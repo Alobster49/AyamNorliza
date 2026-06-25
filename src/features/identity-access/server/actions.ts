@@ -115,7 +115,7 @@ export async function createOrganizationAction(
     return err("validation", "Invalid organization input", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -165,7 +165,7 @@ export async function createOrganizationAction(
     ctx,
   );
 
-  revalidateTag("organizations");
+  revalidateTag("organizations", "max");
   return ok({ organizationId: org.id, slug: org.slug });
 }
 
@@ -190,7 +190,7 @@ export async function updateOrganizationSettingsAction(
   if (!can(member.role as Role, "organization.settings.update")) {
     return err("forbidden", "Insufficient role to update organization settings");
   }
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const before = await supabase
     .from("organizations")
     .select("name, legal_name, region, default_time_zone, default_locale, version")
@@ -243,7 +243,7 @@ export async function inviteUserAction(
     return err("validation", "Invalid invitation input", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -335,7 +335,7 @@ export async function resendInvitationAction(
   const parsed = ResendInvitationInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -396,7 +396,7 @@ export async function revokeInvitationAction(
   const parsed = RevokeInvitationInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -523,7 +523,7 @@ export async function changeMemberRoleAction(
   const parsed = ChangeRoleInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: target } = await supabase
@@ -607,7 +607,7 @@ export async function changeMemberScopeAction(
   const parsed = ChangeScopeInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: target } = await supabase
@@ -692,7 +692,7 @@ export async function deactivateUserAction(
   const parsed = DeactivateUserInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: target } = await supabase
@@ -767,7 +767,7 @@ export async function startAccessReviewAction(
   const parsed = StartAccessReviewInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
   const { data: actor } = await supabase
     .from("organization_members")
@@ -840,7 +840,7 @@ export async function decideReviewItemAction(
   const parsed = DecideReviewItemInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: item } = await supabase
@@ -921,7 +921,7 @@ export async function openSupportSessionAction(
   const parsed = OpenSupportSessionInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
   const { data: actor } = await supabase
     .from("organization_members")
@@ -1002,7 +1002,7 @@ export async function endSupportSessionAction(
   const parsed = EndSupportSessionInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: session } = await supabase
@@ -1073,7 +1073,7 @@ export async function openBreakGlassAction(
   const parsed = OpenBreakGlassInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: actor } = await supabase
@@ -1183,7 +1183,7 @@ export async function endBreakGlassAction(
   const parsed = EndBreakGlassInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: event } = await supabase
@@ -1227,7 +1227,7 @@ export async function finalizeBreakGlassReviewAction(
   const parsed = FinalizeBreakGlassReviewInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const user = await requireUser();
 
   const { data: event } = await supabase

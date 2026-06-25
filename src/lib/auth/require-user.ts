@@ -28,7 +28,7 @@ export class UnauthenticatedError extends Error {
 }
 
 export async function requireUser() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
     error,
@@ -69,7 +69,7 @@ export async function requireOrgMember(
   organizationId: string,
 ): Promise<ActiveOrgMember> {
   const user = await requireUser();
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organization_members")
     .select("id, organization_id, user_id, role, status, starts_at, expires_at")
@@ -86,7 +86,7 @@ export async function requireOrgMember(
 export async function isActiveOrgMember(
   organizationId: string,
 ): Promise<boolean> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();

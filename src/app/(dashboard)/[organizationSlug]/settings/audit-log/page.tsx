@@ -6,16 +6,18 @@ export default async function AuditLogPage({
   params,
   searchParams,
 }: {
-  params: { organizationSlug: string };
-  searchParams: { eventType?: string; entityType?: string };
+  params: Promise<{ organizationSlug: string }>;
+  searchParams: Promise<{ eventType?: string; entityType?: string }>;
 }) {
+  const { organizationSlug } = await params;
+  const { eventType, entityType } = await searchParams;
   await requireUserOrRedirect();
-  const org = await getOrganizationBySlug(params.organizationSlug);
+  const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
   const { rows, total } = await listAuditLog({
     organizationId: org.id,
-    eventType: searchParams.eventType,
-    entityType: searchParams.entityType,
+    eventType,
+    entityType,
     limit: 100,
   });
   return (

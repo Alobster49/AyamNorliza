@@ -2,8 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
-  experimental: {
-    typedRoutes: false,
+  typedRoutes: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+      },
+    ],
   },
   // Whitelist which env vars are exposed to the browser. Anything else must
   // stay server-only; see `src/lib/env.ts` and the SECURITY section of

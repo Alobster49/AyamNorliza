@@ -6,10 +6,11 @@ import { UpdateOrganizationForm } from "@/components/forms/update-organization-f
 export default async function OrganizationSettingsPage({
   params,
 }: {
-  params: { organizationSlug: string };
+  params: Promise<{ organizationSlug: string }>;
 }) {
+  const { organizationSlug } = await params;
   await requireUserOrRedirect();
-  const org = await getOrganizationBySlug(params.organizationSlug);
+  const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
   return (
     <section>

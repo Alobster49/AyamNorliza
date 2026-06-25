@@ -40,7 +40,7 @@ export async function adminCreateInvitation(
   _ctx: AdminContext,
 ): Promise<{ id: string; rawToken: string }> {
   const { raw, hash } = newInvitationToken();
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("invitations")
     .insert({
@@ -68,7 +68,7 @@ export async function adminRotateInvitationToken(
   _ctx: AdminContext,
 ): Promise<{ rawToken: string }> {
   const { raw, hash } = newInvitationToken();
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase
     .from("invitations")
     .update({ token_hash: hash, expires_at: newExpiresAt })

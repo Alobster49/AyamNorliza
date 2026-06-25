@@ -6,10 +6,11 @@ import { SupportSessionsClient } from "@/features/identity-access/components/sup
 export default async function SupportSessionsPage({
   params,
 }: {
-  params: { organizationSlug: string };
+  params: Promise<{ organizationSlug: string }>;
 }) {
+  const { organizationSlug } = await params;
   await requireUserOrRedirect();
-  const org = await getOrganizationBySlug(params.organizationSlug);
+  const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
   const [sessions, members] = await Promise.all([listSupportSessions(org.id), listMembers(org.id)]);
   return (

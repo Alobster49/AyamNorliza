@@ -45,7 +45,7 @@ export async function setReauthCookie(userId: string): Promise<{ jti: string; ex
   const encoded = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const signature = sign(encoded);
 
-  const jar = cookies();
+  const jar = await cookies();
   jar.set(COOKIE_NAME, `${encoded}.${signature}`, {
     httpOnly: true,
     secure: true,
@@ -58,7 +58,7 @@ export async function setReauthCookie(userId: string): Promise<{ jti: string; ex
 }
 
 export async function readReauthProof(userId: string): Promise<Proof | null> {
-  const raw = cookies().get(COOKIE_NAME)?.value;
+  const raw = (await cookies()).get(COOKIE_NAME)?.value;
   if (!raw) return null;
   const [encoded, signature] = raw.split(".");
   if (!encoded || !signature) return null;
@@ -75,6 +75,6 @@ export async function readReauthProof(userId: string): Promise<Proof | null> {
 }
 
 export async function clearReauthCookie(): Promise<void> {
-  const jar = cookies();
+  const jar = await cookies();
   jar.set(COOKIE_NAME, "", { httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 0 });
 }
