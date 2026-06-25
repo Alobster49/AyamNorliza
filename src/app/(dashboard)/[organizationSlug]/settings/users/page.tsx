@@ -1,0 +1,36 @@
+import { notFound } from "next/navigation";
+import { requireUserOrRedirect } from "@/lib/auth/require-user";
+import { requireOrgMember } from "@/lib/auth/require-user";
+import { getOrganizationBySlug, listMembers, listInvitations, listMemberScopes } from "@/features/identity-access/server/queries";
+import { UsersPageClient } from "@/features/identity-access/components/users-page-client";
+
+export default async function UsersSettingsPage({
+  params,
+}: {
+  params: { organizationSlug: string };
+}) {
+  await requireUserOrRedirect();
+  const org = await getOrganizationBySlug(params.organizationSlug);
+  if (!org) notFound();
+  // Confirms membership (RLS would deny on list queries if not a member).
+  await requireOrgMember(org.id);
+
+  const [members, invitations, scopes] = await Promise.all([
+    listMembers(org.id),
+    listInvitations(org.id),
+    listMemberScopes(org.id),
+  ]);
+
+  return (
+    <section>
+      <h1>Users</h1>
+      <UsersPageClient
+        organizationId={org.id}
+        organizationSlug={org.slug}
+        members={members}
+        invitations={invitations}
+        scopes={scopes}
+      />
+    </section>
+  );
+}

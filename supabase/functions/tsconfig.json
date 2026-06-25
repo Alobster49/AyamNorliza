@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "isolatedModules": false,
+    "allowImportingTsExtensions": true,
+    "types": []
+  },
+  "include": [
+    "_shared/**/*.ts",
+    "invitation-accept/**/*.ts",
+    "access-review-reminder/**/*.ts",
+    "temporary-access-expiry/**/*.ts"
+  ]
+}

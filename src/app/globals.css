@@ -1,0 +1,308 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  color-scheme: light;
+  --background: #f7fafc;
+  --foreground: #1a202c;
+  --card: #ffffff;
+  --card-foreground: #1a202c;
+  --popover: #ffffff;
+  --popover-foreground: #1a202c;
+  --primary: #f60505;
+  --primary-foreground: #ffffff;
+  --secondary: #edf2f7;
+  --secondary-foreground: #1a202c;
+  --muted: #edf2f7;
+  --muted-foreground: #4a5568;
+  --accent: #ffdd1b;
+  --accent-foreground: #1a202c;
+  --destructive: #dc2626;
+  --border: #e2e8f0;
+  --input: #cbd5e1;
+  --ring: #f60505;
+  --chart-1: #f60505;
+  --chart-2: #22c55e;
+  --chart-3: #ffdd1b;
+  --chart-4: #2b6cb0;
+  --chart-5: #718096;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1a202c;
+  --sidebar-primary: #f60505;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fff5f5;
+  --sidebar-accent-foreground: #870000;
+  --sidebar-border: #e2e8f0;
+  --sidebar-ring: #f60505;
+  --radius: 0.5rem;
+
+  --font-ui: Poppins, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  --color-bg: var(--background);
+  --color-surface: var(--card);
+  --color-surface-alt: var(--secondary);
+  --color-fg: var(--foreground);
+  --color-fg-muted: var(--muted-foreground);
+  --color-accent: var(--primary);
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: var(--destructive);
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: #0f172a;
+  --foreground: #f7fafc;
+  --card: #111827;
+  --card-foreground: #f7fafc;
+  --popover: #111827;
+  --popover-foreground: #f7fafc;
+  --primary: #f60505;
+  --primary-foreground: #ffffff;
+  --secondary: #1e293b;
+  --secondary-foreground: #e2e8f0;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --accent: #ffdd1b;
+  --accent-foreground: #1a202c;
+  --destructive: #ef4444;
+  --border: #334155;
+  --input: #475569;
+  --ring: #ff4d4d;
+  --chart-1: #ff4d4d;
+  --chart-2: #22c55e;
+  --chart-3: #ffdd1b;
+  --chart-4: #60a5fa;
+  --chart-5: #94a3b8;
+  --sidebar: #111827;
+  --sidebar-foreground: #f7fafc;
+  --sidebar-primary: #f60505;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e293b;
+  --sidebar-accent-foreground: #f7fafc;
+  --sidebar-border: #334155;
+  --sidebar-ring: #ff4d4d;
+
+  --color-bg: var(--background);
+  --color-surface: var(--card);
+  --color-surface-alt: var(--secondary);
+  --color-fg: var(--foreground);
+  --color-fg-muted: var(--muted-foreground);
+  --color-accent: var(--primary);
+}
+
+@theme inline {
+  --font-sans: var(--font-ui);
+  --font-mono: var(--font-code);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--primary);
+}
+
+button {
+  font: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ---- Legacy form surfaces used by existing auth/settings pages ---- */
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-8);
+}
+
+.auth-form,
+.settings-form,
+.dialog {
+  display: grid;
+  gap: var(--space-4);
+  width: min(420px, 100%);
+  background: var(--card);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.auth-form label,
+.settings-form label,
+.dialog label {
+  display: grid;
+  gap: var(--space-1);
+  font-size: 14px;
+  color: var(--muted-foreground);
+}
+
+.auth-form input,
+.auth-form select,
+.settings-form input,
+.settings-form select,
+.settings-form textarea,
+.dialog input,
+.dialog select,
+.dialog textarea {
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font: inherit;
+}
+
+.auth-form__submit,
+.auth-form button[type="submit"],
+.settings-form button[type="submit"],
+.dialog button[type="submit"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:not([class]) {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.auth-form__error,
+[role="alert"] {
+  color: var(--destructive);
+}
+
+/* ---- Tables ---- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-block: var(--space-4);
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.data-table th {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+
+.data-table td code,
+.data-table th code {
+  font-family: var(--font-code);
+  font-size: 12px;
+}
+
+/* ---- Dialogs ---- */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.7);
+  display: grid;
+  place-items: center;
+  z-index: 100;
+}
+
+.dialog__actions {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: flex-end;
+}
+
+.page-actions {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-block: var(--space-3);
+}
+
+.review {
+  background: var(--card);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  margin-block: var(--space-4);
+}
