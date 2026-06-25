@@ -18,7 +18,7 @@ import { admin, type AdminContext } from "@/lib/supabase/admin";
 import { serverEnv } from "@/lib/env";
 
 export async function startEnroll(ctx: AdminContext) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const env = serverEnv();
   const { data, error } = await supabase.auth.mfa.enroll({
     factorType: "totp",
@@ -46,7 +46,7 @@ export async function verifyChallenge(
   code: string,
   ctx: AdminContext,
 ): Promise<{ success: true } | { success: false; error: string }> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId, code });
   if (error) {
     await admin.insertAuthSecurityEvent(
@@ -79,7 +79,7 @@ export async function verifyChallenge(
 }
 
 export async function listFactors() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.mfa.listFactors();
   if (error) throw error;
   return data;
@@ -90,7 +90,7 @@ export async function listFactors() {
  * or to remove an existing factor before re-enrolling.
  */
 export async function unenroll(factorId: string, ctx: AdminContext) {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.mfa.unenroll({ factorId });
   if (error) throw error;
   await admin.insertAuthSecurityEvent(

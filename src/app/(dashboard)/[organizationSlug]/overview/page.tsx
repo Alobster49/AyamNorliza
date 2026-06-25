@@ -6,17 +6,18 @@ import { getOverviewDashboardSummary } from "@/features/overview/server/queries"
 export default async function OverviewPage({
   params,
 }: {
-  params: { organizationSlug: string };
+  params: Promise<{ organizationSlug: string }>;
 }) {
+  const { organizationSlug } = await params;
   await requireUserOrRedirect();
-  const org = await getOrganizationBySlug(params.organizationSlug);
+  const org = await getOrganizationBySlug(organizationSlug);
   if (!org) return null;
   const summary = await getOverviewDashboardSummary(org.id);
 
   return (
     <OperationsOverviewClient
       organizationName={org.name}
-      organizationSlug={params.organizationSlug}
+      organizationSlug={organizationSlug}
       summary={summary}
     />
   );

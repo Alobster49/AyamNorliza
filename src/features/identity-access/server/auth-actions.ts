@@ -36,7 +36,7 @@ export async function loginAction(
   const parsed = LoginInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid login", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email: input.email,
     password: input.password,
@@ -58,7 +58,7 @@ export async function loginAction(
 }
 
 export async function signOutAction(): Promise<ActionResult<{ ok: true }>> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   await clearReauthCookie();
   return ok({ ok: true });
@@ -68,7 +68,7 @@ export async function reauthAction(rawInput: unknown): Promise<ActionResult<{ jt
   const parsed = ReauthInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid reauth input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -110,7 +110,7 @@ export async function getMfaFactorsAction() {
 }
 
 export async function startMfaEnrollAction() {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -129,7 +129,7 @@ export async function verifyMfaChallengeAction(rawInput: unknown): Promise<Actio
   const parsed = MfaChallengeInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -144,7 +144,7 @@ export async function unenrollMfaAction(rawInput: unknown): Promise<ActionResult
   const parsed = z.object({ factorId: z.string().uuid() }).safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -163,7 +163,7 @@ export async function signUpAction(rawInput: unknown): Promise<ActionResult<{ re
   const parsed = SignupInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid signup", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const env = (await import("@/lib/env")).serverEnv();
   const { data, error } = await supabase.auth.signUp({
     email: input.email,

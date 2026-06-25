@@ -16,7 +16,7 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??= "dummy";
 const cookieStore = new Map<string, string>();
 
 vi.mock("next/headers", () => ({
-  cookies: () => ({
+  cookies: async () => ({
     get: (name: string) => {
       const v = cookieStore.get(name);
       return v ? { name, value: v } : undefined;
@@ -28,7 +28,7 @@ vi.mock("next/headers", () => ({
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
-  createSupabaseServerClient: () => ({
+  createSupabaseServerClient: async () => ({
     auth: {
       getUser: async () => ({
         data: { user: { id: "user-x", email: "x@example.com" } },

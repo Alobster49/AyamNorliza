@@ -6,13 +6,14 @@ import { UserDetailClient } from "@/features/identity-access/components/user-det
 export default async function UserDetailPage({
   params,
 }: {
-  params: { organizationSlug: string; userId: string };
+  params: Promise<{ organizationSlug: string; userId: string }>;
 }) {
+  const { organizationSlug, userId } = await params;
   await requireUserOrRedirect();
-  const org = await getOrganizationBySlug(params.organizationSlug);
+  const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
   const members = await listMembers(org.id);
-  const member = members.find((m) => m.userId === params.userId);
+  const member = members.find((m) => m.userId === userId);
   if (!member) notFound();
   const scopes = (await listMemberScopes(org.id)).filter((s) => s.organizationMemberId === member.id);
   return (

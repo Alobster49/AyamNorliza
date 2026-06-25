@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
   if (!tokenHash) {
     return NextResponse.redirect(`${origin}/login?error=missing_token`);
   }
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as "magiclink" });
   if (error) {
     return NextResponse.redirect(`${origin}/login?error=verify_failed`);

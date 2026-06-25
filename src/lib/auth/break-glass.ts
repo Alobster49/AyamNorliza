@@ -28,7 +28,7 @@ export type BreakGlassEvent = {
 export async function isBreakGlassActive(
   organizationId: string,
 ): Promise<{ active: boolean; expiresAt: string | null }> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -48,7 +48,7 @@ export async function isBreakGlassActive(
 }
 
 export async function listActive(organizationId: string): Promise<BreakGlassEvent[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("break_glass_events")
     .select(
@@ -67,7 +67,7 @@ export async function recordPostUseReview(
   review: Record<string, unknown>,
   ctx: AdminContext,
 ): Promise<void> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("break_glass_events")
     .update({ post_use_review: review })

@@ -14,14 +14,14 @@ import { hashToken } from "@/lib/auth/invite-token";
 export default async function InviteAcceptPage({
   params,
 }: {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }) {
-  const token = params.token;
+  const { token } = await params;
   if (!token) redirect("/login");
 
   // The server action invokes the Edge Function. Show a small
   // "processing..." UI while it runs and then redirect to the org.
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
     // Force the user to sign in / sign up first; the action will

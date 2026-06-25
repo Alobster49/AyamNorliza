@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowUpRight,
   Bell,
   ClipboardCheck,
   FileClock,
@@ -35,6 +36,11 @@ import type {
   OperationsPriorityItem,
   OverviewDashboardSummary,
 } from "../summary-model";
+import {
+  getTrendValue,
+  overviewLayoutClasses,
+  overviewTrendSeries,
+} from "./overview-presentation";
 
 type OperationsOverviewClientProps = {
   organizationName: string;
@@ -101,59 +107,70 @@ export function OperationsOverviewClient({
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-      <section className="grid gap-4 rounded-lg border bg-card p-4 shadow-sm md:grid-cols-[1.5fr_1fr] md:p-6">
+    <div className={overviewLayoutClasses.root}>
+      <section className={overviewLayoutClasses.commandStrip}>
         <div className="min-w-0 space-y-3">
-          <Badge variant="outline" className="border-primary/30 text-primary">
-            Signed-in operations overview
-          </Badge>
-          <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className="border-primary/30 text-primary">
+              Live access and operations
+            </Badge>
+            <Badge variant="secondary">
+              {summary.priorityItems.length} priority items
+            </Badge>
+          </div>
+          <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-normal text-foreground md:text-3xl">
               {organizationName} command center
             </h1>
-            <p className="max-w-3xl text-sm text-muted-foreground md:text-base">
-              A farm-to-table operating view for access control, alert focus,
-              flock readiness, and the next work that needs attention.
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              Identity, alert, support, and flock readiness signals for the next
+              operating decision.
             </p>
           </div>
         </div>
-        <div className="grid gap-3 rounded-md border bg-muted/40 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-medium">Operational readiness</p>
-              <p className="text-xs text-muted-foreground">
-                Placeholder farm metrics until operations modules are live
-              </p>
+        <div className={overviewLayoutClasses.commandStats}>
+          <div className="min-w-0 rounded-md border bg-muted/25 p-3">
+            <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
+              <div className="min-w-0">
+                <p className="text-sm font-medium">Operational readiness</p>
+                <p className="truncate text-xs text-muted-foreground">
+                  Interim pulse until operations modules come online
+                </p>
+              </div>
+              <span className="max-w-24 truncate text-right text-3xl font-semibold leading-none tabular-nums text-emerald-600 dark:text-emerald-300">
+                {summary.operations.readinessScore}%
+              </span>
             </div>
-            <span className="text-2xl font-semibold tabular-nums">
-              {summary.operations.readinessScore}%
-            </span>
+            <Progress value={summary.operations.readinessScore} className="mt-3" />
           </div>
-          <Progress value={summary.operations.readinessScore} />
-          <div className="flex flex-wrap gap-2">
-            <Badge className="bg-primary text-primary-foreground">
-              {summary.operations.alerts.open} open alerts
-            </Badge>
-            <Badge variant="secondary">
-              {summary.identity.recentAuditEvents} recent audit events
-            </Badge>
-          </div>
+          <CommandStat
+            label="Open alerts"
+            value={summary.operations.alerts.open.toLocaleString()}
+            tone="danger"
+          />
+          <CommandStat
+            label="Audit events"
+            value={summary.identity.recentAuditEvents.toLocaleString()}
+            tone="neutral"
+          />
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <section className={overviewLayoutClasses.kpiGrid}>
         {cards.map((card) => (
-          <Card key={card.title} className="min-w-0 overflow-hidden">
+          <Card key={card.title} className={overviewLayoutClasses.kpiCard}>
             <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
               <CardDescription className="truncate">{card.title}</CardDescription>
               <card.icon className="size-4 shrink-0 text-primary" />
             </CardHeader>
-            <CardContent className="space-y-2">
+            <CardContent className="space-y-3">
               <div className="text-2xl font-semibold tabular-nums">{card.value}</div>
               <div className="flex items-center justify-between gap-2">
                 <p className="truncate text-xs text-muted-foreground">{card.helper}</p>
-                <Button asChild variant="ghost" size="sm" className="h-7 shrink-0 px-2 text-xs">
-                  <Link href={card.href}>Open</Link>
+                <Button asChild variant="ghost" size="icon-sm" className="rounded-full">
+                  <Link href={card.href} aria-label={`Open ${card.title}`}>
+                    <ArrowUpRight className="size-4" />
+                  </Link>
                 </Button>
               </div>
             </CardContent>
@@ -161,8 +178,8 @@ export function OperationsOverviewClient({
         ))}
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
-        <Card className="min-w-0">
+      <section className={overviewLayoutClasses.contentGrid}>
+        <Card className="min-w-0 shadow-none">
           <CardHeader>
             <CardTitle>Weekly farm pulse</CardTitle>
             <CardDescription>
@@ -170,48 +187,39 @@ export function OperationsOverviewClient({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid min-h-56 grid-cols-7 items-end gap-2 rounded-md border bg-muted/30 p-4">
+            <div className={overviewLayoutClasses.chartFrame}>
               {summary.operations.trend.map((point) => (
                 <div key={point.label} className="flex min-w-0 flex-col items-center gap-2">
-                  <div className="flex h-40 w-full max-w-12 items-end gap-1">
-                    <span
-                      className="w-1/3 rounded-t bg-primary"
-                      style={{ height: `${point.livability}%` }}
-                      aria-label={`${point.label} livability ${point.livability}%`}
-                    />
-                    <span
-                      className="w-1/3 rounded-t bg-chart-2"
-                      style={{ height: `${point.feedIndex}%` }}
-                      aria-label={`${point.label} feed index ${point.feedIndex}%`}
-                    />
-                    <span
-                      className="w-1/3 rounded-t bg-accent"
-                      style={{ height: `${point.environment}%` }}
-                      aria-label={`${point.label} environment ${point.environment}%`}
-                    />
+                  <div className="flex h-32 w-full max-w-12 items-end gap-1">
+                    {overviewTrendSeries.map((series) => {
+                      const value = getTrendValue(point, series);
+
+                      return (
+                        <span
+                          key={series.key}
+                          className={`w-1/3 rounded-t ${series.barClassName}`}
+                          style={{ height: `${value}%` }}
+                          aria-label={`${point.label} ${series.label.toLowerCase()} ${value}%`}
+                        />
+                      );
+                    })}
                   </div>
                   <span className="text-xs text-muted-foreground">{point.label}</span>
                 </div>
               ))}
             </div>
             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1">
-                <span className="size-2 rounded-full bg-primary" />
-                Livability
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="size-2 rounded-full bg-chart-2" />
-                Feed index
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <span className="size-2 rounded-full bg-accent" />
-                Environment
-              </span>
+              {overviewTrendSeries.map((series) => (
+                <span key={series.key} className="inline-flex items-center gap-1">
+                  <span className={`size-2 rounded-full ${series.legendClassName}`} />
+                  {series.label}
+                </span>
+              ))}
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-none">
           <CardHeader>
             <CardTitle>Flock highlights</CardTitle>
             <CardDescription>Current operating signals for the site.</CardDescription>
@@ -235,15 +243,15 @@ export function OperationsOverviewClient({
         </Card>
       </section>
 
-      <Card>
+      <Card className="min-w-0 shadow-none">
         <CardHeader className="gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
+          <div className="min-w-0">
             <CardTitle>Priority queue</CardTitle>
             <CardDescription>
               Access, support, audit, and operations items sorted for quick triage.
             </CardDescription>
           </div>
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" className="w-fit">
             <Link href={`/${organizationSlug}/alerts`}>
               <AlertTriangle className="size-4" />
               Alerts
@@ -274,6 +282,23 @@ export function OperationsOverviewClient({
   );
 }
 
+function CommandStat({
+  label,
+  tone,
+  value,
+}: {
+  label: string;
+  tone: "danger" | "neutral";
+  value: string;
+}) {
+  return (
+    <div className="min-w-0 rounded-md border bg-muted/25 px-3 py-2">
+      <p className="truncate text-xs text-muted-foreground">{label}</p>
+      <p className={statToneClass(tone)}>{value}</p>
+    </div>
+  );
+}
+
 function PriorityTable({
   organizationSlug,
   items,
@@ -290,7 +315,7 @@ function PriorityTable({
   }
 
   return (
-    <div className="overflow-hidden rounded-md border">
+    <div className={overviewLayoutClasses.priorityContent}>
       <Table>
         <TableHeader>
           <TableRow>
@@ -329,6 +354,15 @@ function PriorityTable({
       </Table>
     </div>
   );
+}
+
+function statToneClass(tone: "danger" | "neutral"): string {
+  switch (tone) {
+    case "danger":
+      return "text-lg font-semibold tabular-nums text-red-600 dark:text-red-300";
+    case "neutral":
+      return "text-lg font-semibold tabular-nums text-foreground";
+  }
 }
 
 function filterPriorityItems(

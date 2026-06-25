@@ -22,7 +22,7 @@ import type {
 
 export async function listOrganizationsForCurrentUser(): Promise<Organization[]> {
   await requireUserOrRedirect();
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organizations")
     .select(
@@ -34,7 +34,7 @@ export async function listOrganizationsForCurrentUser(): Promise<Organization[]>
 }
 
 export async function getOrganizationBySlug(slug: string): Promise<Organization | null> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organizations")
     .select(
@@ -47,7 +47,7 @@ export async function getOrganizationBySlug(slug: string): Promise<Organization 
 }
 
 export async function getProfile(userId: string): Promise<Profile | null> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
     .select("user_id, display_name, locale, time_zone, contact_preferences, status")
@@ -67,7 +67,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
 }
 
 export async function listMembers(organizationId: string): Promise<OrganizationMember[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organization_members")
     .select(
@@ -80,7 +80,7 @@ export async function listMembers(organizationId: string): Promise<OrganizationM
 }
 
 export async function listMemberScopes(organizationId: string): Promise<MemberScope[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("member_scopes")
     .select(
@@ -92,7 +92,7 @@ export async function listMemberScopes(organizationId: string): Promise<MemberSc
 }
 
 export async function listInvitations(organizationId: string): Promise<Invitation[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("invitations")
     .select(
@@ -117,7 +117,7 @@ export async function listInvitations(organizationId: string): Promise<Invitatio
 }
 
 export async function listAccessReviews(organizationId: string): Promise<AccessReview[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("access_reviews")
     .select("id, organization_id, period_start, period_end, reviewer_id, status, due_at")
@@ -138,7 +138,7 @@ export async function listAccessReviews(organizationId: string): Promise<AccessR
 export async function listAccessReviewItems(
   accessReviewId: string,
 ): Promise<AccessReviewItem[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("access_review_items")
     .select(
@@ -161,7 +161,7 @@ export async function listAccessReviewItems(
 export async function listSupportSessions(
   organizationId: string,
 ): Promise<SupportSession[]> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("support_sessions")
     .select(
@@ -195,7 +195,7 @@ export async function listAuditLog(input: {
   limit?: number;
   offset?: number;
 }): Promise<{ rows: AuditLogEntry[]; total: number }> {
-  const supabase = createSupabaseServerClient();
+  const supabase = await createSupabaseServerClient();
   const limit = Math.min(Math.max(input.limit ?? 50, 1), 200);
   const offset = Math.max(input.offset ?? 0, 0);
 

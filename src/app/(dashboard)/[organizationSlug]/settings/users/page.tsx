@@ -7,10 +7,11 @@ import { UsersPageClient } from "@/features/identity-access/components/users-pag
 export default async function UsersSettingsPage({
   params,
 }: {
-  params: { organizationSlug: string };
+  params: Promise<{ organizationSlug: string }>;
 }) {
+  const { organizationSlug } = await params;
   await requireUserOrRedirect();
-  const org = await getOrganizationBySlug(params.organizationSlug);
+  const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
   // Confirms membership (RLS would deny on list queries if not a member).
   await requireOrgMember(org.id);
