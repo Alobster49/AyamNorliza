@@ -85,6 +85,19 @@ export function LoginForm({
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
         <Field>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setEmail("admin@gmail.com");
+              setPassword("Password123!");
+            }}
+            className="text-xs"
+          >
+            Dev: Fill admin credentials
+          </Button>
+        </Field>
+        <Field>
           <Button type="submit" disabled={pending}>
             {pending ? "Signing in..." : "Sign in"}
           </Button>

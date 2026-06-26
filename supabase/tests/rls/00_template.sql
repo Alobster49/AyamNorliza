@@ -8,11 +8,14 @@ begin;
 select plan(1);
 
 -- Run a query as an anonymous user, expect a permission denial.
-select results_eq(
+set local role anon;
+select throws_ok(
   $$ select count(*) from public.organizations $$,
-  $$ values (0::bigint) $$,
+  '42501',
+  null,
   'anonymous cannot list organizations'
 );
+reset role;
 
 select * from finish();
 rollback;

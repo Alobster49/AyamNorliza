@@ -20,7 +20,7 @@ export class ReauthRequiredError extends Error {
   }
 }
 
-export async function requireReauth(ttlSeconds = 300): Promise<{ userId: string; jti: string }> {
+export async function requireReauth(ttlSeconds = 0): Promise<{ userId: string; jti: string }> {
   const user = await requireUser();
   const proof = await readReauthProof(user.id);
   if (!proof) throw new ReauthRequiredError();

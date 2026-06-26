@@ -15,9 +15,15 @@ test("dashboard shell exposes sidebar-07 navigation and account actions", async 
   await expect(overview).toBeVisible();
   await expect(overview).toHaveAttribute("aria-current", "page");
 
-  await expect(
-    page.getByRole("button", { name: /access control/i }),
-  ).toBeVisible();
+  await expect(page.getByRole("button", { name: /^operations$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^farm setup$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^access control$/i })).toBeVisible();
+
+  const sidebar = page.locator('[data-slot="sidebar"]');
+  const openSectionSubmenus = sidebar.locator('[data-sidebar="menu-sub"]');
+  await expect(openSectionSubmenus).toHaveCount(3);
+  await expect(openSectionSubmenus.first()).toHaveCSS("border-left-style", "solid");
+
   await expect(page.getByRole("link", { name: /^users$/i })).toBeVisible();
 
   await page.getByRole("button", { name: /owner@ayam-norliza-pilot\.example/i }).click();

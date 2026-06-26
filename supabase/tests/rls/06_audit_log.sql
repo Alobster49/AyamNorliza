@@ -12,18 +12,22 @@ select ok(
   'audit_log RLS is on'
 );
 
+insert into public.audit_log (id, event_type, entity_type, source)
+values ('00000000-0000-0000-0000-000000000106', 'test.audit', 'test', 'server')
+on conflict (id) do nothing;
+
 -- An UPDATE on audit_log must be blocked by the BEFORE UPDATE trigger.
 select throws_ok(
-  $$ update public.audit_log set reason = 'tampered' where false $$,
-  'insufficient_privilege',
+  $$ update public.audit_log set reason = 'tampered' where id = '00000000-0000-0000-0000-000000000106' $$,
+  '42501',
   null,
   'audit_log denies UPDATE'
 );
 
 -- A DELETE on audit_log must be blocked by the BEFORE DELETE trigger.
 select throws_ok(
-  $$ delete from public.audit_log where false $$,
-  'insufficient_privilege',
+  $$ delete from public.audit_log where id = '00000000-0000-0000-0000-000000000106' $$,
+  '42501',
   null,
   'audit_log denies DELETE'
 );

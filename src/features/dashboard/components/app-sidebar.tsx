@@ -5,19 +5,16 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
   BadgeCheck,
-  Bell,
   Building2,
   ChevronRight,
   ChevronsUpDown,
-  ClipboardCheck,
-  FileClock,
+  ClipboardList,
   LayoutDashboard,
-  LifeBuoy,
   LogOut,
   Settings,
   ShieldCheck,
+  Tags,
   UserRound,
-  Users,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -43,18 +40,19 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
   getDashboardSidebarGroups,
   getUserInitials,
-  type DashboardRoute,
 } from "./dashboard-shell-model";
 
 type AppSidebarProps = {
@@ -65,19 +63,10 @@ type AppSidebarProps = {
   userEmail: string;
 };
 
-const routeIcons: Record<string, LucideIcon> = {
-  Overview: LayoutDashboard,
-  Alerts: Bell,
-  Organization: Building2,
-  Users,
-  Roles: ShieldCheck,
-  "Access reviews": ClipboardCheck,
-  "Support sessions": LifeBuoy,
-  "Audit log": FileClock,
-};
-
 const groupIcons: Record<string, LucideIcon> = {
   Operations: LayoutDashboard,
+  "Daily ops": ClipboardList,
+  "Farm setup": Tags,
   "Access control": ShieldCheck,
 };
 
@@ -111,34 +100,41 @@ export function AppSidebar({
               defaultOpen
               className="group/collapsible"
             >
-              <SidebarGroup>
-                <SidebarGroupLabel asChild>
-                  <CollapsibleTrigger>
-                    <GroupIcon />
-                    <span>{group.title}</span>
-                    <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                  </CollapsibleTrigger>
-                </SidebarGroupLabel>
+              <SidebarGroup className="py-1">
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        isActive={group.isActive}
+                        tooltip={group.title}
+                        className="h-9 rounded-lg font-medium"
+                      >
+                        <GroupIcon />
+                        <span>{group.title}</span>
+                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                  </SidebarMenuItem>
+                </SidebarMenu>
                 <CollapsibleContent>
-                  <SidebarMenu>
+                  <SidebarMenuSub className="mx-4 my-1 gap-1 border-sidebar-border/80 px-3 py-0">
                     {group.items.map((item) => (
-                      <SidebarMenuItem key={item.href}>
-                        <SidebarMenuButton
+                      <SidebarMenuSubItem key={item.href}>
+                        <SidebarMenuSubButton
                           asChild
                           isActive={item.isActive}
-                          tooltip={item.title}
+                          className="h-8 rounded-lg px-3 text-sm data-active:font-medium"
                         >
                           <Link
                             href={item.href}
                             aria-current={item.isActive ? "page" : undefined}
                           >
-                            <RouteIcon route={item} />
                             <span>{item.title}</span>
                           </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
+                        </SidebarMenuSubButton>
+                      </SidebarMenuSubItem>
                     ))}
-                  </SidebarMenu>
+                  </SidebarMenuSub>
                 </CollapsibleContent>
               </SidebarGroup>
             </Collapsible>
@@ -208,11 +204,6 @@ function OrganizationSwitcher({
       </SidebarMenuItem>
     </SidebarMenu>
   );
-}
-
-function RouteIcon({ route }: { route: DashboardRoute }) {
-  const Icon = routeIcons[route.title] ?? LayoutDashboard;
-  return <Icon />;
 }
 
 function NavUser({

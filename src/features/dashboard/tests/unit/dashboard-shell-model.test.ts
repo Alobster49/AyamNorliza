@@ -22,6 +22,11 @@ describe("dashboard shell model", () => {
           isActive: true,
         }),
         expect.objectContaining({
+          title: "Flocks",
+          href: "/ayam-norliza-pilot/flocks",
+          isActive: false,
+        }),
+        expect.objectContaining({
           title: "Alerts",
           href: "/ayam-norliza-pilot/alerts",
           isActive: false,
@@ -29,8 +34,47 @@ describe("dashboard shell model", () => {
       ],
     });
     expect(groups[1]).toMatchObject({
+      title: "Daily ops",
+      isActive: false,
+    });
+    expect(groups[2]).toMatchObject({
+      title: "Farm setup",
+      isActive: false,
+    });
+    expect(groups[3]).toMatchObject({
       title: "Access control",
       isActive: false,
+    });
+  });
+
+  it("marks today as the active daily operations route", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/today",
+    });
+
+    expect(groups[1]).toMatchObject({
+      title: "Daily ops",
+      isActive: true,
+      items: expect.arrayContaining([
+        expect.objectContaining({
+          title: "Today",
+          href: "/ayam-norliza-pilot/today",
+          isActive: true,
+        }),
+      ]),
+    });
+  });
+
+  it("returns page context for nested farm setup routes", () => {
+    expect(
+      getDashboardPageContext({
+        organizationSlug: "ayam-norliza-pilot",
+        pathname: "/ayam-norliza-pilot/settings/sites/11111111-1111-1111-1111-111111111111",
+      }),
+    ).toEqual({
+      section: "Farm setup",
+      title: "Sites",
     });
   });
 
