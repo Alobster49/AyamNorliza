@@ -3,7 +3,7 @@ import { defineConfig, devices } from "@playwright/test";
 /**
  * Playwright config for the MOD-01 vertical slice.
  *
- * Prereqs: `supabase start`, `npm run db:reset`, `npm run dev`.
+ * Prereqs: configure `.env.local` for the target Supabase project.
  * Resend is mocked at the network layer (see `e2e/_fixtures.ts`).
  */
 export default defineConfig({

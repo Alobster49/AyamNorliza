@@ -1,0 +1,272 @@
+- generic:
+  - generic:
+    - generic:
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - list:
+                - listitem:
+                  - button:
+                    - generic:
+                      - img
+                    - generic:
+                      - generic: AyamNorliza Pilot
+                      - generic: MY
+                    - img
+            - generic:
+              - generic:
+                - list:
+                  - listitem:
+                    - button [expanded]:
+                      - img
+                      - generic: Operations
+                      - img
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/overview
+                        - generic: Overview
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/alerts
+                        - generic: Alerts
+              - generic:
+                - list:
+                  - listitem:
+                    - button [expanded]:
+                      - img
+                      - generic: Farm setup
+                      - img
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/sites
+                        - generic: Sites
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/zones
+                        - generic: Zones
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/storage-locations
+                        - generic: Storage
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/production-profiles
+                        - generic: Production profiles
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/target-profiles
+                        - generic: Target profiles
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/master-data
+                        - generic: Master data
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/labels
+                        - generic: Labels
+              - generic:
+                - list:
+                  - listitem:
+                    - button [expanded]:
+                      - img
+                      - generic: Access control
+                      - img
+                - generic:
+                  - list:
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/organization
+                        - generic: Organization
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/users
+                        - generic: Users
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/roles
+                        - generic: Roles
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/access-reviews
+                        - generic: Access reviews
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/support-sessions
+                        - generic: Support sessions
+                    - listitem:
+                      - link:
+                        - /url: /ayam-norliza-pilot/settings/audit-log
+                        - generic: Audit log
+            - generic:
+              - list:
+                - listitem:
+                  - button:
+                    - generic:
+                      - generic: A
+                    - generic:
+                      - generic: admin
+                      - generic: admin@gmail.com
+                    - img
+            - button
+      - main:
+        - generic:
+          - button:
+            - img
+            - generic: Toggle Sidebar
+          - generic:
+            - generic:
+              - generic: AyamNorliza Pilot
+              - generic: /
+              - generic: Sites
+            - paragraph: Farm setup workspace
+          - button:
+            - img
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - generic:
+                    - heading [level=1]: E2E Farm 310527
+                    - generic: E2E310527
+                    - generic: Draft
+                  - generic:
+                    - generic: Asia/Kuala_Lumpur
+                    - generic: Metric
+                    - generic: MYR
+                - generic:
+                  - link:
+                    - /url: /ayam-norliza-pilot/settings/sites
+                    - img
+                    - text: Sites
+                  - link:
+                    - /url: /ayam-norliza-pilot/settings/labels
+                    - img
+                    - text: Labels
+              - generic:
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic: Site readiness
+                      - generic: Required setup before the site is operational.
+                    - generic: Needs setup
+                  - generic:
+                    - generic:
+                      - generic: 60%
+                      - generic: complete
+                    - progressbar
+                    - generic:
+                      - generic:
+                        - img
+                        - text: site must be active
+                      - generic:
+                        - img
+                        - text: at least one active house
+                      - generic:
+                        - img
+                        - text: site contact
+                - generic:
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - text: Zones
+                        - paragraph: 1/1 active
+                      - button [expanded]:
+                        - img
+                        - text: Add
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - text: Houses
+                        - paragraph: 0/1 active
+                      - button:
+                        - img
+                        - text: Add
+                  - generic:
+                    - generic:
+                      - generic:
+                        - generic:
+                          - img
+                          - text: Storage
+                        - paragraph: 1/1 active
+                      - button:
+                        - img
+                        - text: Add
+              - generic:
+                - generic:
+                  - generic:
+                    - generic: Site hierarchy
+                    - generic: Manage zones, production houses, and storage locations.
+                - generic:
+                  - generic:
+                    - tablist:
+                      - tab [selected]:
+                        - text: Zones
+                        - generic: "1"
+                      - tab:
+                        - text: Houses
+                        - generic: "1"
+                      - tab:
+                        - text: Storage
+                        - generic: "1"
+                    - tabpanel:
+                      - generic:
+                        - generic:
+                          - table:
+                            - rowgroup:
+                              - row:
+                                - columnheader: Code
+                                - columnheader: Name
+                                - columnheader: Risk
+                                - columnheader: Status
+                            - rowgroup:
+                              - row:
+                                - cell:
+                                  - code: Z310527
+                                - cell: Zone 310527
+                                - cell:
+                                  - generic: Medium
+                                - cell:
+                                  - generic: Active
+  - button "Open Next.js Dev Tools" [ref=e231] [cursor=pointer]:
+    - img [ref=e232]
+  - alert
+  - dialog "Add zone" [ref=e237]:
+    - generic [ref=e238]:
+      - heading "Add zone" [level=2] [ref=e239]
+      - paragraph [ref=e240]: Create a biosecurity area inside this site.
+    - generic [ref=e241]:
+      - generic [ref=e242]:
+        - generic [ref=e243]:
+          - group [ref=e244]:
+            - generic [ref=e245]: Name
+            - textbox "Name" [active] [ref=e246]
+          - group [ref=e247]:
+            - generic [ref=e248]: Code
+            - textbox "Code" [ref=e249]
+        - generic [ref=e250]:
+          - group [ref=e251]:
+            - generic [ref=e252]: Risk
+            - combobox [ref=e253]:
+              - generic: Medium
+              - img
+            - combobox [ref=e254]
+          - group [ref=e255]:
+            - generic [ref=e256]: Status
+            - combobox [ref=e257]:
+              - generic: Active
+              - img
+            - combobox [ref=e258]
+      - button "Add zone" [ref=e260]
+    - button "Close" [ref=e261]:
+      - img
+      - generic [ref=e262]: Close

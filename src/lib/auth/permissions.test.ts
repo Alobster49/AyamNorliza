@@ -25,6 +25,34 @@ describe("permissions matrix", () => {
     expect(can("farm_manager", "membership.role.change")).toBe(false);
   });
 
+  it("MOD-02 structure capabilities are delegated by operating role", () => {
+    expect(can("org_admin", "farm_structure.manage")).toBe(true);
+    expect(can("farm_manager", "target_profile.approve")).toBe(true);
+    expect(can("inventory", "master_data.manage")).toBe(false);
+    expect(can("logistics", "label.manage")).toBe(true);
+    expect(can("caretaker", "farm_structure.manage")).toBe(false);
+  });
+
+  it("MOD-03 flock lifecycle capabilities follow operating responsibility", () => {
+    expect(can("farm_manager", "flock_lifecycle.approve")).toBe(true);
+    expect(can("supervisor", "flock_lifecycle.record")).toBe(true);
+    expect(can("caretaker", "flock_lifecycle.record")).toBe(true);
+    expect(can("logistics", "flock_lifecycle.record")).toBe(true);
+    expect(can("biosecurity_qa", "flock_lifecycle.approve")).toBe(true);
+    expect(can("caretaker", "flock_lifecycle.close")).toBe(false);
+  });
+
+  it("MOD-04 daily operations capabilities follow field workflow responsibility", () => {
+    expect(can("farm_manager", "daily_operations.configure")).toBe(true);
+    expect(can("farm_manager", "daily_operations.close")).toBe(true);
+    expect(can("supervisor", "daily_operations.review")).toBe(true);
+    expect(can("supervisor", "daily_operations.correct")).toBe(true);
+    expect(can("caretaker", "daily_operations.record")).toBe(true);
+    expect(can("maintenance", "daily_operations.record")).toBe(true);
+    expect(can("auditor", "daily_operations.record")).toBe(false);
+    expect(can("caretaker", "daily_operations.close")).toBe(false);
+  });
+
   it("auditor can read audit logs but cannot mutate", () => {
     expect(can("auditor", "audit.read")).toBe(true);
     expect(can("auditor", "membership.role.change")).toBe(false);

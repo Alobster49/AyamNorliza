@@ -1,0 +1,212 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e3]:
+    - generic [ref=e6]:
+      - list [ref=e8]:
+        - listitem [ref=e9]:
+          - button "AyamNorliza Pilot MY" [ref=e10]:
+            - img [ref=e12]
+            - generic [ref=e16]:
+              - generic [ref=e17]: AyamNorliza Pilot
+              - generic [ref=e18]: MY
+            - img [ref=e19]
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - list [ref=e24]:
+            - listitem [ref=e25]:
+              - button "Operations" [expanded] [ref=e26]:
+                - img [ref=e27]
+                - generic [ref=e32]: Operations
+                - img [ref=e33]
+          - list [ref=e36]:
+            - listitem [ref=e37]:
+              - link "Overview" [ref=e38] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/overview
+                - generic [ref=e39]: Overview
+            - listitem [ref=e40]:
+              - link "Alerts" [ref=e41] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/alerts
+                - generic [ref=e42]: Alerts
+        - generic [ref=e43]:
+          - list [ref=e44]:
+            - listitem [ref=e45]:
+              - button "Farm setup" [expanded] [ref=e46]:
+                - img [ref=e47]
+                - generic [ref=e51]: Farm setup
+                - img [ref=e52]
+          - list [ref=e55]:
+            - listitem [ref=e56]:
+              - link "Sites" [ref=e57] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/sites
+                - generic [ref=e58]: Sites
+            - listitem [ref=e59]:
+              - link "Zones" [ref=e60] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/zones
+                - generic [ref=e61]: Zones
+            - listitem [ref=e62]:
+              - link "Storage" [ref=e63] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/storage-locations
+                - generic [ref=e64]: Storage
+            - listitem [ref=e65]:
+              - link "Production profiles" [ref=e66] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/production-profiles
+                - generic [ref=e67]: Production profiles
+            - listitem [ref=e68]:
+              - link "Target profiles" [ref=e69] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/target-profiles
+                - generic [ref=e70]: Target profiles
+            - listitem [ref=e71]:
+              - link "Master data" [ref=e72] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/master-data
+                - generic [ref=e73]: Master data
+            - listitem [ref=e74]:
+              - link "Labels" [ref=e75] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/labels
+                - generic [ref=e76]: Labels
+        - generic [ref=e77]:
+          - list [ref=e78]:
+            - listitem [ref=e79]:
+              - button "Access control" [expanded] [ref=e80]:
+                - img [ref=e81]
+                - generic [ref=e84]: Access control
+                - img [ref=e85]
+          - list [ref=e88]:
+            - listitem [ref=e89]:
+              - link "Organization" [ref=e90] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/organization
+                - generic [ref=e91]: Organization
+            - listitem [ref=e92]:
+              - link "Users" [ref=e93] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/users
+                - generic [ref=e94]: Users
+            - listitem [ref=e95]:
+              - link "Roles" [ref=e96] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/roles
+                - generic [ref=e97]: Roles
+            - listitem [ref=e98]:
+              - link "Access reviews" [ref=e99] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/access-reviews
+                - generic [ref=e100]: Access reviews
+            - listitem [ref=e101]:
+              - link "Support sessions" [ref=e102] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/support-sessions
+                - generic [ref=e103]: Support sessions
+            - listitem [ref=e104]:
+              - link "Audit log" [ref=e105] [cursor=pointer]:
+                - /url: /ayam-norliza-pilot/settings/audit-log
+                - generic [ref=e106]: Audit log
+      - list [ref=e108]:
+        - listitem [ref=e109]:
+          - button "A admin admin@gmail.com" [ref=e110]:
+            - generic [ref=e112]: A
+            - generic [ref=e113]:
+              - generic [ref=e114]: admin
+              - generic [ref=e115]: admin@gmail.com
+            - img [ref=e116]
+      - button "Toggle Sidebar" [ref=e119]
+    - main [ref=e120]:
+      - generic [ref=e121]:
+        - button "Toggle Sidebar" [ref=e122]:
+          - img
+          - generic [ref=e123]: Toggle Sidebar
+        - generic [ref=e124]:
+          - generic [ref=e125]:
+            - generic [ref=e126]: AyamNorliza Pilot
+            - generic [ref=e127]: /
+            - generic [ref=e128]: Zones
+          - paragraph [ref=e129]: Farm setup workspace
+        - button "Toggle color theme" [ref=e130]:
+          - img
+          - img
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - generic [ref=e135]:
+            - generic [ref=e136]:
+              - heading "Biosecurity zones" [level=1] [ref=e137]
+              - generic [ref=e138]: "5"
+            - paragraph [ref=e139]: Track farm access areas by site, risk class, and operating status.
+          - button "Add zone" [ref=e140]:
+            - img
+            - text: Add zone
+        - generic [ref=e142]:
+          - generic [ref=e143]:
+            - generic [ref=e144]:
+              - img
+              - textbox "Search zones" [ref=e145]:
+                - /placeholder: Search zones or sites...
+            - generic [ref=e146]:
+              - img [ref=e147]
+              - combobox "Filter by site" [ref=e149]:
+                - img
+              - combobox [ref=e150]
+              - combobox "Filter by risk" [ref=e151]:
+                - img
+              - combobox [ref=e152]
+              - combobox "Filter by status" [ref=e153]:
+                - img
+              - combobox [ref=e154]
+          - table [ref=e157]:
+            - rowgroup [ref=e158]:
+              - row "Code Name Site Risk Status" [ref=e159]:
+                - columnheader "Code" [ref=e160]
+                - columnheader "Name" [ref=e161]
+                - columnheader "Site" [ref=e162]
+                - columnheader "Risk" [ref=e163]
+                - columnheader "Status" [ref=e164]
+            - rowgroup [ref=e165]:
+              - row "Z310527 Zone 310527 E2E310527 E2E Farm 310527 Medium Active" [ref=e166]:
+                - cell "Z310527" [ref=e167]:
+                  - code [ref=e168]: Z310527
+                - cell "Zone 310527" [ref=e169]
+                - cell "E2E310527 E2E Farm 310527" [ref=e170]:
+                  - generic [ref=e171]: E2E310527
+                  - generic [ref=e172]: E2E Farm 310527
+                - cell "Medium" [ref=e173]:
+                  - generic [ref=e174]: Medium
+                - cell "Active" [ref=e175]:
+                  - generic [ref=e176]: Active
+              - row "Z378289 Zone 378289 E2E378289 E2E Farm 378289 Medium Active" [ref=e177]:
+                - cell "Z378289" [ref=e178]:
+                  - code [ref=e179]: Z378289
+                - cell "Zone 378289" [ref=e180]
+                - cell "E2E378289 E2E Farm 378289" [ref=e181]:
+                  - generic [ref=e182]: E2E378289
+                  - generic [ref=e183]: E2E Farm 378289
+                - cell "Medium" [ref=e184]:
+                  - generic [ref=e185]: Medium
+                - cell "Active" [ref=e186]:
+                  - generic [ref=e187]: Active
+              - row "Z457387 Zone 457387 E2E457387 E2E Farm 457387 Medium Active" [ref=e188]:
+                - cell "Z457387" [ref=e189]:
+                  - code [ref=e190]: Z457387
+                - cell "Zone 457387" [ref=e191]
+                - cell "E2E457387 E2E Farm 457387" [ref=e192]:
+                  - generic [ref=e193]: E2E457387
+                  - generic [ref=e194]: E2E Farm 457387
+                - cell "Medium" [ref=e195]:
+                  - generic [ref=e196]: Medium
+                - cell "Active" [ref=e197]:
+                  - generic [ref=e198]: Active
+              - row "Z604312 Zone 604312 E2E604312 E2E Farm 604312 Medium Active" [ref=e199]:
+                - cell "Z604312" [ref=e200]:
+                  - code [ref=e201]: Z604312
+                - cell "Zone 604312" [ref=e202]
+                - cell "E2E604312 E2E Farm 604312" [ref=e203]:
+                  - generic [ref=e204]: E2E604312
+                  - generic [ref=e205]: E2E Farm 604312
+                - cell "Medium" [ref=e206]:
+                  - generic [ref=e207]: Medium
+                - cell "Active" [ref=e208]:
+                  - generic [ref=e209]: Active
+              - row "Z797862 Zone 797862 E2E797862 E2E Farm 797862 Medium Active" [ref=e210]:
+                - cell "Z797862" [ref=e211]:
+                  - code [ref=e212]: Z797862
+                - cell "Zone 797862" [ref=e213]
+                - cell "E2E797862 E2E Farm 797862" [ref=e214]:
+                  - generic [ref=e215]: E2E797862
+                  - generic [ref=e216]: E2E Farm 797862
+                - cell "Medium" [ref=e217]:
+                  - generic [ref=e218]: Medium
+                - cell "Active" [ref=e219]:
+                  - generic [ref=e220]: Active
+  - button "Open Next.js Dev Tools" [ref=e226] [cursor=pointer]:
+    - img [ref=e227]

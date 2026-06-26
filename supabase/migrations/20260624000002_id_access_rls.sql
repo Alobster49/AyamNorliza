@@ -147,6 +147,25 @@ alter table public.break_glass_events            enable row level security;
 alter table public.auth_security_events          enable row level security;
 alter table public.audit_log                     enable row level security;
 
+grant usage on schema public to authenticated;
+
+grant select, insert, update, delete on
+  public.organizations,
+  public.profiles,
+  public.organization_members,
+  public.member_scopes,
+  public.invitations,
+  public.access_reviews,
+  public.access_review_items,
+  public.support_sessions,
+  public.break_glass_events
+to authenticated;
+
+grant select on
+  public.auth_security_events,
+  public.audit_log
+to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- organizations
 -- ---------------------------------------------------------------------------

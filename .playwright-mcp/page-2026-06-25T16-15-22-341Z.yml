@@ -1,0 +1,126 @@
+- generic [active] [ref=e1]:
+  - main [ref=e4]:
+    - generic [ref=e5]:
+      - button "Toggle Sidebar" [ref=e6]:
+        - img
+        - generic [ref=e7]: Toggle Sidebar
+      - generic [ref=e10]: Storage
+      - button "Toggle color theme" [ref=e11]:
+        - img
+        - img
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - generic [ref=e17]:
+            - img [ref=e18]
+            - heading "Storage locations" [level=1] [ref=e21]
+            - generic [ref=e22]: "5"
+          - paragraph [ref=e23]: Track feed, medicine, egg, and general storage locations across sites.
+        - button "Add storage" [ref=e24]:
+          - img
+          - text: Add storage
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - generic [ref=e28]:
+            - img
+            - textbox "Search storage" [ref=e29]:
+              - /placeholder: Search storage, sites, zones...
+          - generic [ref=e30]:
+            - combobox "Filter by site" [ref=e31]:
+              - img
+            - combobox [ref=e32]
+            - combobox "Filter by zone" [ref=e33]:
+              - img
+            - combobox [ref=e34]
+            - combobox "Filter by type" [ref=e35]:
+              - img
+            - combobox [ref=e36]
+            - combobox "Filter by access" [ref=e37]:
+              - img
+            - combobox [ref=e38]
+            - combobox "Filter by status" [ref=e39]:
+              - img
+            - combobox [ref=e40]
+        - table [ref=e43]:
+          - rowgroup [ref=e44]:
+            - row "Code Name Site Zone Type Access Status" [ref=e45]:
+              - columnheader "Code" [ref=e46]
+              - columnheader "Name" [ref=e47]
+              - columnheader "Site" [ref=e48]
+              - columnheader "Zone" [ref=e49]
+              - columnheader "Type" [ref=e50]
+              - columnheader "Access" [ref=e51]
+              - columnheader "Status" [ref=e52]
+          - rowgroup [ref=e53]:
+            - row "S310527 Feed store 310527 E2E310527 E2E Farm 310527 No zone General Standard Active" [ref=e54]:
+              - cell "S310527" [ref=e55]:
+                - code [ref=e56]: S310527
+              - cell "Feed store 310527" [ref=e57]
+              - cell "E2E310527 E2E Farm 310527" [ref=e58]:
+                - generic [ref=e59]: E2E310527
+                - generic [ref=e60]: E2E Farm 310527
+              - cell "No zone" [ref=e61]
+              - cell "General" [ref=e62]:
+                - generic [ref=e63]: General
+              - cell "Standard" [ref=e64]:
+                - generic [ref=e65]: Standard
+              - cell "Active" [ref=e66]:
+                - generic [ref=e67]: Active
+            - row "S378289 Feed store 378289 E2E378289 E2E Farm 378289 No zone General Standard Active" [ref=e68]:
+              - cell "S378289" [ref=e69]:
+                - code [ref=e70]: S378289
+              - cell "Feed store 378289" [ref=e71]
+              - cell "E2E378289 E2E Farm 378289" [ref=e72]:
+                - generic [ref=e73]: E2E378289
+                - generic [ref=e74]: E2E Farm 378289
+              - cell "No zone" [ref=e75]
+              - cell "General" [ref=e76]:
+                - generic [ref=e77]: General
+              - cell "Standard" [ref=e78]:
+                - generic [ref=e79]: Standard
+              - cell "Active" [ref=e80]:
+                - generic [ref=e81]: Active
+            - row "S457387 Feed store 457387 E2E457387 E2E Farm 457387 No zone General Standard Active" [ref=e82]:
+              - cell "S457387" [ref=e83]:
+                - code [ref=e84]: S457387
+              - cell "Feed store 457387" [ref=e85]
+              - cell "E2E457387 E2E Farm 457387" [ref=e86]:
+                - generic [ref=e87]: E2E457387
+                - generic [ref=e88]: E2E Farm 457387
+              - cell "No zone" [ref=e89]
+              - cell "General" [ref=e90]:
+                - generic [ref=e91]: General
+              - cell "Standard" [ref=e92]:
+                - generic [ref=e93]: Standard
+              - cell "Active" [ref=e94]:
+                - generic [ref=e95]: Active
+            - row "S604312 Feed store 604312 E2E604312 E2E Farm 604312 No zone General Standard Active" [ref=e96]:
+              - cell "S604312" [ref=e97]:
+                - code [ref=e98]: S604312
+              - cell "Feed store 604312" [ref=e99]
+              - cell "E2E604312 E2E Farm 604312" [ref=e100]:
+                - generic [ref=e101]: E2E604312
+                - generic [ref=e102]: E2E Farm 604312
+              - cell "No zone" [ref=e103]
+              - cell "General" [ref=e104]:
+                - generic [ref=e105]: General
+              - cell "Standard" [ref=e106]:
+                - generic [ref=e107]: Standard
+              - cell "Active" [ref=e108]:
+                - generic [ref=e109]: Active
+            - row "S797862 Feed store 797862 E2E797862 E2E Farm 797862 No zone General Standard Active" [ref=e110]:
+              - cell "S797862" [ref=e111]:
+                - code [ref=e112]: S797862
+              - cell "Feed store 797862" [ref=e113]
+              - cell "E2E797862 E2E Farm 797862" [ref=e114]:
+                - generic [ref=e115]: E2E797862
+                - generic [ref=e116]: E2E Farm 797862
+              - cell "No zone" [ref=e117]
+              - cell "General" [ref=e118]:
+                - generic [ref=e119]: General
+              - cell "Standard" [ref=e120]:
+                - generic [ref=e121]: Standard
+              - cell "Active" [ref=e122]:
+                - generic [ref=e123]: Active
+  - button "Open Next.js Dev Tools" [ref=e129] [cursor=pointer]:
+    - img [ref=e130]
