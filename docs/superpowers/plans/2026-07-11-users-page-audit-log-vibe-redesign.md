@@ -52,7 +52,7 @@ Files NOT modified (kept for future re-use):
 **Interfaces:**
 - Consumes: nothing (leaf module).
 - Produces:
-  - Type `MemberRow = { id: string; userId: string; displayName: string; email: string; role: Role; status: MemberStatus; startsAt: string; }` where `Role` re-exports from `@/lib/auth/permissions` and `MemberStatus = "invited" | "active" | "suspended" | "expired"`.
+  - Type `MemberRow = { id: string; userId: string; displayName: string; role: Role; status: MemberStatus; startsAt: string; }` where `Role` re-exports from `@/lib/auth/permissions` and `MemberStatus = "invited" | "active" | "suspended" | "expired"`. **No email field** — pre-flight decision: we render `userId` as the copyable identifier and label the Sheet field "User id" rather than "Email", because the public Profile has no email column.
   - Type `MemberBucket = { key: string; label: string; rows: MemberRow[] }`.
   - Function `formatJoinBucketLabel(date: Date, now?: Date): string` returning `"Today" | "Yesterday" | "Earlier this week" | "Earlier this month" | <locale date>`.
   - Function `bucketizeMembers(rows: MemberRow[], now?: Date): MemberBucket[]` — newest bucket first.
@@ -74,7 +74,6 @@ function row(partial: Partial<MemberRow> & { startsAt: string; id: string }): Me
     id: partial.id,
     userId: partial.userId ?? `user-${partial.id}`,
     displayName: partial.displayName ?? `Name ${partial.id}`,
-    email: partial.email ?? `${partial.id}@example.com`,
     role: partial.role ?? "caretaker",
     status: partial.status ?? "active",
     startsAt: partial.startsAt,
@@ -142,7 +141,6 @@ export type MemberRow = {
   id: string;
   userId: string;
   displayName: string;
-  email: string;
   role: Role;
   status: MemberStatus;
   startsAt: string;
@@ -247,9 +245,9 @@ describe("classifyMemberStatus", () => {
 
 describe("filterMembers", () => {
   const baseRows: MemberRow[] = [
-    row({ id: "a", startsAt: "2026-07-11T09:00:00Z", role: "owner", status: "active", displayName: "Ada Lovelace", email: "ada@example.com" }),
-    row({ id: "b", startsAt: "2026-07-10T09:00:00Z", role: "supervisor", status: "invited", displayName: "Bob", email: "bob@example.com" }),
-    row({ id: "c", startsAt: "2026-07-09T09:00:00Z", role: "caretaker", status: "suspended", displayName: "Cici", email: "cici@example.com" }),
+    row({ id: "a", startsAt: "2026-07-11T09:00:00Z", role: "owner", status: "active", displayName: "Ada Lovelace", userId: "u-1" }),
+    row({ id: "b", startsAt: "2026-07-10T09:00:00Z", role: "supervisor", status: "invited", displayName: "Bob", userId: "u-2" }),
+    row({ id: "c", startsAt: "2026-07-09T09:00:00Z", role: "caretaker", status: "suspended", displayName: "Cici", userId: "u-3" }),
   ];
   const emptyIndex = new Map<string, string>();
 
@@ -268,8 +266,8 @@ describe("filterMembers", () => {
     expect(result.map((r) => r.id)).toEqual(["b"]);
   });
 
-  it("filters by query across name + email", () => {
-    const result = filterMembers({ rows: baseRows, role: "", status: "", query: "ada@", scope: "", scopeIndex: emptyIndex });
+  it("filters by query across name + userId", () => {
+    const result = filterMembers({ rows: baseRows, role: "", status: "", query: "u-1", scope: "", scopeIndex: emptyIndex });
     expect(result.map((r) => r.id)).toEqual(["a"]);
   });
 
@@ -327,7 +325,7 @@ export function filterMembers(opts: {
     if (role && r.role !== role) return false;
     if (status && r.status !== status) return false;
     if (q) {
-      const hay = `${r.displayName} ${r.email}`.toLowerCase();
+      const hay = `${r.displayName} ${r.userId}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
     if (s) {
@@ -552,26 +550,24 @@ import { render, screen } from "@testing-library/react";
 import { UsersPageClient } from "@/features/identity-access/components/users-page-client";
 import type { MemberRow } from "@/features/identity-access/lib/users-page-model";
 
-const rows: MemberRow[] = [
-  {
-    id: "m-1",
-    userId: "u-1",
-    displayName: "Ada Lovelace",
-    email: "ada@example.com",
-    role: "owner",
-    status: "active",
-    startsAt: "2026-07-11T09:00:00.000Z",
-  },
-  {
-    id: "m-2",
-    userId: "u-2",
-    displayName: "Bob",
-    email: "bob@example.com",
-    role: "supervisor",
-    status: "invited",
-    startsAt: "2026-07-10T09:00:00.000Z",
-  },
-];
+  const rows: MemberRow[] = [
+    {
+      id: "m-1",
+      userId: "u-1",
+      displayName: "Ada Lovelace",
+      role: "owner",
+      status: "active",
+      startsAt: "2026-07-11T09:00:00.000Z",
+    },
+    {
+      id: "m-2",
+      userId: "u-2",
+      displayName: "Bob",
+      role: "supervisor",
+      status: "invited",
+      startsAt: "2026-07-10T09:00:00.000Z",
+    },
+  ];
 
 describe("<UsersPageClient />", () => {
   it("renders the filter card with the expected labels", () => {
@@ -594,10 +590,10 @@ describe("<UsersPageClient />", () => {
       />,
     );
     expect(screen.getByText("Filters")).toBeTruthy();
-    expect(screen.getByPlaceholderText(/Search name or email/i)).toBeTruthy();
+    expect(screen.getByPlaceholderText(/Search name or id/i)).toBeTruthy();
   });
 
-  it("renders a member row with the displayName and email", () => {
+  it("renders a member row with the displayName and userId", () => {
     render(
       <UsersPageClient
         rows={rows}
@@ -611,7 +607,7 @@ describe("<UsersPageClient />", () => {
       />,
     );
     expect(screen.getByText("Ada Lovelace")).toBeTruthy();
-    expect(screen.getByText("ada@example.com")).toBeTruthy();
+    expect(screen.getByText("u-1")).toBeTruthy();
   });
 });
 ```
@@ -633,12 +629,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChevronRight,
   Filter,
-  Mail,
   Search,
   ShieldAlert,
   Tag,
   User as UserIcon,
-  Users as UsersIcon,
   X,
 } from "lucide-react";
 
@@ -900,7 +894,7 @@ export function UsersPageClient({ rows, scopeIndex, invitations, filters, active
             <Input
               value={active.query}
               onChange={(e) => updateParam("query", e.target.value || null)}
-              placeholder="Search name or email…"
+              placeholder="Search name or user id…"
               className="h-8 pl-7 text-xs"
               spellCheck={false}
             />
@@ -993,8 +987,8 @@ export function UsersPageClient({ rows, scopeIndex, invitations, filters, active
                           </div>
                           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1">
-                              <Mail className="size-3" aria-hidden />
-                              <Copyable value={row.email} />
+                              <UserIcon className="size-3" aria-hidden />
+                              <Copyable value={row.userId} />
                             </span>
                             <span className="truncate italic">
                               {scope}
@@ -1101,10 +1095,10 @@ function DetailPanel({
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-        <Field label="Email">
+        <Field label="User id">
           <div className="flex items-center gap-1 text-sm">
-            <Mail className="size-3 text-muted-foreground" aria-hidden />
-            <Copyable value={row.email} />
+            <UserIcon className="size-3 text-muted-foreground" aria-hidden />
+            <Copyable value={row.userId} />
           </div>
         </Field>
         <div className="grid grid-cols-2 gap-4">
@@ -1207,7 +1201,7 @@ git commit -m "feat(users-page): client component with filter card, timeline, sh
 - Page render shape:
   - Reads `searchParams` for `role | status | query | scope | row`.
   - Calls `listMembers(orgId, { role, status, q: query, ... })`, `listInvitations(orgId)`, `listMemberScopes(orgId)`, `getOrganizationBySlug(orgSlug)`.
-  - For each member, fetches the latest `Profile` (`getProfile(userId)`) for `displayName` and `email`.
+  - For each member, fetches the latest `Profile` (`getProfile(userId)`) for `displayName`. The copyable identifier on each row is `userId`, not email.
   - Builds the `MemberRow[]` and the scope index map `{ memberId → "Site A · Zones 1-4" }`.
   - Lazily fetches `recentActivity` for the sheet by calling `listAuditLog({ actorUserId: selected.userId, limit: 5 })` only when `rowId` matches a member.
   - Renders header (`Users` icon + title + subtitle + a 3-stat tile row drawn in the page) + `<UsersPageClient>`.
@@ -1290,7 +1284,7 @@ export default async function RolesPage({
     scopeIndex.set(m.id, labels.join(", "));
   }
 
-  // Build MemberRow[] by joining members → profiles (for display_name + email).
+  // Build MemberRow[] by joining members → profiles (for displayName).
   const userIds = Array.from(new Set(members.map((m) => m.userId)));
   const profiles = await Promise.all(userIds.map((id) => getProfile(id)));
   const profileByUser = new Map<string, NonNullable<Awaited<ReturnType<typeof getProfile>>>>();
@@ -1306,7 +1300,6 @@ export default async function RolesPage({
       id: m.id,
       userId: m.userId,
       displayName: profile.displayName,
-      email: deriveEmail(profile) ?? m.userId,
       role: m.role as Role,
       status: m.status as MemberStatus,
       startsAt: m.startsAt,
@@ -1391,11 +1384,6 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-function deriveEmail(profile: { contactPreferences: Record<string, unknown> }): string | null {
-  const v = profile.contactPreferences?.["email"];
-  return typeof v === "string" ? v : null;
-}
 ```
 
 - [ ] **Step 6.2: Type-check**
@@ -1442,7 +1430,7 @@ Verify visually:
 - Header shows `Users` title and the three stat tiles (`Members`, `Active`, `Pending invites`).
 - Filter card renders with `Filters` label, role select, status select, scope text input, search input.
 - Timeline renders the seeded members grouped by join date bucket.
-- Clicking a row toggles the Sheet; Sheet shows email, role, status, scope, recent activity (or empty state).
+- Clicking a row toggles the Sheet; Sheet shows user id, role, status, scope, recent activity (or empty state).
 - Editing role/status/query/scope updates the URL and re-filters.
 - `Clear (n)` button removes all active filters except `row=`.
 
@@ -1469,6 +1457,8 @@ git commit -m "test(e2e): smoke spec for users page"
 ---
 
 ## Self-Review
+
+**Pre-flight fix applied:** user opted to display `userId` everywhere and relabel the Sheet field from "Email" to "User id" (no `Profile.email` column exists). The plan text reflects this — there is no `MemberRow.email` field anywhere in Tasks 1–7.
 
 **1. Spec coverage**
 
