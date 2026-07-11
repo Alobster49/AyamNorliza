@@ -66,17 +66,43 @@ export async function getProfile(userId: string): Promise<Profile | null> {
     : null;
 }
 
-export async function listMembers(organizationId: string): Promise<OrganizationMember[]> {
+export async function listMembers(
+  organizationId: string,
+  opts: { role?: string; status?: string; q?: string } = {},
+): Promise<OrganizationMember[]> {
   const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("organization_members")
     .select(
       "id, organization_id, user_id, role, status, starts_at, expires_at, invited_by, sponsor_id, client_operation_id",
     )
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
+
+  if (opts.role) query = query.eq("role", opts.role);
+  if (opts.status) query = query.eq("status", opts.status);
+
+  const { data, error } = await query;
   if (error) throw error;
-  return (data ?? []).map(rowToMember);
+  const rows = (data ?? []).map(rowToMember);
+  if (!opts.q) return rows;
+  const q = opts.q.trim().toLowerCase();
+  if (q.length === 0) return rows;
+  // Substring filter against profiles.display_name joined client-side; avoids a DB join here.
+  // For 0..500-member orgs this is cheap; revisit if perf becomes an issue.
+  const userIds = Array.from(new Set(rows.map((r) => r.userId)));
+  if (userIds.length === 0) return rows;
+  const { data: profiles, error: pErr } = await supabase
+    .from("profiles")
+    .select("user_id, display_name, contact_preferences")
+    .in("user_id", userIds);
+  if (pErr) throw pErr;
+  const matchingIds = new Set<string>();
+  for (const p of profiles ?? []) {
+    const display = (p.display_name ?? "").toLowerCase();
+    if (display.includes(q)) matchingIds.add(p.user_id);
+  }
+  return rows.filter((r) => matchingIds.has(r.userId));
 }
 
 export async function listMemberScopes(organizationId: string): Promise<MemberScope[]> {
