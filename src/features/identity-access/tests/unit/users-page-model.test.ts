@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { ROLES } from "@/lib/auth/permissions";
 import {
   bucketizeMembers,
   formatJoinBucketLabel,
   type MemberRow,
+  type Role,
 } from "@/features/identity-access/lib/users-page-model";
 
 const now = new Date("2026-07-11T12:00:00.000Z");
@@ -50,14 +52,43 @@ describe("bucketizeMembers", () => {
     const buckets = bucketizeMembers([older, yesterday, today2, today], now);
 
     expect(buckets).toHaveLength(3);
-    expect(buckets[0].label).toBe("Today");
-    expect(buckets[0].rows.map((r) => r.id)).toEqual(["a", "b"]);
-    expect(buckets[1].label).toBe("Yesterday");
-    expect(buckets[1].rows.map((r) => r.id)).toEqual(["c"]);
-    expect(buckets[2].label).toMatch(/Jan/);
+    expect(buckets[0]!.label).toBe("Today");
+    expect(buckets[0]!.rows.map((r) => r.id)).toEqual(["a", "b"]);
+    expect(buckets[1]!.label).toBe("Yesterday");
+    expect(buckets[1]!.rows.map((r) => r.id)).toEqual(["c"]);
+    expect(buckets[2]!.label).toMatch(/Jan/);
   });
 
   it("returns an empty array for empty input", () => {
     expect(bucketizeMembers([], now)).toEqual([]);
+  });
+
+  it("orders buckets chronologically newest-first even when string comparison would disagree (01-02 vs 01-10)", () => {
+    const early = row({ id: "x", startsAt: "2026-01-02T00:00:00.000Z" });
+    const late = row({ id: "y", startsAt: "2026-01-10T00:00:00.000Z" });
+
+    const buckets = bucketizeMembers([early, late], now);
+
+    expect(buckets).toHaveLength(2);
+    expect(buckets[0]!.key).toBe("2026-01-10");
+    expect(buckets[0]!.rows.map((r) => r.id)).toEqual(["y"]);
+    expect(buckets[1]!.key).toBe("2026-01-02");
+    expect(buckets[1]!.rows.map((r) => r.id)).toEqual(["x"]);
+  });
+
+  it("emits zero-padded UTC day keys (YYYY-MM-DD)", () => {
+    const r = row({ id: "p", startsAt: "2026-03-05T07:30:00.000Z" });
+
+    const buckets = bucketizeMembers([r], now);
+
+    expect(buckets).toHaveLength(1);
+    expect(buckets[0]!.key).toBe("2026-03-05");
+  });
+});
+
+describe("Role re-export", () => {
+  it("re-exports Role as a literal-union type assignable to ROLES entries", () => {
+    const sample: Role = "caretaker";
+    expect(ROLES).toContain(sample);
   });
 });

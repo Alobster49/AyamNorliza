@@ -1,4 +1,5 @@
 import type { Role } from "@/lib/auth/permissions";
+export type { Role };
 
 export type MemberStatus = "invited" | "active" | "suspended" | "expired";
 
