@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ROLES } from "@/lib/auth/permissions";
 import {
   bucketizeMembers,
+  classifyMemberStatus,
+  filterMembers,
   formatJoinBucketLabel,
   type MemberRow,
   type Role,
@@ -90,5 +92,54 @@ describe("Role re-export", () => {
   it("re-exports Role as a literal-union type assignable to ROLES entries", () => {
     const sample: Role = "caretaker";
     expect(ROLES).toContain(sample);
+  });
+});
+
+describe("classifyMemberStatus", () => {
+  it("maps each member status to a labelled tone", () => {
+    expect(classifyMemberStatus("active")).toEqual({ label: "Active", tone: "ok" });
+    expect(classifyMemberStatus("invited")).toEqual({ label: "Invited", tone: "warn" });
+    expect(classifyMemberStatus("suspended")).toEqual({ label: "Suspended", tone: "danger" });
+    expect(classifyMemberStatus("expired")).toEqual({ label: "Expired", tone: "neutral" });
+  });
+});
+
+describe("filterMembers", () => {
+  const baseRows: MemberRow[] = [
+    row({ id: "a", startsAt: "2026-07-11T09:00:00Z", role: "owner", status: "active", displayName: "Ada Lovelace", userId: "u-1" }),
+    row({ id: "b", startsAt: "2026-07-10T09:00:00Z", role: "supervisor", status: "invited", displayName: "Bob", userId: "u-2" }),
+    row({ id: "c", startsAt: "2026-07-09T09:00:00Z", role: "caretaker", status: "suspended", displayName: "Cici", userId: "u-3" }),
+  ];
+  const emptyIndex = new Map<string, string>();
+
+  it("returns all rows when no filters are active", () => {
+    const result = filterMembers({ rows: baseRows, role: "", status: "", query: "", scope: "", scopeIndex: emptyIndex });
+    expect(result).toHaveLength(3);
+  });
+
+  it("filters by role", () => {
+    const result = filterMembers({ rows: baseRows, role: "supervisor", status: "", query: "", scope: "", scopeIndex: emptyIndex });
+    expect(result.map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("filters by status", () => {
+    const result = filterMembers({ rows: baseRows, role: "", status: "invited", query: "", scope: "", scopeIndex: emptyIndex });
+    expect(result.map((r) => r.id)).toEqual(["b"]);
+  });
+
+  it("filters by query across name + userId", () => {
+    const result = filterMembers({ rows: baseRows, role: "", status: "", query: "u-1", scope: "", scopeIndex: emptyIndex });
+    expect(result.map((r) => r.id)).toEqual(["a"]);
+  });
+
+  it("filters by scope index when member row has matching scoped text", () => {
+    const index = new Map<string, string>([["a", "Site A · Zones 1-4"]]);
+    const result = filterMembers({ rows: baseRows, role: "", status: "", query: "", scope: "site a", scopeIndex: index });
+    expect(result.map((r) => r.id)).toEqual(["a"]);
+  });
+
+  it("applies multiple filters as AND", () => {
+    const result = filterMembers({ rows: baseRows, role: "supervisor", status: "active", query: "", scope: "", scopeIndex: emptyIndex });
+    expect(result).toEqual([]);
   });
 });

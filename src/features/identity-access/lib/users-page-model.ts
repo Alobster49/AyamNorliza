@@ -63,3 +63,45 @@ export function bucketizeMembers(
   }
   return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
 }
+
+export function classifyMemberStatus(status: MemberStatus): {
+  label: string;
+  tone: "neutral" | "ok" | "warn" | "danger";
+} {
+  switch (status) {
+    case "active":
+      return { label: "Active", tone: "ok" };
+    case "invited":
+      return { label: "Invited", tone: "warn" };
+    case "suspended":
+      return { label: "Suspended", tone: "danger" };
+    case "expired":
+      return { label: "Expired", tone: "neutral" };
+  }
+}
+
+export function filterMembers(opts: {
+  rows: ReadonlyArray<MemberRow>;
+  role: string;
+  status: string;
+  query: string;
+  scope: string;
+  scopeIndex: ReadonlyMap<string, string>;
+}): MemberRow[] {
+  const { rows, role, status, query, scope, scopeIndex } = opts;
+  const q = query.trim().toLowerCase();
+  const s = scope.trim().toLowerCase();
+  return rows.filter((r) => {
+    if (role && r.role !== role) return false;
+    if (status && r.status !== status) return false;
+    if (q) {
+      const hay = `${r.displayName} ${r.userId}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (s) {
+      const scopedText = scopeIndex.get(r.id) ?? "";
+      if (!scopedText.toLowerCase().includes(s)) return false;
+    }
+    return true;
+  });
+}
