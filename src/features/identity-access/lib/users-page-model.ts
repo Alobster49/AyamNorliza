@@ -18,13 +18,13 @@ export type MemberBucket = {
 };
 
 function toUtcDay(d: Date): string {
-  return `${d.getUTCFullYear()}-${d.getUTCMonth() + 1}-${d.getUTCDate()}`;
+  return d.toISOString().slice(0, 10);
 }
 
-function daysBetween(a: Date, b: Date): number {
-  const aDay = Date.UTC(a.getUTCFullYear(), a.getUTCMonth(), a.getUTCDate());
-  const bDay = Date.UTC(b.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate());
-  return Math.round((bDay - aDay) / 86_400_000);
+function daysBetween(date: Date, now: Date): number {
+  const dateDay = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  const nowDay = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+  return Math.round((nowDay - dateDay) / 86_400_000);
 }
 
 export function formatJoinBucketLabel(date: Date, now: Date = new Date()): string {
@@ -58,7 +58,7 @@ export function bucketizeMembers(
     groups.set(key, bucket);
   }
   for (const bucket of groups.values()) {
-    bucket.rows.sort((a, b) => (a.startsAt < b.startsAt ? 1 : -1));
+    bucket.rows.sort((a, b) => b.startsAt.localeCompare(a.startsAt));
   }
-  return Array.from(groups.values()).sort((a, b) => (a.key < b.key ? 1 : -1));
+  return Array.from(groups.values()).sort((a, b) => b.key.localeCompare(a.key));
 }
