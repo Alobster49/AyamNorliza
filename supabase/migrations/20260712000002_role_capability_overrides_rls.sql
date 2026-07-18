@@ -142,13 +142,13 @@ as $$
     from base_matrix b
     left join overrides o
       on o.role = b.role and o.capability = b.capability
+  ),
+  per_role as (
+    select role, jsonb_object_agg(capability, granted) as caps
+    from merged
+    group by role
   )
-  select jsonb_object_agg(
-    role,
-    jsonb_object_agg(capability, granted)
-      filter (where role is not null)
-  ) from merged
-  group by role;
+  select jsonb_object_agg(role, caps) from per_role;
 $$;
 
 -- We need a single aggregate even when the matrix is empty; coalesce to {}.

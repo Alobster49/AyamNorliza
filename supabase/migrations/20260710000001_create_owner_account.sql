@@ -33,7 +33,7 @@ insert into auth.users (
   'authenticated',
   'authenticated',
   'owner@gmail.com',
-  crypt('Ayamnorliza', gen_salt('bf')),
+  extensions.crypt('Ayamnorliza', extensions.gen_salt('bf')),
   now(),
   '',
   '',
@@ -50,8 +50,8 @@ insert into auth.users (
   now(),
   false,
   false
-) on conflict (email) do update
-  set encrypted_password = crypt('Ayamnorliza', gen_salt('bf')),
+) on conflict (email) where is_sso_user = false do update
+  set encrypted_password = extensions.crypt('Ayamnorliza', extensions.gen_salt('bf')),
       email_confirmed_at = now(),
       updated_at = now();
 

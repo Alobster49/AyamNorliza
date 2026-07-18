@@ -22,33 +22,10 @@
 
 begin;
 
--- ============================================================================
--- DROP TRIGGERS for unused tables
--- ============================================================================
-drop trigger if exists code_sets_set_updated_at on public.code_sets;
-drop trigger if exists code_values_set_updated_at on public.code_values;
-drop trigger if exists flock_plans_set_updated_at on public.flock_plans;
-drop trigger if exists flocks_set_updated_at on public.flocks;
-drop trigger if exists flocks_status_transition on public.flocks;
-drop trigger if exists harvest_plans_set_updated_at on public.harvest_plans;
-drop trigger if exists house_areas_set_updated_at on public.house_areas;
-drop trigger if exists houses_set_updated_at on public.houses;
-drop trigger if exists houses_status_transition on public.houses;
-drop trigger if exists inspection_template_versions_updated_at on public.inspection_template_versions;
-drop trigger if exists inspection_templates_updated_at on public.inspection_templates;
-drop trigger if exists inspections_updated_at on public.inspections;
-drop trigger if exists inspections_no_locked_update on public.inspections;
-drop trigger if exists period_closes_updated_at on public.period_closes;
-drop trigger if exists period_closes_no_locked_update on public.period_closes;
-drop trigger if exists production_profiles_set_updated_at on public.production_profiles;
-drop trigger if exists shifts_updated_at on public.shifts;
-drop trigger if exists storage_locations_set_updated_at on public.storage_locations;
-drop trigger if exists sync_operations_processed_at on public.sync_operations;
-drop trigger if exists target_curve_points_approved_immutable on public.target_curve_points;
-drop trigger if exists target_curve_points_set_updated_at on public.target_curve_points;
-drop trigger if exists target_profile_versions_immutable on public.target_profile_versions;
-drop trigger if exists target_profile_versions_set_updated_at on public.target_profile_versions;
-drop trigger if exists target_profiles_set_updated_at on public.target_profiles;
+-- Triggers on the tables below are dropped implicitly when their owning
+-- table is dropped further down, so no separate DROP TRIGGER statements are
+-- needed here (DROP TRIGGER ... ON public.x errors if x doesn't exist,
+-- unlike DROP TABLE IF EXISTS).
 
 -- ============================================================================
 -- DROP FUNCTIONS for unused tables
