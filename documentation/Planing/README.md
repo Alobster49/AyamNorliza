@@ -34,9 +34,9 @@ This folder breaks down the complete blueprint into individual phase-aligned mar
 | File | Module | Source lines |
 |---|---|---|
 | `01-MOD-01-tenant-identity-access.md` | MOD-01 Tenant, identity and access management | 485-608 |
-| `02-MOD-02-farm-structure-master-data.md` | MOD-02 Farm structure, houses and master data | 609-716 |
-| `03-MOD-03-flock-planning-lifecycle.md` | MOD-03 Flock planning and lifecycle | 717-861 |
-| `04-MOD-04-daily-operations-rounds.md` | MOD-04 Daily operations, rounds, shifts and period close | 862-991 |
+| `02-MOD-02-farm-structure-master-data.md` | ~~MOD-02 Farm structure, houses and master data~~ |
+| `03-MOD-03-flock-planning-lifecycle.md` | ~~MOD-03 Flock planning and lifecycle~~ |
+| `04-MOD-04-daily-operations-rounds.md` | ~~MOD-04 Daily operations, rounds, shifts and period close~~ |
 | `05-MOD-05-environment-iot-control.md` | MOD-05 Environment, IoT monitoring and safe control | 992-1106 |
 | `06-MOD-06-alerts-incidents-emergency.md` | MOD-06 Alerts, incidents and emergency management | 1107-1253 |
 | `07-MOD-07-feed-water-nutrition.md` | MOD-07 Feed, water and nutrition operations | 1254-1371 |
@@ -61,8 +61,8 @@ This folder breaks down the complete blueprint into individual phase-aligned mar
 | Phase | Read | Build |
 |---|---|---|
 | Phase 0 - Discovery and operating-model approval | `00-foundation.md`, `operations-roadmap-workflows-screens-delivery.md` | - |
-| Phase 1 - Platform foundation | both `shared/` files | `01-MOD-01`, `02-MOD-02` |
-| Phase 2 - Operational MVP | both `shared/` files | `03-MOD-03`, `04-MOD-04`, `07-MOD-07`, `08-MOD-08`, `09-MOD-09`, `10-MOD-10`, `11-MOD-11`, `12-MOD-12`, `13-MOD-13`, `17-MOD-17` |
+| Phase 1 - Platform foundation | both `shared/` files | `01-MOD-01` |
+| Phase 2 - Operational MVP | both `shared/` files | `07-MOD-07`, `08-MOD-08`, `09-MOD-09`, `10-MOD-10`, `11-MOD-11`, `12-MOD-12`, `13-MOD-13`, `17-MOD-17` |
 | Phase 3 - Connected pilot | both `shared/` files | `05-MOD-05`, `06-MOD-06`, `14-MOD-14`, `20-MOD-20` |
 | Phase 4 - Production hardening | both `shared/` files | `15-MOD-15`, `16-MOD-16`, `18-MOD-18`, `19-MOD-19` |
 

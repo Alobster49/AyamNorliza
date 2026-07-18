@@ -39,6 +39,7 @@
 
   --font-ui: Poppins, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-code: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  --font-display: "DM Serif Display", "Iowan Old Style", Georgia, "Times New Roman", serif;
 
   --color-bg: var(--background);
   --color-surface: var(--card);
@@ -46,6 +47,7 @@
   --color-fg: var(--foreground);
   --color-fg-muted: var(--muted-foreground);
   --color-accent: var(--primary);
+  --editorial-accent: oklch(0.65 0.19 50);
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-danger: var(--destructive);
@@ -253,6 +255,41 @@ button[disabled] {
 .auth-form__error,
 [role="alert"] {
   color: var(--destructive);
+}
+
+/* ---- Editorial typography (Roles page) ---- */
+@font-face {
+  font-family: "DM Serif Display";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("https://fonts.gstatic.com/s/dmserifdisplay/v15/-nFnOHM81r4j6k0gjAW3mujVU2B2K_d709jy92k.woff2") format("woff2");
+}
+
+.font-display {
+  font-family: var(--font-display);
+  font-feature-settings: "ss01", "lnum";
+}
+
+.animate-fade-in {
+  animation: editorial-fade-in 400ms ease-out both;
+}
+
+@keyframes editorial-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
 }
 
 /* ---- Tables ---- */

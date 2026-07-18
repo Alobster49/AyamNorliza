@@ -16,19 +16,7 @@ grant select, insert, update, delete on
   public.access_reviews,
   public.access_review_items,
   public.support_sessions,
-  public.break_glass_events,
-  public.sites,
-  public.biosecurity_zones,
-  public.houses,
-  public.house_areas,
-  public.storage_locations,
-  public.production_profiles,
-  public.target_profiles,
-  public.target_profile_versions,
-  public.target_curve_points,
-  public.code_sets,
-  public.code_values,
-  public.qr_identifiers
+  public.break_glass_events
 to authenticated;
 
 grant select on

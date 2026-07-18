@@ -47,7 +47,12 @@ export function LoginForm({
   }
 
   return (
-    <form onSubmit={onSubmit} className={cn("flex flex-col gap-6", className)}>
+    <form
+      onSubmit={onSubmit}
+      method="post"
+      action=""
+      className={cn("flex flex-col gap-6", className)}
+    >
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
           <h1 className="text-2xl font-bold">Sign in to your account</h1>
@@ -85,17 +90,30 @@ export function LoginForm({
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
         <Field>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setEmail("admin@gmail.com");
-              setPassword("Password123!");
-            }}
-            className="text-xs"
-          >
-            Dev: Fill admin credentials
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEmail("admin@gmail.com");
+                setPassword("Password123!");
+              }}
+              className="flex-1 text-xs"
+            >
+              Dev: Admin
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setEmail("owner@gmail.com");
+                setPassword("Ayamnorliza");
+              }}
+              className="flex-1 text-xs"
+            >
+              Dev: Owner
+            </Button>
+          </div>
         </Field>
         <Field>
           <Button type="submit" disabled={pending}>

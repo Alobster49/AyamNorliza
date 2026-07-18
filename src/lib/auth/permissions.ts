@@ -4,10 +4,19 @@
  * Roles are managed collections of capabilities. A role never widens the
  * caller's own delegated authority (see MOD-01 §6.7).
  *
- * This module is pure (no DB calls). The matrix is the single source of
- * truth for which role may perform which action. Server Actions check
- * `can(role, capability)` before mutating, and RLS independently enforces
- * the same matrix in the database.
+ * The canonical matrix below is the **default** role/capability set;
+ * organization owners can override individual capabilities on top of this
+ * via the `role_capability_overrides` table (resolved by the
+ * `effective_capabilities` DB helper). On the server-side hot path the
+ * canonical matrix is consulted via `can(role, capability)`, which is
+ * intentionally synchronous and DB-free so every Server Action can check
+ * permission without paying for a round-trip. The DB-backed override
+ * resolution is exposed through `canForOrg(...)` and is consulted by the
+ * Roles & Permissions settings UI to render the resolved matrix; future
+ * inline enforcement can swap callers to `canForOrg` without changing
+ * signatures.
+ *
+ * RLS independently enforces the same defaults in the database.
  */
 
 export const ROLES = [
@@ -44,20 +53,6 @@ export const CAPABILITIES = [
   "audit_log.read",
   "auth_security.read",
   "step_up.reauth",
-  "farm_structure.manage",
-  "master_data.manage",
-  "target_profile.manage",
-  "target_profile.approve",
-  "label.manage",
-  "flock_lifecycle.manage",
-  "flock_lifecycle.approve",
-  "flock_lifecycle.record",
-  "flock_lifecycle.close",
-  "daily_operations.configure",
-  "daily_operations.record",
-  "daily_operations.review",
-  "daily_operations.close",
-  "daily_operations.correct",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -79,20 +74,6 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
     "audit_log.read",
     "auth_security.read",
     "step_up.reauth",
-    "farm_structure.manage",
-    "master_data.manage",
-    "target_profile.manage",
-    "target_profile.approve",
-    "label.manage",
-    "flock_lifecycle.manage",
-    "flock_lifecycle.approve",
-    "flock_lifecycle.record",
-    "flock_lifecycle.close",
-    "daily_operations.configure",
-    "daily_operations.record",
-    "daily_operations.review",
-    "daily_operations.close",
-    "daily_operations.correct",
   ]),
   farm_manager: new Set<Capability>([
     "membership.invite",
@@ -100,54 +81,22 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
     "access_review.run",
     "audit.read",
     "step_up.reauth",
-    "farm_structure.manage",
-    "master_data.manage",
-    "target_profile.manage",
-    "target_profile.approve",
-    "label.manage",
-    "flock_lifecycle.manage",
-    "flock_lifecycle.approve",
-    "flock_lifecycle.record",
-    "flock_lifecycle.close",
-    "daily_operations.configure",
-    "daily_operations.record",
-    "daily_operations.review",
-    "daily_operations.close",
-    "daily_operations.correct",
   ]),
   supervisor: new Set<Capability>([
     "audit.read",
     "step_up.reauth",
-    "flock_lifecycle.record",
-    "daily_operations.record",
-    "daily_operations.review",
-    "daily_operations.correct",
   ]),
-  caretaker: new Set<Capability>(["flock_lifecycle.record", "daily_operations.record"]),
+  caretaker: new Set<Capability>([]),
   veterinarian: new Set<Capability>([
     "step_up.reauth",
-    "target_profile.manage",
-    "target_profile.approve",
-    "flock_lifecycle.approve",
-    "flock_lifecycle.record",
-    "daily_operations.record",
-    "daily_operations.review",
   ]),
   biosecurity_qa: new Set<Capability>([
     "audit.read",
     "step_up.reauth",
-    "farm_structure.manage",
-    "target_profile.manage",
-    "target_profile.approve",
-    "flock_lifecycle.approve",
-    "flock_lifecycle.record",
-    "daily_operations.record",
-    "daily_operations.review",
-    "daily_operations.correct",
   ]),
-  maintenance: new Set<Capability>(["step_up.reauth", "label.manage", "daily_operations.record"]),
-  inventory: new Set<Capability>(["step_up.reauth", "farm_structure.manage", "label.manage"]),
-  logistics: new Set<Capability>(["step_up.reauth", "label.manage", "flock_lifecycle.record"]),
+  maintenance: new Set<Capability>(["step_up.reauth"]),
+  inventory: new Set<Capability>(["step_up.reauth"]),
+  logistics: new Set<Capability>(["step_up.reauth"]),
   auditor: new Set<Capability>(["audit.read", "audit_log.read"]),
   support: new Set<Capability>([]),
 };
@@ -181,6 +130,15 @@ const roleRank: Record<Role, number> = {
   support: 10,
 };
 
+/**
+ * Exported so the access-control feature can render a visual rank ladder
+ * that matches the grant-check rule used by `canGrantRole()`. The single
+ * source of truth remains this module.
+ */
+export function getRoleRank(role: Role): number {
+  return roleRank[role];
+}
+
 export function canGrantRole(actor: Role, target: Role): boolean {
   if (!can(actor, "membership.role.change")) return false;
   return roleRank[target] <= roleRank[actor];
@@ -191,3 +149,103 @@ export function highestGrantableRole(actor: Role): Role {
   eligible.sort((a, b) => roleRank[a] - roleRank[b]);
   return eligible[eligible.length - 1] ?? "support";
 }
+
+/**
+ * Roles that organization owners are allowed to edit on the Roles &
+ * Permissions page. `owner` is intentionally excluded: an owner can never
+ * be partially locked out of their own privileges (changing their own
+ * capability set would be irreversible by design -- the only path back is
+ * a second owner acting). This list is the **single source of truth** for
+ * both the UI affordances and the Server Action gates.
+ */
+export const EDITABLE_ROLES: readonly Role[] = ROLES.filter(
+  (r): r is Role => r !== "owner",
+);
+
+/**
+ * Capabilities that are structurally non-overridable for any role. The
+ * owner is never editable at all (see EDITABLE_ROLES). On top of that,
+ * `step_up.reauth` is preserved on every role that has it by default --
+ * removing it would break every sensitive Server Action the role can
+ * perform (the reauth gate fails closed). The list is kept tiny on
+ * purpose: anything not listed here follows the canonical matrix and is
+ * fully overridable by an owner.
+ */
+const NON_OVERRIDABLE_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
+  "step_up.reauth",
+]);
+
+export function isCapabilityOverridable(capability: Capability): boolean {
+  return !NON_OVERRIDABLE_CAPABILITIES.has(capability);
+}
+
+export function isRoleEditable(role: Role): boolean {
+  return EDITABLE_ROLES.includes(role);
+}
+
+/**
+ * Database-backed capability resolution. Reads per-org overrides from
+ * `role_capability_overrides` via the `effective_capabilities` helper and
+ * merges them on top of the canonical matrix in this module.
+ *
+ * The shape mirrors the RLS-locked helper: a JSON object keyed by role
+ * where each value is an object keyed by capability mapping to boolean.
+ * The owner role is always reported as the canonical matrix (it cannot
+ * be overridden), regardless of any stray rows in the table (which would
+ * also be rejected by the row-level CHECK on `role <> 'owner'`).
+ */
+export type ResolvedCapabilities = Readonly<Record<Role, Readonly<Record<Capability, boolean>>>>;
+
+export type CapabilitiesByRole = Readonly<Record<Role, ReadonlySet<Capability>>>;
+
+export function buildDefaultCapabilities(): CapabilitiesByRole {
+  const out = {} as Record<Role, ReadonlySet<Capability>>;
+  for (const r of ROLES) {
+    const set = new Set<Capability>();
+    for (const c of CAPABILITIES) {
+      if (matrix[r].has(c)) set.add(c);
+    }
+    out[r] = set;
+  }
+  return out;
+}
+
+// NOTE: The async, DB-backed capability resolvers (`resolveCapabilitiesForOrg`,
+// `canForOrg`) live in `./permissions.server.ts`. They cannot live here
+// because this module is imported by client components (e.g. ROLES is used
+// in selects), and importing `@/lib/supabase/server` from a module that ends
+// up in the client bundle is rejected by Next/Turbopack.
+
+function mergeOverrides(
+  overrides: Partial<Record<Role, Partial<Record<Capability, boolean>>>>,
+): ResolvedCapabilities {
+  const merged = {} as Record<Role, Record<Capability, boolean>>;
+  for (const r of ROLES) {
+    const baseSet = matrix[r];
+    const roleOverrides = overrides[r] ?? {};
+    merged[r] = {} as Record<Capability, boolean>;
+    for (const c of CAPABILITIES) {
+      const hasOverride = Object.prototype.hasOwnProperty.call(roleOverrides, c);
+      if (hasOverride && isCapabilityOverridable(c) && isRoleEditable(r)) {
+        merged[r][c] = Boolean(roleOverrides[c]);
+      } else {
+        merged[r][c] = baseSet.has(c);
+      }
+    }
+  }
+  return merged;
+}
+
+function buildCanonicalResolved(): ResolvedCapabilities {
+  const merged = {} as Record<Role, Record<Capability, boolean>>;
+  for (const r of ROLES) {
+    merged[r] = {} as Record<Capability, boolean>;
+    for (const c of CAPABILITIES) {
+      merged[r][c] = matrix[r].has(c);
+    }
+  }
+  return merged;
+}
+
+// `resolveCapabilitiesForOrg` / `canForOrg` are exported from
+// `./permissions.server.ts` instead.

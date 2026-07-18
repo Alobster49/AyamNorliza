@@ -32,13 +32,12 @@ Exit gate: protected vertical slice passes RLS, migration and staging tests.
 ## 35.3 Phase 2 - Operational MVP
 
 - Flock lifecycle and house readiness.
-- Daily rounds, observations, tasks, handover and offline sync.
 - Health/mortality/treatment/withdrawal.
 - Feed/water and one production profile.
 - Basic biosecurity, sanitation, inventory, maintenance and reports.
 - Traceable correction, approval and period close.
 
-Exit gate: selected flock lifecycle and offline acceptance pass with real users.
+Exit gate: selected operational workflows and offline acceptance pass with real users.
 
 ## 35.4 Phase 3 - Connected pilot
 
@@ -114,33 +113,9 @@ Exit gate: go-live checklist and operational acceptance signed.
 
 ## 36.1 House readiness and flock placement
 
-| Step | Responsible role | Module/action | Transaction or gate |
-|---|---|---|---|
-| 1. Close previous flock | Farm manager | MOD-03 closeout | Bird/output/inventory reconciliation approved. |
-| 2. Start sanitation | Quality/sanitation | MOD-11 sanitation event | House status becomes sanitation-in-progress. |
-| 3. Complete maintenance/calibration | Maintenance | MOD-13 work/calibration | Critical open work and overdue calibration resolved or approved exception. |
-| 4. Verify environment/supplies | Supervisor/manager | MOD-05/MOD-07/MOD-12 | Controller/device status, feed/water and required stock verified. |
-| 5. Release house | QA/manager | MOD-11 release approval | Failed verification blocks release. |
-| 6. Approve flock plan/readiness | Manager/vet/quality | MOD-03 readiness gate | Profile compatibility, documents and health plan confirmed. |
-| 7. Receive birds | Supervisor | MOD-03 placement | Source, transport, quantity, DOA and observations captured. |
-| 8. Activate flock | System/manager | MOD-03 | Flock state active; schedules/forms/rules generated. |
-| 9. Notify team | System | MOD-14 | Due tasks, shifts and handover updated. |
+House readiness and flock placement workflows are covered by the operational workflow modules.
 
-## 36.2 Daily round to corrective action
-
-| Step | Behavior |
-|---|---|
-| Start | Scan house; load active flock, current alerts, due tasks, restrictions, recent unresolved findings and correct form version. |
-| Observe | Worker records bird behavior and visible condition before entering detailed values. |
-| Validate | Client and server validate required fields, units, ranges and event context. |
-| Classify exception | Finding is categorized as health, environment, feed/water, equipment, biosecurity, production or other. |
-| Create linked work | One action creates task, health case, work order, incident or alert acknowledgement with copied context. |
-| Immediate response | Worker records action and escalation, including photos/notes. |
-| Save/sync | Local record receives UUID and sync state; server accepts idempotently. |
-| Review | Supervisor sees missing, late, abnormal, corrected and unresolved items. |
-| Close | Period completeness and required approvals lock the record. |
-
-## 36.3 Treatment, withdrawal and shipment release
+## 36.2 Treatment, withdrawal and shipment release
 
 ```mermaid
 flowchart TD
@@ -195,13 +170,9 @@ Transaction requirements:
 6. Recall query traverses source and destination links plus relevant input/health/sanitation/visitor events.
 7. Recall case records notification, hold/return/destruction and effectiveness.
 
-## 36.7 Period close and correction
+## 36.6 Period close and correction
 
-- Daily close checks required rounds, bird balance, production, feed/water, mortality, critical alerts and unresolved exceptions.
-- Weekly review examines trends, inventory, maintenance, biosecurity and data quality.
-- Flock close performs final reconciliations and locks the cycle.
-- A locked record correction creates a request, new version/event and approval; the original is retained.
-- Reports show corrected values and indicate that a correction occurred.
+Period close and correction workflows are covered by their respective domain modules.
 
 ---
 
@@ -213,8 +184,7 @@ Transaction requirements:
 |---|---|
 | Home / My work | Role dashboard, critical alerts, today's rounds/tasks, weather/power, restrictions, handover and offline queue. |
 | Portfolio / sites | Site map/list, house cards, exceptions, comparisons and status. |
-| House / flock | Environment, bird count/age, feed/water, production, health, tasks, devices, documents and timeline. |
-| Daily operations | Guided rounds, observations, handovers, period close and corrections. |
+| House / flock | ~~Environment, bird count/age, feed/water, production, health, tasks, devices, documents and timeline.~~ |
 | Environment | Current values, trend, zones, target bands, devices, calibration and controller status. |
 | Alerts / incidents | Prioritized queue, acknowledgement, checklist, escalation, evidence, root cause and drills. |
 | Health / welfare | Observations, cases, samples/results, treatments, vaccinations, mortality, welfare and withdrawal. |
@@ -274,9 +244,9 @@ Final permissions must be encoded as capability plus scope and enforced by RLS/d
 
 | Requirement prefix | Scope | Primary module(s) |
 |---|---|---|
-| `ADM` | Organization, sites and master data | MOD-01, MOD-02, MOD-19 |
-| `FLK` | Flock planning and lifecycle | MOD-03 |
-| `DLY` | Daily rounds and operational records | MOD-04, MOD-14 |
+| `ADM` | ~~Organization, sites and master data~~ | ~~MOD-01, MOD-02, MOD-19~~ |
+| `FLK` | ~~Flock planning and lifecycle~~ | ~~MOD-03~~ |
+| `DLY` | ~~Daily rounds and operational records~~ | ~~MOD-04, MOD-14~~ |
 | `ENV` | Environment, devices and automation | MOD-05, MOD-06, MOD-13 |
 | `FWT` | Feed, water and nutrition | MOD-07, MOD-12 |
 | `PRD` | Production | MOD-08 |
@@ -289,7 +259,7 @@ Final permissions must be encoded as capability plus scope and enforced by RLS/d
 | `TRC` | Traceability, shipments and costing | MOD-15, MOD-16 |
 | `ALT` | Alerts, incidents and corrective action | MOD-06 |
 | `RPT` | Dashboards, reports and analytics | MOD-17 |
-| `MOB` | Mobile, usability and administration | MOD-04, Sections 28-29, MOD-19 |
+| `MOB` | ~~Mobile, usability and administration~~ | ~~MOD-04, Sections 28-29, MOD-19~~ |
 | `INT` | Integration and platform services | MOD-20 |
 | `SEC` | Security, privacy and auditability | MOD-01, MOD-18, MOD-19, Sections 27 and 34 |
 
@@ -310,33 +280,6 @@ Priority uses MoSCoW: Must = required for the baseline go-live of the relevant s
 | ADM-005 | Support multiple languages, time zones, currencies and SI/imperial units with a single canonical unit in storage.                                        | Should       |
 | ADM-006 | Assign users, contractors and devices to permitted organizations, sites, zones and houses.                                                               | Must         |
 | ADM-007 | Generate durable QR/barcode identifiers for houses, assets, inventory lots, flocks, samples and shipment lots.                                           | Should       |
-
-### 38.1.2 Flock planning and lifecycle
-
-| **ID**  | **Requirement**                                                                                                                                      | **Priority** |
-|---------|------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|
-| FLK-001 | Create a flock plan with production type, source, breed/strain, sex, hatch date, arrival date, planned quantity, target house and expected end date. | Must         |
-| FLK-002 | Record source certificates, hatchery/breeder details, transport information, health status, vaccinations and placement acceptance checks.            | Must         |
-| FLK-003 | Require a configurable house-readiness gate covering sanitation, maintenance, environmental readiness, supplies and approval before placement.       | Must         |
-| FLK-004 | Record actual placement counts, dead-on-arrival, discrepancies and initial observations with electronic sign-off.                                    | Must         |
-| FLK-005 | Calculate age and production stage automatically and apply effective-dated target curves, schedules and alert profiles.                              | Must         |
-| FLK-006 | Support flock transfers, splits, merges and partial removals while preserving lineage and quantity reconciliation.                                   | Should       |
-| FLK-007 | Prevent a house from carrying overlapping active flocks unless the housing model explicitly permits it.                                              | Must         |
-| FLK-008 | Support depopulation/harvest, flock closure, final reconciliation, performance review and house release to sanitation.                               | Must         |
-| FLK-009 | Lock approved historical periods and require reasoned, auditable corrections rather than destructive edits.                                          | Must         |
-| FLK-010 | Allow comparison against breed/vendor, company and site target profiles with source and version visible.                                             | Should       |
-
-### 38.1.3 Daily rounds and operational records
-
-| **ID**  | **Requirement**                                                                                                                 | **Priority** |
-|---------|---------------------------------------------------------------------------------------------------------------------------------|--------------|
-| DLY-001 | Provide configurable daily/shift inspection forms by production type, age/stage, house and risk level.                          | Must         |
-| DLY-002 | Capture bird count, mortality, culls, behavior, litter, feed, water, equipment, environment, egg/growth data, notes and photos. | Must         |
-| DLY-003 | Support offline mobile entry with local timestamp, user, device, house and sync status.                                         | Must         |
-| DLY-004 | Display current alerts, due tasks, previous unresolved findings and relevant SOPs during the round.                             | Must         |
-| DLY-005 | Convert a finding into a task, health event, work order, biosecurity incident or alert acknowledgement without re-entry.        | Must         |
-| DLY-006 | Require supervisor review for late, missing, implausible or corrected daily records.                                            | Should       |
-| DLY-007 | Calculate completion, timeliness and data-quality scores by worker, house and site.                                             | Should       |
 
 ### 38.1.4 Environmental monitoring, devices and automation
 

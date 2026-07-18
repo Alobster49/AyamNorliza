@@ -91,7 +91,6 @@ High-risk tasks may require a separate verifier.
 - `/training`
 - `/competencies`
 - `/sops`
-- `/handovers`
 - `/announcements`
 
 ## 19.9 Events and alerts

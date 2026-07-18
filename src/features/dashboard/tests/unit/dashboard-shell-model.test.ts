@@ -6,14 +6,14 @@ import {
 } from "../../components/dashboard-shell-model";
 
 describe("dashboard shell model", () => {
-  it("marks overview as the active operations route", () => {
+  it("marks overview as the active sidebar group", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/overview",
     });
 
     expect(groups[0]).toMatchObject({
-      title: "Operations",
+      title: "Overview",
       isActive: true,
       items: [
         expect.objectContaining({
@@ -21,61 +21,27 @@ describe("dashboard shell model", () => {
           href: "/ayam-norliza-pilot/overview",
           isActive: true,
         }),
-        expect.objectContaining({
-          title: "Flocks",
-          href: "/ayam-norliza-pilot/flocks",
-          isActive: false,
-        }),
-        expect.objectContaining({
-          title: "Alerts",
-          href: "/ayam-norliza-pilot/alerts",
-          isActive: false,
-        }),
       ],
     });
     expect(groups[1]).toMatchObject({
-      title: "Daily ops",
+      title: "Alerts",
       isActive: false,
     });
     expect(groups[2]).toMatchObject({
-      title: "Farm setup",
-      isActive: false,
-    });
-    expect(groups[3]).toMatchObject({
       title: "Access control",
       isActive: false,
     });
   });
 
-  it("marks today as the active daily operations route", () => {
+  it("marks alerts as the active sidebar group", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
-      pathname: "/ayam-norliza-pilot/today",
+      pathname: "/ayam-norliza-pilot/alerts",
     });
 
-    expect(groups[1]).toMatchObject({
-      title: "Daily ops",
-      isActive: true,
-      items: expect.arrayContaining([
-        expect.objectContaining({
-          title: "Today",
-          href: "/ayam-norliza-pilot/today",
-          isActive: true,
-        }),
-      ]),
-    });
-  });
-
-  it("returns page context for nested farm setup routes", () => {
-    expect(
-      getDashboardPageContext({
-        organizationSlug: "ayam-norliza-pilot",
-        pathname: "/ayam-norliza-pilot/settings/sites/11111111-1111-1111-1111-111111111111",
-      }),
-    ).toEqual({
-      section: "Farm setup",
-      title: "Sites",
-    });
+    expect(groups[0]).toMatchObject({ title: "Overview", isActive: false });
+    expect(groups[1]).toMatchObject({ title: "Alerts", isActive: true });
+    expect(groups[2]).toMatchObject({ title: "Access control", isActive: false });
   });
 
   it("returns page context for nested access control routes", () => {
@@ -87,6 +53,18 @@ describe("dashboard shell model", () => {
     ).toEqual({
       section: "Access control",
       title: "Support sessions",
+    });
+  });
+
+  it("returns overview as default page context for unknown routes", () => {
+    expect(
+      getDashboardPageContext({
+        organizationSlug: "ayam-norliza-pilot",
+        pathname: "/ayam-norliza-pilot/unknown",
+      }),
+    ).toEqual({
+      section: "Overview",
+      title: "Overview",
     });
   });
 

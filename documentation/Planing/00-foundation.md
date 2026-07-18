@@ -146,11 +146,11 @@ flowchart LR
 
 ## 3.3 Daily operating rhythm
 
+The daily operating rhythm is covered by the field workflow modules (MOD-05, MOD-06, MOD-07, MOD-14).
+
 1. **Start shift:** review emergency/critical alerts, weather, power/generator, house restrictions, health actions, staffing and due work.
-2. **Perform house round:** scan the house QR code, observe birds before disturbing them, then verify environment, feed, water, litter, equipment and production.
-3. **Record exceptions immediately:** mortality/culls, health signs, leaks, equipment faults, biosecurity breaches, abnormal production or sensor problems.
-4. **Respond and escalate:** follow the linked SOP/checklist, acknowledge the alert, create the required event or work order and contact qualified personnel.
-5. **Reconcile inputs and outputs:** bird count, feed, water, eggs/weights, medicine, inventory and shipments.
+2. **Respond and escalate:** follow the linked SOP/checklist, acknowledge the alert, create the required event or work order and contact qualified personnel.
+3. **Reconcile inputs and outputs:** bird count, feed, water, eggs/weights, medicine, inventory and shipments.
 6. **Supervisor review:** inspect missing or implausible records, unresolved alerts, overdue tasks, health trends and handover notes.
 7. **Daily close:** sign off the period, lock approved records and keep offline copies until synchronization is confirmed.
 
@@ -394,8 +394,8 @@ features/<module>/
 | ID | Module | MVP | Connected / Phase 2 | Advanced / Enterprise |
 |---|---|---:|---:|---:|
 | MOD-01 | Tenant, identity and access | Yes | SSO, automated lifecycle | Customer billing/portal roles |
-| MOD-02 | Farm structure and master data | Yes | GIS/floor plans, richer profiles | Regional configuration packs |
-| MOD-03 | Flock planning and lifecycle | Yes | Advanced split/merge/forecast | Cross-company transfers |
+| MOD-02 | ~~Farm structure and master data~~ | ~~Yes~~ | ~~GIS/floor plans, richer profiles~~ | ~~Regional configuration packs~~ |
+| MOD-03 | ~~Flock planning and lifecycle~~ | ~~Yes~~ | ~~Advanced split/merge/forecast~~ | ~~Cross-company transfers~~ |
 | MOD-04 | Daily operations, rounds and close | Yes | Advanced workload optimization | Voice/computer-vision assistance |
 | MOD-05 | Environment, IoT and safe control | Read-only pilot | Multi-device integration, advisory | Supervised/local automatic control |
 | MOD-06 | Alerts, incidents and emergency | Yes | Cross-signal rules, drills | Predictive risk and advanced correlation |
@@ -418,29 +418,9 @@ features/<module>/
 
 ```mermaid
 flowchart TD
-    M1[MOD-01 Identity/access] --> M2[MOD-02 Structure/master data]
-    M2 --> M3[MOD-03 Flock lifecycle]
-    M2 --> M5[MOD-05 Environment/IoT]
-    M3 --> M4[MOD-04 Daily operations]
-    M3 --> M7[MOD-07 Feed/water]
-    M3 --> M8[MOD-08 Production]
-    M3 --> M9[MOD-09 Health/welfare]
-    M2 --> M10[MOD-10 Biosecurity]
-    M3 --> M11[MOD-11 Sanitation/waste]
-    M2 --> M12[MOD-12 Inventory]
-    M2 --> M13[MOD-13 Maintenance]
-    M1 --> M14[MOD-14 Workforce/knowledge]
-    M3 --> M15[MOD-15 Traceability/logistics]
-    M7 --> M16[MOD-16 Costing/sustainability]
-    M8 --> M16
-    M12 --> M16
-    M13 --> M16
-    M4 --> M17[MOD-17 Reporting/analytics]
+    M1[MOD-01 Identity/access] --> M5[MOD-05 Environment/IoT]
     M5 --> M6[MOD-06 Alerts/incidents]
-    M9 --> M6
-    M10 --> M6
-    M18[MOD-18 Documents/media] --> M4
-    M19[MOD-19 Configuration/governance] --> M2
+    M18[MOD-18 Documents/media] --> M17[MOD-17 Reporting/analytics]
     M20[MOD-20 Integrations] --> M17
 ```
 

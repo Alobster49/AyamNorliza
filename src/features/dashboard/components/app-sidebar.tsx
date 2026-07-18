@@ -4,16 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
+  AlertTriangle,
   BadgeCheck,
   Building2,
   ChevronRight,
   ChevronsUpDown,
-  ClipboardList,
   LayoutDashboard,
   LogOut,
   Settings,
   ShieldCheck,
-  Tags,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -64,9 +63,8 @@ type AppSidebarProps = {
 };
 
 const groupIcons: Record<string, LucideIcon> = {
-  Operations: LayoutDashboard,
-  "Daily ops": ClipboardList,
-  "Farm setup": Tags,
+  Overview: LayoutDashboard,
+  Alerts: AlertTriangle,
   "Access control": ShieldCheck,
 };
 

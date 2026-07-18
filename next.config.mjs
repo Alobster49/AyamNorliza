@@ -3,6 +3,11 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: false,
+  // Allow HMR and other dev resources when accessing the dev server over the
+  // LAN. Without this, browsers on a different host (e.g. http://192.168.x.x:3000)
+  // see a partially-hydrated page where React event handlers never attach and
+  // native form submission takes over, leaking credentials into query strings.
+  allowedDevOrigins: ["192.168.50.100", "192.168.50.*", "localhost", "127.0.0.1"],
   images: {
     remotePatterns: [
       {

@@ -17,35 +17,12 @@ type DashboardPathInput = {
 
 const routeGroups = [
   {
-    title: "Operations",
-    items: [
-      { title: "Overview", segment: "overview" },
-      { title: "Flocks", segment: "flocks" },
-      { title: "Alerts", segment: "alerts" },
-    ],
+    title: "Overview",
+    items: [{ title: "Overview", segment: "overview" }],
   },
   {
-    title: "Daily ops",
-    items: [
-      { title: "Today", segment: "today" },
-      { title: "Rounds", segment: "rounds" },
-      { title: "Handovers", segment: "handovers" },
-      { title: "Exceptions", segment: "exceptions/daily-records" },
-      { title: "Period close", segment: "period-close" },
-      { title: "Corrections", segment: "corrections" },
-    ],
-  },
-  {
-    title: "Farm setup",
-    items: [
-      { title: "Sites", segment: "settings/sites" },
-      { title: "Zones", segment: "settings/zones" },
-      { title: "Storage", segment: "settings/storage-locations" },
-      { title: "Production profiles", segment: "settings/production-profiles" },
-      { title: "Target profiles", segment: "settings/target-profiles" },
-      { title: "Master data", segment: "settings/master-data" },
-      { title: "Labels", segment: "settings/labels" },
-    ],
+    title: "Alerts",
+    items: [{ title: "Alerts", segment: "alerts" }],
   },
   {
     title: "Access control",
@@ -91,7 +68,7 @@ export function getDashboardPageContext({
   const activeItem = activeGroup?.items.find((item) => item.isActive);
 
   return {
-    section: activeGroup?.title ?? "Operations",
+    section: activeGroup?.title ?? "Overview",
     title: activeItem?.title ?? "Overview",
   };
 }

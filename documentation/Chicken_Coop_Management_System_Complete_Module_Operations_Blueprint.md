@@ -119,9 +119,7 @@ Out of scope for the first release: full accounting, payroll, slaughter/processi
 
 A pilot is successful only when all of the following are demonstrated:
 
-- The complete selected flock lifecycle is executed in the system.
-- Workers complete daily rounds faster or with no more effort than the previous process.
-- Offline records synchronize without loss or duplication.
+- The selected operational workflows are demonstrated end-to-end in the system.
 - A simulated critical environmental event triggers the independent local alarm and the configured cloud escalation.
 - Treatment and withdrawal controls block or warn against an ineligible shipment.
 - A shipment can be traced backward to flock, house, source, feed/medicine lots and relevant health/sanitation events within the agreed time.
@@ -183,11 +181,11 @@ flowchart LR
 
 ## 3.3 Daily operating rhythm
 
+The daily operating rhythm is covered by the field workflow modules (MOD-03, MOD-05, MOD-06, MOD-07, MOD-14).
+
 1. **Start shift:** review emergency/critical alerts, weather, power/generator, house restrictions, health actions, staffing and due work.
-2. **Perform house round:** scan the house QR code, observe birds before disturbing them, then verify environment, feed, water, litter, equipment and production.
-3. **Record exceptions immediately:** mortality/culls, health signs, leaks, equipment faults, biosecurity breaches, abnormal production or sensor problems.
-4. **Respond and escalate:** follow the linked SOP/checklist, acknowledge the alert, create the required event or work order and contact qualified personnel.
-5. **Reconcile inputs and outputs:** bird count, feed, water, eggs/weights, medicine, inventory and shipments.
+2. **Respond and escalate:** follow the linked SOP/checklist, acknowledge the alert, create the required event or work order and contact qualified personnel.
+3. **Reconcile inputs and outputs:** bird count, feed, water, eggs/weights, medicine, inventory and shipments.
 6. **Supervisor review:** inspect missing or implausible records, unresolved alerts, overdue tasks, health trends and handover notes.
 7. **Daily close:** sign off the period, lock approved records and keep offline copies until synchronization is confirmed.
 
@@ -208,7 +206,7 @@ flowchart LR
 | Owner / executive | Portfolio risk, cost, assurance and investment. |
 | Farm manager | Daily accountability, flock performance, staffing, approvals, alerts and closeout. |
 | Supervisor | Shift execution, round review, task coordination and exception escalation. |
-| Caretaker / worker | Daily rounds, observations, records, first response and assigned tasks. |
+| Caretaker / worker | ~~Daily rounds, observations, records,~~ first response and assigned tasks. |
 | Poultry veterinarian | Health program, diagnosis, treatment authorization, withdrawal and outbreak decisions. |
 | Biosecurity / quality lead | Biosecurity plan, food-safety evidence, audits and corrective action. |
 | Maintenance technician | Critical equipment, preventive maintenance, calibration, repair and emergency tests. |
@@ -431,9 +429,9 @@ features/<module>/
 | ID | Module | MVP | Connected / Phase 2 | Advanced / Enterprise |
 |---|---|---:|---:|---:|
 | MOD-01 | Tenant, identity and access | Yes | SSO, automated lifecycle | Customer billing/portal roles |
-| MOD-02 | Farm structure and master data | Yes | GIS/floor plans, richer profiles | Regional configuration packs |
-| MOD-03 | Flock planning and lifecycle | Yes | Advanced split/merge/forecast | Cross-company transfers |
-| MOD-04 | Daily operations, rounds and close | Yes | Advanced workload optimization | Voice/computer-vision assistance |
+| MOD-02 | ~~Farm structure and master data~~ | ~~Yes~~ | ~~GIS/floor plans, richer profiles~~ | ~~Regional configuration packs~~ |
+| MOD-03 | ~~Flock planning and lifecycle~~ | ~~Yes~~ | ~~Advanced split/merge/forecast~~ | ~~Cross-company transfers~~ |
+| MOD-04 | ~~Daily operations, rounds and close~~ | ~~Yes~~ | ~~Advanced workload optimization~~ | ~~Voice/computer-vision assistance~~ |
 | MOD-05 | Environment, IoT and safe control | Read-only pilot | Multi-device integration, advisory | Supervised/local automatic control |
 | MOD-06 | Alerts, incidents and emergency | Yes | Cross-signal rules, drills | Predictive risk and advanced correlation |
 | MOD-07 | Feed, water and nutrition | Yes | Automated meters and feed planning | Supplier optimization/feed-mill integration |
@@ -455,29 +453,9 @@ features/<module>/
 
 ```mermaid
 flowchart TD
-    M1[MOD-01 Identity/access] --> M2[MOD-02 Structure/master data]
-    M2 --> M3[MOD-03 Flock lifecycle]
-    M2 --> M5[MOD-05 Environment/IoT]
-    M3 --> M4[MOD-04 Daily operations]
-    M3 --> M7[MOD-07 Feed/water]
-    M3 --> M8[MOD-08 Production]
-    M3 --> M9[MOD-09 Health/welfare]
-    M2 --> M10[MOD-10 Biosecurity]
-    M3 --> M11[MOD-11 Sanitation/waste]
-    M2 --> M12[MOD-12 Inventory]
-    M2 --> M13[MOD-13 Maintenance]
-    M1 --> M14[MOD-14 Workforce/knowledge]
-    M3 --> M15[MOD-15 Traceability/logistics]
-    M7 --> M16[MOD-16 Costing/sustainability]
-    M8 --> M16
-    M12 --> M16
-    M13 --> M16
-    M4 --> M17[MOD-17 Reporting/analytics]
+    M1[MOD-01 Identity/access] --> M5[MOD-05 Environment/IoT]
     M5 --> M6[MOD-06 Alerts/incidents]
-    M9 --> M6
-    M10 --> M6
-    M18[MOD-18 Documents/media] --> M4
-    M19[MOD-19 Configuration/governance] --> M2
+    M18[MOD-18 Documents/media] --> M17[MOD-17 Reporting/analytics]
     M20[MOD-20 Integrations] --> M17
 ```
 
@@ -603,389 +581,6 @@ Notify the organization owner or security contact of privileged changes, break-g
 - Privileged actions require the configured role, scope and re-authentication.
 - Deactivation prevents new authenticated operations and preserves attribution of historical records.
 - All role/scope changes appear in the immutable audit log.
-
----
-
-# 7. MOD-02 - Farm structure, houses and master data
-
-## 7.1 Purpose
-
-Maintain the shared operational hierarchy and controlled master data used by every transaction, rule, report and integration.
-
-## 7.2 Primary users
-
-Organization administrator, farm manager, biosecurity/quality lead, veterinarian, maintenance lead and data steward.
-
-## 7.3 Capabilities
-
-- Maintain organization, site/farm, biosecurity zone, house/coop, room/area and storage-location hierarchy.
-- Store house capacity, dimensions, housing system, production purpose, floor plan, coordinates, equipment, operational status and criticality.
-- Maintain production profiles for layer, broiler, breeder and simplified smallholder workflows.
-- Maintain versioned target profiles and curves by breed/strain, age/stage, season, house type and source.
-- Maintain controlled lists for breeds, feed products, units, egg grades, mortality causes, observation codes, sanitation chemicals, medicine catalogs, suppliers and report categories.
-- Support local terminology, multiple languages, time zones, currencies and display units while storing canonical units.
-- Generate durable QR/barcode labels for houses, assets, flocks, lots, samples and shipments.
-- Track master-data approval, effective dates, superseded status and impact on active operations.
-
-## 7.4 Structure model
-
-| Entity | Definition |
-|---|---|
-| Organization | Tenant and data-ownership boundary. |
-| Site/farm | Operational location containing houses, stores and support areas. |
-| Biosecurity zone | Access-controlled area with entry requirements and movement restrictions. |
-| House/coop | Main bird housing unit and environmental/equipment context. |
-| House area | Optional room, pen, tier, section or sensor zone within a house. |
-| Storage location | Feed, medicine, chemical, egg, spare-part or general inventory location. |
-| Production profile | Configuration selecting workflows, fields, KPIs and state rules for a production type. |
-| Target profile version | Approved age/stage curves, bands, schedules and alerts effective for defined flocks/houses. |
-
-## 7.5 Key workflows
-
-### Create a site and house
-
-1. Administrator creates the site with time zone, units, contacts and biosecurity layout.
-2. Houses are created with capacity, production purpose and operating characteristics.
-3. Biosecurity zones, stores, access points and waste/mortality areas are linked.
-4. Assets, devices, inspection templates and applicable SOPs are assigned.
-5. Manager/quality reviews readiness of master data before the site is activated.
-
-### Publish a target profile version
-
-1. Qualified owner creates or clones a draft profile.
-2. Curves, bands, schedules, formulas and source documents are entered.
-3. Validation checks for gaps, overlaps, unit consistency and unsupported production stages.
-4. Veterinary/operations/quality approval is captured as configured.
-5. Version receives an effective date; active flocks retain their assigned version unless an approved change is applied.
-
-## 7.6 Key entities
-
-| Entity/table | Important fields |
-|---|---|
-| `sites` | Organization, name, code, address/coordinates, time zone, status and contacts. |
-| `biosecurity_zones` | Site, name, risk class, parent zone, entry rules and status. |
-| `houses` | Site/zone, code, capacity, dimensions, housing system, purpose, status and geometry. |
-| `house_areas` | House, area type, capacity, sequence and geometry. |
-| `storage_locations` | Site/zone, location type, conditions, restricted flag and status. |
-| `production_profiles` | Type, supported workflow options, owner and status. |
-| `target_profiles` | Profile family, breed/strain, housing, region and owner. |
-| `target_profile_versions` | Version, effective dates, approval, source, status and immutable definition hash. |
-| `target_curve_points` | Metric, age/stage, target/min/max, unit and interpolation method. |
-| `code_sets` / `code_values` | Versioned controlled vocabularies and translations. |
-| `qr_identifiers` | Entity type/id, printable code, status and replacement history. |
-
-## 7.7 Business rules
-
-- Active houses have a unique code within a site.
-- Capacity and dimensions must be non-negative and use canonical units.
-- A house status transition is controlled: `draft -> active -> maintenance/restricted -> inactive/retired`.
-- A target-profile version is immutable after approval; a change creates a new version.
-- Historical records retain the exact profile/version applied when the event occurred.
-- Deactivating a master-data value does not remove it from historical records.
-- A production profile determines which production-specific screens, fields, reports and constraints are available.
-- Site time zone controls display and operating-day boundaries; timestamps are stored as `timestamptz` in UTC.
-
-## 7.8 UI and routes
-
-- `/settings/sites`
-- `/settings/sites/[siteId]`
-- `/settings/houses/[houseId]`
-- `/settings/zones`
-- `/settings/storage-locations`
-- `/settings/production-profiles`
-- `/settings/target-profiles/[profileId]/versions/[versionId]`
-- `/settings/master-data`
-- `/settings/labels`
-
-## 7.9 Reports and controls
-
-- Site/house master-data completeness.
-- Active/inactive/restricted houses.
-- Target-profile version usage by flock.
-- Master-data values with upcoming expiry or review.
-- QR/barcode label inventory and replacement history.
-
-## 7.10 Module acceptance gate
-
-- A complete farm hierarchy can be created and used to scope users, flocks, assets, inventory and reports.
-- Historical transactions continue to resolve after a master-data value is superseded.
-- Target-profile versions are approved, immutable and visible on every calculation using them.
-- Invalid unit, date or hierarchy combinations are blocked by database constraints and server validation.
-
----
-
-# 8. MOD-03 - Flock planning and lifecycle
-
-## 8.1 Purpose
-
-Manage each traceable cohort of birds from plan through house readiness, placement, active production, transfer/harvest, closeout and sanitation handoff.
-
-## 8.2 Primary users
-
-Farm manager, supervisor, caretaker, veterinarian, biosecurity/quality, logistics and inventory/procurement.
-
-## 8.3 Flock state model
-
-```mermaid
-stateDiagram-v2
-    [*] --> Draft
-    Draft --> Planned: plan approved
-    Planned --> ReadinessPending: house assigned
-    ReadinessPending --> Ready: readiness gate approved
-    Ready --> Active: placement accepted
-    Active --> Restricted: quarantine/outbreak/operational restriction
-    Restricted --> Active: authorized release
-    Active --> HarvestPending: harvest/transfer approved
-    HarvestPending --> Depopulated: final removal recorded
-    Active --> Depopulated: full transfer/depopulation
-    Depopulated --> Closing: reconciliation started
-    Closing --> Closed: final approval and lock
-    Closed --> [*]
-```
-
-House sanitation/release is a related but separate state after depopulation.
-
-## 8.4 Capabilities
-
-- Plan flock source, production type, breed/strain, sex, hatch date, planned arrival, quantity, house, target profile and expected end date.
-- Link source certificates, vaccination/health status, transport and supplier information.
-- Execute a configurable readiness gate covering sanitation, maintenance, calibration, supplies, environment and approvals.
-- Record placement quantity, dead-on-arrival, discrepancies, initial observations and acceptance signatures.
-- Calculate age and stage automatically using effective operating-day rules.
-- Support controlled transfer, split, merge and partial removal while preserving lineage and count reconciliation.
-- Apply stage-dependent schedules, forms, targets, alert rules, feed programs and health plans.
-- Plan and record harvest/depopulation/transfer, including crew/vehicle biosecurity and withdrawal readiness.
-- Reconcile final bird balance, production, feed, medicine, inventory, cost and incidents at closeout.
-- Lock approved periods and require reasoned correction events instead of destructive edits.
-
-## 8.5 Key workflows
-
-### Flock plan and approval
-
-1. Planner selects production profile, source, breed/strain, quantity, planned house and dates.
-2. System checks house capacity, schedule overlap, sanitation status, supply plan and profile compatibility.
-3. Health/vaccination plan and required source documents are attached.
-4. Manager approves plan; procurement and readiness tasks are generated.
-
-### House readiness and placement
-
-1. Sanitation release, critical maintenance, calibration, environment stabilization and supply checks must be complete.
-2. Authorized approver signs the readiness gate.
-3. On arrival, user records vehicle, source documents, actual quantity, DOA, condition and initial readings.
-4. Discrepancies create an exception and optional supplier claim.
-5. Placement activates the flock and schedules age/stage-driven work.
-
-### Transfer/split/merge
-
-1. User proposes movement with source flock, destination, quantity and reason.
-2. System checks destination compatibility, capacity, health/biosecurity restrictions and withdrawal status.
-3. Approved movement creates immutable lineage links and quantity transactions.
-4. Source and destination counts reconcile; unresolved variance requires supervisor review.
-
-### Closeout
-
-1. Confirm final removal and no remaining live-bird count.
-2. Reconcile birds, mortality/culls, feed, medicine, inventory, output, shipment and cost.
-3. Review unresolved health, alert, work-order, audit and corrective-action items.
-4. Generate final KPI report and lessons learned.
-5. Approver closes and locks the flock; house is transferred to sanitation status.
-
-## 8.6 Key entities
-
-| Entity/table | Important fields |
-|---|---|
-| `flocks` | Organization, site, house, production type, source, breed, hatch date, target version, status. |
-| `flock_plans` | Planned quantity/dates, expected output, approvals and planning notes. |
-| `house_readiness_reviews` | Checklist version, results, evidence, exceptions, approvers and release time. |
-| `placements` | Arrival/placement time, source, vehicle, quantity, DOA, discrepancy and sign-off. |
-| `flock_movements` | Type, source/destination flock/house, quantity, reason, approval and lineage. |
-| `flock_count_transactions` | Placement, mortality, cull, transfer, harvest and adjustment quantities. |
-| `flock_stage_history` | Calculated stage, effective times, profile version and overrides. |
-| `harvest_plans` | Planned date, destination, expected quantity/weight, crew, vehicle and readiness. |
-| `flock_closeouts` | Reconciliation, final KPIs, issues, approvals and locked timestamp. |
-
-## 8.7 Bird balance rule
-
-For a flock and period, the system must explain:
-
-```text
-Opening live birds
-+ placements received
-+ transfers in
-- mortality
-- culls
-- transfers out
-- harvest/depopulation
-+/- approved count adjustments
-= closing live birds
-```
-
-Any adjustment requires reason, evidence where configured and supervisor approval. Closed periods may only be changed through an auditable correction version.
-
-## 8.8 UI and routes
-
-- `/flocks`
-- `/flocks/new`
-- `/flocks/[flockId]/overview`
-- `/flocks/[flockId]/readiness`
-- `/flocks/[flockId]/placement`
-- `/flocks/[flockId]/movements`
-- `/flocks/[flockId]/harvest`
-- `/flocks/[flockId]/closeout`
-- `/houses/[houseId]/schedule`
-
-## 8.9 Events
-
-- `flock.plan_approved`
-- `flock.house_ready`
-- `flock.placed`
-- `flock.stage_changed`
-- `flock.restricted`
-- `flock.moved`
-- `flock.harvest_started`
-- `flock.depopulated`
-- `flock.closed`
-
-## 8.10 KPIs
-
-Plan variance, placement discrepancy, DOA rate, age/stage compliance, bird-balance variance, closeout completeness, flock-cycle duration and comparison to the assigned target profile.
-
-## 8.11 Module acceptance gate
-
-- The selected production profile can complete the whole flock lifecycle without manual database intervention.
-- A house cannot receive an incompatible or overlapping active flock unless the configured housing model explicitly permits it.
-- Splits, merges and transfers preserve lineage and reconcile quantities.
-- A flock cannot close while required reconciliations or critical open items remain, unless an authorized exception is recorded.
-
----
-
-# 9. MOD-04 - Daily operations, rounds, shifts and period close
-
-## 9.1 Purpose
-
-Provide the main field workflow for daily husbandry and operational discipline, optimized for fast use in houses with poor connectivity.
-
-## 9.2 Primary users
-
-Caretakers, supervisors, farm managers, veterinarians, quality/biosecurity and maintenance personnel.
-
-## 9.3 Capabilities
-
-- Configure inspection templates by production type, age/stage, house, shift, season and risk.
-- Generate due rounds and tasks from schedules and flock events.
-- Start work by scanning a house QR code and loading assigned work, active alerts, unresolved findings and applicable SOPs.
-- Capture observations, counts, manual environment readings, feed/water, litter, equipment, production, notes, photos and signatures.
-- Create a task, health case, work order, biosecurity incident or alert acknowledgement directly from a finding.
-- Support local-first offline entry, client-generated UUIDs, explicit sync status and retry.
-- Support shift handover with unresolved risk, equipment state, restricted areas and next actions.
-- Identify missing, late, implausible and corrected records for supervisor review.
-- Perform daily/weekly period completeness checks, approval and lock.
-- Preserve correction history with before/after, reason, user, time and approval.
-
-## 9.4 Daily-round workflow
-
-```mermaid
-flowchart TD
-    A[Scan house QR / select assigned house] --> B[Confirm flock, shift, time and offline state]
-    B --> C[Observe birds before disturbance]
-    C --> D[Complete guided checks]
-    D --> E{Abnormal finding?}
-    E -- No --> F[Review summary and sign]
-    E -- Yes --> G[Record severity, note, photo and immediate action]
-    G --> H{Create linked workflow}
-    H --> I[Task]
-    H --> J[Health case]
-    H --> K[Work order]
-    H --> L[Biosecurity incident]
-    H --> M[Alert acknowledgement]
-    I --> F
-    J --> F
-    K --> F
-    L --> F
-    M --> F
-    F --> N[Save locally and sync]
-    N --> O[Supervisor exception review]
-```
-
-## 9.5 Offline data model
-
-The PWA stores only assigned, necessary data in IndexedDB:
-
-- Active sites/houses/flocks assigned to the user.
-- Current and next seven days of forms, tasks and SOPs.
-- Recent alerts, unresolved findings and limited trend summaries.
-- Controlled master-data subsets required for entry.
-- An encrypted-at-rest capability should be evaluated for managed devices; browser storage is not a substitute for device security.
-
-Every queued operation contains:
-
-- `client_operation_id` UUID.
-- Entity ID generated on the client where appropriate.
-- Entity type and mutation type.
-- Local event time and local save time.
-- Base server version for mutable records.
-- Payload schema version.
-- User/device/session identity.
-- Attachment references and upload state.
-
-The sync API returns `accepted`, `duplicate`, `conflict`, `rejected` or `retry_later` per operation.
-
-## 9.6 Conflict policy
-
-| Record type | Conflict behavior |
-|---|---|
-| Append-only observation, mortality, task comment | Accept idempotently by client operation ID; duplicates return the existing record. |
-| Mutable draft owned by one user | Optimistic version check; client can review server version and retry. |
-| Approved/locked record | Never overwrite; create a correction request/version. |
-| Master data or rule | Server-authoritative; offline user receives current version and must reapply if still relevant. |
-| Attachment | Upload separately; record may remain `attachment_pending` until confirmed. |
-
-## 9.7 Key entities
-
-| Entity/table | Important fields |
-|---|---|
-| `shifts` | Site, start/end, role requirements, status. |
-| `shift_assignments` | User, shift, site/house scope and responsibility. |
-| `inspection_templates` / `inspection_template_versions` | Applicability, sections, questions, validation and approval. |
-| `inspections` | House/flock, shift, template version, started/completed, user/device, status and quality score. |
-| `inspection_responses` | Question, typed response, unit, status, reason and source. |
-| `observations` | Category, severity, description, immediate action, media and linked entity. |
-| `handovers` | From/to shift, unresolved items, restrictions, acknowledgements. |
-| `period_closes` | Scope, period, completeness, reviewer, approval and lock. |
-| `record_corrections` | Target record/version, before/after, reason, requester and approver. |
-| `sync_operations` | Client operation ID, result, conflict detail and processed time. |
-
-## 9.8 Business rules
-
-- The round displays the applicable template version and target profile for the event time.
-- Required critical checks cannot be silently skipped; an exception reason and escalation are required.
-- Abnormal numeric values prompt confirmation and may automatically create an observation/alert.
-- A user cannot approve their own high-risk correction where separation of duties is configured.
-- Submitted records retain event time, entry time, device time and sync time.
-- The UI explicitly shows offline, unsynced, stale, rejected and conflicted states.
-- A daily close cannot pass required completeness checks without an authorized exception.
-
-## 9.9 UI and routes
-
-- `/today`
-- `/rounds`
-- `/rounds/[inspectionId]`
-- `/houses/[houseId]/round`
-- `/handovers`
-- `/exceptions/daily-records`
-- `/period-close`
-- `/corrections`
-
-## 9.10 KPIs
-
-Round completion, on-time completion, average duration, missing critical responses, offline sync success, conflict rate, supervisor review backlog, repeated observations and data-quality score.
-
-## 9.11 Module acceptance gate
-
-- A worker can complete a full round offline, take a photo, create linked health/maintenance work and synchronize without duplication.
-- The system shows all unsynced operations and provides a safe recovery path.
-- Late, missing, abnormal and corrected records are visible to the supervisor.
-- Locked records cannot be destructively edited.
 
 ---
 
@@ -3797,13 +3392,12 @@ Exit gate: protected vertical slice passes RLS, migration and staging tests.
 ## 35.3 Phase 2 - Operational MVP
 
 - Flock lifecycle and house readiness.
-- Daily rounds, observations, tasks, handover and offline sync.
 - Health/mortality/treatment/withdrawal.
 - Feed/water and one production profile.
 - Basic biosecurity, sanitation, inventory, maintenance and reports.
 - Traceable correction, approval and period close.
 
-Exit gate: selected flock lifecycle and offline acceptance pass with real users.
+Exit gate: selected operational workflows and offline acceptance pass with real users.
 
 ## 35.4 Phase 3 - Connected pilot
 
@@ -3891,21 +3485,7 @@ Exit gate: go-live checklist and operational acceptance signed.
 | 8. Activate flock | System/manager | MOD-03 | Flock state active; schedules/forms/rules generated. |
 | 9. Notify team | System | MOD-14 | Due tasks, shifts and handover updated. |
 
-## 36.2 Daily round to corrective action
-
-| Step | Behavior |
-|---|---|
-| Start | Scan house; load active flock, current alerts, due tasks, restrictions, recent unresolved findings and correct form version. |
-| Observe | Worker records bird behavior and visible condition before entering detailed values. |
-| Validate | Client and server validate required fields, units, ranges and event context. |
-| Classify exception | Finding is categorized as health, environment, feed/water, equipment, biosecurity, production or other. |
-| Create linked work | One action creates task, health case, work order, incident or alert acknowledgement with copied context. |
-| Immediate response | Worker records action and escalation, including photos/notes. |
-| Save/sync | Local record receives UUID and sync state; server accepts idempotently. |
-| Review | Supervisor sees missing, late, abnormal, corrected and unresolved items. |
-| Close | Period completeness and required approvals lock the record. |
-
-## 36.3 Treatment, withdrawal and shipment release
+## 36.2 Treatment, withdrawal and shipment release
 
 ```mermaid
 flowchart TD
@@ -3960,13 +3540,9 @@ Transaction requirements:
 6. Recall query traverses source and destination links plus relevant input/health/sanitation/visitor events.
 7. Recall case records notification, hold/return/destruction and effectiveness.
 
-## 36.7 Period close and correction
+## 36.6 Period close and correction
 
-- Daily close checks required rounds, bird balance, production, feed/water, mortality, critical alerts and unresolved exceptions.
-- Weekly review examines trends, inventory, maintenance, biosecurity and data quality.
-- Flock close performs final reconciliations and locks the cycle.
-- A locked record correction creates a request, new version/event and approval; the original is retained.
-- Reports show corrected values and indicate that a correction occurred.
+Period close and correction workflows are covered by their respective domain modules.
 
 ---
 
@@ -4039,9 +3615,9 @@ Final permissions must be encoded as capability plus scope and enforced by RLS/d
 
 | Requirement prefix | Scope | Primary module(s) |
 |---|---|---|
-| `ADM` | Organization, sites and master data | MOD-01, MOD-02, MOD-19 |
-| `FLK` | Flock planning and lifecycle | MOD-03 |
-| `DLY` | Daily rounds and operational records | MOD-04, MOD-14 |
+| `ADM` | ~~Organization, sites and master data~~ | ~~MOD-01, MOD-02, MOD-19~~ |
+| `FLK` | ~~Flock planning and lifecycle~~ | ~~MOD-03~~ |
+| `DLY` | ~~Daily rounds and operational records~~ | ~~MOD-04, MOD-14~~ |
 | `ENV` | Environment, devices and automation | MOD-05, MOD-06, MOD-13 |
 | `FWT` | Feed, water and nutrition | MOD-07, MOD-12 |
 | `PRD` | Production | MOD-08 |
@@ -4054,7 +3630,7 @@ Final permissions must be encoded as capability plus scope and enforced by RLS/d
 | `TRC` | Traceability, shipments and costing | MOD-15, MOD-16 |
 | `ALT` | Alerts, incidents and corrective action | MOD-06 |
 | `RPT` | Dashboards, reports and analytics | MOD-17 |
-| `MOB` | Mobile, usability and administration | MOD-04, Sections 28-29, MOD-19 |
+| `MOB` | ~~Mobile, usability and administration~~ | ~~MOD-04, Sections 28-29, MOD-19~~ |
 | `INT` | Integration and platform services | MOD-20 |
 | `SEC` | Security, privacy and auditability | MOD-01, MOD-18, MOD-19, Sections 27 and 34 |
 
@@ -4075,33 +3651,6 @@ Priority uses MoSCoW: Must = required for the baseline go-live of the relevant s
 | ADM-005 | Support multiple languages, time zones, currencies and SI/imperial units with a single canonical unit in storage.                                        | Should       |
 | ADM-006 | Assign users, contractors and devices to permitted organizations, sites, zones and houses.                                                               | Must         |
 | ADM-007 | Generate durable QR/barcode identifiers for houses, assets, inventory lots, flocks, samples and shipment lots.                                           | Should       |
-
-### 38.1.2 Flock planning and lifecycle
-
-| **ID**  | **Requirement**                                                                                                                                      | **Priority** |
-|---------|------------------------------------------------------------------------------------------------------------------------------------------------------|--------------|
-| FLK-001 | Create a flock plan with production type, source, breed/strain, sex, hatch date, arrival date, planned quantity, target house and expected end date. | Must         |
-| FLK-002 | Record source certificates, hatchery/breeder details, transport information, health status, vaccinations and placement acceptance checks.            | Must         |
-| FLK-003 | Require a configurable house-readiness gate covering sanitation, maintenance, environmental readiness, supplies and approval before placement.       | Must         |
-| FLK-004 | Record actual placement counts, dead-on-arrival, discrepancies and initial observations with electronic sign-off.                                    | Must         |
-| FLK-005 | Calculate age and production stage automatically and apply effective-dated target curves, schedules and alert profiles.                              | Must         |
-| FLK-006 | Support flock transfers, splits, merges and partial removals while preserving lineage and quantity reconciliation.                                   | Should       |
-| FLK-007 | Prevent a house from carrying overlapping active flocks unless the housing model explicitly permits it.                                              | Must         |
-| FLK-008 | Support depopulation/harvest, flock closure, final reconciliation, performance review and house release to sanitation.                               | Must         |
-| FLK-009 | Lock approved historical periods and require reasoned, auditable corrections rather than destructive edits.                                          | Must         |
-| FLK-010 | Allow comparison against breed/vendor, company and site target profiles with source and version visible.                                             | Should       |
-
-### 38.1.3 Daily rounds and operational records
-
-| **ID**  | **Requirement**                                                                                                                 | **Priority** |
-|---------|---------------------------------------------------------------------------------------------------------------------------------|--------------|
-| DLY-001 | Provide configurable daily/shift inspection forms by production type, age/stage, house and risk level.                          | Must         |
-| DLY-002 | Capture bird count, mortality, culls, behavior, litter, feed, water, equipment, environment, egg/growth data, notes and photos. | Must         |
-| DLY-003 | Support offline mobile entry with local timestamp, user, device, house and sync status.                                         | Must         |
-| DLY-004 | Display current alerts, due tasks, previous unresolved findings and relevant SOPs during the round.                             | Must         |
-| DLY-005 | Convert a finding into a task, health event, work order, biosecurity incident or alert acknowledgement without re-entry.        | Must         |
-| DLY-006 | Require supervisor review for late, missing, implausible or corrected daily records.                                            | Should       |
-| DLY-007 | Calculate completion, timeliness and data-quality scores by worker, house and site.                                             | Should       |
 
 ### 38.1.4 Environmental monitoring, devices and automation
 
