@@ -22,6 +22,7 @@
 export const ROLES = [
   "owner",
   "org_admin",
+  "seller",
   "farm_manager",
   "supervisor",
   "caretaker",
@@ -53,6 +54,9 @@ export const CAPABILITIES = [
   "audit_log.read",
   "auth_security.read",
   "step_up.reauth",
+  "catalog.manage",
+  "orders.manage",
+  "customers.manage",
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
@@ -73,6 +77,15 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
     "audit.read",
     "audit_log.read",
     "auth_security.read",
+    "step_up.reauth",
+    "catalog.manage",
+    "orders.manage",
+    "customers.manage",
+  ]),
+  seller: new Set<Capability>([
+    "catalog.manage",
+    "orders.manage",
+    "customers.manage",
     "step_up.reauth",
   ]),
   farm_manager: new Set<Capability>([
@@ -118,6 +131,7 @@ export function requireAny(role: Role, capabilities: Capability[]): boolean {
 const roleRank: Record<Role, number> = {
   owner: 100,
   org_admin: 80,
+  seller: 60,
   farm_manager: 60,
   supervisor: 50,
   veterinarian: 50,

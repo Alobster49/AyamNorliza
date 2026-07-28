@@ -17,14 +17,6 @@ type DashboardPathInput = {
 
 const routeGroups = [
   {
-    title: "Overview",
-    items: [{ title: "Overview", segment: "overview" }],
-  },
-  {
-    title: "Alerts",
-    items: [{ title: "Alerts", segment: "alerts" }],
-  },
-  {
     title: "Access control",
     items: [
       { title: "Organization", segment: "settings/organization" },
@@ -33,6 +25,14 @@ const routeGroups = [
       { title: "Access reviews", segment: "settings/access-reviews" },
       { title: "Support sessions", segment: "settings/support-sessions" },
       { title: "Audit log", segment: "settings/audit-log" },
+    ],
+  },
+  {
+    title: "Sales",
+    items: [
+      { title: "Products", segment: "products" },
+      { title: "Orders", segment: "orders" },
+      { title: "Customers", segment: "customers" },
     ],
   },
 ] as const;
@@ -68,9 +68,14 @@ export function getDashboardPageContext({
   const activeItem = activeGroup?.items.find((item) => item.isActive);
 
   return {
-    section: activeGroup?.title ?? "Overview",
-    title: activeItem?.title ?? "Overview",
+    section: activeGroup?.title ?? "Access control",
+    title: activeItem?.title ?? "Organization",
   };
+}
+
+export function getDefaultPageContext(section: string): string {
+  if (section === "Sales") return "Products";
+  return "Organization";
 }
 
 export function getUserInitials(name: string, email: string): string {

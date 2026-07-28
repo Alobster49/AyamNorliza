@@ -10,7 +10,7 @@ export type CapabilityGroup = {
 };
 
 /**
- * The 6 buckets used by the editorial capability matrix. Order matters —
+ * The 7 buckets used by the editorial capability matrix. Order matters —
  * this drives the visual column order from left to right (Organization,
  * Membership, ...). Listed explicitly so the matrix layout is stable
  * regardless of how `CAPABILITIES` is declared in the future.
@@ -30,6 +30,16 @@ export const CAPABILITY_GROUPS: ReadonlyArray<CapabilityGroup> = [
       "membership.scope.change",
       "membership.deactivate",
     ],
+  },
+  {
+    id: "catalog",
+    label: "Catalog",
+    capabilities: ["catalog.manage"],
+  },
+  {
+    id: "sales",
+    label: "Sales",
+    capabilities: ["orders.manage", "customers.manage"],
   },
   {
     id: "access_review",

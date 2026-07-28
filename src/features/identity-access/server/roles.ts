@@ -41,7 +41,7 @@ import { recordAudit } from "@/lib/audit/events";
 // Public types: shape the UI receives
 // ---------------------------------------------------------------------------
 
-export type CapabilityArea = "organization" | "membership" | "audit" | "support" | "access_review" | "break_glass";
+export type CapabilityArea = "organization" | "membership" | "audit" | "support" | "access_review" | "break_glass" | "catalog" | "sales";
 
 export const CAPABILITY_AREAS: ReadonlyArray<{
   id: CapabilityArea;
@@ -57,6 +57,16 @@ export const CAPABILITY_AREAS: ReadonlyArray<{
     id: "membership",
     label: "Membership",
     description: "Inviting users, changing roles, scopes, and access lifecycle.",
+  },
+  {
+    id: "catalog",
+    label: "Catalog",
+    description: "Manage products, categories, and pricing.",
+  },
+  {
+    id: "sales",
+    label: "Sales",
+    description: "Manage orders and customers.",
   },
   {
     id: "access_review",
@@ -87,6 +97,9 @@ const CAPABILITY_AREA: Record<Capability, CapabilityArea> = {
   "membership.role.change": "membership",
   "membership.scope.change": "membership",
   "membership.deactivate": "membership",
+  "catalog.manage": "catalog",
+  "orders.manage": "sales",
+  "customers.manage": "sales",
   "access_review.run": "access_review",
   "access_review.decide": "access_review",
   "support_session.open": "support",
@@ -150,6 +163,11 @@ const ROLE_LABELS: Record<Role, { label: string; description: string; rank: numb
     label: "Org admin",
     description: "Configures the organization and manages membership.",
     rank: 80,
+  },
+  seller: {
+    label: "Seller",
+    description: "Manages products, orders, and customer relationships.",
+    rank: 60,
   },
   farm_manager: {
     label: "Farm manager",
@@ -268,6 +286,18 @@ const CAPABILITY_LABELS: Record<Capability, { label: string; description: string
     label: "Step-up re-authentication (locked)",
     description:
       "Required to confirm sensitive mutations. Always preserved for roles that need it; cannot be removed.",
+  },
+  "catalog.manage": {
+    label: "Manage catalog",
+    description: "Create and edit categories, products, and variants.",
+  },
+  "orders.manage": {
+    label: "Manage orders",
+    description: "Create, view, and update order statuses.",
+  },
+  "customers.manage": {
+    label: "Manage customers",
+    description: "Add and edit customer records.",
   },
 };
 

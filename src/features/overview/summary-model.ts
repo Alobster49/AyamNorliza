@@ -21,11 +21,6 @@ export type OperationsPriorityItem = {
 
 export type OperationsSnapshot = {
   readinessScore: number;
-  alerts: {
-    open: number;
-    critical: number;
-    acknowledged: number;
-  };
   trend: Array<{
     label: string;
     livability: number;
@@ -65,11 +60,6 @@ export type OverviewDashboardRows = {
 
 export const operationsSnapshot: OperationsSnapshot = {
   readinessScore: 86,
-  alerts: {
-    open: 4,
-    critical: 1,
-    acknowledged: 3,
-  },
   trend: [
     { label: "Mon", livability: 97, feedIndex: 82, environment: 91 },
     { label: "Tue", livability: 97.4, feedIndex: 84, environment: 93 },
@@ -105,28 +95,7 @@ export const operationsSnapshot: OperationsSnapshot = {
       tone: "warning",
     },
   ],
-  priorityItems: [
-    {
-      id: "operations-biosecurity-gate",
-      title: "Biosecurity gate check",
-      detail: "Visitor log sync is delayed for House B2.",
-      category: "operations",
-      severity: "high",
-      status: "Open",
-      href: "/alerts",
-      timestamp: "12 min ago",
-    },
-    {
-      id: "operations-feed-bin",
-      title: "Feed bin reorder review",
-      detail: "Reserve is under the 7-day planning threshold.",
-      category: "operations",
-      severity: "medium",
-      status: "Review",
-      href: "/alerts",
-      timestamp: "Today",
-    },
-  ],
+  priorityItems: [],
 };
 
 export function buildOverviewDashboardSummary(

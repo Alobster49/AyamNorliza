@@ -16,7 +16,7 @@ export async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page).toHaveURL(/\/(?:[^/]+\/overview|overview)(?:[/?#]|$)/, { timeout: 10_000 });
+  await expect(page).toHaveURL(/\/(?:[^/]+\/settings\/organization|signup)(?:[/?#]|$)/, { timeout: 10_000 });
 }
 
 export async function expectOnDashboard(page: Page) {

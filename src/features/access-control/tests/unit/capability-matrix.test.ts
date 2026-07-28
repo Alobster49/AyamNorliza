@@ -19,6 +19,7 @@ describe("buildCapabilityMatrix", () => {
       const ranks: Record<Role, number> = {
         owner: 100,
         org_admin: 80,
+        seller: 60,
         farm_manager: 60,
         supervisor: 50,
         veterinarian: 50,

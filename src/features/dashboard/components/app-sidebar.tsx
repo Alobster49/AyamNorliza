@@ -4,15 +4,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
-  AlertTriangle,
   BadgeCheck,
   Building2,
   ChevronRight,
   ChevronsUpDown,
-  LayoutDashboard,
   LogOut,
   Settings,
   ShieldCheck,
+  ShoppingCart,
   UserRound,
   type LucideIcon,
 } from "lucide-react";
@@ -63,10 +62,9 @@ type AppSidebarProps = {
 };
 
 const groupIcons: Record<string, LucideIcon> = {
-  Overview: LayoutDashboard,
-  Alerts: AlertTriangle,
   "Access control": ShieldCheck,
-};
+  Sales: ShoppingCart,
+} as const;
 
 export function AppSidebar({
   organizationName,
@@ -89,7 +87,7 @@ export function AppSidebar({
       </SidebarHeader>
       <SidebarContent>
         {groups.map((group) => {
-          const GroupIcon = groupIcons[group.title] ?? LayoutDashboard;
+          const GroupIcon = groupIcons[group.title] ?? Settings;
 
           return (
             <Collapsible

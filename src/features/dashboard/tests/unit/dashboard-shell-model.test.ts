@@ -6,42 +6,31 @@ import {
 } from "../../components/dashboard-shell-model";
 
 describe("dashboard shell model", () => {
-  it("marks overview as the active sidebar group", () => {
+  it("marks organization settings as the active sidebar item", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
-      pathname: "/ayam-norliza-pilot/overview",
+      pathname: "/ayam-norliza-pilot/settings/organization",
     });
 
     expect(groups[0]).toMatchObject({
-      title: "Overview",
-      isActive: true,
-      items: [
-        expect.objectContaining({
-          title: "Overview",
-          href: "/ayam-norliza-pilot/overview",
-          isActive: true,
-        }),
-      ],
-    });
-    expect(groups[1]).toMatchObject({
-      title: "Alerts",
-      isActive: false,
-    });
-    expect(groups[2]).toMatchObject({
       title: "Access control",
-      isActive: false,
+      isActive: true,
+    });
+    const orgItem = groups[0]?.items.find((item) => item.title === "Organization");
+    expect(orgItem).toMatchObject({
+      title: "Organization",
+      href: "/ayam-norliza-pilot/settings/organization",
+      isActive: true,
     });
   });
 
-  it("marks alerts as the active sidebar group", () => {
+  it("marks users as the active sidebar item", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
-      pathname: "/ayam-norliza-pilot/alerts",
+      pathname: "/ayam-norliza-pilot/settings/users",
     });
 
-    expect(groups[0]).toMatchObject({ title: "Overview", isActive: false });
-    expect(groups[1]).toMatchObject({ title: "Alerts", isActive: true });
-    expect(groups[2]).toMatchObject({ title: "Access control", isActive: false });
+    expect(groups[0]).toMatchObject({ title: "Access control", isActive: true });
   });
 
   it("returns page context for nested access control routes", () => {
@@ -56,15 +45,15 @@ describe("dashboard shell model", () => {
     });
   });
 
-  it("returns overview as default page context for unknown routes", () => {
+  it("returns access control as default page context for unknown routes", () => {
     expect(
       getDashboardPageContext({
         organizationSlug: "ayam-norliza-pilot",
         pathname: "/ayam-norliza-pilot/unknown",
       }),
     ).toEqual({
-      section: "Overview",
-      title: "Overview",
+      section: "Access control",
+      title: "Organization",
     });
   });
 

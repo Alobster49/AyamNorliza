@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import {
-  AlertTriangle,
   ArrowUpRight,
-  Bell,
   ClipboardCheck,
   FileClock,
   LifeBuoy,
@@ -91,13 +89,6 @@ export function OperationsOverviewClient({
       href: `/${organizationSlug}/settings/support-sessions`,
     },
     {
-      title: "Open alerts",
-      value: summary.operations.alerts.open.toLocaleString(),
-      helper: `${summary.operations.alerts.critical} critical`,
-      icon: Bell,
-      href: `/${organizationSlug}/alerts`,
-    },
-    {
       title: "Readiness",
       value: `${summary.operations.readinessScore}%`,
       helper: "Operational snapshot",
@@ -143,11 +134,6 @@ export function OperationsOverviewClient({
             </div>
             <Progress value={summary.operations.readinessScore} className="mt-3" />
           </div>
-          <CommandStat
-            label="Open alerts"
-            value={summary.operations.alerts.open.toLocaleString()}
-            tone="danger"
-          />
           <CommandStat
             label="Audit events"
             value={summary.identity.recentAuditEvents.toLocaleString()}
@@ -251,12 +237,6 @@ export function OperationsOverviewClient({
               Access, support, audit, and operations items sorted for quick triage.
             </CardDescription>
           </div>
-          <Button asChild variant="outline" size="sm" className="w-fit">
-            <Link href={`/${organizationSlug}/alerts`}>
-              <AlertTriangle className="size-4" />
-              Alerts
-            </Link>
-          </Button>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="all" className="gap-4">

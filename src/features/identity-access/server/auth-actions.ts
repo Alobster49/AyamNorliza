@@ -52,7 +52,7 @@ export async function loginAction(
   // "/" has a fallback that redirects to /signup when no memberships are
   // visible (which made existing users land on "Create account" instead).
   const orgs = await listOrganizationsForCurrentUser();
-  const redirectTo = orgs.length > 0 ? `/${orgs[0]!.slug}/overview` : "/overview";
+  const redirectTo = orgs.length > 0 ? `/${orgs[0]!.slug}/settings/organization` : "/signup";
 
   return ok({ requiresMfa, redirectTo });
 }

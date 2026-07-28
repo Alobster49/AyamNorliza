@@ -17,3 +17,6 @@ test-results
 supabase/.branches
 supabase/.temp
 supabase/snippets
+
+# dev helper scripts
+.dev-stop-requested

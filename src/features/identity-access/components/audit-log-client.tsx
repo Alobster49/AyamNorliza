@@ -150,14 +150,21 @@ function Copyable({ value }: { value: string }) {
     });
   }, [value]);
   return (
-    <button
-      type="button"
+    <span
+      role="button"
+      tabIndex={0}
       onClick={onCopy}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onCopy();
+        }
+      }}
       title={value}
-      className="rounded px-1 font-mono text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
+      className="cursor-pointer rounded px-1 font-mono text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
     >
       {copied ? "copied" : `${value.slice(0, 8)}…`}
-    </button>
+    </span>
   );
 }
 
