@@ -14,6 +14,20 @@ const nextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        // Hosted Supabase Storage public URLs
+        protocol: "https",
+        hostname: "**.supabase.co",
+      },
+      {
+        // Local Supabase (supabase start) storage URLs
+        protocol: "http",
+        hostname: "127.0.0.1",
+      },
+      {
+        protocol: "http",
+        hostname: "localhost",
+      },
     ],
   },
   // Whitelist which env vars are exposed to the browser. Anything else must
