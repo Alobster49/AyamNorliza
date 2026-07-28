@@ -47,3 +47,12 @@ export type OrderWithDetails = Order & {
   customer: Customer;
   items: (OrderItem & { variant: ProductVariant & { product: Product } })[];
 };
+
+export type UnitType = "per_kg" | "per_piece";
+
+export const UNIT_TYPES: readonly UnitType[] = ["per_kg", "per_piece"] as const;
+
+export const UNIT_TYPE_LABELS: Record<UnitType, string> = {
+  per_kg: "Per kg",
+  per_piece: "Per piece",
+};
