@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { updateOrderStatus } from "@/features/seller/server/actions";
 import type { Order, OrderItem, OrderStatus } from "@/features/seller/types";
 import { ORDER_STATUS_LABELS } from "@/features/seller/types";
+import { formatQuantity, formatVariantPrice } from "@/features/seller/lib/pricing";
+import type { UnitType } from "@/features/seller/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
@@ -12,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 type OrderWithDetails = Order & {
   customer: { name: string; phone: string; address: string | null; notes: string | null };
-  items: (OrderItem & { variant: { name: string; price_per_unit: number; product: { name: string } } })[];
+  items: (OrderItem & { variant: { name: string; price_per_unit: number; product: { name: string }; unit_type: string } })[];
 };
 
 type OrderDetailClientProps = {
@@ -109,13 +111,20 @@ export function OrderDetailClient({ organizationSlug, initialOrder }: OrderDetai
                   <div>
                     <div className="font-medium">{item.variant?.product?.name || "Unknown Product"}</div>
                     <div className="text-sm text-muted-foreground">
-                      {item.variant?.name || "Unknown Variant"} x {item.quantity}
+                      {item.variant?.name || "Unknown Variant"} ·{" "}
+                      {formatQuantity(
+                        Number(item.quantity),
+                        (item.variant?.unit_type ?? "per_piece") as UnitType,
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="font-medium">{formatPrice(Number(item.subtotal))}</div>
                     <div className="text-sm text-muted-foreground">
-                      {formatPrice(Number(item.unit_price))} each
+                      {formatVariantPrice(
+                        Number(item.unit_price),
+                        (item.variant?.unit_type ?? "per_piece") as UnitType,
+                      )}
                     </div>
                   </div>
                 </div>
