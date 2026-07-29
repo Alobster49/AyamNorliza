@@ -30,7 +30,9 @@ export function CategoryDialog({
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async (data: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
     setSaving(true);
     try {
       const input = {
@@ -61,7 +63,7 @@ export function CategoryDialog({
         <DialogHeader>
           <DialogTitle>{category ? "Edit Category" : "Add Category"}</DialogTitle>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="category-name">Category Name</Label>
             <Input id="category-name" name="name" defaultValue={category?.name ?? ""} required />

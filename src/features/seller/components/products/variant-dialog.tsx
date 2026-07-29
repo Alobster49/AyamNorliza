@@ -56,7 +56,9 @@ export function VariantDialog({
 
   const priceLabel = unitType === "per_kg" ? "Price (RM per kg)" : "Price (RM per piece)";
 
-  const handleSubmit = async (data: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
     setSaving(true);
     try {
       const input = {
@@ -88,7 +90,7 @@ export function VariantDialog({
         <DialogHeader>
           <DialogTitle>{variant ? "Edit Size/Option" : "Add Size/Option"}</DialogTitle>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="variant-name">Name (e.g., Standard, Small, 1kg Pack)</Label>
             <Input id="variant-name" name="name" defaultValue={variant?.name ?? ""} required />

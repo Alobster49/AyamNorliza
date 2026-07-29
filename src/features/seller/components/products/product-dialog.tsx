@@ -54,7 +54,9 @@ export function ProductDialog({
     }
   }, [open, product, defaultCategoryId]);
 
-  const handleSubmit = async (data: FormData) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const data = new FormData(e.currentTarget);
     if (!categoryId) {
       toast({ title: "Please choose a category", variant: "destructive" });
       return;
@@ -90,7 +92,7 @@ export function ProductDialog({
         <DialogHeader>
           <DialogTitle>{product ? "Edit Product" : "Add Product"}</DialogTitle>
         </DialogHeader>
-        <form action={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label>Photo</Label>
             <ImageUpload organizationId={organizationId} value={imageUrl} onChange={setImageUrl} />
