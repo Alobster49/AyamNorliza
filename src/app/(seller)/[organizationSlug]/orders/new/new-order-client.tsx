@@ -6,7 +6,6 @@ import { createOrder, createCustomer, searchCustomers, getCatalogForOrdering } f
 import type { Customer, UnitType } from "@/features/seller/types";
 import {
   formatPrice,
-  formatQuantity,
   formatVariantPrice,
   isValidQuantity,
   lineSubtotal,
@@ -414,7 +413,13 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                           step={step}
                           min={min}
                           value={item.quantity}
-                          onChange={(e) => updateQuantity(item.variantId, Number(e.target.value))}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            if (raw === "") return;
+                            const next = Number(raw);
+                            if (Number.isNaN(next)) return;
+                            updateQuantity(item.variantId, next);
+                          }}
                           className="h-7 w-20 text-center"
                         />
                         <Button
