@@ -277,7 +277,7 @@ const CreateOrderInput = z.object({
     .array(
       z.object({
         variantId: z.string().uuid(),
-        quantity: z.number().positive(),
+        quantity: z.number().positive().max(10000),
       }),
     )
     .min(1),

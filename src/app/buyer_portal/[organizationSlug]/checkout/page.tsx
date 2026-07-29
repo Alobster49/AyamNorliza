@@ -98,7 +98,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   };
 
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + Math.round(item.price * item.quantity * 100) / 100,
     0,
   );
 
@@ -266,7 +266,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                       {item.productName} - {item.name} ×{" "}
                       {item.unitType === "per_kg" ? `${item.quantity} kg` : item.quantity}
                     </span>
-                    <span>{formatPrice(item.price * item.quantity)}</span>
+                    <span>{formatPrice(Math.round(item.price * item.quantity * 100) / 100)}</span>
                   </div>
                 ))}
                 <div className="border-t pt-2 mt-2">

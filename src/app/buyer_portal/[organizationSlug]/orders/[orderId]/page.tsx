@@ -157,7 +157,10 @@ export default async function OrderDetailPage({
                     {item.variant?.product?.name || "Unknown Product"}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {item.variant?.name} x {item.quantity}
+                    {item.variant?.name} x{" "}
+                    {(item.variant?.unit_type ?? "per_piece") === "per_kg"
+                      ? `${item.quantity} kg`
+                      : item.quantity}
                   </p>
                 </div>
                 <div className="text-right">

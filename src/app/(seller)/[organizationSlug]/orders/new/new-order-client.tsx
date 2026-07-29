@@ -417,8 +417,16 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                             const raw = e.target.value;
                             if (raw === "") return;
                             const next = Number(raw);
-                            if (Number.isNaN(next)) return;
+                            if (!Number.isFinite(next)) return;
+                            if (next <= 0) return;
                             updateQuantity(item.variantId, next);
+                          }}
+                          onBlur={(e) => {
+                            const raw = e.target.value;
+                            const next = Number(raw);
+                            if (raw === "" || !Number.isFinite(next) || next <= 0) {
+                              e.target.value = String(item.quantity);
+                            }
                           }}
                           className="h-7 w-20 text-center"
                         />

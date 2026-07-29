@@ -35,6 +35,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     if (stored) {
       try {
+        // Hydrating from localStorage must happen after mount: reading it in a
+        // lazy initializer would make the client's first render differ from the
+        // server's and trip a hydration mismatch.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setItems(JSON.parse(stored));
       } catch {
         // Ignore invalid JSON

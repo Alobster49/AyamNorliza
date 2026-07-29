@@ -1,3 +1,34 @@
+// Restrict Supabase Storage remote patterns to the public storage path so
+// /_next/image can't be used as a GET-based SSRF probe against arbitrary
+// paths/ports. Localhost entries are dev-only: a remotePattern with no
+// `port` matches any port, so leaving them in production would let
+// /_next/image?url=http://localhost:PORT/... fetch co-located services.
+const remotePatterns = [
+  { protocol: "https", hostname: "images.unsplash.com" },
+  {
+    // Hosted Supabase Storage public URLs
+    protocol: "https",
+    hostname: "**.supabase.co",
+    pathname: "/storage/v1/object/public/**",
+  },
+];
+
+if (process.env.NODE_ENV !== "production") {
+  remotePatterns.push(
+    {
+      // Local Supabase (supabase start) storage URLs
+      protocol: "http",
+      hostname: "127.0.0.1",
+      pathname: "/storage/v1/object/public/**",
+    },
+    {
+      protocol: "http",
+      hostname: "localhost",
+      pathname: "/storage/v1/object/public/**",
+    },
+  );
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -9,26 +40,7 @@ const nextConfig = {
   // native form submission takes over, leaking credentials into query strings.
   allowedDevOrigins: ["192.168.50.100", "192.168.50.*", "localhost", "127.0.0.1"],
   images: {
-    remotePatterns: [
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-      },
-      {
-        // Hosted Supabase Storage public URLs
-        protocol: "https",
-        hostname: "**.supabase.co",
-      },
-      {
-        // Local Supabase (supabase start) storage URLs
-        protocol: "http",
-        hostname: "127.0.0.1",
-      },
-      {
-        protocol: "http",
-        hostname: "localhost",
-      },
-    ],
+    remotePatterns,
   },
   // Whitelist which env vars are exposed to the browser. Anything else must
   // stay server-only; see `src/lib/env.ts` and the SECURITY section of

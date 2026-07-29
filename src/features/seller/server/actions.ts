@@ -167,7 +167,9 @@ export async function deleteProduct(id: string, orgSlug?: string) {
   const { error } = await supabase.from("products").delete().eq("id", id);
   if (error) {
     if (error.code === "23503") {
-      throw new Error("This product has been ordered before and cannot be deleted. Mark it inactive instead.");
+      throw new Error(
+        "This product has been ordered before and cannot be deleted. Mark its sizes/options unavailable instead.",
+      );
     }
     throw new Error(error.message);
   }

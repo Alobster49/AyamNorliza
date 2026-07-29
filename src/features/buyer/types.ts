@@ -109,7 +109,7 @@ export type OrderWithItems = BuyerOrder & {
 
 export const CartItemSchema = z.object({
   variantId: z.string().uuid(),
-  quantity: z.number().positive(),
+  quantity: z.number().positive().max(10000),
 });
 
 export type CartItem = z.infer<typeof CartItemSchema>;

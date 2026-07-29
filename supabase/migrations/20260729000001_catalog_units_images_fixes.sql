@@ -65,9 +65,18 @@ create policy "customers_delete" on public.customers
 -- 4. product-images storage bucket (public read; sellers write within own org
 --    folder: object names are '{organization_id}/{uuid}.{ext}').
 -- ---------------------------------------------------------------------------
-insert into storage.buckets (id, name, public)
-values ('product-images', 'product-images', true)
-on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'product-images',
+  'product-images',
+  true,
+  5242880,
+  array['image/jpeg','image/png','image/webp','image/gif']
+)
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
 
 create policy "product_images_public_read" on storage.objects
   for select using (bucket_id = 'product-images');

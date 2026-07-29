@@ -86,7 +86,7 @@ export default function CartPage({ params }: CartPageProps) {
   };
 
   const subtotal = cartItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    (sum, item) => sum + Math.round(item.price * item.quantity * 100) / 100,
     0,
   );
 
@@ -187,7 +187,7 @@ export default function CartPage({ params }: CartPageProps) {
                     </div>
 
                     <p className="w-24 text-right font-medium">
-                      {formatPrice(item.price * item.quantity)}
+                      {formatPrice(Math.round(item.price * item.quantity * 100) / 100)}
                     </p>
 
                     <Button
