@@ -17,6 +17,7 @@ export default async function ProductsPage({
 
   return (
     <ProductsClient
+      organizationId={org.id}
       organizationSlug={organizationSlug}
       initialCategories={categories}
       initialProducts={products}
