@@ -163,7 +163,7 @@ export default function CartPage({ params }: CartPageProps) {
                             >
                               <Minus className="h-4 w-4" />
                             </Button>
-                            <span className="w-14 text-center">
+                            <span className={item.unitType === "per_kg" ? "w-14 text-center" : "w-8 text-center"}>
                               {item.unitType === "per_kg"
                                 ? `${item.quantity} kg`
                                 : item.quantity}

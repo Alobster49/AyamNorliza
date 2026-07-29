@@ -136,7 +136,17 @@ export function ProductCard({
                   min={0.5}
                   step={0.5}
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(0.5, Number(e.target.value) || 0.5))}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    if (raw === "") return;
+                    const next = Number(raw);
+                    if (!Number.isFinite(next)) return;
+                    setQuantity(next);
+                  }}
+                  onBlur={(e) => {
+                    const next = Number(e.target.value);
+                    if (!Number.isFinite(next) || next < 0.5) setQuantity(0.5);
+                  }}
                   className="text-center"
                 />
                 <span className="text-sm text-muted-foreground">kg</span>
