@@ -277,7 +277,7 @@ const CreateOrderInput = z.object({
     .array(
       z.object({
         variantId: z.string().uuid(),
-        quantity: z.number().int().positive(),
+        quantity: z.number().positive(),
       }),
     )
     .min(1),
@@ -318,7 +318,7 @@ export async function createBuyerOrder(
   const variantIds = input.items.map((i) => i.variantId);
   const { data: variants } = await supabase
     .from("product_variants")
-    .select("id, price_per_unit, product_id, is_available")
+    .select("id, price_per_unit, unit_type, product_id, is_available")
     .in("id", variantIds);
 
   if (!variants || variants.length !== variantIds.length) {
@@ -336,7 +336,10 @@ export async function createBuyerOrder(
     if (!variant || !variant.is_available) {
       return err("validation", `Product is not available`);
     }
-    const subtotal = Number(variant.price_per_unit) * item.quantity;
+    if (variant.unit_type === "per_piece" && !Number.isInteger(item.quantity)) {
+      return err("validation", "Piece quantities must be whole numbers");
+    }
+    const subtotal = Math.round(Number(variant.price_per_unit) * item.quantity * 100) / 100;
     totalAmount += subtotal;
     orderItems.push({
       variant_id: variant.id,

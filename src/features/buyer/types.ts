@@ -87,6 +87,7 @@ export type ProductVariant = {
   product_id: string;
   name: string;
   price_per_unit: number;
+  unit_type: "per_kg" | "per_piece";
   is_available: boolean;
 };
 
@@ -108,7 +109,7 @@ export type OrderWithItems = BuyerOrder & {
 
 export const CartItemSchema = z.object({
   variantId: z.string().uuid(),
-  quantity: z.number().int().positive(),
+  quantity: z.number().positive(),
 });
 
 export type CartItem = z.infer<typeof CartItemSchema>;

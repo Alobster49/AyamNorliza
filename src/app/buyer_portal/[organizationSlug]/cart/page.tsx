@@ -20,6 +20,7 @@ type CartItemWithDetails = {
   quantity: number;
   name: string;
   price: number;
+  unitType: "per_kg" | "per_piece";
   productName: string;
 };
 
@@ -63,6 +64,7 @@ export default function CartPage({ params }: CartPageProps) {
             quantity: itemsMap.get(v.id) || 1,
             name: v.name,
             price: Number(v.price_per_unit),
+            unitType: v.unit_type === "per_kg" ? "per_kg" : "per_piece",
             productName: v.product?.name || "Unknown Product",
           })),
         );
@@ -144,27 +146,44 @@ export default function CartPage({ params }: CartPageProps) {
 
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() =>
-                          updateQuantity(item.variantId, item.quantity - 1)
-                        }
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="w-8 text-center">{item.quantity}</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() =>
-                          updateQuantity(item.variantId, item.quantity + 1)
-                        }
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
+                      {(() => {
+                        const step = item.unitType === "per_kg" ? 0.5 : 1;
+                        return (
+                          <>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                updateQuantity(
+                                  item.variantId,
+                                  Math.round((item.quantity - step) * 1000) / 1000,
+                                )
+                              }
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <span className="w-14 text-center">
+                              {item.unitType === "per_kg"
+                                ? `${item.quantity} kg`
+                                : item.quantity}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() =>
+                                updateQuantity(
+                                  item.variantId,
+                                  Math.round((item.quantity + step) * 1000) / 1000,
+                                )
+                              }
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <p className="w-24 text-right font-medium">

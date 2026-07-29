@@ -27,6 +27,7 @@ type CartItemWithDetails = {
   quantity: number;
   name: string;
   price: number;
+  unitType: "per_kg" | "per_piece";
   productName: string;
 };
 
@@ -75,6 +76,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
             quantity: itemsMap.get(v.id) || 1,
             name: v.name,
             price: Number(v.price_per_unit),
+            unitType: v.unit_type === "per_kg" ? "per_kg" : "per_piece",
             productName: v.product?.name || "Unknown Product",
           })),
         );
@@ -261,7 +263,8 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                     className="flex justify-between text-sm"
                   >
                     <span>
-                      {item.productName} - {item.name} x {item.quantity}
+                      {item.productName} - {item.name} ×{" "}
+                      {item.unitType === "per_kg" ? `${item.quantity} kg` : item.quantity}
                     </span>
                     <span>{formatPrice(item.price * item.quantity)}</span>
                   </div>
