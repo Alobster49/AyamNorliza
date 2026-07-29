@@ -3,8 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createOrder, createCustomer, searchCustomers, getCatalogForOrdering } from "@/features/seller/server/actions";
-import type { Customer, OrderStatus } from "@/features/seller/types";
-import { ORDER_STATUS_LABELS } from "@/features/seller/types";
+import type { Customer, UnitType } from "@/features/seller/types";
+import {
+  formatPrice,
+  formatQuantity,
+  formatVariantPrice,
+  isValidQuantity,
+  lineSubtotal,
+} from "@/features/seller/lib/pricing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +31,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
+import { Minus, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type CategoryWithProducts = {
@@ -34,7 +40,13 @@ type CategoryWithProducts = {
   products: {
     id: string;
     name: string;
-    variants: { id: string; name: string; price_per_unit: number; is_available: boolean }[];
+    variants: {
+      id: string;
+      name: string;
+      price_per_unit: number;
+      unit_type: string;
+      is_available: boolean;
+    }[];
   }[];
 }[];
 
@@ -44,6 +56,7 @@ type CartItem = {
   productName: string;
   variantName: string;
   price: number;
+  unitType: UnitType;
   quantity: number;
 };
 
@@ -110,24 +123,31 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     }
   };
 
-  const addToCart = (variantId: string, productId: string, productName: string, variantName: string, price: number) => {
+  const addToCart = (
+    variantId: string,
+    productId: string,
+    productName: string,
+    variantName: string,
+    price: number,
+    unitType: UnitType,
+  ) => {
     setCart((prev) => {
       const existing = prev.find((item) => item.variantId === variantId);
       if (existing) {
         return prev.map((item) =>
-          item.variantId === variantId ? { ...item, quantity: item.quantity + 1 } : item
+          item.variantId === variantId ? { ...item, quantity: item.quantity + 1 } : item,
         );
       }
-      return [...prev, { variantId, productId, productName, variantName, price, quantity: 1 }];
+      return [...prev, { variantId, productId, productName, variantName, price, unitType, quantity: 1 }];
     });
   };
 
   const updateQuantity = (variantId: string, quantity: number) => {
-    if (quantity <= 0) {
+    if (!Number.isFinite(quantity) || quantity <= 0) {
       setCart((prev) => prev.filter((item) => item.variantId !== variantId));
     } else {
       setCart((prev) =>
-        prev.map((item) => (item.variantId === variantId ? { ...item, quantity } : item))
+        prev.map((item) => (item.variantId === variantId ? { ...item, quantity } : item)),
       );
     }
   };
@@ -136,7 +156,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     setCart((prev) => prev.filter((item) => item.variantId !== variantId));
   };
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const cartTotal = cart.reduce((sum, item) => sum + lineSubtotal(item.price, item.quantity), 0);
 
   const submitOrder = async () => {
     if (!selectedCustomer) {
@@ -145,6 +165,19 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     }
     if (cart.length === 0) {
       toast({ title: "Please add items to the order", variant: "destructive" });
+      return;
+    }
+
+    const invalid = cart.find((item) => !isValidQuantity(item.quantity, item.unitType));
+    if (invalid) {
+      toast({
+        title: `Invalid quantity for ${invalid.productName} (${invalid.variantName})`,
+        description:
+          invalid.unitType === "per_piece"
+            ? "Piece quantities must be whole numbers."
+            : "Weight must be greater than zero.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -160,21 +193,15 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
           variant_id: item.variantId,
           quantity: item.quantity,
           unit_price: item.price,
-          subtotal: item.price * item.quantity,
-        }))
+          subtotal: lineSubtotal(item.price, item.quantity),
+        })),
+        organizationSlug,
       );
       toast({ title: "Order created successfully" });
       router.push(`/${organizationSlug}/orders`);
     } catch (error) {
       toast({ title: "Error", description: String(error), variant: "destructive" });
     }
-  };
-
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat("en-MY", {
-      style: "currency",
-      currency: "MYR",
-    }).format(amount);
   };
 
   return (
@@ -220,11 +247,13 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                                   product.id,
                                   product.name,
                                   variant.name,
-                                  variant.price_per_unit
+                                  variant.price_per_unit,
+                                  variant.unit_type as UnitType,
                                 )
                               }
                             >
-                              {variant.name} - {formatPrice(variant.price_per_unit)}
+                              {variant.name} —{" "}
+                              {formatVariantPrice(variant.price_per_unit, variant.unit_type as UnitType)}
                             </Button>
                           ))}
                         </div>
@@ -339,27 +368,75 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
               <p className="text-center text-muted-foreground">No items added yet</p>
             ) : (
               <div className="space-y-3">
-                {cart.map((item) => (
-                  <div key={item.variantId} className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="font-medium">{item.productName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {item.variantName} x {item.quantity}
+                {cart.map((item) => {
+                  const step = item.unitType === "per_kg" ? 0.5 : 1;
+                  const min = item.unitType === "per_kg" ? 0.1 : 1;
+                  return (
+                    <div key={item.variantId} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate font-medium">{item.productName}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {item.variantName} · {formatVariantPrice(item.price, item.unitType)}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium">
+                            {formatPrice(lineSubtotal(item.price, item.quantity))}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => removeFromCart(item.variantId)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() =>
+                            updateQuantity(
+                              item.variantId,
+                              Math.round((item.quantity - step) * 1000) / 1000,
+                            )
+                          }
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          type="number"
+                          inputMode="decimal"
+                          step={step}
+                          min={min}
+                          value={item.quantity}
+                          onChange={(e) => updateQuantity(item.variantId, Number(e.target.value))}
+                          className="h-7 w-20 text-center"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() =>
+                            updateQuantity(
+                              item.variantId,
+                              Math.round((item.quantity + step) * 1000) / 1000,
+                            )
+                          }
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                        <span className="ml-1 text-sm text-muted-foreground">
+                          {item.unitType === "per_kg" ? "kg" : "pcs"}
+                        </span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <div className="font-medium">{formatPrice(item.price * item.quantity)}</div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => removeFromCart(item.variantId)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <div className="border-t pt-3">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
