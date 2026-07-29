@@ -180,6 +180,9 @@ export function ProductsClient({
         onSaved={handleCategorySaved}
       />
       <ProductDialog
+        // Remount per target so the form's initial state comes from the
+        // product being edited rather than the previously opened one.
+        key={dialog?.kind === "product" ? `product-${dialog.product?.id ?? "new"}` : "product-idle"}
         open={dialog?.kind === "product"}
         onOpenChange={closeDialog}
         organizationId={organizationId}
@@ -190,6 +193,7 @@ export function ProductsClient({
         onSaved={handleProductSaved}
       />
       <VariantDialog
+        key={dialog?.kind === "variant" ? `variant-${dialog.variant?.id ?? "new"}` : "variant-idle"}
         open={dialog?.kind === "variant"}
         onOpenChange={closeDialog}
         organizationId={organizationId}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createProduct, updateProduct } from "@/features/seller/server/actions";
 import type { Category, Product } from "@/features/seller/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -45,14 +45,6 @@ export function ProductDialog({
   const [categoryId, setCategoryId] = useState<string>(
     product?.category_id ?? defaultCategoryId ?? "",
   );
-
-  // Re-sync when the dialog opens for a different product.
-  useEffect(() => {
-    if (open) {
-      setImageUrl(product?.image_url ?? null);
-      setCategoryId(product?.category_id ?? defaultCategoryId ?? "");
-    }
-  }, [open, product, defaultCategoryId]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

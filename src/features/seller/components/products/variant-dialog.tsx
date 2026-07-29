@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createVariant, updateVariant } from "@/features/seller/server/actions";
 import {
   UNIT_TYPE_LABELS,
@@ -46,13 +46,6 @@ export function VariantDialog({
     (variant?.unit_type as UnitType) ?? "per_piece",
   );
   const [available, setAvailable] = useState(variant?.is_available ?? true);
-
-  useEffect(() => {
-    if (open) {
-      setUnitType((variant?.unit_type as UnitType) ?? "per_piece");
-      setAvailable(variant?.is_available ?? true);
-    }
-  }, [open, variant]);
 
   const priceLabel = unitType === "per_kg" ? "Price (RM per kg)" : "Price (RM per piece)";
 

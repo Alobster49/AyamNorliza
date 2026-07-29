@@ -10,7 +10,7 @@ export type CapabilityGroup = {
 };
 
 /**
- * The 7 buckets used by the editorial capability matrix. Order matters —
+ * The 8 buckets used by the editorial capability matrix. Order matters —
  * this drives the visual column order from left to right (Organization,
  * Membership, ...). Listed explicitly so the matrix layout is stable
  * regardless of how `CAPABILITIES` is declared in the future.

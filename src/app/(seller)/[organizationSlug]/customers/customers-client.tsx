@@ -265,7 +265,7 @@ export function CustomersClient({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (e.g., "prefers breast cuts")</Label>
+              <Label htmlFor="notes">Notes (e.g., &ldquo;prefers breast cuts&rdquo;)</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
