@@ -3,9 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2, Plus, Minus, ShoppingCart, ArrowRight } from "lucide-react";
+import { Trash2, Minus, Plus, ShoppingCart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -13,16 +12,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/features/buyer/components/cart-context";
-
-type CartItemWithDetails = {
-  variantId: string;
-  quantity: number;
-  name: string;
-  price: number;
-  unitType: "per_kg" | "per_piece";
-  productName: string;
-};
+import { FALLBACK_LABELS } from "@/features/orders/types";
 
 type CartPageProps = {
   params: Promise<{ organizationSlug: string }>;
@@ -30,82 +22,19 @@ type CartPageProps = {
 
 export default function CartPage({ params }: CartPageProps) {
   const router = useRouter();
-  const { items, updateQuantity, removeItem, clearCart } = useCart();
-  const [cartItems, setCartItems] = useState<CartItemWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { items, updateLine, removeLine } = useCart();
   const [organizationSlug, setOrganizationSlug] = useState<string>("");
 
   useEffect(() => {
     params.then((p) => setOrganizationSlug(p.organizationSlug));
   }, [params]);
 
-  // Fetch variant details
-  useEffect(() => {
-    async function fetchCartDetails() {
-      if (items.length === 0) {
-        setCartItems([]);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const variantIds = items.map((i) => i.variantId);
-        const response = await fetch(
-          `/api/buyer/cart?variantIds=${variantIds.join(",")}`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch");
-
-        const data = await response.json();
-        const itemsMap = new Map(items.map((i) => [i.variantId, i.quantity]));
-
-        setCartItems(
-          data.variants.map((v: any) => ({
-            variantId: v.id,
-            quantity: itemsMap.get(v.id) || 1,
-            name: v.name,
-            price: Number(v.price_per_unit),
-            unitType: v.unit_type === "per_kg" ? "per_kg" : "per_piece",
-            productName: v.product?.name || "Unknown Product",
-          })),
-        );
-      } catch (error) {
-        console.error("Error fetching cart details:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchCartDetails();
-  }, [items]);
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-MY", {
-      style: "currency",
-      currency: "MYR",
-    }).format(price);
-  };
-
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + Math.round(item.price * item.quantity * 100) / 100,
-    0,
-  );
-
   const handleCheckout = () => {
-    if (cartItems.length === 0) return;
+    if (items.length === 0) return;
     router.push(`/buyer_portal/${organizationSlug}/checkout`);
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading cart...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (cartItems.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
         <ShoppingCart className="mb-4 h-16 w-16 text-muted-foreground" />
@@ -125,118 +54,101 @@ export default function CartPage({ params }: CartPageProps) {
       <h1 className="mb-8 text-3xl font-bold">Shopping Cart</h1>
 
       <div className="grid gap-8 lg:grid-cols-3">
-        {/* Cart Items */}
         <div className="lg:col-span-2">
           <Card>
             <CardHeader>
-              <CardTitle>Items ({cartItems.length})</CardTitle>
+              <CardTitle>Items ({items.length})</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {cartItems.map((item) => (
-                <div
-                  key={item.variantId}
-                  className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-                >
-                  <div className="flex-1">
-                    <p className="font-medium">{item.productName}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.name} - {formatPrice(item.price)}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1">
-                      {(() => {
-                        const step = item.unitType === "per_kg" ? 0.5 : 1;
-                        return (
-                          <>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.variantId,
-                                  Math.round((item.quantity - step) * 1000) / 1000,
-                                )
-                              }
-                            >
-                              <Minus className="h-4 w-4" />
-                            </Button>
-                            <span className={item.unitType === "per_kg" ? "w-14 text-center" : "w-8 text-center"}>
-                              {item.unitType === "per_kg"
-                                ? `${item.quantity} kg`
-                                : item.quantity}
-                            </span>
-                            <Button
-                              variant="outline"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                updateQuantity(
-                                  item.variantId,
-                                  Math.round((item.quantity + step) * 1000) / 1000,
-                                )
-                              }
-                            >
-                              <Plus className="h-4 w-4" />
-                            </Button>
-                          </>
-                        );
-                      })()}
+              {items.map((item, index) => {
+                const step = item.mode === "kg" ? 0.1 : 1;
+                const min = item.mode === "kg" ? 0.1 : 1;
+                return (
+                  <div
+                    key={`${item.productId}-${index}`}
+                    className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">{item.productName}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.sizeMinKg}-{item.sizeMaxKg} kg / bird
+                      </p>
+                      <Badge variant="outline" className="mt-1">
+                        {FALLBACK_LABELS[item.fallback]}
+                      </Badge>
                     </div>
 
-                    <p className="w-24 text-right font-medium">
-                      {formatPrice(Math.round(item.price * item.quantity * 100) / 100)}
-                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() =>
+                            updateLine(index, {
+                              quantity: Math.max(
+                                min,
+                                Math.round((item.quantity - step) * 1000) / 1000,
+                              ),
+                            })
+                          }
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span
+                          className={
+                            item.mode === "kg" ? "w-16 text-center" : "w-8 text-center"
+                          }
+                        >
+                          {item.mode === "kg" ? `${item.quantity} kg` : item.quantity}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() =>
+                            updateLine(index, {
+                              quantity: Math.round((item.quantity + step) * 1000) / 1000,
+                            })
+                          }
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
 
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive"
-                      onClick={() => removeItem(item.variantId)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive"
+                        onClick={() => removeLine(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </CardContent>
           </Card>
         </div>
 
-        {/* Order Summary */}
         <div>
           <Card className="sticky top-20">
             <CardHeader>
-              <CardTitle>Order Summary</CardTitle>
+              <CardTitle>Ready to order?</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Subtotal</span>
-                <span className="font-medium">{formatPrice(subtotal)}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Delivery</span>
-                <span className="font-medium">Calculated at checkout</span>
-              </div>
-              <div className="border-t pt-4">
-                <div className="flex justify-between">
-                  <span className="font-semibold">Total</span>
-                  <span className="text-xl font-bold">{formatPrice(subtotal)}</span>
-                </div>
-              </div>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Pricing is confirmed after your order is weighed and closed —
+                pick a delivery slot next.
+              </p>
             </CardContent>
             <CardFooter className="flex flex-col gap-2">
               <Button className="w-full" size="lg" onClick={handleCheckout}>
                 Proceed to Checkout
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                asChild
-              >
+              <Button variant="outline" className="w-full" asChild>
                 <Link href={`/buyer_portal/${organizationSlug}/shop`}>
                   Continue Shopping
                 </Link>
