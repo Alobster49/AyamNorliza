@@ -69,6 +69,7 @@ export function DeliveryClient({ organizationSlug, initialSetup }: DeliveryClien
   const [truckDialog, setTruckDialog] = useState<TruckDialogState>(null);
   const [slotDialog, setSlotDialog] = useState<SlotDialogState>(null);
   const [blockForm, setBlockForm] = useState({ blockDate: "", truckId: "all", reason: "" });
+  const [savingTruckId, setSavingTruckId] = useState<string | null>(null);
 
   function fail(message: string) {
     toast({ title: "Error", description: message, variant: "destructive" });
@@ -155,25 +156,30 @@ export function DeliveryClient({ organizationSlug, initialSetup }: DeliveryClien
   }
 
   async function handleToggleTruckZone(truck: Truck, zoneId: string, checked: boolean) {
-    const currentZoneIds = truckZones
-      .filter((tz) => tz.truck_id === truck.id)
-      .map((tz) => tz.zone_id);
-    const nextZoneIds = checked
-      ? [...currentZoneIds, zoneId]
-      : currentZoneIds.filter((id) => id !== zoneId);
-    const result = await setTruckZones(organizationSlug, truck.id, nextZoneIds);
-    if (!result.ok) {
-      fail(result.message);
-      return;
+    setSavingTruckId(truck.id);
+    try {
+      const currentZoneIds = truckZones
+        .filter((tz) => tz.truck_id === truck.id)
+        .map((tz) => tz.zone_id);
+      const nextZoneIds = checked
+        ? [...currentZoneIds, zoneId]
+        : currentZoneIds.filter((id) => id !== zoneId);
+      const result = await setTruckZones(organizationSlug, truck.id, nextZoneIds);
+      if (!result.ok) {
+        fail(result.message);
+        return;
+      }
+      setTruckZonesList((prev) => [
+        ...prev.filter((tz) => tz.truck_id !== truck.id),
+        ...nextZoneIds.map((id) => ({
+          truck_id: truck.id,
+          zone_id: id,
+          organization_id: truck.organization_id,
+        })),
+      ]);
+    } finally {
+      setSavingTruckId((prev) => (prev === truck.id ? null : prev));
     }
-    setTruckZonesList((prev) => [
-      ...prev.filter((tz) => tz.truck_id !== truck.id),
-      ...nextZoneIds.map((id) => ({
-        truck_id: truck.id,
-        zone_id: id,
-        organization_id: truck.organization_id,
-      })),
-    ]);
   }
 
   // -- Slots --------------------------------------------------------------
@@ -369,6 +375,7 @@ export function DeliveryClient({ organizationSlug, initialSetup }: DeliveryClien
                                   type="checkbox"
                                   className="h-4 w-4"
                                   checked={coveredZoneIds.has(zone.id)}
+                                  disabled={savingTruckId === truck.id}
                                   onChange={(e) =>
                                     handleToggleTruckZone(truck, zone.id, e.target.checked)
                                   }
