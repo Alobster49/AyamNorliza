@@ -1,63 +1,58 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createOrder, createCustomer, searchCustomers, getCatalogForOrdering } from "@/features/seller/server/actions";
-import type { Customer, UnitType } from "@/features/seller/types";
-import {
-  formatPrice,
-  formatVariantPrice,
-  isValidQuantity,
-  lineSubtotal,
-} from "@/features/seller/lib/pricing";
+import { createCustomer, searchCustomers, getCatalogForOrdering } from "@/features/seller/server/actions";
+import type { Customer } from "@/features/seller/types";
+import { getActiveZones } from "@/features/orders/server/portal-actions";
+import { getDeliveryOptionsForOrg, createManualOrder } from "@/features/orders/server/order-actions";
+import type { DeliveryOption, DeliveryZone, OrderFallback, OrderItemMode } from "@/features/orders/types";
+import { FALLBACKS, FALLBACK_LABELS } from "@/features/orders/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Minus, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Search, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type CategoryWithProducts = {
+type CategoryWithProducts = Array<{
   id: string;
   name: string;
-  products: {
-    id: string;
-    name: string;
-    variants: {
-      id: string;
-      name: string;
-      price_per_unit: number;
-      unit_type: string;
-      is_available: boolean;
-    }[];
-  }[];
-}[];
+  products: Array<{ id: string; name: string }>;
+}>;
 
-type CartItem = {
-  variantId: string;
+type ProductOption = { id: string; name: string; categoryName: string };
+
+type LineDraft = {
+  key: string;
   productId: string;
-  productName: string;
-  variantName: string;
-  price: number;
-  unitType: UnitType;
-  quantity: number;
+  mode: OrderItemMode;
+  quantity: string;
+  sizeMinKg: string;
+  sizeMaxKg: string;
+  fallback: OrderFallback;
 };
+
+let lineKeySeq = 0;
+function newLine(): LineDraft {
+  lineKeySeq += 1;
+  return {
+    key: `line-${lineKeySeq}`,
+    productId: "",
+    mode: "piece",
+    quantity: "1",
+    sizeMinKg: "1",
+    sizeMaxKg: "2",
+    fallback: "mix",
+  };
+}
 
 type NewOrderClientProps = {
   organizationSlug: string;
@@ -67,26 +62,42 @@ type NewOrderClientProps = {
 export function NewOrderClient({ organizationSlug, organizationId }: NewOrderClientProps) {
   const { toast } = useToast();
   const router = useRouter();
-  const [catalog, setCatalog] = useState<CategoryWithProducts>([]);
-  const [loading, setLoading] = useState(false);
+
+  const [products, setProducts] = useState<ProductOption[]>([]);
+  const [zones, setZones] = useState<DeliveryZone[]>([]);
+
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [newCustomerMode, setNewCustomerMode] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "", notes: "" });
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [notes, setNotes] = useState("");
 
-  const loadCatalog = async () => {
-    setLoading(true);
-    try {
-      const data = await getCatalogForOrdering(organizationId);
-      setCatalog(data);
-    } catch (error) {
-      toast({ title: "Error loading catalog", description: String(error), variant: "destructive" });
-    }
-    setLoading(false);
-  };
+  const [lines, setLines] = useState<LineDraft[]>([newLine()]);
+
+  const [zoneId, setZoneId] = useState("");
+  const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
+  const [selectedOptionKey, setSelectedOptionKey] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const catalog = (await getCatalogForOrdering(organizationId)) as CategoryWithProducts;
+      const flattened: ProductOption[] = catalog.flatMap((category) =>
+        category.products.map((product) => ({
+          id: product.id,
+          name: product.name,
+          categoryName: category.name,
+        })),
+      );
+      setProducts(flattened);
+    })();
+    (async () => {
+      const result = await getActiveZones(organizationSlug);
+      if (result.ok) setZones(result.data);
+    })();
+  }, [organizationId, organizationSlug]);
 
   const handleCustomerSearch = async (query: string) => {
     setCustomerSearch(query);
@@ -122,152 +133,265 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     }
   };
 
-  const addToCart = (
-    variantId: string,
-    productId: string,
-    productName: string,
-    variantName: string,
-    price: number,
-    unitType: UnitType,
-  ) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.variantId === variantId);
-      if (existing) {
-        return prev.map((item) =>
-          item.variantId === variantId ? { ...item, quantity: item.quantity + 1 } : item,
-        );
-      }
-      return [...prev, { variantId, productId, productName, variantName, price, unitType, quantity: 1 }];
-    });
-  };
-
-  const updateQuantity = (variantId: string, quantity: number) => {
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      setCart((prev) => prev.filter((item) => item.variantId !== variantId));
-    } else {
-      setCart((prev) =>
-        prev.map((item) => (item.variantId === variantId ? { ...item, quantity } : item)),
-      );
+  const handleZoneChange = async (nextZoneId: string) => {
+    setZoneId(nextZoneId);
+    setSelectedOptionKey("");
+    setDeliveryOptions([]);
+    if (!nextZoneId) return;
+    const result = await getDeliveryOptionsForOrg(organizationSlug, nextZoneId);
+    if (!result.ok) {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
+      return;
     }
+    setDeliveryOptions(result.data);
   };
 
-  const removeFromCart = (variantId: string) => {
-    setCart((prev) => prev.filter((item) => item.variantId !== variantId));
-  };
+  const addLine = () => setLines((prev) => [...prev, newLine()]);
+  const removeLine = (key: string) => setLines((prev) => prev.filter((line) => line.key !== key));
+  const updateLine = (key: string, patch: Partial<LineDraft>) =>
+    setLines((prev) => prev.map((line) => (line.key === key ? { ...line, ...patch } : line)));
 
-  const cartTotal = cart.reduce((sum, item) => sum + lineSubtotal(item.price, item.quantity), 0);
+  const selectedOption = deliveryOptions.find(
+    (option) => `${option.slotId}-${option.date}` === selectedOptionKey,
+  );
 
   const submitOrder = async () => {
     if (!selectedCustomer) {
       toast({ title: "Please select a customer", variant: "destructive" });
       return;
     }
-    if (cart.length === 0) {
-      toast({ title: "Please add items to the order", variant: "destructive" });
+    if (!zoneId || !selectedOption) {
+      toast({ title: "Please pick a delivery zone and slot", variant: "destructive" });
+      return;
+    }
+    if (!address.trim()) {
+      toast({ title: "Please enter a delivery address", variant: "destructive" });
+      return;
+    }
+    if (lines.length === 0 || lines.some((line) => !line.productId)) {
+      toast({ title: "Please select a product for every line", variant: "destructive" });
+      return;
+    }
+    for (const line of lines) {
+      const quantity = Number(line.quantity);
+      const sizeMinKg = Number(line.sizeMinKg);
+      const sizeMaxKg = Number(line.sizeMaxKg);
+      if (!Number.isFinite(quantity) || quantity <= 0) {
+        toast({ title: "Error", description: "Enter a valid quantity for every line.", variant: "destructive" });
+        return;
+      }
+      if (line.mode === "piece" && !Number.isInteger(quantity)) {
+        toast({ title: "Error", description: "Piece quantities must be whole numbers.", variant: "destructive" });
+        return;
+      }
+      if (!Number.isFinite(sizeMinKg) || !Number.isFinite(sizeMaxKg) || sizeMinKg <= 0 || sizeMaxKg < sizeMinKg) {
+        toast({ title: "Error", description: "Enter a valid size range for every line.", variant: "destructive" });
+        return;
+      }
+    }
+
+    const items = lines.map((line) => ({
+      productId: line.productId,
+      mode: line.mode,
+      quantity: Number(line.quantity),
+      sizeMinKg: Number(line.sizeMinKg),
+      sizeMaxKg: Number(line.sizeMaxKg),
+      fallback: line.fallback,
+    }));
+
+    setSubmitting(true);
+    const result = await createManualOrder({
+      organizationSlug,
+      customerId: selectedCustomer.id,
+      zoneId,
+      slotId: selectedOption.slotId,
+      deliveryDate: selectedOption.date,
+      address,
+      notes: notes || undefined,
+      items,
+    });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
       return;
     }
 
-    const invalid = cart.find((item) => !isValidQuantity(item.quantity, item.unitType));
-    if (invalid) {
-      toast({
-        title: `Invalid quantity for ${invalid.productName} (${invalid.variantName})`,
-        description:
-          invalid.unitType === "per_piece"
-            ? "Piece quantities must be whole numbers."
-            : "Weight must be greater than zero.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      await createOrder(
-        organizationId,
-        {
-          customer_id: selectedCustomer.id,
-          status: "new",
-          notes: notes || null,
-        },
-        cart.map((item) => ({
-          variant_id: item.variantId,
-          quantity: item.quantity,
-          unit_price: item.price,
-          subtotal: lineSubtotal(item.price, item.quantity),
-        })),
-        organizationSlug,
-      );
-      toast({ title: "Order created successfully" });
-      router.push(`/${organizationSlug}/orders`);
-    } catch (error) {
-      toast({ title: "Error", description: String(error), variant: "destructive" });
-    }
+    toast({ title: "Order created" });
+    router.push(`/${organizationSlug}/orders/${result.data.orderId}`);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">New Order</h1>
-          <p className="text-muted-foreground">Create a new customer order</p>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold">New order</h1>
+        <p className="text-muted-foreground">Create a manual order for a customer</p>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Left: Catalog */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-lg border">
-            <div className="border-b p-4">
-              <h2 className="font-semibold">Select Items</h2>
+        <div className="space-y-4 lg:col-span-2">
+          <div className="rounded-lg border p-4">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-semibold">Order lines</h2>
+              <Button type="button" variant="outline" size="sm" onClick={addLine}>
+                <Plus className="mr-2 h-4 w-4" />
+                Add line
+              </Button>
             </div>
-            {catalog.length === 0 ? (
-              <div className="p-8 text-center">
-                <Button onClick={loadCatalog} disabled={loading}>
-                  {loading ? "Loading..." : "Load Catalog"}
-                </Button>
-              </div>
-            ) : (
-              <div className="divide-y">
-                {catalog.map((category) => (
-                  <div key={category.id}>
-                    <div className="bg-muted/50 px-4 py-2 font-medium">{category.name}</div>
-                    {category.products.map((product) => (
-                      <div key={product.id} className="border-b p-4 last:border-b-0">
-                        <div className="mb-2 font-medium">{product.name}</div>
-                        <div className="flex flex-wrap gap-2">
-                          {product.variants.map((variant) => (
-                            <Button
-                              key={variant.id}
-                              variant="outline"
-                              size="sm"
-                              disabled={!variant.is_available}
-                              onClick={() =>
-                                addToCart(
-                                  variant.id,
-                                  product.id,
-                                  product.name,
-                                  variant.name,
-                                  variant.price_per_unit,
-                                  variant.unit_type as UnitType,
-                                )
-                              }
-                            >
-                              {variant.name} —{" "}
-                              {formatVariantPrice(variant.price_per_unit, variant.unit_type as UnitType)}
-                            </Button>
+            <div className="space-y-4">
+              {lines.map((line) => (
+                <div key={line.key} className="space-y-3 rounded-md border p-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 space-y-1">
+                      <Label className="text-xs">Product</Label>
+                      <Select value={line.productId} onValueChange={(value) => updateLine(line.key, { productId: value })}>
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select product" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {products.map((product) => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.categoryName} · {product.name}
+                            </SelectItem>
                           ))}
-                        </div>
-                      </div>
-                    ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="mt-5"
+                      onClick={() => removeLine(line.key)}
+                      disabled={lines.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
-                ))}
+
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Mode</Label>
+                      <Select
+                        value={line.mode}
+                        onValueChange={(value) => updateLine(line.key, { mode: value as OrderItemMode })}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="piece">Piece</SelectItem>
+                          <SelectItem value="kg">Kg</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Quantity</Label>
+                      <Input
+                        type="number"
+                        step={line.mode === "piece" ? 1 : 0.1}
+                        min={line.mode === "piece" ? 1 : 0.1}
+                        value={line.quantity}
+                        onChange={(e) => updateLine(line.key, { quantity: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Size min (kg)</Label>
+                      <Input
+                        type="number"
+                        step={0.1}
+                        min={0.1}
+                        value={line.sizeMinKg}
+                        onChange={(e) => updateLine(line.key, { sizeMinKg: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Size max (kg)</Label>
+                      <Input
+                        type="number"
+                        step={0.1}
+                        min={0.1}
+                        value={line.sizeMaxKg}
+                        onChange={(e) => updateLine(line.key, { sizeMaxKg: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label className="text-xs">If size unavailable</Label>
+                    <Select
+                      value={line.fallback}
+                      onValueChange={(value) => updateLine(line.key, { fallback: value as OrderFallback })}
+                    >
+                      <SelectTrigger className="w-full sm:w-64">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {FALLBACKS.map((fallback) => (
+                          <SelectItem key={fallback} value={fallback}>
+                            {FALLBACK_LABELS[fallback]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-lg border p-4">
+            <h2 className="font-semibold">Delivery</h2>
+            <div className="space-y-1">
+              <Label className="text-xs">Zone</Label>
+              <Select value={zoneId} onValueChange={handleZoneChange}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select zone" />
+                </SelectTrigger>
+                <SelectContent>
+                  {zones.map((zone) => (
+                    <SelectItem key={zone.id} value={zone.id}>
+                      {zone.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {zoneId && (
+              <div className="space-y-1">
+                <Label className="text-xs">Delivery date &amp; slot</Label>
+                <Select value={selectedOptionKey} onValueChange={setSelectedOptionKey}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue
+                      placeholder={deliveryOptions.length === 0 ? "No slots available" : "Select a date and slot"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deliveryOptions.map((option) => (
+                      <SelectItem key={`${option.slotId}-${option.date}`} value={`${option.slotId}-${option.date}`}>
+                        {option.date} · {option.truckName} {option.startTime}–{option.endTime}
+                        {option.remaining != null ? ` (${option.remaining} left)` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
+
+            <div className="space-y-1">
+              <Label className="text-xs">Delivery address</Label>
+              <Textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street address" />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Notes</Label>
+              <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Order notes..." />
+            </div>
           </div>
         </div>
 
-        {/* Right: Order Summary */}
         <div className="space-y-4">
-          {/* Customer Selection */}
           <div className="rounded-lg border p-4">
             <h2 className="mb-4 font-semibold">Customer</h2>
             {!newCustomerMode ? (
@@ -285,6 +409,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                       {customerResults.map((customer) => (
                         <button
                           key={customer.id}
+                          type="button"
                           className="block w-full px-4 py-2 text-left hover:bg-muted"
                           onClick={() => {
                             setSelectedCustomer(customer);
@@ -308,13 +433,9 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                     )}
                   </div>
                 )}
-                <Button
-                  variant="outline"
-                  className="mt-2 w-full"
-                  onClick={() => setNewCustomerMode(true)}
-                >
+                <Button variant="outline" className="mt-2 w-full" onClick={() => setNewCustomerMode(true)}>
                   <Plus className="mr-2 h-4 w-4" />
-                  New Customer
+                  New customer
                 </Button>
               </>
             ) : (
@@ -351,133 +472,14 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                   <Button variant="outline" onClick={() => setNewCustomerMode(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={handleAddNewCustomer}>Save Customer</Button>
+                  <Button onClick={handleAddNewCustomer}>Save customer</Button>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Cart */}
-          <div className="rounded-lg border p-4">
-            <h2 className="mb-4 flex items-center gap-2 font-semibold">
-              <ShoppingCart className="h-4 w-4" />
-              Order Summary
-            </h2>
-            {cart.length === 0 ? (
-              <p className="text-center text-muted-foreground">No items added yet</p>
-            ) : (
-              <div className="space-y-3">
-                {cart.map((item) => {
-                  const step = item.unitType === "per_kg" ? 0.5 : 1;
-                  const min = item.unitType === "per_kg" ? 0.1 : 1;
-                  return (
-                    <div key={item.variantId} className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate font-medium">{item.productName}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {item.variantName} · {formatVariantPrice(item.price, item.unitType)}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <div className="font-medium">
-                            {formatPrice(lineSubtotal(item.price, item.quantity))}
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => removeFromCart(item.variantId)}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() =>
-                            updateQuantity(
-                              item.variantId,
-                              Math.round((item.quantity - step) * 1000) / 1000,
-                            )
-                          }
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="number"
-                          inputMode="decimal"
-                          step={step}
-                          min={min}
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            if (raw === "") return;
-                            const next = Number(raw);
-                            if (!Number.isFinite(next)) return;
-                            if (next <= 0) return;
-                            updateQuantity(item.variantId, next);
-                          }}
-                          onBlur={(e) => {
-                            const raw = e.target.value;
-                            const next = Number(raw);
-                            if (raw === "" || !Number.isFinite(next) || next <= 0) {
-                              e.target.value = String(item.quantity);
-                            }
-                          }}
-                          className="h-7 w-20 text-center"
-                        />
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-7 w-7"
-                          onClick={() =>
-                            updateQuantity(
-                              item.variantId,
-                              Math.round((item.quantity + step) * 1000) / 1000,
-                            )
-                          }
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                        <span className="ml-1 text-sm text-muted-foreground">
-                          {item.unitType === "per_kg" ? "kg" : "pcs"}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="border-t pt-3">
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span>{formatPrice(cartTotal)}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div className="rounded-lg border p-4">
-            <h2 className="mb-4 font-semibold">Notes</h2>
-            <Textarea
-              placeholder="Order notes..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
-          </div>
-
-          {/* Submit */}
-          <Button
-            className="w-full"
-            size="lg"
-            disabled={!selectedCustomer || cart.length === 0}
-            onClick={submitOrder}
-          >
-            Create Order
+          <Button className="w-full" size="lg" disabled={submitting} onClick={submitOrder}>
+            {submitting ? "Creating…" : "Create order"}
           </Button>
         </div>
       </div>

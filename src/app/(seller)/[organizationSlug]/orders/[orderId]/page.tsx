@@ -1,6 +1,7 @@
-import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
-import { getOrderWithItems } from "@/features/seller/server/actions";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
+import { MANAGER_ROLES } from "@/features/orders/lib/roles";
+import { getOrderDetail } from "@/features/orders/server/order-actions";
 import { OrderDetailClient } from "./order-detail-client";
 
 export default async function OrderDetailPage({
@@ -9,15 +10,25 @@ export default async function OrderDetailPage({
   params: Promise<{ organizationSlug: string; orderId: string }>;
 }) {
   const { organizationSlug, orderId } = await params;
-  const org = await getOrganizationBySlug(organizationSlug);
-  if (!org) notFound();
 
-  const order = await getOrderWithItems(orderId);
+  let callerRole: string;
+  try {
+    ({ role: callerRole } = await requireOrgRole(organizationSlug, MANAGER_ROLES));
+  } catch (error) {
+    if (error instanceof OrderPermissionError) {
+      redirect(`/${organizationSlug}`);
+    }
+    throw error;
+  }
+
+  const result = await getOrderDetail(organizationSlug, orderId);
+  if (!result.ok) notFound();
 
   return (
     <OrderDetailClient
       organizationSlug={organizationSlug}
-      initialOrder={order}
+      callerRole={callerRole}
+      initialOrder={result.data}
     />
   );
 }
