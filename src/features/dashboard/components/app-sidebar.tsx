@@ -81,7 +81,7 @@ export function AppSidebar({
   const groups = getDashboardSidebarGroups({ organizationSlug, pathname, role });
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="inset" className="print:hidden">
       <SidebarHeader>
         <OrganizationSwitcher
           organizationName={organizationName}
