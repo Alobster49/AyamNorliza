@@ -1,12 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import { format } from "date-fns";
 import { useCart } from "@/features/buyer/components/cart-context";
-import { createBuyerOrder } from "@/features/buyer/server/actions";
+import {
+  getActiveZones,
+  getDeliveryOptions,
+  placeOrder,
+} from "@/features/orders/server/portal-actions";
+import type { DeliveryZone, DeliveryOption } from "@/features/orders/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -22,121 +35,121 @@ type CheckoutPageProps = {
   params: Promise<{ organizationSlug: string }>;
 };
 
-type CartItemWithDetails = {
-  variantId: string;
-  quantity: number;
-  name: string;
-  price: number;
-  unitType: "per_kg" | "per_piece";
-  productName: string;
-};
+function optionKey(option: DeliveryOption) {
+  return `${option.date}-${option.slotId}`;
+}
 
 export default function CheckoutPage({ params }: CheckoutPageProps) {
   const router = useRouter();
   const { items, clearCart } = useCart();
   const { toast } = useToast();
-  const [cartItems, setCartItems] = useState<CartItemWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
+
   const [organizationSlug, setOrganizationSlug] = useState<string>("");
+  const [zones, setZones] = useState<DeliveryZone[]>([]);
+  const [zonesLoading, setZonesLoading] = useState(true);
+  const [zoneId, setZoneId] = useState<string>("");
+  const [options, setOptions] = useState<DeliveryOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [selectedKey, setSelectedKey] = useState<string>("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState<string>("");
-
-  const [formData, setFormData] = useState({
-    deliveryAddress: "",
-    notes: "",
-  });
 
   useEffect(() => {
     params.then((p) => setOrganizationSlug(p.organizationSlug));
   }, [params]);
 
-  // Fetch variant details
   useEffect(() => {
-    async function fetchCartDetails() {
-      if (items.length === 0) {
-        setCartItems([]);
-        setLoading(false);
-        return;
+    if (!organizationSlug) return;
+    let cancelled = false;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setZonesLoading(true);
+    getActiveZones(organizationSlug).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setZones(result.data);
       }
+      setZonesLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationSlug]);
 
-      try {
-        const variantIds = items.map((i) => i.variantId);
-        const response = await fetch(
-          `/api/buyer/cart?variantIds=${variantIds.join(",")}`,
-        );
-        if (!response.ok) throw new Error("Failed to fetch");
-
-        const data = await response.json();
-        const itemsMap = new Map(items.map((i) => [i.variantId, i.quantity]));
-
-        setCartItems(
-          data.variants.map((v: any) => ({
-            variantId: v.id,
-            quantity: itemsMap.get(v.id) || 1,
-            name: v.name,
-            price: Number(v.price_per_unit),
-            unitType: v.unit_type === "per_kg" ? "per_kg" : "per_piece",
-            productName: v.product?.name || "Unknown Product",
-          })),
-        );
-      } catch (error) {
-        console.error("Error fetching cart details:", error);
-      } finally {
-        setLoading(false);
-      }
+  useEffect(() => {
+    if (!organizationSlug || !zoneId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setOptions([]);
+      setSelectedKey("");
+      return;
     }
+    let cancelled = false;
+    setOptionsLoading(true);
+    setSelectedKey("");
+    getDeliveryOptions(organizationSlug, zoneId).then((result) => {
+      if (cancelled) return;
+      setOptions(result.ok ? result.data : []);
+      setOptionsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationSlug, zoneId]);
 
-    fetchCartDetails();
-  }, [items]);
+  const groupedOptions = useMemo(() => {
+    const groups = new Map<string, DeliveryOption[]>();
+    for (const option of options) {
+      const list = groups.get(option.date) ?? [];
+      list.push(option);
+      groups.set(option.date, list);
+    }
+    return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [options]);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-MY", {
-      style: "currency",
-      currency: "MYR",
-    }).format(price);
-  };
+  const selectedOption = options.find((o) => optionKey(o) === selectedKey) ?? null;
 
-  const subtotal = cartItems.reduce(
-    (sum, item) => sum + Math.round(item.price * item.quantity * 100) / 100,
-    0,
-  );
+  const canSubmit =
+    items.length > 0 &&
+    zoneId !== "" &&
+    address.trim().length > 0 &&
+    selectedOption !== null &&
+    !submitting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (cartItems.length === 0) {
-      toast({
-        title: "Cart is empty",
-        description: "Add some items to your cart first.",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!canSubmit || !selectedOption) return;
 
     setSubmitting(true);
-
-    const result = await createBuyerOrder({
-      items: cartItems.map((item) => ({
-        variantId: item.variantId,
+    const result = await placeOrder({
+      organizationSlug,
+      zoneId,
+      slotId: selectedOption.slotId,
+      deliveryDate: selectedOption.date,
+      address: address.trim(),
+      notes: notes.trim() || undefined,
+      items: items.map((item) => ({
+        productId: item.productId,
+        mode: item.mode,
         quantity: item.quantity,
+        sizeMinKg: item.sizeMinKg,
+        sizeMaxKg: item.sizeMaxKg,
+        fallback: item.fallback,
       })),
-      deliveryAddress: formData.deliveryAddress || undefined,
-      notes: formData.notes || undefined,
     });
-
     setSubmitting(false);
 
     if (!result.ok) {
       toast({
         title: "Order failed",
-        description: result.message || "Failed to place order. Please try again.",
+        description: result.message,
         variant: "destructive",
       });
       return;
     }
 
-    setOrderId(result.data.id);
+    setOrderId(result.data.orderId);
     setOrderComplete(true);
     clearCart();
 
@@ -182,15 +195,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
     );
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (cartItems.length === 0) {
+  if (items.length === 0) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
         <h1 className="text-2xl font-bold">Your cart is empty</h1>
@@ -210,42 +215,56 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
 
       <form onSubmit={handleSubmit}>
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Delivery Details */}
           <div className="space-y-6">
             <Card>
               <CardHeader>
                 <CardTitle>Delivery Details</CardTitle>
                 <CardDescription>
-                  Provide your delivery address and any special instructions.
+                  Pick your delivery zone, address, and a time slot.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <label htmlFor="address" className="text-sm font-medium">
-                    Delivery Address
-                  </label>
+                  <Label htmlFor="zone">Delivery Zone</Label>
+                  <Select
+                    value={zoneId}
+                    onValueChange={(v) => setZoneId(v)}
+                    disabled={zonesLoading || zones.length === 0}
+                  >
+                    <SelectTrigger id="zone" className="w-full">
+                      <SelectValue
+                        placeholder={zonesLoading ? "Loading zones..." : "Select a zone"}
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {zones.map((zone) => (
+                        <SelectItem key={zone.id} value={zone.id}>
+                          {zone.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address">Delivery Address</Label>
                   <Textarea
                     id="address"
                     placeholder="Enter your full delivery address"
-                    value={formData.deliveryAddress}
-                    onChange={(e) =>
-                      setFormData({ ...formData, deliveryAddress: e.target.value })
-                    }
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
                     rows={3}
                     required
                   />
                 </div>
+
                 <div className="space-y-2">
-                  <label htmlFor="notes" className="text-sm font-medium">
-                    Order Notes (Optional)
-                  </label>
+                  <Label htmlFor="notes">Order Notes (Optional)</Label>
                   <Textarea
                     id="notes"
                     placeholder="Any special instructions for your order?"
-                    value={formData.notes}
-                    onChange={(e) =>
-                      setFormData({ ...formData, notes: e.target.value })
-                    }
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                     rows={2}
                   />
                 </div>
@@ -254,54 +273,98 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
 
             <Card>
               <CardHeader>
-                <CardTitle>Order Summary</CardTitle>
+                <CardTitle>Delivery Slot</CardTitle>
+                <CardDescription>
+                  {zoneId === ""
+                    ? "Select a zone to see delivery dates and times."
+                    : "Choose a date and truck time window."}
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-2">
-                {cartItems.map((item) => (
-                  <div
-                    key={item.variantId}
-                    className="flex justify-between text-sm"
-                  >
-                    <span>
-                      {item.productName} - {item.name} ×{" "}
-                      {item.unitType === "per_kg" ? `${item.quantity} kg` : item.quantity}
-                    </span>
-                    <span>{formatPrice(Math.round(item.price * item.quantity * 100) / 100)}</span>
+              <CardContent>
+                {zoneId !== "" && optionsLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading delivery options...
                   </div>
-                ))}
-                <div className="border-t pt-2 mt-2">
-                  <div className="flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>{formatPrice(subtotal)}</span>
+                )}
+                {zoneId !== "" && !optionsLoading && groupedOptions.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    No delivery available for this area yet.
+                  </p>
+                )}
+                {!optionsLoading && groupedOptions.length > 0 && (
+                  <div className="space-y-4" role="radiogroup" aria-label="Delivery slot">
+                    {groupedOptions.map(([date, dateOptions]) => (
+                      <div key={date}>
+                        <p className="mb-2 text-sm font-medium">
+                          {format(new Date(`${date}T00:00:00`), "EEEE, d MMM yyyy")}
+                        </p>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {dateOptions.map((option) => {
+                            const key = optionKey(option);
+                            const isSelected = key === selectedKey;
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                role="radio"
+                                aria-checked={isSelected}
+                                onClick={() => setSelectedKey(key)}
+                                className={`rounded-2xl border p-3 text-left text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:bg-muted"
+                                }`}
+                              >
+                                <p className="font-medium">{option.truckName}</p>
+                                <p className="text-muted-foreground">
+                                  {option.startTime.slice(0, 5)}–{option.endTime.slice(0, 5)}
+                                </p>
+                                {option.remaining !== null && (
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    {option.remaining} slot{option.remaining === 1 ? "" : "s"} left
+                                  </p>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Place Order */}
           <div>
             <Card className="sticky top-20">
               <CardHeader>
                 <CardTitle>Place Order</CardTitle>
                 <CardDescription>
-                  Review your order and click Place Order to confirm.
+                  {items.length} item{items.length === 1 ? "" : "s"} in your
+                  cart. Final pricing is set per kg when your order closes.
                 </CardDescription>
               </CardHeader>
+              <CardContent className="space-y-2">
+                {items.map((item, index) => (
+                  <div key={`${item.productId}-${index}`} className="flex justify-between text-sm">
+                    <span>
+                      {item.productName} ×{" "}
+                      {item.mode === "kg" ? `${item.quantity} kg` : item.quantity}
+                    </span>
+                  </div>
+                ))}
+              </CardContent>
               <CardFooter>
-                <Button
-                  type="submit"
-                  className="w-full"
-                  size="lg"
-                  disabled={submitting}
-                >
+                <Button type="submit" className="w-full" size="lg" disabled={!canSubmit}>
                   {submitting ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Placing Order...
                     </>
                   ) : (
-                    <>Place Order - {formatPrice(subtotal)}</>
+                    "Place Order"
                   )}
                 </Button>
               </CardFooter>
