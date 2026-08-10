@@ -70,6 +70,7 @@ where not exists (
 -- ---------------------------------------------------------------------------
 -- E2E buyer fixture: buyer@ayam-norliza-pilot.example, same deterministic
 -- password convention as the other local E2E users.
+-- Gated on pilot org existence.
 -- ---------------------------------------------------------------------------
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -77,7 +78,8 @@ insert into auth.users (
   email_change_token_current, phone_change, phone_change_token, reauthentication_token,
   raw_app_meta_data, raw_user_meta_data, is_super_admin, created_at, updated_at,
   is_sso_user, is_anonymous
-) values (
+)
+select
   '00000000-0000-0000-0000-000000000000',
   '30000000-0000-0000-0000-000000000099',
   'authenticated',
@@ -88,7 +90,8 @@ insert into auth.users (
   jsonb_build_object('provider', 'email', 'providers', array['email']),
   jsonb_build_object('display_name', 'E2E Pilot Buyer'),
   false, now(), now(), false, false
-)
+from (select 1) as _
+cross join (select 1 from public.organizations where slug = 'ayam-norliza-pilot') as org_check
 on conflict (id) do update
   set email = excluded.email,
       encrypted_password = excluded.encrypted_password,
@@ -106,6 +109,7 @@ select
   'email',
   now(), now(), now()
 from auth.users u
+cross join (select 1 from public.organizations where slug = 'ayam-norliza-pilot') as org_check
 where u.email = 'buyer@ayam-norliza-pilot.example'
 on conflict (provider, provider_id) do update
   set user_id = excluded.user_id,
