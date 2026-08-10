@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(17);
+select plan(19);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (inserted as postgres, which bypasses RLS)
@@ -19,13 +19,20 @@ on conflict (id) do nothing;
 insert into auth.users (id) values
   ('a0000000-0000-0000-0000-000000000001'), -- manager (owner)
   ('a0000000-0000-0000-0000-000000000002'), -- inventory staff
-  ('a0000000-0000-0000-0000-000000000003')  -- buyer (not an org member)
+  ('a0000000-0000-0000-0000-000000000003'), -- buyer (not an org member)
+  ('a0000000-0000-0000-0000-000000000010')  -- seller whose membership has expired
 on conflict (id) do nothing;
 
 insert into public.organization_members (organization_id, user_id, role, status)
 values
   ('a0000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-000000000001', 'owner', 'active'),
   ('a0000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-000000000002', 'inventory', 'active')
+on conflict (organization_id, user_id) do nothing;
+
+-- Time-boxed member whose window has lapsed: status is still 'active' but
+-- expires_at is in the past. RLS must treat this the same as no membership.
+insert into public.organization_members (organization_id, user_id, role, status, starts_at, expires_at)
+values ('a0000000-0000-0000-0000-00000000000a', 'a0000000-0000-0000-0000-000000000010', 'seller', 'active', now() - interval '2 days', now() - interval '1 day')
 on conflict (organization_id, user_id) do nothing;
 
 insert into public.customers (id, organization_id, name, phone, created_by)
@@ -152,6 +159,30 @@ select throws_ok(
   '42501',
   null,
   'inventory-role member cannot insert a delivery_zone'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- Expired membership: status = 'active' but expires_at is in the past. The
+-- org-membership subqueries must additionally require
+-- (expires_at is null or expires_at > now()), matching
+-- public.is_active_org_member/has_org_role -- otherwise a time-boxed member
+-- keeps access after their window lapses.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'a0000000-0000-0000-0000-000000000010';
+
+select is_empty(
+  $$ select id from public.orders $$,
+  'expired seller membership cannot read any order in the org'
+);
+
+select throws_ok(
+  $$ insert into public.delivery_zones (id, organization_id, name, created_by) values ('a0000000-0000-0000-0000-00000000000e', 'a0000000-0000-0000-0000-00000000000a', 'Expired Seller Zone', 'a0000000-0000-0000-0000-000000000010') $$,
+  '42501',
+  null,
+  'expired seller membership cannot insert a delivery_zone'
 );
 
 reset role;

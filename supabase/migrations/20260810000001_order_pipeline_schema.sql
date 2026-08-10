@@ -301,7 +301,7 @@ create policy "delivery_zones_select" on public.delivery_zones
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -312,7 +312,7 @@ create policy "delivery_zones_insert" on public.delivery_zones
   for insert to authenticated with check (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -321,7 +321,7 @@ create policy "delivery_zones_update" on public.delivery_zones
   for update to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -330,7 +330,7 @@ create policy "delivery_zones_delete" on public.delivery_zones
   for delete to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -340,7 +340,7 @@ create policy "trucks_select" on public.trucks
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -348,7 +348,7 @@ create policy "trucks_insert" on public.trucks
   for insert to authenticated with check (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -357,7 +357,7 @@ create policy "trucks_update" on public.trucks
   for update to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -366,7 +366,7 @@ create policy "trucks_delete" on public.trucks
   for delete to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -376,7 +376,7 @@ create policy "truck_zones_select" on public.truck_zones
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -384,7 +384,7 @@ create policy "truck_zones_insert" on public.truck_zones
   for insert to authenticated with check (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -393,7 +393,7 @@ create policy "truck_zones_delete" on public.truck_zones
   for delete to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -403,7 +403,7 @@ create policy "delivery_slots_select" on public.delivery_slots
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -411,7 +411,7 @@ create policy "delivery_slots_insert" on public.delivery_slots
   for insert to authenticated with check (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -420,7 +420,7 @@ create policy "delivery_slots_update" on public.delivery_slots
   for update to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -429,7 +429,7 @@ create policy "delivery_slots_delete" on public.delivery_slots
   for delete to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -439,7 +439,7 @@ create policy "schedule_blocks_select" on public.schedule_blocks
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -447,7 +447,7 @@ create policy "schedule_blocks_insert" on public.schedule_blocks
   for insert to authenticated with check (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -456,7 +456,7 @@ create policy "schedule_blocks_delete" on public.schedule_blocks
   for delete to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       and role in ('owner', 'org_admin', 'seller')
     )
   );
@@ -466,7 +466,7 @@ create policy "delivery_runs_select" on public.delivery_runs
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -475,7 +475,7 @@ create policy "orders_select_member" on public.orders
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -489,7 +489,7 @@ create policy "order_items_select_member" on public.order_items
       select id from public.orders
       where organization_id in (
         select organization_id from public.organization_members
-        where user_id = auth.uid() and status = 'active'
+        where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
       )
     )
   );
@@ -506,7 +506,7 @@ create policy "order_tasks_select" on public.order_tasks
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
@@ -515,7 +515,7 @@ create policy "order_weight_log_select" on public.order_weight_log
   for select to authenticated using (
     organization_id in (
       select organization_id from public.organization_members
-      where user_id = auth.uid() and status = 'active'
+      where user_id = auth.uid() and status = 'active' and (expires_at is null or expires_at > now())
     )
   );
 
