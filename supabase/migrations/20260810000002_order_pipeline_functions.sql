@@ -9,6 +9,71 @@
 begin;
 
 -- ---------------------------------------------------------------------------
+-- Internal helpers: exception-safe casts for jsonb-sourced text. Return null
+-- on any parse failure instead of raising 22P02, so every RPC below can turn
+-- a malformed payload into its own machine-readable P0001 code instead of
+-- leaking a raw Postgres cast error. Not part of the public RPC surface --
+-- revoked from public, never granted to authenticated; only ever called
+-- from within the security definer functions below, which run as their
+-- owner and so aren't blocked by the missing grant.
+-- ---------------------------------------------------------------------------
+create or replace function public._order_safe_uuid(p_text text)
+returns uuid
+language plpgsql
+immutable
+as $$
+begin
+  return p_text::uuid;
+exception when others then
+  return null;
+end;
+$$;
+
+revoke all on function public._order_safe_uuid(text) from public;
+
+create or replace function public._order_safe_numeric(p_text text)
+returns numeric
+language plpgsql
+immutable
+as $$
+begin
+  return p_text::numeric;
+exception when others then
+  return null;
+end;
+$$;
+
+revoke all on function public._order_safe_numeric(text) from public;
+
+create or replace function public._order_safe_integer(p_text text)
+returns integer
+language plpgsql
+immutable
+as $$
+begin
+  return p_text::integer;
+exception when others then
+  return null;
+end;
+$$;
+
+revoke all on function public._order_safe_integer(text) from public;
+
+create or replace function public._order_safe_boolean(p_text text)
+returns boolean
+language plpgsql
+immutable
+as $$
+begin
+  return p_text::boolean;
+exception when others then
+  return null;
+end;
+$$;
+
+revoke all on function public._order_safe_boolean(text) from public;
+
+-- ---------------------------------------------------------------------------
 -- get_delivery_options: zone -> valid (date, slot, truck) options for the
 -- next 14 days starting tomorrow, minus blocked dates, minus full slots.
 -- ---------------------------------------------------------------------------
@@ -90,6 +155,7 @@ declare
   v_source text;
   v_order_id uuid;
   v_item jsonb;
+  v_product_id uuid;
   v_mode text;
   v_fallback text;
   v_quantity numeric;
@@ -182,13 +248,14 @@ begin
 
   for v_item in select * from jsonb_array_elements(p_items)
   loop
+    v_product_id := public._order_safe_uuid(v_item->>'productId');
     v_mode := v_item->>'mode';
     v_fallback := v_item->>'fallback';
-    v_quantity := nullif(v_item->>'quantity', '')::numeric;
-    v_size_min := nullif(v_item->>'sizeMinKg', '')::numeric;
-    v_size_max := nullif(v_item->>'sizeMaxKg', '')::numeric;
+    v_quantity := public._order_safe_numeric(v_item->>'quantity');
+    v_size_min := public._order_safe_numeric(v_item->>'sizeMinKg');
+    v_size_max := public._order_safe_numeric(v_item->>'sizeMaxKg');
 
-    if v_mode not in ('piece', 'kg') or v_fallback not in ('cancel', 'mix', 'upsize', 'downsize') then
+    if v_product_id is null or v_mode not in ('piece', 'kg') or v_fallback not in ('cancel', 'mix', 'upsize', 'downsize') then
       raise exception using errcode = 'P0001', message = 'invalid_items';
     end if;
 
@@ -206,7 +273,7 @@ begin
 
     if not exists (
       select 1 from public.products
-      where id = nullif(v_item->>'productId', '')::uuid
+      where id = v_product_id
         and organization_id = p_org
         and is_active = true
     ) then
@@ -229,11 +296,11 @@ begin
       order_id, product_id, mode, quantity, size_min_kg, size_max_kg, fallback
     ) values (
       v_order_id,
-      (v_item->>'productId')::uuid,
+      public._order_safe_uuid(v_item->>'productId'),
       (v_item->>'mode')::public.order_item_mode,
-      (v_item->>'quantity')::numeric,
-      (v_item->>'sizeMinKg')::numeric,
-      (v_item->>'sizeMaxKg')::numeric,
+      public._order_safe_numeric(v_item->>'quantity'),
+      public._order_safe_numeric(v_item->>'sizeMinKg'),
+      public._order_safe_numeric(v_item->>'sizeMaxKg'),
       (v_item->>'fallback')::public.order_fallback
     );
   end loop;
@@ -265,12 +332,16 @@ declare
   v_delivery_date date;
   v_item_count integer;
   v_decision jsonb;
+  v_item_id uuid;
+  v_available boolean;
+  v_seen_ids uuid[] := '{}';
   v_all_cancelled boolean;
   v_run_id uuid;
 begin
   select organization_id, status, truck_id, delivery_date
     into v_org, v_status, v_truck_id, v_delivery_date
-  from public.orders where id = p_order;
+  from public.orders where id = p_order
+  for update;
 
   if v_org is null then
     raise exception using errcode = 'P0001', message = 'invalid_status';
@@ -284,28 +355,43 @@ begin
     raise exception using errcode = 'P0001', message = 'invalid_status';
   end if;
 
-  select count(*) into v_item_count from public.order_items where order_id = p_order;
-
-  if (
-    select count(distinct (d.value->>'item_id')::uuid) from jsonb_array_elements(p_decisions) d
-  ) <> v_item_count
-  or exists (
-    select 1 from jsonb_array_elements(p_decisions) d
-    where not exists (
-      select 1 from public.order_items oi
-      where oi.id = (d.value->>'item_id')::uuid and oi.order_id = p_order
-    )
-  ) then
+  if p_decisions is null or jsonb_typeof(p_decisions) <> 'array' or jsonb_array_length(p_decisions) = 0 then
     raise exception using errcode = 'P0001', message = 'decisions_incomplete';
   end if;
 
+  select count(*) into v_item_count from public.order_items where order_id = p_order;
+
+  -- Validation pass: every decision must name a real, distinct line on this
+  -- order with a well-formed item_id/available pair, and every line must be
+  -- covered, before any row is touched.
   for v_decision in select * from jsonb_array_elements(p_decisions)
   loop
-    if (v_decision->>'available')::boolean = false then
+    v_item_id := public._order_safe_uuid(v_decision->>'item_id');
+    v_available := public._order_safe_boolean(v_decision->>'available');
+
+    if v_item_id is null or v_available is null or v_item_id = any(v_seen_ids) then
+      raise exception using errcode = 'P0001', message = 'decisions_incomplete';
+    end if;
+
+    if not exists (select 1 from public.order_items where id = v_item_id and order_id = p_order) then
+      raise exception using errcode = 'P0001', message = 'decisions_incomplete';
+    end if;
+
+    v_seen_ids := array_append(v_seen_ids, v_item_id);
+  end loop;
+
+  if coalesce(array_length(v_seen_ids, 1), 0) <> v_item_count then
+    raise exception using errcode = 'P0001', message = 'decisions_incomplete';
+  end if;
+
+  -- Apply pass: mark unavailable lines with their pre-declared fallback.
+  for v_decision in select * from jsonb_array_elements(p_decisions)
+  loop
+    if public._order_safe_boolean(v_decision->>'available') = false then
       update public.order_items
       set fallback_applied = fallback,
           is_cancelled = (fallback = 'cancel')
-      where id = (v_decision->>'item_id')::uuid and order_id = p_order;
+      where id = public._order_safe_uuid(v_decision->>'item_id') and order_id = p_order;
     end if;
   end loop;
 
@@ -350,14 +436,18 @@ declare
   v_order_status public.order_status;
   v_item_count integer;
   v_weight jsonb;
+  v_item_id uuid;
   v_weight_kg numeric;
   v_pieces integer;
+  v_pieces_text text;
+  v_seen_ids uuid[] := '{}';
 begin
   select ot.organization_id, ot.order_id, ot.status, o.status
     into v_org, v_order_id, v_task_status, v_order_status
   from public.order_tasks ot
   join public.orders o on o.id = ot.order_id
-  where ot.id = p_task;
+  where ot.id = p_task
+  for update;
 
   if v_org is null then
     raise exception using errcode = 'P0001', message = 'invalid_status';
@@ -375,37 +465,65 @@ begin
     raise exception using errcode = 'P0001', message = 'invalid_status';
   end if;
 
-  select count(*) into v_item_count
-  from public.order_items where order_id = v_order_id and is_cancelled = false;
-
-  if (
-    select count(distinct (w.value->>'item_id')::uuid) from jsonb_array_elements(p_weights) w
-  ) <> v_item_count
-  or exists (
-    select 1 from jsonb_array_elements(p_weights) w
-    where not exists (
-      select 1 from public.order_items oi
-      where oi.id = (w.value->>'item_id')::uuid and oi.order_id = v_order_id and oi.is_cancelled = false
-    )
-  ) then
+  if p_weights is null or jsonb_typeof(p_weights) <> 'array' or jsonb_array_length(p_weights) = 0 then
     raise exception using errcode = 'P0001', message = 'weights_incomplete';
   end if;
 
+  select count(*) into v_item_count
+  from public.order_items where order_id = v_order_id and is_cancelled = false;
+
+  -- Validation pass: every weight entry must name a real, distinct,
+  -- not-yet-cancelled line on this order with a well-formed item_id and a
+  -- positive weight_kg, and every line must be covered, before any row is
+  -- touched.
   for v_weight in select * from jsonb_array_elements(p_weights)
   loop
-    v_weight_kg := nullif(v_weight->>'weight_kg', '')::numeric;
-    v_pieces := nullif(v_weight->>'pieces', '')::integer;
+    v_item_id := public._order_safe_uuid(v_weight->>'item_id');
+
+    if v_item_id is null or v_item_id = any(v_seen_ids) then
+      raise exception using errcode = 'P0001', message = 'weights_incomplete';
+    end if;
+
+    if not exists (
+      select 1 from public.order_items
+      where id = v_item_id and order_id = v_order_id and is_cancelled = false
+    ) then
+      raise exception using errcode = 'P0001', message = 'weights_incomplete';
+    end if;
+
+    v_seen_ids := array_append(v_seen_ids, v_item_id);
+
+    v_weight_kg := public._order_safe_numeric(v_weight->>'weight_kg');
 
     if v_weight_kg is null or v_weight_kg <= 0 then
       raise exception using errcode = 'P0001', message = 'invalid_weight';
     end if;
 
+    v_pieces_text := nullif(v_weight->>'pieces', '');
+
+    if v_pieces_text is not null and public._order_safe_integer(v_pieces_text) is null then
+      raise exception using errcode = 'P0001', message = 'weights_incomplete';
+    end if;
+  end loop;
+
+  if coalesce(array_length(v_seen_ids, 1), 0) <> v_item_count then
+    raise exception using errcode = 'P0001', message = 'weights_incomplete';
+  end if;
+
+  -- Apply pass.
+  for v_weight in select * from jsonb_array_elements(p_weights)
+  loop
+    v_item_id := public._order_safe_uuid(v_weight->>'item_id');
+    v_weight_kg := public._order_safe_numeric(v_weight->>'weight_kg');
+    v_pieces_text := nullif(v_weight->>'pieces', '');
+    v_pieces := case when v_pieces_text is null then null else public._order_safe_integer(v_pieces_text) end;
+
     update public.order_items
     set warehouse_weight_kg = v_weight_kg, warehouse_pieces = v_pieces
-    where id = (v_weight->>'item_id')::uuid and order_id = v_order_id;
+    where id = v_item_id and order_id = v_order_id;
 
     insert into public.order_weight_log (organization_id, order_item_id, kind, weight_kg, pieces, recorded_by)
-    values (v_org, (v_weight->>'item_id')::uuid, 'warehouse', v_weight_kg, v_pieces, auth.uid());
+    values (v_org, v_item_id, 'warehouse', v_weight_kg, v_pieces, auth.uid());
   end loop;
 
   update public.order_tasks
@@ -479,12 +597,15 @@ declare
   v_status public.order_status;
   v_item_count integer;
   v_line jsonb;
+  v_item_id uuid;
   v_weight numeric;
   v_price numeric;
   v_pieces integer;
+  v_pieces_text text;
+  v_seen_ids uuid[] := '{}';
   v_total numeric;
 begin
-  select organization_id, status into v_org, v_status from public.orders where id = p_order;
+  select organization_id, status into v_org, v_status from public.orders where id = p_order for update;
 
   if v_org is null then
     raise exception using errcode = 'P0001', message = 'invalid_status';
@@ -498,42 +619,72 @@ begin
     raise exception using errcode = 'P0001', message = 'invalid_status';
   end if;
 
-  select count(*) into v_item_count
-  from public.order_items where order_id = p_order and is_cancelled = false;
-
-  if (
-    select count(distinct (l.value->>'item_id')::uuid) from jsonb_array_elements(p_lines) l
-  ) <> v_item_count
-  or exists (
-    select 1 from jsonb_array_elements(p_lines) l
-    where not exists (
-      select 1 from public.order_items oi
-      where oi.id = (l.value->>'item_id')::uuid and oi.order_id = p_order and oi.is_cancelled = false
-    )
-  ) then
+  if p_lines is null or jsonb_typeof(p_lines) <> 'array' or jsonb_array_length(p_lines) = 0 then
     raise exception using errcode = 'P0001', message = 'lines_incomplete';
   end if;
 
+  select count(*) into v_item_count
+  from public.order_items where order_id = p_order and is_cancelled = false;
+
+  -- Validation pass: every line must name a real, distinct, not-cancelled
+  -- line on this order with well-formed item_id/final_weight_kg/
+  -- price_per_kg, and every line must be covered, before any row is
+  -- touched.
   for v_line in select * from jsonb_array_elements(p_lines)
   loop
-    v_weight := nullif(v_line->>'final_weight_kg', '')::numeric;
-    v_price := nullif(v_line->>'price_per_kg', '')::numeric;
-    v_pieces := nullif(v_line->>'final_pieces', '')::integer;
+    v_item_id := public._order_safe_uuid(v_line->>'item_id');
+
+    if v_item_id is null or v_item_id = any(v_seen_ids) then
+      raise exception using errcode = 'P0001', message = 'lines_incomplete';
+    end if;
+
+    if not exists (
+      select 1 from public.order_items
+      where id = v_item_id and order_id = p_order and is_cancelled = false
+    ) then
+      raise exception using errcode = 'P0001', message = 'lines_incomplete';
+    end if;
+
+    v_seen_ids := array_append(v_seen_ids, v_item_id);
+
+    v_weight := public._order_safe_numeric(v_line->>'final_weight_kg');
 
     if v_weight is null or v_weight <= 0 then
       raise exception using errcode = 'P0001', message = 'invalid_weight';
     end if;
 
+    v_price := public._order_safe_numeric(v_line->>'price_per_kg');
+
     if v_price is null or v_price < 0 then
       raise exception using errcode = 'P0001', message = 'invalid_price';
     end if;
 
+    v_pieces_text := nullif(v_line->>'final_pieces', '');
+
+    if v_pieces_text is not null and public._order_safe_integer(v_pieces_text) is null then
+      raise exception using errcode = 'P0001', message = 'lines_incomplete';
+    end if;
+  end loop;
+
+  if coalesce(array_length(v_seen_ids, 1), 0) <> v_item_count then
+    raise exception using errcode = 'P0001', message = 'lines_incomplete';
+  end if;
+
+  -- Apply pass.
+  for v_line in select * from jsonb_array_elements(p_lines)
+  loop
+    v_item_id := public._order_safe_uuid(v_line->>'item_id');
+    v_weight := public._order_safe_numeric(v_line->>'final_weight_kg');
+    v_price := public._order_safe_numeric(v_line->>'price_per_kg');
+    v_pieces_text := nullif(v_line->>'final_pieces', '');
+    v_pieces := case when v_pieces_text is null then null else public._order_safe_integer(v_pieces_text) end;
+
     update public.order_items
     set final_weight_kg = v_weight, final_pieces = v_pieces, price_per_kg = v_price
-    where id = (v_line->>'item_id')::uuid and order_id = p_order;
+    where id = v_item_id and order_id = p_order;
 
     insert into public.order_weight_log (organization_id, order_item_id, kind, weight_kg, pieces, recorded_by)
-    values (v_org, (v_line->>'item_id')::uuid, 'final', v_weight, v_pieces, auth.uid());
+    values (v_org, v_item_id, 'final', v_weight, v_pieces, auth.uid());
   end loop;
 
   select coalesce(sum(line_total), 0) into v_total
@@ -568,7 +719,7 @@ declare
   v_created_by uuid;
   v_is_manager boolean;
 begin
-  select organization_id, status, created_by into v_org, v_status, v_created_by from public.orders where id = p_order;
+  select organization_id, status, created_by into v_org, v_status, v_created_by from public.orders where id = p_order for update;
 
   if v_org is null then
     raise exception using errcode = 'P0001', message = 'invalid_status';
@@ -614,7 +765,7 @@ declare
   v_org uuid;
   v_status public.order_status;
 begin
-  select organization_id, status into v_org, v_status from public.orders where id = p_order;
+  select organization_id, status into v_org, v_status from public.orders where id = p_order for update;
 
   if v_org is null then
     raise exception using errcode = 'P0001', message = 'invalid_status';

@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(28);
+select plan(54);
 
 create temporary table _scratch (label text primary key, order_id uuid);
 
@@ -92,6 +92,102 @@ values (
   extract(dow from current_date + 1)::smallint,
   '14:00', '17:00',
   'b0000000-0000-0000-0000-000000000001'
+)
+on conflict (id) do nothing;
+
+-- Isolated fixtures for get_delivery_options coverage: a second and third
+-- truck, both covering zone007 but never touched by place_order, so their
+-- capacity/date math can be asserted independently of the order-lifecycle
+-- scenarios above.
+insert into public.trucks (id, organization_id, name, code, created_by)
+values
+  ('b0000000-0000-0000-0000-00000000000c', 'b0000000-0000-0000-0000-00000000000a', 'Options Truck 2', 'RPC-B', 'b0000000-0000-0000-0000-000000000001'),
+  ('b0000000-0000-0000-0000-00000000000f', 'b0000000-0000-0000-0000-00000000000a', 'Options Truck 3', 'RPC-C', 'b0000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
+
+insert into public.truck_zones (truck_id, zone_id, organization_id)
+values
+  ('b0000000-0000-0000-0000-00000000000c', 'b0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-00000000000a'),
+  ('b0000000-0000-0000-0000-00000000000f', 'b0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-00000000000a')
+on conflict do nothing;
+
+-- Capacity-2 slot on the matching weekday, never ordered against: proves
+-- "seeded slot appears with expected remaining" and, once blocked below,
+-- "a schedule_block removes the date".
+insert into public.delivery_slots (id, organization_id, truck_id, weekday, start_time, end_time, max_orders, created_by)
+values (
+  'b0000000-0000-0000-0000-00000000000d',
+  'b0000000-0000-0000-0000-00000000000a',
+  'b0000000-0000-0000-0000-00000000000c',
+  extract(dow from current_date + 1)::smallint,
+  '07:00', '07:30', 2,
+  'b0000000-0000-0000-0000-000000000001'
+)
+on conflict (id) do nothing;
+
+-- Unlimited-capacity slot one weekday off the others: proves weekday
+-- filtering (it must only ever appear on its own matching dates).
+insert into public.delivery_slots (id, organization_id, truck_id, weekday, start_time, end_time, created_by)
+values (
+  'b0000000-0000-0000-0000-00000000000e',
+  'b0000000-0000-0000-0000-00000000000a',
+  'b0000000-0000-0000-0000-00000000000c',
+  ((extract(dow from current_date + 1)::int + 1) % 7)::smallint,
+  '10:00', '10:30',
+  'b0000000-0000-0000-0000-000000000001'
+)
+on conflict (id) do nothing;
+
+-- Capacity-1 slot on a third truck, pre-consumed by a directly-inserted
+-- order fixture (bypassing place_order, since only the resulting capacity
+-- state matters here): proves "capacity-full slot excluded".
+insert into public.delivery_slots (id, organization_id, truck_id, weekday, start_time, end_time, max_orders, created_by)
+values (
+  'b0000000-0000-0000-0000-000000000010',
+  'b0000000-0000-0000-0000-00000000000a',
+  'b0000000-0000-0000-0000-00000000000f',
+  extract(dow from current_date + 1)::smallint,
+  '11:00', '11:30', 1,
+  'b0000000-0000-0000-0000-000000000001'
+)
+on conflict (id) do nothing;
+
+insert into public.customers (id, organization_id, name, phone, created_by)
+values ('b0000000-0000-0000-0000-000000000011', 'b0000000-0000-0000-0000-00000000000a', 'Fixture Customer', '0000000000', 'b0000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
+
+insert into public.orders (
+  id, organization_id, customer_id, created_by, source, status,
+  zone_id, delivery_address, delivery_date, slot_id, truck_id
+) values (
+  'b0000000-0000-0000-0000-000000000012', 'b0000000-0000-0000-0000-00000000000a', 'b0000000-0000-0000-0000-000000000011',
+  'b0000000-0000-0000-0000-000000000001', 'manual', 'pending',
+  'b0000000-0000-0000-0000-000000000007', 'Fixture St', current_date + 1,
+  'b0000000-0000-0000-0000-000000000010', 'b0000000-0000-0000-0000-00000000000f'
+)
+on conflict (id) do nothing;
+
+-- Isolated fixtures for set_run_status coverage: a fourth truck with its own
+-- delivery_runs row and a directly-inserted 'ready' order riding on it, kept
+-- separate from the order-lifecycle scenarios above so their status
+-- transitions can't collide with this run's planned -> departed -> completed
+-- walk.
+insert into public.trucks (id, organization_id, name, code, created_by)
+values ('b0000000-0000-0000-0000-000000000013', 'b0000000-0000-0000-0000-00000000000a', 'Run Truck', 'RPC-D', 'b0000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
+
+insert into public.delivery_runs (id, organization_id, truck_id, run_date, status)
+values ('b0000000-0000-0000-0000-000000000014', 'b0000000-0000-0000-0000-00000000000a', 'b0000000-0000-0000-0000-000000000013', current_date + 1, 'planned')
+on conflict (id) do nothing;
+
+insert into public.orders (
+  id, organization_id, customer_id, created_by, source, status,
+  zone_id, delivery_address, delivery_date, slot_id, truck_id, run_id
+) values (
+  'b0000000-0000-0000-0000-000000000015', 'b0000000-0000-0000-0000-00000000000a', 'b0000000-0000-0000-0000-000000000011',
+  'b0000000-0000-0000-0000-000000000001', 'manual', 'ready',
+  'b0000000-0000-0000-0000-000000000007', 'Run Fixture St', current_date + 1,
+  'b0000000-0000-0000-0000-00000000000b', 'b0000000-0000-0000-0000-000000000013', 'b0000000-0000-0000-0000-000000000014'
 )
 on conflict (id) do nothing;
 
@@ -458,6 +554,405 @@ select ok(
   (select count(*) = 1 from public.audit_log where entity_type = 'order' and event_type = 'order.reopened' and entity_id = (select order_id from _scratch where label = 'confirm')),
   'reopen writes an audit_log row'
 );
+
+-- ---------------------------------------------------------------------------
+-- 10. get_delivery_options: window/weekday/capacity/block behavior
+-- ---------------------------------------------------------------------------
+select results_eq(
+  $$ select option_date, remaining from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) where slot_id = 'b0000000-0000-0000-0000-00000000000d'::uuid order by option_date $$,
+  $$ values (current_date + 1, 2::integer), (current_date + 8, 2::integer) $$,
+  'get_delivery_options: a seeded slot appears on both matching dates in the 14-day window with expected remaining capacity'
+);
+
+select results_eq(
+  $$ select option_date from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) where slot_id = 'b0000000-0000-0000-0000-00000000000e'::uuid order by option_date $$,
+  $$ values (current_date + 2), (current_date + 9) $$,
+  'get_delivery_options: a slot on a different weekday only appears on its own matching dates'
+);
+
+select results_eq(
+  $$ select option_date, remaining from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) where slot_id = 'b0000000-0000-0000-0000-000000000010'::uuid order by option_date $$,
+  $$ values (current_date + 8, 1::integer) $$,
+  'get_delivery_options: a slot already at capacity on one date is excluded there but still offered on its next matching date'
+);
+
+insert into public.schedule_blocks (organization_id, block_date, truck_id, created_by)
+values ('b0000000-0000-0000-0000-00000000000a', current_date + 8, 'b0000000-0000-0000-0000-00000000000c', 'b0000000-0000-0000-0000-000000000001');
+
+select results_eq(
+  $$ select option_date, remaining from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) where slot_id = 'b0000000-0000-0000-0000-00000000000d'::uuid order by option_date $$,
+  $$ values (current_date + 1, 2::integer) $$,
+  'get_delivery_options: a schedule_block on the truck removes just that date, leaving the other matching date'
+);
+
+-- ---------------------------------------------------------------------------
+-- 11. set_run_status: planned -> departed -> completed, flips ready orders
+-- to delivered on completion, and rejects completed -> departed.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select lives_ok(
+  $$ select public.set_run_status('b0000000-0000-0000-0000-000000000014'::uuid, 'departed'::public.delivery_run_status) $$,
+  'manager departs a planned run (planned -> departed is legal)'
+);
+
+select lives_ok(
+  $$ select public.set_run_status('b0000000-0000-0000-0000-000000000014'::uuid, 'completed'::public.delivery_run_status) $$,
+  'manager completes a departed run (departed -> completed is legal)'
+);
+
+reset role;
+
+select results_eq(
+  $$ select status::text from public.orders where id = 'b0000000-0000-0000-0000-000000000015' $$,
+  $$ values ('delivered'::text) $$,
+  'completing a run flips its ready orders to delivered'
+);
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select throws_ok(
+  $$ select public.set_run_status('b0000000-0000-0000-0000-000000000014'::uuid, 'departed'::public.delivery_run_status) $$,
+  'P0001', 'invalid_transition',
+  'a completed run cannot transition back to departed'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- 12. place_order: remaining untested error codes (zone_not_found,
+-- slot_not_found, date_out_of_window, date_blocked), plus invalid_items via
+-- a malformed (non-uuid) productId to prove the jsonb-cast guard.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000004';
+
+select throws_ok(
+  $$
+    select public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      '00000000-0000-0000-0000-000000000000'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 1,
+      '9 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'P0001', 'zone_not_found',
+  'place_order rejects a zone that does not exist'
+);
+
+select throws_ok(
+  $$
+    select public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      '00000000-0000-0000-0000-000000000000'::uuid,
+      current_date + 1,
+      '10 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'P0001', 'slot_not_found',
+  'place_order rejects a slot that does not exist'
+);
+
+select throws_ok(
+  $$
+    select public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 20,
+      '11 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'P0001', 'date_out_of_window',
+  'place_order rejects a date more than 14 days out'
+);
+
+select throws_ok(
+  $$
+    select public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 1,
+      '13 Test Street',
+      null,
+      '[{"productId":"not-a-uuid","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'P0001', 'invalid_items',
+  'place_order turns a malformed (non-uuid) productId into invalid_items instead of a raw cast error'
+);
+
+reset role;
+
+insert into public.schedule_blocks (organization_id, block_date, truck_id, created_by)
+values ('b0000000-0000-0000-0000-00000000000a', current_date + 8, 'b0000000-0000-0000-0000-000000000008', 'b0000000-0000-0000-0000-000000000001');
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000004';
+
+select throws_ok(
+  $$
+    select public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 8,
+      '12 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'P0001', 'date_blocked',
+  'place_order rejects a date blocked for the slot''s truck'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- 13. confirm_order: decisions_incomplete via a malformed (non-uuid)
+-- item_id, proving the jsonb-cast guard instead of a raw cast error.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000004';
+
+select lives_ok(
+  $$
+    insert into _scratch (label, order_id)
+    select 'confirm_bad_decisions', public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 1,
+      '14 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'seed: place an order for the decisions_incomplete scenario'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select throws_ok(
+  $$
+    select public.confirm_order(
+      (select order_id from _scratch where label = 'confirm_bad_decisions'),
+      '[{"item_id":"not-a-uuid","available":false}]'::jsonb
+    )
+  $$,
+  'P0001', 'decisions_incomplete',
+  'confirm_order turns a malformed (non-uuid) item_id into decisions_incomplete instead of a raw cast error'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- 14. complete_order_task: weights_incomplete (malformed item_id),
+-- invalid_weight (non-positive weight_kg), then a valid completion followed
+-- by task_done on the already-done task.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000004';
+
+select lives_ok(
+  $$
+    insert into _scratch (label, order_id)
+    select 'complete_bad_weights', public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 1,
+      '15 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'seed: place an order for the complete_order_task error-code scenarios'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select lives_ok(
+  $$
+    select public.confirm_order(
+      (select order_id from _scratch where label = 'complete_bad_weights'),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'complete_bad_weights')
+      )
+    )
+  $$,
+  'manager confirms the order so its allocate_weigh task is pending'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000003';
+
+select throws_ok(
+  $$
+    select public.complete_order_task(
+      (select id from public.order_tasks where order_id = (select order_id from _scratch where label = 'complete_bad_weights')),
+      '[{"item_id":"not-a-uuid","weight_kg":3.0}]'::jsonb
+    )
+  $$,
+  'P0001', 'weights_incomplete',
+  'complete_order_task turns a malformed (non-uuid) item_id into weights_incomplete instead of a raw cast error'
+);
+
+select throws_ok(
+  $$
+    select public.complete_order_task(
+      (select id from public.order_tasks where order_id = (select order_id from _scratch where label = 'complete_bad_weights')),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'weight_kg', -1, 'pieces', 1))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'complete_bad_weights')
+      )
+    )
+  $$,
+  'P0001', 'invalid_weight',
+  'complete_order_task rejects a non-positive weight_kg'
+);
+
+select lives_ok(
+  $$
+    select public.complete_order_task(
+      (select id from public.order_tasks where order_id = (select order_id from _scratch where label = 'complete_bad_weights')),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'weight_kg', 1.5, 'pieces', 1))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'complete_bad_weights')
+      )
+    )
+  $$,
+  'inventory-role staff completes the task with a valid payload'
+);
+
+select throws_ok(
+  $$
+    select public.complete_order_task(
+      (select id from public.order_tasks where order_id = (select order_id from _scratch where label = 'complete_bad_weights')),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'weight_kg', 1.5, 'pieces', 1))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'complete_bad_weights')
+      )
+    )
+  $$,
+  'P0001', 'task_done',
+  'complete_order_task rejects a task that is already done'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
+-- 15. close_order: lines_incomplete (malformed item_id) and invalid_price
+-- (negative price_per_kg).
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000004';
+
+select lives_ok(
+  $$
+    insert into _scratch (label, order_id)
+    select 'close_bad_lines', public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 1,
+      '16 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'seed: place an order for the close_order error-code scenarios'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select lives_ok(
+  $$
+    select public.confirm_order(
+      (select order_id from _scratch where label = 'close_bad_lines'),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'close_bad_lines')
+      )
+    )
+  $$,
+  'manager confirms the order'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$
+    select public.complete_order_task(
+      (select id from public.order_tasks where order_id = (select order_id from _scratch where label = 'close_bad_lines')),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'weight_kg', 1.2, 'pieces', 1))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'close_bad_lines')
+      )
+    )
+  $$,
+  'inventory-role staff completes the task, moving the order to ready'
+);
+
+reset role;
+
+update public.orders set status = 'delivered' where id = (select order_id from _scratch where label = 'close_bad_lines');
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select throws_ok(
+  $$
+    select public.close_order(
+      (select order_id from _scratch where label = 'close_bad_lines'),
+      '[{"item_id":"not-a-uuid","final_weight_kg":1.0,"final_pieces":1,"price_per_kg":5.0}]'::jsonb
+    )
+  $$,
+  'P0001', 'lines_incomplete',
+  'close_order turns a malformed (non-uuid) item_id into lines_incomplete instead of a raw cast error'
+);
+
+select throws_ok(
+  $$
+    select public.close_order(
+      (select order_id from _scratch where label = 'close_bad_lines'),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'final_weight_kg', 1.0, 'final_pieces', 1, 'price_per_kg', -1))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'close_bad_lines')
+      )
+    )
+  $$,
+  'P0001', 'invalid_price',
+  'close_order rejects a negative price_per_kg'
+);
+
+reset role;
 
 select * from finish();
 rollback;
