@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(54);
+select plan(64);
 
 create temporary table _scratch (label text primary key, order_id uuid);
 
@@ -586,6 +586,46 @@ select results_eq(
 );
 
 -- ---------------------------------------------------------------------------
+-- 10b. get_delivery_options: caller authorization (finding #3 -- cross-org
+-- enumeration). Forbidden for a caller who is neither a buyer nor a member
+-- of p_org; still works for an active buyer and for an active org member.
+-- ---------------------------------------------------------------------------
+insert into auth.users (id) values
+  ('b0000000-0000-0000-0000-000000000017') -- stranger: no organization_members row, no buyers row
+on conflict (id) do nothing;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000017';
+
+select throws_ok(
+  $$ select * from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) $$,
+  'P0001', 'forbidden',
+  'get_delivery_options rejects a caller who is neither a buyer nor a member of the org'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000004';
+
+select lives_ok(
+  $$ select * from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) $$,
+  'get_delivery_options still works for an active buyer of the org'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select lives_ok(
+  $$ select * from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) $$,
+  'get_delivery_options still works for an active org member'
+);
+
+reset role;
+
+-- ---------------------------------------------------------------------------
 -- 11. set_run_status: planned -> departed -> completed, flips ready orders
 -- to delivered on completion, and rejects completed -> departed.
 -- ---------------------------------------------------------------------------
@@ -620,6 +660,108 @@ select throws_ok(
 );
 
 reset role;
+
+-- ---------------------------------------------------------------------------
+-- 11b. set_run_status: completed -> completed re-fire (finding #4). A new
+-- order can still be confirmed onto an already-completed run (confirm_order
+-- never checks run status) and reach 'ready'; without the idempotent
+-- re-fire case that order would be stuck at 'ready' forever. A fresh slot
+-- on the same truck+date as run 014 (already completed above) proves the
+-- upsert-by-(truck_id, run_date) reattaches to the existing run.
+-- ---------------------------------------------------------------------------
+insert into public.truck_zones (truck_id, zone_id, organization_id)
+values ('b0000000-0000-0000-0000-000000000013', 'b0000000-0000-0000-0000-000000000007', 'b0000000-0000-0000-0000-00000000000a')
+on conflict do nothing;
+
+insert into public.delivery_slots (id, organization_id, truck_id, weekday, start_time, end_time, created_by)
+values (
+  'b0000000-0000-0000-0000-000000000018',
+  'b0000000-0000-0000-0000-00000000000a',
+  'b0000000-0000-0000-0000-000000000013',
+  extract(dow from current_date + 1)::smallint,
+  '20:00', '21:00',
+  'b0000000-0000-0000-0000-000000000001'
+)
+on conflict (id) do nothing;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000004';
+
+select lives_ok(
+  $$
+    insert into _scratch (label, order_id)
+    select 'late_on_completed_run', public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-000000000018'::uuid,
+      current_date + 1,
+      '17 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":1.0,"sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'seed: place an order on the Run Truck slot, after run 014 is already completed'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select lives_ok(
+  $$
+    select public.confirm_order(
+      (select order_id from _scratch where label = 'late_on_completed_run'),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'late_on_completed_run')
+      )
+    )
+  $$,
+  'manager confirms the order, attaching it to the already-completed run 014 (confirm_order does not check run status)'
+);
+
+reset role;
+
+select results_eq(
+  $$ select run_id from public.orders where id = (select order_id from _scratch where label = 'late_on_completed_run') $$,
+  $$ values ('b0000000-0000-0000-0000-000000000014'::uuid) $$,
+  'confirming attaches the new order to the existing completed run (same truck+date)'
+);
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$
+    select public.complete_order_task(
+      (select id from public.order_tasks where order_id = (select order_id from _scratch where label = 'late_on_completed_run')),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'weight_kg', 1.1, 'pieces', 1))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'late_on_completed_run')
+      )
+    )
+  $$,
+  'staff completes the task, moving the late order to ready on an already-completed run'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
+
+select lives_ok(
+  $$ select public.set_run_status('b0000000-0000-0000-0000-000000000014'::uuid, 'completed'::public.delivery_run_status) $$,
+  'manager re-fires completed -> completed on run 014 (idempotent, no longer invalid_transition)'
+);
+
+reset role;
+
+select results_eq(
+  $$ select status::text from public.orders where id = (select order_id from _scratch where label = 'late_on_completed_run') $$,
+  $$ values ('delivered'::text) $$,
+  'the completed -> completed re-fire delivers the late-ready order'
+);
 
 -- ---------------------------------------------------------------------------
 -- 12. place_order: remaining untested error codes (zone_not_found,
@@ -691,6 +833,26 @@ select throws_ok(
   $$,
   'P0001', 'invalid_items',
   'place_order turns a malformed (non-uuid) productId into invalid_items instead of a raw cast error'
+);
+
+-- Finding #5: 'NaN' is a textually-valid numeric literal in Postgres and
+-- (per numeric's ordering rules) compares greater than every ordinary
+-- value, so without the _order_safe_numeric guard it would sail past the
+-- `v_quantity <= 0` check instead of failing invalid_items.
+select throws_ok(
+  $$
+    select public.place_order(
+      'b0000000-0000-0000-0000-00000000000a'::uuid,
+      'b0000000-0000-0000-0000-000000000007'::uuid,
+      'b0000000-0000-0000-0000-00000000000b'::uuid,
+      current_date + 1,
+      '19 Test Street',
+      null,
+      '[{"productId":"b0000000-0000-0000-0000-000000000006","mode":"kg","quantity":"NaN","sizeMinKg":1.0,"sizeMaxKg":2.0,"fallback":"mix"}]'::jsonb
+    )
+  $$,
+  'P0001', 'invalid_items',
+  'place_order rejects a NaN quantity literal instead of letting it poison the > 0 check'
 );
 
 reset role;

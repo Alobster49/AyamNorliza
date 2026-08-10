@@ -114,6 +114,11 @@ export function RunsClient({ organizationSlug, initialDate, initialRuns }: RunsC
                       Mark completed
                     </Button>
                   )}
+                  {run.status === "completed" && run.orders.some((o) => o.status === "ready") && (
+                    <Button size="sm" onClick={() => handleStatusChange(run.id, "completed")}>
+                      Deliver remaining
+                    </Button>
+                  )}
                 </div>
               </div>
               <Table>

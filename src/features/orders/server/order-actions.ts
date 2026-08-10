@@ -113,15 +113,33 @@ export async function getOrderDetail(
     return err("not_found", "Order not found");
   }
 
-  const [{ data: items }, { data: tasks }] = await Promise.all([
-    supabase.from("order_items").select("*, product:products(id, name, image_url)").eq("order_id", orderId),
+  const { data: items } = await supabase
+    .from("order_items")
+    .select("*, product:products(id, name, image_url)")
+    .eq("order_id", orderId);
+
+  const itemIds = (items ?? []).map((item: { id: string }) => item.id);
+
+  const [{ data: tasks }, { data: weightLog }] = await Promise.all([
     supabase.from("order_tasks").select("*").eq("order_id", orderId),
+    // order_weight_log has no order_id column -- scope through the order's
+    // items (org-scoped via orgId) instead of a direct order_id filter. The
+    // closed-order "Weight log" panel (order-detail-client.tsx) reads this.
+    itemIds.length > 0
+      ? supabase
+          .from("order_weight_log")
+          .select("*")
+          .eq("organization_id", orgId)
+          .in("order_item_id", itemIds)
+          .order("recorded_at", { ascending: true })
+      : Promise.resolve({ data: [] as unknown[] }),
   ]);
 
   return ok({
     ...(order as OrderWithItems),
     items: (items ?? []) as OrderWithItems["items"],
     tasks: (tasks ?? []) as OrderWithItems["tasks"],
+    weight_log: (weightLog ?? []) as OrderWithItems["weight_log"],
   });
 }
 

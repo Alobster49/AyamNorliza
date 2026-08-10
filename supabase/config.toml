@@ -19,6 +19,12 @@ pool_mode = "transaction"
 default_pool_size = 20
 max_client_conn = 100
 
+[db.seed]
+# Local-only fixtures (e.g. e2e login accounts) that must never ship in a
+# migration -- see supabase/seed.sql. Runs after migrations on `db reset`.
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [realtime]
 enabled = true
 

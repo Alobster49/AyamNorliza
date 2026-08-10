@@ -8,7 +8,8 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import type { OrderFallback, OrderItemMode } from "@/features/orders/types";
+import { z } from "zod";
+import { FALLBACKS, type OrderFallback, type OrderItemMode } from "@/features/orders/types";
 
 export type CartLine = {
   productId: string;
@@ -19,6 +20,53 @@ export type CartLine = {
   sizeMaxKg: number;
   fallback: OrderFallback;
 };
+
+// Validates localStorage-hydrated cart lines. A corrupt or stale shape
+// (manual edits, an old cart schema version, devtools tampering) must be
+// dropped per-line instead of crashing the cart/checkout render on every
+// load thereafter.
+const CartLineSchema = z
+  .object({
+    productId: z.string().uuid(),
+    productName: z.string().min(1),
+    mode: z.enum(["piece", "kg"]),
+    quantity: z.number().positive(),
+    sizeMinKg: z.number().positive(),
+    sizeMaxKg: z.number().positive(),
+    fallback: z.enum(FALLBACKS),
+  })
+  .refine((v) => v.sizeMaxKg >= v.sizeMinKg, { message: "sizeMaxKg must be >= sizeMinKg" })
+  .refine((v) => v.mode !== "piece" || Number.isInteger(v.quantity), {
+    message: "quantity must be a whole number for piece mode",
+  });
+
+// Exported for unit testing (see tests/unit/cart-context.test.ts). Pure and
+// side-effect free -- no DOM/localStorage access -- so it's safe to test
+// under vitest's node environment.
+export function parseStoredCart(raw: string): CartLine[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+
+  const valid: CartLine[] = [];
+  for (const entry of parsed) {
+    const result = CartLineSchema.safeParse(entry);
+    if (result.success) {
+      valid.push(result.data);
+    }
+    // Invalid entries are silently dropped rather than discarding the
+    // whole cart -- one corrupt line shouldn't cost the buyer their other
+    // lines.
+  }
+  return valid;
+}
 
 type CartContextType = {
   items: CartLine[];
@@ -49,15 +97,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     if (stored) {
-      try {
-        // Hydrating from localStorage must happen after mount: reading it in a
-        // lazy initializer would make the client's first render differ from the
-        // server's and trip a hydration mismatch.
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setItems(JSON.parse(stored));
-      } catch {
-        // Ignore invalid JSON
-      }
+      // Hydrating from localStorage must happen after mount: reading it in a
+      // lazy initializer would make the client's first render differ from the
+      // server's and trip a hydration mismatch.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setItems(parseStoredCart(stored));
     }
   }, []);
 

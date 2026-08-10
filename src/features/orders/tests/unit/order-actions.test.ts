@@ -11,7 +11,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getTodayTasks, confirmOrder, closeOrder } from "../../server/order-actions";
+import { getTodayTasks, confirmOrder, closeOrder, getOrderDetail } from "../../server/order-actions";
 import { mapRpcError } from "../../lib/rpc-errors";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
@@ -130,6 +130,57 @@ describe("closeOrder", () => {
     });
 
     expect(result).toEqual({ ok: true, data: { total: 245.5 } });
+  });
+});
+
+describe("getOrderDetail", () => {
+  it("queries order_weight_log scoped to the order's items/org and attaches it as weight_log", async () => {
+    const WEIGHT_LOG_ROW = {
+      id: "66666666-6666-6666-6666-666666666666",
+      organization_id: "org-1",
+      order_item_id: ITEM_ID,
+      kind: "final",
+      weight_kg: 3.2,
+      pieces: 2,
+      recorded_by: "user-1",
+      recorded_at: "2026-08-10T12:00:00.000Z",
+    };
+
+    const supabase = mockSupabaseFor({
+      role: "owner",
+      tableResults: {
+        orders: { data: { id: ORDER_ID, organization_id: "org-1" }, error: null },
+        order_items: { data: [{ id: ITEM_ID }], error: null },
+        order_tasks: { data: [], error: null },
+        order_weight_log: { data: [WEIGHT_LOG_ROW], error: null },
+      },
+    });
+
+    const result = await getOrderDetail("ayam-norliza-pilot", ORDER_ID);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.weight_log).toEqual([WEIGHT_LOG_ROW]);
+    }
+    expect(supabase.from).toHaveBeenCalledWith("order_weight_log");
+  });
+
+  it("skips the order_weight_log query and returns an empty array when the order has no items", async () => {
+    mockSupabaseFor({
+      role: "owner",
+      tableResults: {
+        orders: { data: { id: ORDER_ID, organization_id: "org-1" }, error: null },
+        order_items: { data: [], error: null },
+        order_tasks: { data: [], error: null },
+      },
+    });
+
+    const result = await getOrderDetail("ayam-norliza-pilot", ORDER_ID);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.weight_log).toEqual([]);
+    }
   });
 });
 

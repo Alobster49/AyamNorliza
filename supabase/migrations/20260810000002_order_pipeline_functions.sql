@@ -36,7 +36,26 @@ returns numeric
 language plpgsql
 immutable
 as $$
+declare
+  v_normalized text;
 begin
+  if p_text is null then
+    return null;
+  end if;
+
+  -- Postgres's numeric type (unlike the RPC callers' own > 0 / >= checks)
+  -- accepts the textual special values below without raising, and treats
+  -- NaN as greater than every ordinary value (including Infinity) for
+  -- comparison purposes -- so e.g. 'NaN'::numeric sails past `v_quantity
+  -- <= 0` as if it were a huge positive number instead of failing
+  -- validation. Reject the literals up front so callers see the documented
+  -- P0001 codes (invalid_items / invalid_weight / invalid_price) instead
+  -- of NaN/Infinity poisoning downstream math.
+  v_normalized := lower(trim(p_text));
+  if v_normalized in ('nan', 'infinity', '+infinity', '-infinity', 'inf', '+inf', '-inf') then
+    return null;
+  end if;
+
   return p_text::numeric;
 exception when others then
   return null;
@@ -76,6 +95,12 @@ revoke all on function public._order_safe_boolean(text) from public;
 -- ---------------------------------------------------------------------------
 -- get_delivery_options: zone -> valid (date, slot, truck) options for the
 -- next 14 days starting tomorrow, minus blocked dates, minus full slots.
+--
+-- Caller must be either an active buyer of p_org or an active member of
+-- p_org (any role) -- otherwise this is an unauthenticated/cross-org
+-- enumeration of another org's delivery capacity and schedule. plpgsql
+-- (not sql) so the guard can raise; still stable, since auth.uid() and the
+-- membership/buyer lookups are stable within a single statement.
 -- ---------------------------------------------------------------------------
 create or replace function public.get_delivery_options(p_org uuid, p_zone uuid)
 returns table (
@@ -87,12 +112,27 @@ returns table (
   end_time time,
   remaining integer
 )
-language sql
+language plpgsql
 stable
 security definer
 set search_path = public, pg_temp
 as $$
-  select option_date, slot_id, truck_id, truck_name, start_time, end_time, remaining
+begin
+  if not (
+    exists (select 1 from public.buyers where id = auth.uid() and organization_id = p_org)
+    or public.is_active_org_member(p_org)
+  ) then
+    raise exception using errcode = 'P0001', message = 'forbidden';
+  end if;
+
+  -- Columns are qualified with the `options` alias because plpgsql (unlike
+  -- plain sql-language functions) binds unqualified names in this query
+  -- against the RETURNS TABLE out-parameters first, which are identically
+  -- named to these column aliases and would otherwise raise "column
+  -- reference is ambiguous".
+  return query
+  select options.option_date, options.slot_id, options.truck_id, options.truck_name,
+    options.start_time, options.end_time, options.remaining
   from (
     select
       d::date as option_date,
@@ -119,8 +159,9 @@ as $$
         and (b.truck_id is null or b.truck_id = t.id)
     )
   ) options
-  where remaining is null or remaining > 0
-  order by option_date, start_time;
+  where options.remaining is null or options.remaining > 0
+  order by options.option_date, options.start_time;
+end;
 $$;
 
 revoke all on function public.get_delivery_options(uuid, uuid) from public;
@@ -566,6 +607,14 @@ begin
     (v_current = 'planned' and p_status = 'departed')
     or (v_current = 'departed' and p_status = 'completed')
     or (v_current = 'planned' and p_status = 'completed')
+    -- Idempotent re-fire: confirm_order can still attach a newly-confirmed
+    -- order to an already-completed run's delivery_runs row (it upserts on
+    -- (truck_id, run_date) with no run-status check), and that order can
+    -- later reach 'ready' via complete_order_task. Without this case those
+    -- orders are permanently stuck at 'ready' -- completed -> completed
+    -- is allowed specifically so the ready -> delivered sweep below can
+    -- run again and pick them up.
+    or (v_current = 'completed' and p_status = 'completed')
   ) then
     raise exception using errcode = 'P0001', message = 'invalid_transition';
   end if;
