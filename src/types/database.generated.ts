@@ -288,109 +288,11 @@ export type Database = {
           },
         ]
       }
-      buyer_order_items: {
-        Row: {
-          created_at: string
-          id: string
-          order_id: string
-          quantity: number
-          subtotal: number
-          unit_price: number
-          variant_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          order_id: string
-          quantity: number
-          subtotal: number
-          unit_price: number
-          variant_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          order_id?: string
-          quantity?: number
-          subtotal?: number
-          unit_price?: number
-          variant_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "buyer_order_items_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "buyer_orders"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "buyer_order_items_variant_id_fkey"
-            columns: ["variant_id"]
-            isOneToOne: false
-            referencedRelation: "product_variants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      buyer_orders: {
-        Row: {
-          buyer_id: string
-          created_at: string
-          delivery_address: string | null
-          id: string
-          notes: string | null
-          organization_id: string
-          status: Database["public"]["Enums"]["order_status"]
-          total_amount: number
-          updated_at: string
-          version: number
-        }
-        Insert: {
-          buyer_id: string
-          created_at?: string
-          delivery_address?: string | null
-          id?: string
-          notes?: string | null
-          organization_id: string
-          status?: Database["public"]["Enums"]["order_status"]
-          total_amount?: number
-          updated_at?: string
-          version?: number
-        }
-        Update: {
-          buyer_id?: string
-          created_at?: string
-          delivery_address?: string | null
-          id?: string
-          notes?: string | null
-          organization_id?: string
-          status?: Database["public"]["Enums"]["order_status"]
-          total_amount?: number
-          updated_at?: string
-          version?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "buyer_orders_buyer_id_fkey"
-            columns: ["buyer_id"]
-            isOneToOne: false
-            referencedRelation: "buyers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "buyer_orders_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       buyers: {
         Row: {
           address: string | null
           created_at: string
+          customer_id: string | null
           display_name: string
           id: string
           organization_id: string
@@ -401,6 +303,7 @@ export type Database = {
         Insert: {
           address?: string | null
           created_at?: string
+          customer_id?: string | null
           display_name: string
           id: string
           organization_id: string
@@ -411,6 +314,7 @@ export type Database = {
         Update: {
           address?: string | null
           created_at?: string
+          customer_id?: string | null
           display_name?: string
           id?: string
           organization_id?: string
@@ -419,6 +323,13 @@ export type Database = {
           version?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "buyers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "buyers_organization_id_fkey"
             columns: ["organization_id"]
@@ -515,6 +426,161 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "customers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_runs: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          organization_id: string
+          run_date: string
+          status: Database["public"]["Enums"]["delivery_run_status"]
+          truck_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id: string
+          run_date: string
+          status?: Database["public"]["Enums"]["delivery_run_status"]
+          truck_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          organization_id?: string
+          run_date?: string
+          status?: Database["public"]["Enums"]["delivery_run_status"]
+          truck_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_runs_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_runs_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_slots: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          end_time: string
+          id: string
+          is_active: boolean
+          max_orders: number | null
+          organization_id: string
+          start_time: string
+          truck_id: string
+          updated_at: string
+          version: number
+          weekday: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          end_time: string
+          id?: string
+          is_active?: boolean
+          max_orders?: number | null
+          organization_id: string
+          start_time: string
+          truck_id: string
+          updated_at?: string
+          version?: number
+          weekday: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          max_orders?: number | null
+          organization_id?: string
+          start_time?: string
+          truck_id?: string
+          updated_at?: string
+          version?: number
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_slots_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_slots_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      delivery_zones: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_zones_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -632,30 +698,70 @@ export type Database = {
       order_items: {
         Row: {
           created_at: string
+          fallback: Database["public"]["Enums"]["order_fallback"]
+          fallback_applied: Database["public"]["Enums"]["order_fallback"] | null
+          final_pieces: number | null
+          final_weight_kg: number | null
           id: string
+          is_cancelled: boolean
+          line_total: number | null
+          mode: Database["public"]["Enums"]["order_item_mode"]
           order_id: string
+          price_per_kg: number | null
+          product_id: string
           quantity: number
-          subtotal: number
-          unit_price: number
-          variant_id: string
+          size_max_kg: number
+          size_min_kg: number
+          updated_at: string
+          version: number
+          warehouse_pieces: number | null
+          warehouse_weight_kg: number | null
         }
         Insert: {
           created_at?: string
+          fallback: Database["public"]["Enums"]["order_fallback"]
+          fallback_applied?:
+            | Database["public"]["Enums"]["order_fallback"]
+            | null
+          final_pieces?: number | null
+          final_weight_kg?: number | null
           id?: string
+          is_cancelled?: boolean
+          line_total?: number | null
+          mode: Database["public"]["Enums"]["order_item_mode"]
           order_id: string
+          price_per_kg?: number | null
+          product_id: string
           quantity: number
-          subtotal: number
-          unit_price: number
-          variant_id: string
+          size_max_kg: number
+          size_min_kg: number
+          updated_at?: string
+          version?: number
+          warehouse_pieces?: number | null
+          warehouse_weight_kg?: number | null
         }
         Update: {
           created_at?: string
+          fallback?: Database["public"]["Enums"]["order_fallback"]
+          fallback_applied?:
+            | Database["public"]["Enums"]["order_fallback"]
+            | null
+          final_pieces?: number | null
+          final_weight_kg?: number | null
           id?: string
+          is_cancelled?: boolean
+          line_total?: number | null
+          mode?: Database["public"]["Enums"]["order_item_mode"]
           order_id?: string
+          price_per_kg?: number | null
+          product_id?: string
           quantity?: number
-          subtotal?: number
-          unit_price?: number
-          variant_id?: string
+          size_max_kg?: number
+          size_min_kg?: number
+          updated_at?: string
+          version?: number
+          warehouse_pieces?: number | null
+          warehouse_weight_kg?: number | null
         }
         Relationships: [
           {
@@ -666,50 +772,179 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "order_items_variant_id_fkey"
-            columns: ["variant_id"]
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
             isOneToOne: false
-            referencedRelation: "product_variants"
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          done_at: string | null
+          done_by: string | null
+          id: string
+          order_id: string
+          organization_id: string
+          status: Database["public"]["Enums"]["order_task_status"]
+          type: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          order_id: string
+          organization_id: string
+          status?: Database["public"]["Enums"]["order_task_status"]
+          type?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          id?: string
+          order_id?: string
+          organization_id?: string
+          status?: Database["public"]["Enums"]["order_task_status"]
+          type?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_tasks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_weight_log: {
+        Row: {
+          id: string
+          kind: Database["public"]["Enums"]["weight_log_kind"]
+          order_item_id: string
+          organization_id: string
+          pieces: number | null
+          recorded_at: string
+          recorded_by: string
+          weight_kg: number
+        }
+        Insert: {
+          id?: string
+          kind: Database["public"]["Enums"]["weight_log_kind"]
+          order_item_id: string
+          organization_id: string
+          pieces?: number | null
+          recorded_at?: string
+          recorded_by: string
+          weight_kg: number
+        }
+        Update: {
+          id?: string
+          kind?: Database["public"]["Enums"]["weight_log_kind"]
+          order_item_id?: string
+          organization_id?: string
+          pieces?: number | null
+          recorded_at?: string
+          recorded_by?: string
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_weight_log_order_item_id_fkey"
+            columns: ["order_item_id"]
+            isOneToOne: false
+            referencedRelation: "order_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_weight_log_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
       }
       orders: {
         Row: {
+          closed_at: string | null
           created_at: string
+          created_by: string | null
           customer_id: string
+          delivery_address: string
+          delivery_date: string
           id: string
           notes: string | null
           organization_id: string
-          seller_id: string
+          run_id: string | null
+          slot_id: string
+          source: string
           status: Database["public"]["Enums"]["order_status"]
           total_amount: number
+          truck_id: string
           updated_at: string
           version: number
+          zone_id: string
         }
         Insert: {
+          closed_at?: string | null
           created_at?: string
+          created_by?: string | null
           customer_id: string
+          delivery_address: string
+          delivery_date: string
           id?: string
           notes?: string | null
           organization_id: string
-          seller_id: string
+          run_id?: string | null
+          slot_id: string
+          source?: string
           status?: Database["public"]["Enums"]["order_status"]
           total_amount?: number
+          truck_id: string
           updated_at?: string
           version?: number
+          zone_id: string
         }
         Update: {
+          closed_at?: string | null
           created_at?: string
+          created_by?: string | null
           customer_id?: string
+          delivery_address?: string
+          delivery_date?: string
           id?: string
           notes?: string | null
           organization_id?: string
-          seller_id?: string
+          run_id?: string | null
+          slot_id?: string
+          source?: string
           status?: Database["public"]["Enums"]["order_status"]
           total_amount?: number
+          truck_id?: string
           updated_at?: string
           version?: number
+          zone_id?: string
         }
         Relationships: [
           {
@@ -724,6 +959,34 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_slots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
             referencedColumns: ["id"]
           },
         ]
@@ -1026,6 +1289,51 @@ export type Database = {
           },
         ]
       }
+      schedule_blocks: {
+        Row: {
+          block_date: string
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          reason: string | null
+          truck_id: string | null
+        }
+        Insert: {
+          block_date: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          reason?: string | null
+          truck_id?: string | null
+        }
+        Update: {
+          block_date?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          reason?: string | null
+          truck_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_blocks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_blocks_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_sessions: {
         Row: {
           created_at: string
@@ -1076,6 +1384,90 @@ export type Database = {
           },
         ]
       }
+      truck_zones: {
+        Row: {
+          organization_id: string
+          truck_id: string
+          zone_id: string
+        }
+        Insert: {
+          organization_id: string
+          truck_id: string
+          zone_id: string
+        }
+        Update: {
+          organization_id?: string
+          truck_id?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_zones_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_zones_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_zones_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trucks: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trucks_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1119,7 +1511,18 @@ export type Database = {
       role_rank: { Args: { role: string }; Returns: number }
     }
     Enums: {
-      order_status: "new" | "preparing" | "ready" | "completed" | "cancelled"
+      delivery_run_status: "planned" | "departed" | "completed"
+      order_fallback: "cancel" | "mix" | "upsize" | "downsize"
+      order_item_mode: "piece" | "kg"
+      order_status:
+        | "pending"
+        | "confirmed"
+        | "ready"
+        | "delivered"
+        | "closed"
+        | "cancelled"
+      order_task_status: "pending" | "done"
+      weight_log_kind: "warehouse" | "final"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1795,7 +2198,19 @@ export const Constants = {
   },
   public: {
     Enums: {
-      order_status: ["new", "preparing", "ready", "completed", "cancelled"],
+      delivery_run_status: ["planned", "departed", "completed"],
+      order_fallback: ["cancel", "mix", "upsize", "downsize"],
+      order_item_mode: ["piece", "kg"],
+      order_status: [
+        "pending",
+        "confirmed",
+        "ready",
+        "delivered",
+        "closed",
+        "cancelled",
+      ],
+      order_task_status: ["pending", "done"],
+      weight_log_kind: ["warehouse", "final"],
     },
   },
   storage: {
