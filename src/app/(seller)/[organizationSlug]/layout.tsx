@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
+import { STAFF_ROLES } from "@/features/orders/lib/roles";
 import {
   getOrganizationBySlug,
   getProfile,
@@ -30,10 +31,14 @@ export default async function SellerLayout({
     .select("role")
     .eq("organization_id", org.id)
     .eq("user_id", user.id)
+    .eq("status", "active")
     .single();
 
-  // Only allow owner, org_admin, or seller roles
-  if (!member || !["owner", "org_admin", "seller"].includes(member.role)) {
+  // Allow managers (owner/org_admin/seller) and warehouse staff
+  // (inventory/logistics). Staff get a restricted nav — see AppSidebar —
+  // and manager-only pages redirect them to /tasks (see CONTRACT CONCERN
+  // at the end of this file for why that redirect lives per-page).
+  if (!member || !(STAFF_ROLES as readonly string[]).includes(member.role)) {
     redirect(`/${organizationSlug}`);
   }
 
@@ -51,6 +56,7 @@ export default async function SellerLayout({
           organizationRegion={org.region}
           userEmail={userEmail}
           userName={userName}
+          role={member.role}
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
           <DashboardShellHeader

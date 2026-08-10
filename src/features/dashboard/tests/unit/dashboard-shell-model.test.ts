@@ -61,4 +61,72 @@ describe("dashboard shell model", () => {
     expect(getUserInitials("Ayam Norliza", "owner@example.com")).toBe("AN");
     expect(getUserInitials("", "owner@example.com")).toBe("O");
   });
+
+  it("returns only the warehouse group for staff roles", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/tasks",
+      role: "inventory",
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({ title: "Warehouse", isActive: true });
+    expect(groups[0]?.items).toEqual([
+      {
+        title: "Warehouse tasks",
+        href: "/ayam-norliza-pilot/tasks",
+        isActive: true,
+      },
+    ]);
+  });
+
+  it("returns only the warehouse group for the logistics role too", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/orders",
+      role: "logistics",
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.title).toBe("Warehouse");
+    expect(groups[0]?.items[0]).toMatchObject({ isActive: false });
+  });
+
+  it("returns the full nav with delivery segments for manager roles", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/delivery",
+      role: "seller",
+    });
+
+    expect(groups).toHaveLength(2);
+    const salesTitles = groups[1]?.items.map((item) => item.title);
+    expect(salesTitles).toEqual([
+      "Products",
+      "Orders",
+      "Customers",
+      "Delivery setup",
+      "Delivery runs",
+      "Warehouse tasks",
+    ]);
+    const deliverySetup = groups[1]?.items.find((item) => item.title === "Delivery setup");
+    expect(deliverySetup).toMatchObject({
+      href: "/ayam-norliza-pilot/delivery",
+      isActive: true,
+    });
+  });
+
+  it("returns the full nav when role is undefined (back-compat)", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/runs",
+    });
+
+    expect(groups).toHaveLength(2);
+    const runsItem = groups[1]?.items.find((item) => item.title === "Delivery runs");
+    expect(runsItem).toMatchObject({
+      href: "/ayam-norliza-pilot/runs",
+      isActive: true,
+    });
+  });
 });

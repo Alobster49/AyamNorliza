@@ -13,6 +13,7 @@ export type DashboardRouteGroup = {
 type DashboardPathInput = {
   organizationSlug: string;
   pathname: string;
+  role?: string;
 };
 
 const routeGroups = [
@@ -33,14 +34,31 @@ const routeGroups = [
       { title: "Products", segment: "products" },
       { title: "Orders", segment: "orders" },
       { title: "Customers", segment: "customers" },
+      { title: "Delivery setup", segment: "delivery" },
+      { title: "Delivery runs", segment: "runs" },
+      { title: "Warehouse tasks", segment: "tasks" },
     ],
   },
 ] as const;
 
+// Roles that only see the warehouse queue — no schedule admin, catalog, or
+// customer data. Kept local (not imported from @/features/orders/lib/roles)
+// so this dashboard-layer file has no dependency on the orders feature.
+const STAFF_ONLY_ROLES = ["inventory", "logistics"] as const;
+
 export function getDashboardSidebarGroups({
   organizationSlug,
   pathname,
+  role,
 }: DashboardPathInput): DashboardRouteGroup[] {
+  if (role && (STAFF_ONLY_ROLES as readonly string[]).includes(role)) {
+    const href = `/${organizationSlug}/tasks`;
+    const items = [
+      { title: "Warehouse tasks", href, isActive: isRouteActive(pathname, href) },
+    ];
+    return [{ title: "Warehouse", isActive: items.some((item) => item.isActive), items }];
+  }
+
   return routeGroups.map((group) => {
     const items = group.items.map((item) => {
       const href = `/${organizationSlug}/${item.segment}`;
