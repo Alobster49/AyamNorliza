@@ -43,21 +43,32 @@ function fieldAfterLabel(root: Page | Locator, labelText: string) {
   return root.getByText(labelText, { exact: true }).locator("xpath=following-sibling::*[1]");
 }
 
-// RECONCILIATION: the "Mode" and "If size unavailable" controls on the New
-// order line are shadcn Selects (not radio buttons as originally assumed),
-// each defaulting to a value ("Piece" / "Mix sizes"). Opens the Select whose
-// trigger currently displays `currentValue` and picks `optionName`.
-async function chooseSelect(page: Page, currentValue: string, optionName: string) {
-  await page.getByRole("combobox", { name: currentValue, exact: true }).click();
-  await page.getByRole("option", { name: optionName, exact: true }).click();
+// RECONCILIATION (bigger than a label-text mismatch): every shadcn Select
+// trigger on this page is unlabeled (no htmlFor/aria-label), and — unlike
+// plain buttons, options, tabs, or rows — the ARIA "combobox" role does NOT
+// support accessible-name-from-content. Chromium computes an EMPTY
+// accessible name for these triggers regardless of their visible text (e.g.
+// "Select product", "Piece", "Mix sizes"), so `getByRole("combobox", {name})`
+// matches zero elements and any `.click()` against it hangs until the
+// action timeout — confirmed by inspecting the live accessibility tree
+// (`combobox[...]` has no computed name; `getByRole("combobox", {name:
+// "Piece", exact:true})` returns 0 matches even though `el.textContent ===
+// "Piece"`). This is standard ARIA/browser behavior, not an app bug. Locate
+// these triggers the same way as the unlabeled inputs: by the element
+// immediately following their (also-unlinked) <Label> text.
+async function chooseSelect(trigger: Locator, optionName: string) {
+  await trigger.click();
+  await trigger.page().getByRole("option", { name: optionName, exact: true }).click();
 }
 
 // RECONCILIATION: unlike the buyer checkout page, the New order screen's
 // "Delivery date & slot" field is a shadcn Select, not a radiogroup — so
 // there is no `role="radio"` to read a date off of. Its options already
 // spell out the ISO date, e.g. "2026-08-15 · Truck A 08:00–12:00 (5 left)".
+// (Also affected by the unlabeled-combobox issue above — located the same
+// way, via the label text it follows.)
 async function pickFirstDeliveryOption(page: Page): Promise<string> {
-  const trigger = page.getByRole("combobox", { name: /select a date and slot/i });
+  const trigger = fieldAfterLabel(page, "Delivery date & slot");
   await expect(trigger).toBeVisible({ timeout: 10_000 });
   await trigger.click();
   const firstOption = page.getByRole("option").first();
@@ -92,18 +103,18 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   await page.getByRole("button", { name: /save customer/i }).click();
   await expect(page.getByText("E2E Pipeline Customer")).toBeVisible({ timeout: 10_000 });
 
-  await page.getByRole("combobox", { name: /select product/i }).click();
+  await fieldAfterLabel(page, "Product").click();
   await page.getByRole("option", { name: "E2E Pipeline Chicken" }).click();
-  await chooseSelect(page, "Piece", "Kg");
+  await chooseSelect(fieldAfterLabel(page, "Mode"), "Kg");
   await fieldAfterLabel(page, "Quantity").fill("5");
   await fieldAfterLabel(page, "Size min (kg)").fill("1.5");
   await fieldAfterLabel(page, "Size max (kg)").fill("1.8");
   // "Mix sizes" is already the line's default fallback; re-select it
   // explicitly so the test documents intent and stays correct if the
   // default ever changes.
-  await chooseSelect(page, "Mix sizes", "Mix sizes");
+  await chooseSelect(fieldAfterLabel(page, "If size unavailable"), "Mix sizes");
 
-  await page.getByRole("combobox", { name: /select zone/i }).click();
+  await fieldAfterLabel(page, "Zone").click();
   await page.getByRole("option", { name: "Zone 1" }).click();
   await fieldAfterLabel(page, "Delivery address").fill("12 Jalan Uji, Kuala Lumpur");
   const deliveryDate = await pickFirstDeliveryOption(page);
@@ -150,12 +161,27 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   // associated <label> at all.
   await page.locator('input[type="date"]').fill(deliveryDate);
   await expect(page.getByText("E2E Pipeline Customer")).toBeVisible({ timeout: 10_000 });
+  // RECONCILIATION (test bug, found via direct DB inspection): the "Mark
+  // departed"/"Mark completed" BUTTONS themselves contain the words
+  // "departed"/"completed" in their own labels and stay mounted right up
+  // until the transition actually lands, so a loose `getByText(/departed/i)`
+  // is satisfied by the *button* immediately on click — before setRunStatus
+  // has actually round-tripped to the server. That let the very next
+  // `page.goto` abort the in-flight request (observed as the run silently
+  // stuck on "departed" in the DB after "Mark completed" was clicked, only
+  // on the tablet/WebKit project, presumably because WebKit cancels
+  // in-flight requests on navigation more eagerly than Chromium). Scope to
+  // the status Badge specifically so the wait is tied to the real state.
   await page.getByRole("button", { name: /mark departed/i }).click();
-  await expect(page.getByText(/departed/i).first()).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.locator('[data-slot="badge"]').filter({ hasText: "Departed" }).first(),
+  ).toBeVisible({ timeout: 10_000 });
   // RECONCILIATION: the return-trip action is labeled "Mark completed", not
   // "Truck returned".
   await page.getByRole("button", { name: /mark completed/i }).click();
-  await expect(page.getByText(/completed/i).first()).toBeVisible({ timeout: 10_000 });
+  await expect(
+    page.locator('[data-slot="badge"]').filter({ hasText: "Completed" }).first(),
+  ).toBeVisible({ timeout: 10_000 });
 
   // --- Close with final weights and today's price ---
   await page.goto("/ayam-norliza-pilot/orders");
@@ -196,15 +222,15 @@ test("fallback = cancel cancels the order when the only line is unavailable at c
   await page.getByRole("button", { name: /save customer/i }).click();
   await expect(page.getByText("E2E Cancel Customer")).toBeVisible({ timeout: 10_000 });
 
-  await page.getByRole("combobox", { name: /select product/i }).click();
+  await fieldAfterLabel(page, "Product").click();
   await page.getByRole("option", { name: "E2E Cancel Fallback Chicken" }).click();
   // Mode stays "Piece" — that's the line's default.
   await fieldAfterLabel(page, "Quantity").fill("4");
   await fieldAfterLabel(page, "Size min (kg)").fill("1.4");
   await fieldAfterLabel(page, "Size max (kg)").fill("1.6");
-  await chooseSelect(page, "Mix sizes", "Cancel my order");
+  await chooseSelect(fieldAfterLabel(page, "If size unavailable"), "Cancel my order");
 
-  await page.getByRole("combobox", { name: /select zone/i }).click();
+  await fieldAfterLabel(page, "Zone").click();
   await page.getByRole("option", { name: "Zone 1" }).click();
   await fieldAfterLabel(page, "Delivery address").fill("9 Jalan Uji, Kuala Lumpur");
   await pickFirstDeliveryOption(page);
