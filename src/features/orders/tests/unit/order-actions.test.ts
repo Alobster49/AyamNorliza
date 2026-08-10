@@ -11,7 +11,8 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getTodayTasks, confirmOrder, closeOrder, mapRpcError } from "../../server/order-actions";
+import { getTodayTasks, confirmOrder, closeOrder } from "../../server/order-actions";
+import { mapRpcError } from "../../lib/rpc-errors";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
 
