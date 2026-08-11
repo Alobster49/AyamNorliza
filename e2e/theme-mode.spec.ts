@@ -3,8 +3,11 @@ import { expect, test } from "@playwright/test";
 test("visitor can switch between dark and light mode", async ({ page }) => {
   await page.goto("/login");
 
-  await page.getByRole("button", { name: /change color theme/i }).click();
-  await page.getByRole("menuitem", { name: /^dark$/i }).click();
+  // The theme control is a single toggle button (see ThemeToggle): it flips
+  // between dark and light rather than opening a menu of choices.
+  const toggle = page.getByRole("button", { name: /toggle color theme/i });
+
+  await toggle.click();
 
   await expect(page.locator("html")).toHaveClass(/dark/);
   await expect
@@ -14,8 +17,7 @@ test("visitor can switch between dark and light mode", async ({ page }) => {
   await page.reload();
   await expect(page.locator("html")).toHaveClass(/dark/);
 
-  await page.getByRole("button", { name: /change color theme/i }).click();
-  await page.getByRole("menuitem", { name: /^light$/i }).click();
+  await toggle.click();
 
   await expect(page.locator("html")).not.toHaveClass(/dark/);
   await expect

@@ -48,19 +48,22 @@ const HIGH_PRIORITY: ReadonlySet<NotificationEvent> = new Set([
 
 export async function dispatch(payload: NotificationPayload): Promise<void> {
   if (HIGH_PRIORITY.has(payload.event)) payload.priority ??= "high";
-  if (payload.priority === "high") {
+  // Notifications are a best-effort side-effect: callers dispatch *after* the
+  // state change and its audit event are already committed, so a mail-provider
+  // outage must not turn a completed action (deactivation, role change) into a
+  // rejected Server Action. Log and carry on instead of throwing.
+  try {
     await sendEmail({
       to: payload.recipients,
       subject: subjectFor(payload),
       html: renderHtml(payload),
     });
-    return;
+  } catch (e) {
+    console.error(
+      `notifications: failed to deliver "${payload.event}" to ${payload.recipients.length} recipient(s)`,
+      e,
+    );
   }
-  await sendEmail({
-    to: payload.recipients,
-    subject: subjectFor(payload),
-    html: renderHtml(payload),
-  });
 }
 
 function subjectFor(p: NotificationPayload): string {

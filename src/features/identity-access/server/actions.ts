@@ -794,12 +794,15 @@ export async function startAccessReviewAction(
     .single();
   if (error) return err("internal", error.message);
 
-  // One item per active member in scope.
+  // One item per active member in scope, excluding the actor: reviewers do
+  // not review their own access, and `access_review_items_admin_write`
+  // rejects a self-referencing item (which would fail the whole batch).
   const { data: members } = await supabase
     .from("organization_members")
     .select("id")
     .eq("organization_id", input.organizationId)
-    .eq("status", "active");
+    .eq("status", "active")
+    .neq("user_id", user.id);
   if (members && members.length > 0) {
     const { error: itemErr } = await supabase.from("access_review_items").insert(
       members.map((m) => ({
