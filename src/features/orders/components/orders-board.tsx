@@ -103,7 +103,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
 
   return (
     <>
-      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveOrder(null)}>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {ORDER_STATUSES.map((status) => (
             <BoardColumn
