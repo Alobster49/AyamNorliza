@@ -49,6 +49,12 @@ export function OrderCard({ order, onOpen }: { order: OrderListItem; onOpen: () 
       {...attributes}
       {...listeners}
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
       className={
         "cursor-grab touch-none active:cursor-grabbing " + (isDragging ? "opacity-40" : "")
       }
