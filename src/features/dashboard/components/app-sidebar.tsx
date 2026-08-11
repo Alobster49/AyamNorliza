@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   UserRound,
+  Warehouse,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -59,11 +60,13 @@ type AppSidebarProps = {
   organizationRegion: string | null;
   userName: string;
   userEmail: string;
+  role?: string;
 };
 
 const groupIcons: Record<string, LucideIcon> = {
   "Access control": ShieldCheck,
   Sales: ShoppingCart,
+  Warehouse: Warehouse,
 } as const;
 
 export function AppSidebar({
@@ -72,12 +75,13 @@ export function AppSidebar({
   organizationRegion,
   userName,
   userEmail,
+  role,
 }: AppSidebarProps) {
   const pathname = usePathname();
-  const groups = getDashboardSidebarGroups({ organizationSlug, pathname });
+  const groups = getDashboardSidebarGroups({ organizationSlug, pathname, role });
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
+    <Sidebar collapsible="icon" variant="inset" className="print:hidden">
       <SidebarHeader>
         <OrganizationSwitcher
           organizationName={organizationName}

@@ -2,84 +2,87 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { updateOrderStatus } from "@/features/seller/server/actions";
-import type { Order, OrderItem, OrderStatus } from "@/features/seller/types";
-import { ORDER_STATUS_LABELS } from "@/features/seller/types";
-import { formatQuantity, formatVariantPrice } from "@/features/seller/lib/pricing";
-import type { UnitType } from "@/features/seller/types";
+import {
+  getOrderDetail,
+  confirmOrder,
+  cancelOrder,
+  closeOrder,
+  reopenOrder,
+} from "@/features/orders/server/order-actions";
+import type { OrderWithItems } from "@/features/orders/types";
+import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, FALLBACK_LABELS } from "@/features/orders/types";
+import {
+  formatPrice,
+  formatWeight,
+  computeLineTotal,
+  weightWarnings,
+  describeFallback,
+} from "@/features/orders/lib/order-model";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-type OrderWithDetails = Order & {
-  customer: { name: string; phone: string; address: string | null; notes: string | null };
-  items: (OrderItem & { variant: { name: string; price_per_unit: number; product: { name: string }; unit_type: string } })[];
-};
-
 type OrderDetailClientProps = {
   organizationSlug: string;
-  initialOrder: OrderWithDetails | null;
+  callerRole: string;
+  initialOrder: OrderWithItems | null;
 };
 
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  new: "bg-blue-100 text-blue-800",
-  preparing: "bg-yellow-100 text-yellow-800",
-  ready: "bg-green-100 text-green-800",
-  completed: "bg-gray-100 text-gray-800",
-  cancelled: "bg-red-100 text-red-800",
-};
-
-const NEXT_STATUS: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>> = {
-  new: { status: "preparing", label: "Start Preparing" },
-  preparing: { status: "ready", label: "Mark Ready" },
-  ready: { status: "completed", label: "Mark Completed" },
-};
-
-export function OrderDetailClient({ organizationSlug, initialOrder }: OrderDetailClientProps) {
-  const { toast } = useToast();
+export function OrderDetailClient({ organizationSlug, callerRole, initialOrder }: OrderDetailClientProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [order, setOrder] = useState(initialOrder);
+
+  async function reloadOrder() {
+    if (!order) return;
+    const result = await getOrderDetail(organizationSlug, order.id);
+    if (!result.ok) {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
+      return;
+    }
+    setOrder(result.data);
+  }
 
   if (!order) {
     return (
-      <div className="flex flex-col items-center justify-center py-12">
+      <div className="flex flex-col items-center justify-center gap-4 py-12">
         <p className="text-muted-foreground">Order not found</p>
         <Button variant="outline" onClick={() => router.push(`/${organizationSlug}/orders`)}>
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Orders
+          Back to orders
         </Button>
       </div>
     );
   }
 
-  const handleStatusUpdate = async (newStatus: OrderStatus) => {
-    try {
-      await updateOrderStatus(order.id, newStatus);
-      setOrder({ ...order, status: newStatus });
-      toast({ title: `Order status updated to ${ORDER_STATUS_LABELS[newStatus]}` });
-    } catch (error) {
-      toast({ title: "Error", description: String(error), variant: "destructive" });
-    }
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleString("en-MY", {
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("en-MY", {
       weekday: "short",
       day: "2-digit",
       month: "short",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
-  };
-
-  const formatPrice = (amount: number) => {
-    return new Intl.NumberFormat("en-MY", {
-      style: "currency",
-      currency: "MYR",
-    }).format(amount);
-  };
 
   return (
     <div className="space-y-6">
@@ -88,149 +91,554 @@ export function OrderDetailClient({ organizationSlug, initialOrder }: OrderDetai
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">Order Details</h1>
-          <p className="text-muted-foreground">
-            Order #{order.id.slice(0, 8).toUpperCase()}
-          </p>
+          <h1 className="text-2xl font-bold">Order {order.id.slice(0, 8).toUpperCase()}</h1>
+          <p className="text-muted-foreground">{order.customer?.name ?? "Unknown customer"}</p>
         </div>
-        <Badge className={STATUS_COLORS[order.status as OrderStatus]}>
-          {ORDER_STATUS_LABELS[order.status as OrderStatus]}
-        </Badge>
+        <Badge className={ORDER_STATUS_COLORS[order.status]}>{ORDER_STATUS_LABELS[order.status]}</Badge>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Items */}
-          <div className="rounded-lg border">
-            <div className="border-b px-6 py-4">
-              <h2 className="font-semibold">Order Items</h2>
-            </div>
-            <div className="divide-y">
-              {order.items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between px-6 py-4">
-                  <div>
-                    <div className="font-medium">{item.variant?.product?.name || "Unknown Product"}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {item.variant?.name || "Unknown Variant"} ·{" "}
-                      {formatQuantity(
-                        Number(item.quantity),
-                        (item.variant?.unit_type ?? "per_piece") as UnitType,
-                      )}
-                    </div>
+      <div className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div>
+          <div className="text-xs text-muted-foreground">Zone</div>
+          <div className="font-medium">{order.zone?.name ?? "-"}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Delivery date</div>
+          <div className="font-medium">{formatDate(order.delivery_date)}</div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Truck</div>
+          <div className="font-medium">
+            {order.truck?.name ?? "-"} {order.truck?.code ? `(${order.truck.code})` : ""}
+          </div>
+        </div>
+        <div>
+          <div className="text-xs text-muted-foreground">Address</div>
+          <div className="font-medium">{order.delivery_address}</div>
+        </div>
+      </div>
+
+      {order.notes && (
+        <div className="rounded-lg border p-4">
+          <h2 className="mb-2 font-semibold">Notes</h2>
+          <p className="whitespace-pre-line text-sm text-muted-foreground">{order.notes}</p>
+        </div>
+      )}
+
+      {order.status === "pending" && (
+        <PendingPanel order={order} organizationSlug={organizationSlug} onReload={reloadOrder} />
+      )}
+      {(order.status === "confirmed" || order.status === "ready") && (
+        <ConfirmedReadyPanel order={order} organizationSlug={organizationSlug} onReload={reloadOrder} />
+      )}
+      {order.status === "delivered" && (
+        <DeliveredPanel order={order} organizationSlug={organizationSlug} onReload={reloadOrder} />
+      )}
+      {order.status === "closed" && (
+        <ClosedPanel
+          order={order}
+          callerRole={callerRole}
+          organizationSlug={organizationSlug}
+          onReload={reloadOrder}
+        />
+      )}
+      {order.status === "cancelled" && (
+        <div className="rounded-lg border p-4 text-sm text-muted-foreground">This order was cancelled.</div>
+      )}
+    </div>
+  );
+}
+
+function CancelOrderDialog({
+  organizationSlug,
+  orderId,
+  onReload,
+  triggerLabel = "Cancel order",
+}: {
+  organizationSlug: string;
+  orderId: string;
+  onReload: () => void;
+  triggerLabel?: string;
+}) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleCancel() {
+    setSubmitting(true);
+    const result = await cancelOrder(organizationSlug, orderId, reason);
+    setSubmitting(false);
+    if (!result.ok) {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Order cancelled" });
+    setOpen(false);
+    onReload();
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline">{triggerLabel}</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cancel order</DialogTitle>
+          <DialogDescription>This cannot be undone. Let the team know why.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label>Reason</Label>
+          <Textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason for cancelling" />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Back
+          </Button>
+          <Button variant="destructive" disabled={submitting} onClick={handleCancel}>
+            {submitting ? "Cancelling…" : "Confirm cancel"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function PendingPanel({
+  order,
+  organizationSlug,
+  onReload,
+}: {
+  order: OrderWithItems;
+  organizationSlug: string;
+  onReload: () => void;
+}) {
+  const { toast } = useToast();
+  const [availability, setAvailability] = useState<Record<string, boolean>>(() =>
+    Object.fromEntries(order.items.map((item) => [item.id, true])),
+  );
+  const [confirming, setConfirming] = useState(false);
+
+  async function handleConfirm() {
+    setConfirming(true);
+    const result = await confirmOrder({
+      organizationSlug,
+      orderId: order.id,
+      decisions: order.items.map((item) => ({
+        itemId: item.id,
+        available: availability[item.id] ?? true,
+      })),
+    });
+    setConfirming(false);
+    if (!result.ok) {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Order confirmed" });
+    onReload();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="space-y-3">
+        {order.items.map((item) => {
+          const available = availability[item.id] ?? true;
+          return (
+            <div key={item.id} className="rounded-lg border p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <div className="font-medium">{item.product?.name ?? "Unknown product"}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {item.mode === "kg" ? formatWeight(item.quantity) : `${item.quantity} pcs`} · size{" "}
+                    {item.size_min_kg}–{item.size_max_kg} kg
                   </div>
-                  <div className="text-right">
-                    <div className="font-medium">{formatPrice(Number(item.subtotal))}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatVariantPrice(
-                        Number(item.unit_price),
-                        (item.variant?.unit_type ?? "per_piece") as UnitType,
-                      )}
-                    </div>
-                  </div>
+                  <div className="text-sm text-muted-foreground">If unavailable: {FALLBACK_LABELS[item.fallback]}</div>
                 </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={available ? "default" : "outline"}
+                    onClick={() => setAvailability((prev) => ({ ...prev, [item.id]: true }))}
+                  >
+                    Available
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={!available ? "destructive" : "outline"}
+                    onClick={() => setAvailability((prev) => ({ ...prev, [item.id]: false }))}
+                  >
+                    Not available
+                  </Button>
+                </div>
+              </div>
+              {!available && (
+                <Badge className="mt-3" variant={item.fallback === "cancel" ? "destructive" : "secondary"}>
+                  Resulting fallback: {describeFallback(item.fallback)}
+                </Badge>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-3">
+        <Button disabled={confirming} onClick={handleConfirm}>
+          {confirming ? "Confirming…" : "Confirm order"}
+        </Button>
+        <CancelOrderDialog organizationSlug={organizationSlug} orderId={order.id} onReload={onReload} />
+      </div>
+    </div>
+  );
+}
+
+function ConfirmedReadyPanel({
+  order,
+  organizationSlug,
+  onReload,
+}: {
+  order: OrderWithItems;
+  organizationSlug: string;
+  onReload: () => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border p-4">
+        <h2 className="mb-3 font-semibold">Order lines</h2>
+        <div className="space-y-2">
+          {order.items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between text-sm">
+              <span>
+                {item.product?.name ?? "Item"} —{" "}
+                {item.mode === "kg" ? formatWeight(item.quantity) : `${item.quantity} pcs`}
+              </span>
+              {item.is_cancelled ? (
+                <Badge variant="destructive">Cancelled</Badge>
+              ) : item.fallback_applied ? (
+                <Badge variant="secondary">{describeFallback(item.fallback_applied)}</Badge>
+              ) : (
+                <Badge variant="outline">As ordered</Badge>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-lg border p-4">
+        <h2 className="mb-3 font-semibold">Warehouse task</h2>
+        {(order.tasks ?? []).length === 0 ? (
+          <p className="text-sm text-muted-foreground">No task recorded yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {order.tasks!.map((task) => (
+              <li key={task.id} className="flex items-center justify-between text-sm">
+                <span>{task.type === "allocate_weigh" ? "Allocate & weigh" : task.type}</span>
+                <Badge variant={task.status === "done" ? "secondary" : "outline"}>
+                  {task.status === "done" ? "Done" : "Pending"}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <CancelOrderDialog organizationSlug={organizationSlug} orderId={order.id} onReload={onReload} />
+    </div>
+  );
+}
+
+type SettlementDraft = { finalWeightKg: string; finalPieces: string; pricePerKg: string };
+
+function DeliveredPanel({
+  order,
+  organizationSlug,
+  onReload,
+}: {
+  order: OrderWithItems;
+  organizationSlug: string;
+  onReload: () => void;
+}) {
+  const { toast } = useToast();
+  const nonCancelled = order.items.filter((item) => !item.is_cancelled);
+  const [drafts, setDrafts] = useState<Record<string, SettlementDraft>>(() =>
+    Object.fromEntries(
+      nonCancelled.map((item) => [
+        item.id,
+        {
+          finalWeightKg: item.warehouse_weight_kg != null ? String(item.warehouse_weight_kg) : "",
+          finalPieces: item.warehouse_pieces != null ? String(item.warehouse_pieces) : "",
+          pricePerKg: "",
+        },
+      ]),
+    ),
+  );
+  const [closing, setClosing] = useState(false);
+
+  function updateDraft(itemId: string, field: keyof SettlementDraft, value: string) {
+    setDrafts((prev) => {
+      const existing = prev[itemId] ?? { finalWeightKg: "", finalPieces: "", pricePerKg: "" };
+      return { ...prev, [itemId]: { ...existing, [field]: value } };
+    });
+  }
+
+  function parseNum(value: string): number | null {
+    if (value.trim() === "") return null;
+    const n = Number(value);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  const lines = nonCancelled.map((item) => {
+    const draft = drafts[item.id] ?? { finalWeightKg: "", finalPieces: "", pricePerKg: "" };
+    const finalWeightKg = parseNum(draft.finalWeightKg);
+    const finalPieces = parseNum(draft.finalPieces);
+    const pricePerKg = parseNum(draft.pricePerKg);
+    const lineTotal = finalWeightKg != null && pricePerKg != null ? computeLineTotal(finalWeightKg, pricePerKg) : null;
+    const warnings = weightWarnings({
+      id: item.id,
+      mode: item.mode,
+      quantity: item.quantity,
+      size_min_kg: item.size_min_kg,
+      size_max_kg: item.size_max_kg,
+      warehouse_weight_kg: item.warehouse_weight_kg,
+      final_weight_kg: finalWeightKg,
+      final_pieces: finalPieces,
+      warehouse_pieces: item.warehouse_pieces,
+    });
+    return { item, draft, finalWeightKg, finalPieces, pricePerKg, lineTotal, warnings };
+  });
+
+  const runningTotal = lines.reduce((sum, line) => sum + (line.lineTotal ?? 0), 0);
+
+  async function handleClose() {
+    const invalid = lines.find(
+      (line) =>
+        line.finalWeightKg == null || line.finalWeightKg <= 0 || line.pricePerKg == null || line.pricePerKg < 0,
+    );
+    if (invalid) {
+      toast({
+        title: "Error",
+        description: `Enter a final weight and price per kg for ${invalid.item.product?.name ?? "every line"}.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setClosing(true);
+    const result = await closeOrder({
+      organizationSlug,
+      orderId: order.id,
+      lines: lines.map((line) => ({
+        itemId: line.item.id,
+        finalWeightKg: line.finalWeightKg!,
+        finalPieces: line.finalPieces ?? undefined,
+        pricePerKg: line.pricePerKg!,
+      })),
+    });
+    setClosing(false);
+
+    if (!result.ok) {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
+      return;
+    }
+
+    toast({ title: "Order closed", description: `Total: ${formatPrice(result.data.total)}` });
+    onReload();
+  }
+
+  return (
+    <div className="space-y-4">
+      {lines.map(({ item, draft, lineTotal, warnings }) => (
+        <div key={item.id} className="space-y-3 rounded-lg border p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <div className="font-medium">{item.product?.name ?? "Unknown product"}</div>
+              <div className="text-sm text-muted-foreground">
+                Warehouse: {item.warehouse_weight_kg != null ? formatWeight(item.warehouse_weight_kg) : "-"}
+                {item.warehouse_pieces != null ? ` · ${item.warehouse_pieces} pcs` : ""}
+              </div>
+            </div>
+            <div className="text-right font-medium">{lineTotal != null ? formatPrice(lineTotal) : "—"}</div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1">
+              <Label className="text-xs">Final weight (kg)</Label>
+              <Input
+                type="number"
+                step="0.001"
+                min="0"
+                value={draft.finalWeightKg}
+                onChange={(e) => updateDraft(item.id, "finalWeightKg", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Final pieces</Label>
+              <Input
+                type="number"
+                step="1"
+                min="0"
+                value={draft.finalPieces}
+                onChange={(e) => updateDraft(item.id, "finalPieces", e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Price / kg</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0"
+                value={draft.pricePerKg}
+                onChange={(e) => updateDraft(item.id, "pricePerKg", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {warnings.length > 0 && (
+            <div className="space-y-1">
+              {warnings.map((warning) => (
+                <p key={warning.kind} className="rounded-md bg-amber-100 px-3 py-1.5 text-sm text-amber-800">
+                  {warning.message}
+                </p>
               ))}
             </div>
-            <div className="border-t px-6 py-4">
-              <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
-                <span>{formatPrice(Number(order.total_amount))}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Notes */}
-          {order.notes && (
-            <div className="rounded-lg border">
-              <div className="border-b px-6 py-4">
-                <h2 className="font-semibold">Order Notes</h2>
-              </div>
-              <div className="px-6 py-4">
-                <p className="text-muted-foreground">{order.notes}</p>
-              </div>
-            </div>
           )}
         </div>
+      ))}
 
-        <div className="space-y-6">
-          {/* Customer */}
-          <div className="rounded-lg border p-6">
-            <h2 className="mb-4 font-semibold">Customer</h2>
-            <div className="space-y-2">
-              <div className="font-medium">{order.customer?.name || "Unknown"}</div>
-              <div className="text-sm text-muted-foreground">{order.customer?.phone || "-"}</div>
-              {order.customer?.address && (
-                <div className="text-sm text-muted-foreground">{order.customer.address}</div>
-              )}
-              {order.customer?.notes && (
-                <div className="mt-2 rounded-md bg-muted p-2 text-sm">
-                  {order.customer.notes}
-                </div>
-              )}
+      <div className="flex items-center justify-between rounded-lg border p-4">
+        <span className="font-semibold">Running total</span>
+        <span className="text-lg font-bold">{formatPrice(runningTotal)}</span>
+      </div>
+
+      <Button className="w-full" size="lg" disabled={closing} onClick={handleClose}>
+        {closing ? "Closing…" : "Close order"}
+      </Button>
+    </div>
+  );
+}
+
+function ClosedPanel({
+  order,
+  callerRole,
+  organizationSlug,
+  onReload,
+}: {
+  order: OrderWithItems;
+  callerRole: string;
+  organizationSlug: string;
+  onReload: () => void;
+}) {
+  const { toast } = useToast();
+  const [reopenOpen, setReopenOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const canReopen = callerRole === "owner" || callerRole === "org_admin";
+  const nonCancelled = order.items.filter((item) => !item.is_cancelled);
+
+  async function handleReopen() {
+    setSubmitting(true);
+    const result = await reopenOrder(organizationSlug, order.id, reason);
+    setSubmitting(false);
+    if (!result.ok) {
+      toast({ title: "Error", description: result.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Order reopened" });
+    setReopenOpen(false);
+    onReload();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="rounded-lg border p-4">
+        <h2 className="mb-3 font-semibold">Settlement summary</h2>
+        <div className="space-y-2">
+          {nonCancelled.map((item) => (
+            <div key={item.id} className="flex justify-between text-sm">
+              <span>
+                {item.product?.name ?? "Item"} —{" "}
+                {item.final_weight_kg != null ? formatWeight(item.final_weight_kg) : "-"} @{" "}
+                {item.price_per_kg != null ? formatPrice(item.price_per_kg) : "-"}/kg
+              </span>
+              <span className="font-medium">{item.line_total != null ? formatPrice(item.line_total) : "-"}</span>
             </div>
-          </div>
-
-          {/* Timeline */}
-          <div className="rounded-lg border p-6">
-            <h2 className="mb-4 font-semibold">Timeline</h2>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
-                <div>
-                  <div className="font-medium">Order Created</div>
-                  <div className="text-sm text-muted-foreground">{formatDate(order.created_at)}</div>
-                </div>
-              </div>
-              {order.status !== "new" && (
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-yellow-500" />
-                  <div>
-                    <div className="font-medium">Started Preparing</div>
-                    <div className="text-sm text-muted-foreground">{formatDate(order.updated_at)}</div>
-                  </div>
-                </div>
-              )}
-              {(order.status === "ready" || order.status === "completed") && (
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-green-500" />
-                  <div>
-                    <div className="font-medium">Ready for Pickup</div>
-                    <div className="text-sm text-muted-foreground">{formatDate(order.updated_at)}</div>
-                  </div>
-                </div>
-              )}
-              {order.status === "completed" && (
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 h-2 w-2 rounded-full bg-gray-500" />
-                  <div>
-                    <div className="font-medium">Completed</div>
-                    <div className="text-sm text-muted-foreground">{formatDate(order.updated_at)}</div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Actions */}
-          {NEXT_STATUS[order.status as OrderStatus] && (
-            <Button
-              className="w-full"
-              size="lg"
-              onClick={() => handleStatusUpdate(NEXT_STATUS[order.status as OrderStatus]!.status)}
-            >
-              {NEXT_STATUS[order.status as OrderStatus]!.label}
-            </Button>
-          )}
-          {order.status !== "completed" && order.status !== "cancelled" && (
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleStatusUpdate("cancelled")}
-            >
-              Cancel Order
-            </Button>
-          )}
+          ))}
+        </div>
+        <div className="mt-3 flex justify-between border-t pt-3 text-lg font-bold">
+          <span>Total</span>
+          <span>{formatPrice(order.total_amount)}</span>
         </div>
       </div>
+
+      <div className="rounded-lg border">
+        <div className="border-b px-4 py-3">
+          <h2 className="font-semibold">Weight log</h2>
+        </div>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Kind</TableHead>
+              <TableHead>Weight</TableHead>
+              <TableHead>Pieces</TableHead>
+              <TableHead>Recorded at</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {(order.weight_log ?? []).length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground">
+                  No weight log entries
+                </TableCell>
+              </TableRow>
+            ) : (
+              order.weight_log!.map((log) => (
+                <TableRow key={log.id}>
+                  <TableCell className="capitalize">{log.kind}</TableCell>
+                  <TableCell>{formatWeight(log.weight_kg)}</TableCell>
+                  <TableCell>{log.pieces ?? "-"}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {new Date(log.recorded_at).toLocaleString("en-MY")}
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+
+      {canReopen && (
+        <Dialog open={reopenOpen} onOpenChange={setReopenOpen}>
+          <DialogTrigger asChild>
+            <Button variant="outline">Reopen order</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reopen order</DialogTitle>
+              <DialogDescription>
+                This reverts the order to delivered so settlement can be redone. The action is audit-logged.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label>Reason</Label>
+              <Textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Why are you reopening this order?"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReopenOpen(false)}>
+                Cancel
+              </Button>
+              <Button disabled={submitting} onClick={handleReopen}>
+                {submitting ? "Reopening…" : "Reopen"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

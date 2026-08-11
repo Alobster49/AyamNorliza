@@ -1,6 +1,5 @@
-import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
-import { getOrders } from "@/features/seller/server/actions";
 import { notFound } from "next/navigation";
+import { getOrders } from "@/features/orders/server/order-actions";
 import { OrdersClient } from "./orders-client";
 
 export default async function OrdersPage({
@@ -9,15 +8,10 @@ export default async function OrdersPage({
   params: Promise<{ organizationSlug: string }>;
 }) {
   const { organizationSlug } = await params;
-  const org = await getOrganizationBySlug(organizationSlug);
-  if (!org) notFound();
-
-  const orders = await getOrders(org.id);
+  const result = await getOrders(organizationSlug);
+  if (!result.ok) notFound();
 
   return (
-    <OrdersClient
-      organizationSlug={organizationSlug}
-      initialOrders={orders}
-    />
+    <OrdersClient organizationSlug={organizationSlug} initialOrders={result.data} />
   );
 }

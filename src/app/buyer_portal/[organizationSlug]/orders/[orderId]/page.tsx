@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
-import { getBuyerOrderWithItems } from "@/features/buyer/server/actions";
-import { orderStatusLabels, orderStatusColors } from "@/features/buyer/types";
-import { formatDistanceToNow, format } from "date-fns";
+import { getMyOrder } from "@/features/orders/server/portal-actions";
+import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, FALLBACK_LABELS } from "@/features/orders/types";
+import { formatPrice, formatWeight, describeFallback } from "@/features/orders/lib/order-model";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -12,56 +14,25 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Package,
-  MapPin,
-  FileText,
-  ArrowLeft,
-  CheckCircle,
-  Clock,
-  ChefHat,
-  Bell,
-  XCircle,
-  type LucideIcon,
-} from "lucide-react";
+import { MapPin, FileText, ArrowLeft } from "lucide-react";
+import { CancelOrderButton } from "./cancel-order-button";
 
 type OrderDetailPageProps = {
   params: Promise<{ organizationSlug: string; orderId: string }>;
 };
 
-const statusIcons: Record<string, LucideIcon> = {
-  new: Package,
-  preparing: ChefHat,
-  ready: Bell,
-  completed: CheckCircle,
-  cancelled: XCircle,
-};
-
-const statusSteps = ["new", "preparing", "ready", "completed"];
-
-export default async function OrderDetailPage({
-  params,
-}: OrderDetailPageProps) {
+export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
   const { organizationSlug, orderId } = await params;
   await requireBuyerOrRedirect(organizationSlug);
 
-  const result = await getBuyerOrderWithItems(orderId);
+  const result = await getMyOrder(orderId);
 
-  if (!result.ok || !result.data) {
+  if (!result.ok) {
     notFound();
   }
 
   const order = result.data;
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-MY", {
-      style: "currency",
-      currency: "MYR",
-    }).format(price);
-  };
-
-  const currentStepIndex = statusSteps.indexOf(order.status);
-  const isCancelled = order.status === "cancelled";
+  const isClosed = order.status === "closed";
 
   return (
     <div className="space-y-8">
@@ -73,118 +44,107 @@ export default async function OrderDetailPage({
         </Button>
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Order Details</h1>
-          <p className="text-muted-foreground">
-            Order #{order.id.slice(0, 8)}
-          </p>
+          <p className="text-muted-foreground">Order #{order.id.slice(0, 8)}</p>
         </div>
       </div>
 
-      {/* Order Status */}
       <Card>
         <CardHeader>
           <CardTitle>Order Status</CardTitle>
           <CardDescription>
-            {format(new Date(order.created_at), "PPpp")}
+            Placed {format(new Date(order.created_at), "PPpp")}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <span
               className={`rounded-full px-4 py-2 text-sm font-medium ${
-                orderStatusColors[order.status]
+                ORDER_STATUS_COLORS[order.status]
               }`}
             >
-              {orderStatusLabels[order.status]}
+              {ORDER_STATUS_LABELS[order.status]}
             </span>
+            {order.status === "pending" && (
+              <CancelOrderButton organizationSlug={organizationSlug} orderId={order.id} />
+            )}
           </div>
 
-          {/* Status Timeline */}
-          {!isCancelled && (
-            <div className="mt-6">
-              <div className="flex items-center justify-between">
-                {statusSteps.map((step, index) => {
-                  const Icon = statusIcons[step] ?? Package;
-                  const isCompleted = index <= currentStepIndex;
-                  const isCurrent = index === currentStepIndex;
-
-                  return (
-                    <div key={step} className="flex flex-1 flex-col items-center">
-                      <div
-                        className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                          isCompleted
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted text-muted-foreground"
-                        } ${isCurrent ? "ring-4 ring-primary/20" : ""}`}
-                      >
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <span
-                        className={`mt-2 text-xs font-medium ${
-                          isCompleted ? "text-primary" : "text-muted-foreground"
-                        }`}
-                      >
-                        {orderStatusLabels[step as keyof typeof orderStatusLabels]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {isCancelled && (
-            <div className="mt-4 rounded-lg bg-red-50 p-4 text-red-800">
-              <p>This order has been cancelled.</p>
+          {order.status === "cancelled" && order.notes && (
+            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800">
+              <p className="font-medium">This order was cancelled.</p>
+              <p className="mt-1 whitespace-pre-line">{order.notes}</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Order Items */}
       <Card>
         <CardHeader>
           <CardTitle>Items</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {order.items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between border-b pb-4 last:border-0 last:pb-0"
-              >
-                <div>
-                  <p className="font-medium">
-                    {item.variant?.product?.name || "Unknown Product"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {item.variant?.name} x{" "}
-                    {(item.variant?.unit_type ?? "per_piece") === "per_kg"
-                      ? `${item.quantity} kg`
-                      : item.quantity}
-                  </p>
+            {order.items.map((item) => {
+              const fallbackNote = describeFallback(item.fallback_applied);
+              return (
+                <div key={item.id} className="border-b pb-4 last:border-0 last:pb-0">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="font-medium">
+                        {item.product?.name ?? "Unknown product"}
+                        {item.is_cancelled && (
+                          <Badge variant="destructive" className="ml-2">
+                            Cancelled
+                          </Badge>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.mode === "kg"
+                          ? `${Number(item.quantity)} kg`
+                          : `${Number(item.quantity)} birds`}
+                        {" · "}
+                        {Number(item.size_min_kg)}-{Number(item.size_max_kg)} kg / bird
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Badge variant="outline">{FALLBACK_LABELS[item.fallback]}</Badge>
+                        {fallbackNote && (
+                          <Badge className="bg-amber-100 text-amber-800">
+                            Applied: {fallbackNote}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                    {isClosed && item.final_weight_kg !== null && item.price_per_kg !== null && (
+                      <div className="text-right">
+                        <p className="font-medium">{formatPrice(Number(item.line_total))}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {formatWeight(Number(item.final_weight_kg))} ×{" "}
+                          {formatPrice(Number(item.price_per_kg))}/kg
+                        </p>
+                        {item.final_pieces !== null && (
+                          <p className="text-xs text-muted-foreground">
+                            {Number(item.final_pieces)} pieces
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    {formatPrice(Number(item.subtotal))}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {formatPrice(Number(item.unit_price))} each
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="mt-4 border-t pt-4">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
-              <span>{formatPrice(Number(order.total_amount))}</span>
+          {isClosed && (
+            <div className="mt-4 border-t pt-4">
+              <div className="flex justify-between text-lg font-bold">
+                <span>Total</span>
+                <span>{formatPrice(Number(order.total_amount))}</span>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Delivery & Notes */}
       <div className="grid gap-6 md:grid-cols-2">
         {order.delivery_address && (
           <Card>
@@ -194,11 +154,14 @@ export default async function OrderDetailPage({
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">{order.delivery_address}</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {format(new Date(`${order.delivery_date}T00:00:00`), "EEEE, d MMM yyyy")}
+              </p>
             </CardContent>
           </Card>
         )}
 
-        {order.notes && (
+        {order.notes && order.status !== "cancelled" && (
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <FileText className="h-5 w-5 text-muted-foreground" />

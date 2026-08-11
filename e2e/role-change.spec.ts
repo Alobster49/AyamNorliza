@@ -1,21 +1,27 @@
 import { test, expect } from "@playwright/test";
-import { OWNER, signIn } from "./_fixtures";
+import { OWNER, TARGET, signIn, completeReauth } from "./_fixtures";
 
 test("owner changes a member role and sees an audit row", async ({ page }) => {
   await signIn(page, OWNER.email, OWNER.password);
   await page.goto("/ayam-norliza-pilot/settings/users");
-  // Find a role select on a non-owner member and change it.
-  const select = page.locator("table tbody tr td select").first();
+  // Target the seeded non-owner member explicitly: row order is not stable
+  // (the seed has two owners), and changing an owner's role is rejected as
+  // needing a second approver.
+  const targetRow = page.locator("table tbody tr", { hasText: TARGET.userId });
+  const select = targetRow.locator("td select");
   await expect(select).toBeVisible({ timeout: 10_000 });
-  await select.selectOption("caretaker");
-  // The action triggers `reauth_required`; we rely on the seeded reauth
-  // proof for tests. The dialog should not appear when the proof is
-  // valid; otherwise it appears and we cancel.
-  const reauthDialog = page.getByRole("dialog");
-  if (await reauthDialog.isVisible().catch(() => false)) {
-    await page.getByRole("button", { name: /cancel/i }).click();
-  }
-  // Visit the audit log to confirm the event was recorded.
+  // Pick whichever of the two roles the member is not currently in, so the
+  // action never short-circuits with "Member already has that role".
+  const current = await select.inputValue();
+  await select.selectOption(current === "supervisor" ? "caretaker" : "supervisor");
+
+  // Role changes are a sensitive action: the server returns `reauth_required`
+  // and the island mounts the step-up dialog, which must be completed for the
+  // change (and its audit event) to actually happen.
+  await completeReauth(page, OWNER.password);
+
   await page.goto("/ayam-norliza-pilot/settings/audit-log");
-  await expect(page.getByText(/identity\.role_changed|identity\.scope_changed/i).first()).toBeVisible({ timeout: 5_000 });
+  await expect(
+    page.getByText(/identity\.role_changed|identity\.scope_changed/i).first(),
+  ).toBeVisible({ timeout: 10_000 });
 });

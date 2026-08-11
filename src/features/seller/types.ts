@@ -16,36 +16,8 @@ export type Customer = Database["public"]["Tables"]["customers"]["Row"];
 export type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
 export type CustomerUpdate = Database["public"]["Tables"]["customers"]["Update"];
 
-export type Order = Database["public"]["Tables"]["orders"]["Row"];
-export type OrderInsert = Database["public"]["Tables"]["orders"]["Insert"];
-export type OrderUpdate = Database["public"]["Tables"]["orders"]["Update"];
-
-export type OrderItem = Database["public"]["Tables"]["order_items"]["Row"];
-export type OrderItemInsert = Database["public"]["Tables"]["order_items"]["Insert"];
-
-export type OrderStatus = Database["public"]["Enums"]["order_status"];
-
-export const ORDER_STATUSES: OrderStatus[] = ["new", "preparing", "ready", "completed", "cancelled"];
-
-export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  new: "New",
-  preparing: "Preparing",
-  ready: "Ready",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
 export type CatalogWithProducts = Category & {
   products: (Product & { variants: ProductVariant[] })[];
-};
-
-export type OrderWithCustomer = Order & {
-  customer: Customer;
-};
-
-export type OrderWithDetails = Order & {
-  customer: Customer;
-  items: (OrderItem & { variant: ProductVariant & { product: Product } })[];
 };
 
 export type UnitType = "per_kg" | "per_piece";

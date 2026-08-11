@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { consume } from "@/lib/rate-limit";
 import { OpenBreakGlassInput } from "@/features/identity-access/schema";
 import { openBreakGlassAction } from "@/features/identity-access/server/actions";
+import { UnauthenticatedError } from "@/lib/auth/require-user";
 
 /**
  * POST /api/auth/break-glass
@@ -23,7 +24,18 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "validation", details: parsed.error.flatten() }, { status: 400 });
   }
-  const result = await openBreakGlassAction(parsed.data);
+  let result: Awaited<ReturnType<typeof openBreakGlassAction>>;
+  try {
+    result = await openBreakGlassAction(parsed.data);
+  } catch (e) {
+    // A caller without a session reaches the action's reauth check, which
+    // rethrows UnauthenticatedError. Map it to 401 here rather than letting
+    // it surface as an unhandled 500.
+    if (e instanceof UnauthenticatedError) {
+      return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+    }
+    throw e;
+  }
   if (!result.ok) {
     return NextResponse.json(
       { error: result.code, message: result.message },

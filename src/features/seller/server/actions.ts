@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
 import type {
   CategoryInsert,
@@ -12,9 +11,6 @@ import type {
   ProductVariantUpdate,
   CustomerInsert,
   CustomerUpdate,
-  OrderInsert,
-  OrderUpdate,
-  OrderItemInsert,
 } from "../types";
 
 export async function getOrganizationId(orgSlug: string): Promise<string | null> {
@@ -285,97 +281,6 @@ export async function deleteCustomer(id: string, orgSlug?: string) {
   const { error } = await supabase.from("customers").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidateSellerPath(orgSlug, "customers");
-}
-
-// ---------------------------------------------------------------------------
-// Orders
-// ---------------------------------------------------------------------------
-export async function getOrders(orgId: string, status?: string) {
-  const supabase = await createClient();
-  let query = supabase
-    .from("orders")
-    .select(`
-      *,
-      customer:customers(*)
-    `)
-    .eq("organization_id", orgId)
-    .order("created_at", { ascending: false });
-
-  if (status) {
-    query = query.eq("status", status);
-  }
-
-  const { data } = await query;
-  return data ?? [];
-}
-
-export async function getOrderWithItems(orderId: string) {
-  const supabase = await createClient();
-  const { data: order } = await supabase
-    .from("orders")
-    .select(`
-      *,
-      customer:customers(*),
-      seller:profiles(*),
-      items:order_items(
-        *,
-        variant:product_variants(*)
-      )
-    `)
-    .eq("id", orderId)
-    .single();
-  return order;
-}
-
-export async function createOrder(
-  orgId: string,
-  orderInput: Omit<OrderInsert, "organization_id" | "seller_id">,
-  items: Omit<OrderItemInsert, "order_id">[],
-  orgSlug?: string,
-) {
-  const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user.user) throw new Error("Not authenticated");
-
-  // Calculate total
-  const total = items.reduce((sum, item) => sum + Number(item.subtotal), 0);
-
-  const { data: order, error: orderError } = await supabase
-    .from("orders")
-    .insert({
-      ...orderInput,
-      organization_id: orgId,
-      seller_id: user.user.id,
-      total_amount: total,
-    })
-    .select()
-    .single();
-
-  if (orderError) throw new Error(orderError.message);
-
-  // Insert order items
-  const itemsWithOrderId = items.map((item) => ({ ...item, order_id: order.id }));
-  const { error: itemsError } = await supabase.from("order_items").insert(itemsWithOrderId);
-
-  if (itemsError) throw new Error(itemsError.message);
-
-  revalidateSellerPath(orgSlug, "orders");
-  return order;
-}
-
-export async function updateOrderStatus(orderId: string, status: string, orgSlug?: string) {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("orders")
-    .update({ status })
-    .eq("id", orderId)
-    .select()
-    .single();
-
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "orders");
-  revalidateSellerPath(orgSlug, `orders/${orderId}`);
-  return data;
 }
 
 export async function getCatalogForOrdering(orgId: string) {

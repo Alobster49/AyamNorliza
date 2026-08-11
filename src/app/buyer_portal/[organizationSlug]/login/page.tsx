@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/features/buyer/components/cart-context";
@@ -44,8 +44,19 @@ export default function LoginPage({ params }: LoginPageProps) {
     confirmPassword: "",
   });
 
-  // Get org slug from params
-  params.then((p) => setOrganizationSlug(p.organizationSlug));
+  // Get org slug from params. Resolving the promise in an effect (rather
+  // than during render) avoids firing setState on every render pass and
+  // the race where an early form submit reads organizationSlug before the
+  // promise settles.
+  useEffect(() => {
+    let cancelled = false;
+    params.then((p) => {
+      if (!cancelled) setOrganizationSlug(p.organizationSlug);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [params]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

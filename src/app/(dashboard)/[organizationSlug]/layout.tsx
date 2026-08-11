@@ -1,5 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   getOrganizationBySlug,
   getProfile,
@@ -20,6 +21,22 @@ export default async function OrganizationLayout({
   const user = await requireUserOrRedirect(`/${organizationSlug}`);
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
+
+  // Being signed in is not enough: the caller must still be an *active*
+  // member of this organization. Without this, a suspended/deactivated user
+  // kept full dashboard access until their access token expired, and any
+  // authenticated user could load another organization's shell. Mirrors the
+  // membership check in the (seller) layout.
+  const supabase = await createSupabaseServerClient();
+  const { data: member } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", org.id)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!member) redirect("/login");
+
   const profile = await getProfile(user.id);
   const userEmail = user.email ?? "signed-in-user@ayam-norliza.local";
   const userName =

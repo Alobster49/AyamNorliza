@@ -2,18 +2,18 @@
 
 import { ProductCard } from "@/features/buyer/components/product-card";
 import { useCart } from "@/features/buyer/components/cart-context";
+import type { CartLine } from "@/features/buyer/components/cart-context";
 import type { CatalogWithProducts } from "@/features/buyer/types";
-import type { ProductVariant } from "@/features/buyer/types";
 
 type ProductGridProps = {
   categories: CatalogWithProducts[];
 };
 
 export function ProductGrid({ categories }: ProductGridProps) {
-  const { addItem } = useCart();
+  const { addLine } = useCart();
 
-  const handleAddToCart = (variantId: string, quantity: number) => {
-    addItem(variantId, quantity);
+  const handleAddToCart = (line: CartLine) => {
+    addLine(line);
   };
 
   return (
@@ -36,7 +36,7 @@ export function ProductGrid({ categories }: ProductGridProps) {
               <ProductCard
                 key={product.id}
                 product={product}
-                variants={(product as any).variants || []}
+                variants={product.variants ?? []}
                 onAddToCart={handleAddToCart}
                 showAddToCart={true}
               />
