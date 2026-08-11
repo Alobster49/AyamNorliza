@@ -129,7 +129,15 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
         onOpenChange={(open) => !open && setWorkflow(null)}
         organizationSlug={organizationSlug}
         order={workflow?.kind === "confirm" ? workflow.detail : null}
-        onDone={() => workflow && moveOrder(workflow.orderId, "confirmed")}
+        onDone={async () => {
+          if (!workflow) return;
+          const result = await getOrderDetail(organizationSlug, workflow.orderId);
+          if (result.ok) {
+            moveOrder(workflow.orderId, result.data.status);
+          } else {
+            router.refresh();
+          }
+        }}
       />
       <CancelOrderBoardDialog
         open={workflow?.kind === "cancel"}

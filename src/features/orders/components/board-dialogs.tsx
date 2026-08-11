@@ -62,7 +62,7 @@ export function ConfirmOrderDialog({
       toast({ title: "Error", description: result.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Order confirmed" });
+    toast({ title: "Decisions saved" });
     onOpenChange(false);
     onDone();
   }
