@@ -190,8 +190,13 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
 
   // --- Close with final weights and today's price ---
   await page.goto("/ayam-norliza-pilot/orders");
+  // The orders page now defaults to the kanban board; the close flow below
+  // drives the table, so switch views first.
+  await page.getByRole("button", { name: "Table" }).click();
   await page.getByRole("tab", { name: /delivered/i }).click();
-  const deliveredRow = page.getByRole("row", { name: /e2e pipeline customer/i });
+  // Match this run's unique customer name — a generic /e2e pipeline customer/i
+  // regex trips strict mode when a previous run's order is still in the list.
+  const deliveredRow = page.getByRole("row", { name: customerName });
   await expect(deliveredRow).toBeVisible({ timeout: 10_000 });
   // RECONCILIATION: order rows have no "View" button — the whole <tr> is
   // clickable and navigates to the detail page.
