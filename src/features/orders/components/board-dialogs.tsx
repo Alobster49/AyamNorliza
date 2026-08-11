@@ -142,6 +142,13 @@ export function CancelOrderBoardDialog({
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setReason("");
+    }
+  }, [open, orderId]);
+
   async function handleCancel() {
     setSubmitting(true);
     const result = await cancelOrder(organizationSlug, orderId, reason);
@@ -194,6 +201,13 @@ export function ReopenOrderBoardDialog({
   const { toast } = useToast();
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setReason("");
+    }
+  }, [open, orderId]);
 
   async function handleReopen() {
     setSubmitting(true);
