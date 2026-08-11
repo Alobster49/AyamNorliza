@@ -20,3 +20,6 @@ supabase/snippets
 
 # dev helper scripts
 .dev-stop-requested
+
+# Claude Code worktrees (local only)
+.claude/worktrees/

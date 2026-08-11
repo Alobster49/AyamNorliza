@@ -16,6 +16,26 @@ import { Input } from "@/components/ui/input";
 import { loginAction } from "@/features/identity-access/server/auth-actions";
 import { cn } from "@/lib/utils";
 
+/**
+ * Optional local-only quick-fill logins for the dev login form.
+ *
+ * Credentials are read from the environment (`.env.local`, which is
+ * gitignored) and the whole block is compiled out of production builds --
+ * these values must never be committed. Format:
+ *
+ *   NEXT_PUBLIC_DEV_LOGINS="Owner:owner@example.com:password,Admin:a@b.c:pw"
+ */
+const devLogins =
+  process.env.NODE_ENV === "production"
+    ? []
+    : (process.env.NEXT_PUBLIC_DEV_LOGINS ?? "")
+        .split(",")
+        .map((entry) => entry.split(":"))
+        .filter(
+          (parts): parts is [string, string, string] => parts.length === 3,
+        )
+        .map(([label, email, password]) => ({ label, email, password }));
+
 export function LoginForm({
   next,
   className,
@@ -89,32 +109,26 @@ export function LoginForm({
           />
         </Field>
         {error ? <FieldError>{error}</FieldError> : null}
-        <Field>
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setEmail("admin@gmail.com");
-                setPassword("Password123!");
-              }}
-              className="flex-1 text-xs"
-            >
-              Dev: Admin
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setEmail("owner@gmail.com");
-                setPassword("Ayamnorliza");
-              }}
-              className="flex-1 text-xs"
-            >
-              Dev: Owner
-            </Button>
-          </div>
-        </Field>
+        {devLogins.length > 0 ? (
+          <Field>
+            <div className="flex gap-2">
+              {devLogins.map((login) => (
+                <Button
+                  key={login.label}
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setEmail(login.email);
+                    setPassword(login.password);
+                  }}
+                  className="flex-1 text-xs"
+                >
+                  Dev: {login.label}
+                </Button>
+              ))}
+            </div>
+          </Field>
+        ) : null}
         <Field>
           <Button type="submit" disabled={pending}>
             {pending ? "Signing in..." : "Sign in"}
