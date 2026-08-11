@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   DndContext,
@@ -54,6 +54,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
   const [activeOrder, setActiveOrder] = useState<OrderListItem | null>(null);
   const [workflow, setWorkflow] = useState<PendingWorkflow | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const detailFetchToken = useRef(0);
 
   function moveOrder(orderId: string, to: OrderStatus) {
     onOrdersChange(orders.map((o) => (o.id === orderId ? { ...o, status: to } : o)));
@@ -68,6 +69,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
     setActiveOrder(null);
     const { active, over } = event;
     if (!over) return;
+    if (workflow !== null) return; // a drop while a workflow is pending is ignored
 
     const order = orders.find((o) => o.id === active.id);
     if (!order) return;
@@ -90,7 +92,9 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
         setWorkflow({ kind: "reopen", orderId: order.id });
         return;
       case "confirm": {
+        const token = ++detailFetchToken.current;
         const result = await getOrderDetail(organizationSlug, order.id);
+        if (token !== detailFetchToken.current) return; // a newer drag superseded this fetch
         if (!result.ok) {
           toast({ title: "Error", description: result.message, variant: "destructive" });
           return;
