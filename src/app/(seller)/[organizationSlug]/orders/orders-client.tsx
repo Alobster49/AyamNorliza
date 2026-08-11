@@ -43,16 +43,24 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
   const [view, setView] = useState<ViewMode>("board");
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
-    if (stored === "table" || stored === "board") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setView(stored);
+    try {
+      const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+      if (stored === "table" || stored === "board") {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setView(stored);
+      }
+    } catch {
+      // storage unavailable (private browsing) — keep default view
     }
   }, []);
 
   function switchView(next: ViewMode) {
     setView(next);
-    window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    try {
+      window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+    } catch {
+      // storage unavailable — view still switches for this session
+    }
   }
 
   const counts = useMemo(() => {
