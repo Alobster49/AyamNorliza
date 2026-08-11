@@ -812,6 +812,7 @@ function BoardColumn({
 
 Notes for the implementer:
 - Dialog-gated moves are NOT optimistic: the card moves only in `onDone`, after the server action succeeded inside the dialog. `router.refresh()` then re-syncs server data in the background. A failed action leaves the card where it was — the "revert" case in the spec is covered by never moving early.
+  (Correction from final review: this requires OrdersClient to adopt `initialOrders` into state via an effect — added as a post-review fix.)
 - `onClick` and drag coexist because `PointerSensor` has `activationConstraint: { distance: 6 }` — a real drag suppresses the click, a plain click navigates.
 
 - [ ] **Step 2: Verify it compiles**

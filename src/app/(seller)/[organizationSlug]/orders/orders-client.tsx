@@ -43,6 +43,12 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
   const [view, setView] = useState<ViewMode>("board");
 
   useEffect(() => {
+    // router.refresh() after a workflow returns fresh server data — adopt it.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrders(initialOrders);
+  }, [initialOrders]);
+
+  useEffect(() => {
     try {
       const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
       if (stored === "table" || stored === "board") {
