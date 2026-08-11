@@ -73,6 +73,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
 
     const order = orders.find((o) => o.id === active.id);
     if (!order) return;
+    const token = ++detailFetchToken.current;
     const to = over.id as OrderStatus;
     const resolution = resolveDrop(order.status, to, callerRole);
 
@@ -92,7 +93,6 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
         setWorkflow({ kind: "reopen", orderId: order.id });
         return;
       case "confirm": {
-        const token = ++detailFetchToken.current;
         const result = await getOrderDetail(organizationSlug, order.id);
         if (token !== detailFetchToken.current) return; // a newer drag superseded this fetch
         if (!result.ok) {
@@ -135,10 +135,14 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
         order={workflow?.kind === "confirm" ? workflow.detail : null}
         onDone={async () => {
           if (!workflow) return;
-          const result = await getOrderDetail(organizationSlug, workflow.orderId);
-          if (result.ok) {
-            moveOrder(workflow.orderId, result.data.status);
-          } else {
+          try {
+            const result = await getOrderDetail(organizationSlug, workflow.orderId);
+            if (result.ok) {
+              moveOrder(workflow.orderId, result.data.status);
+            } else {
+              router.refresh();
+            }
+          } catch {
             router.refresh();
           }
         }}
