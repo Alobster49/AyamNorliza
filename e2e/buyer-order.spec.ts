@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { OWNER, BUYER, signIn, signInBuyer } from "./_fixtures";
+import { OWNER, BUYER, signIn, signInBuyer, uniqueFixtureName } from "./_fixtures";
 
 async function createSellableProduct(page: Page, productName: string) {
   await page.goto("/ayam-norliza-pilot/products");
@@ -32,8 +32,9 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
   context,
 }) => {
   // Seed a sellable product as the owner in the main tab.
+  const productName = uniqueFixtureName("E2E Buyer Portal Chicken");
   await signIn(page, OWNER.email, OWNER.password);
-  await createSellableProduct(page, "E2E Buyer Portal Chicken");
+  await createSellableProduct(page, productName);
 
   // Shop as the buyer in a second tab (same pattern as e2e/deactivation.spec.ts).
   const buyerPage = await context.newPage();
@@ -41,7 +42,7 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
 
   const productCard = buyerPage
     .locator('[data-slot="card"]')
-    .filter({ hasText: "E2E Buyer Portal Chicken" });
+    .filter({ hasText: productName });
   await expect(productCard).toBeVisible({ timeout: 10_000 });
   // RECONCILIATION: the dialog trigger reads "Add to Cart" (title case);
   // brief's /add to cart/i already matches this case-insensitively.
@@ -68,7 +69,7 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
   await expect(addToCartDialog).toBeHidden({ timeout: 10_000 });
 
   await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/cart");
-  await expect(buyerPage.getByText("E2E Buyer Portal Chicken")).toBeVisible({ timeout: 10_000 });
+  await expect(buyerPage.getByText(productName)).toBeVisible({ timeout: 10_000 });
   await buyerPage.getByRole("button", { name: /proceed to checkout/i }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
     timeout: 10_000,
@@ -102,15 +103,16 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
 });
 
 test("buyer cancels a pending order", async ({ page, context }) => {
+  const productName = uniqueFixtureName("E2E Buyer Cancel Chicken");
   await signIn(page, OWNER.email, OWNER.password);
-  await createSellableProduct(page, "E2E Buyer Cancel Chicken");
+  await createSellableProduct(page, productName);
 
   const buyerPage = await context.newPage();
   await signInBuyer(buyerPage, BUYER.email, BUYER.password);
 
   const productCard = buyerPage
     .locator('[data-slot="card"]')
-    .filter({ hasText: "E2E Buyer Cancel Chicken" });
+    .filter({ hasText: productName });
   await expect(productCard).toBeVisible({ timeout: 10_000 });
   await productCard.getByRole("button", { name: /add to cart/i }).click();
 

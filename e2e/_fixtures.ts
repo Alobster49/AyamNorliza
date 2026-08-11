@@ -19,6 +19,17 @@ export async function signIn(page: Page, email: string, password: string) {
   await expect(page).toHaveURL(/\/(?:[^/]+\/settings\/organization|signup)(?:[/?#]|$)/, { timeout: 10_000 });
 }
 
+/**
+ * Catalog fixtures live in the database for the whole run, and every
+ * Playwright project shares one database. A fixed name would therefore be
+ * created twice (once per project) and every `getByRole("option", ...)`
+ * lookup for it would match two elements. Suffix each name so the fixtures
+ * a test creates are unique to that test run.
+ */
+export function uniqueFixtureName(base: string): string {
+  return `${base} ${Math.random().toString(36).slice(2, 8)}`;
+}
+
 /** Seeded non-owner member (see 20260624000004_id_access_seed.sql). */
 export const TARGET = {
   email: "target@ayam-norliza-pilot.example",
@@ -73,7 +84,12 @@ export async function completeReauth(page: Page, password: string) {
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   await dialog.getByLabel(/password/i).fill(password);
   await dialog.getByRole("button", { name: /confirm/i }).click();
+  // The dialog closes as soon as re-auth succeeds, BEFORE it retries the
+  // pending action. Returning here would race the retry — a navigation or
+  // reload by the caller can abort that in-flight Server Action — so wait for
+  // the retry request to settle too.
   await expect(dialog).toBeHidden({ timeout: 10_000 });
+  await page.waitForLoadState("networkidle").catch(() => {});
 }
 
 export const BUYER = {

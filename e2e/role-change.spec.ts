@@ -20,8 +20,14 @@ test("owner changes a member role and sees an audit row", async ({ page }) => {
   // change (and its audit event) to actually happen.
   await completeReauth(page, OWNER.password);
 
-  await page.goto("/ayam-norliza-pilot/settings/audit-log");
-  await expect(
-    page.getByText(/identity\.role_changed|identity\.scope_changed/i).first(),
-  ).toBeVisible({ timeout: 10_000 });
+  // Re-read the audit log until the event lands.
+  await expect
+    .poll(
+      async () => {
+        await page.goto("/ayam-norliza-pilot/settings/audit-log");
+        return page.getByText(/identity\.role_changed|identity\.scope_changed/i).count();
+      },
+      { timeout: 20_000 },
+    )
+    .toBeGreaterThan(0);
 });

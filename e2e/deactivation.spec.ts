@@ -1,9 +1,11 @@
 import { test, expect } from "@playwright/test";
 import { OWNER, TARGET, signIn, completeReauth, reactivateTarget } from "./_fixtures";
 
-// This spec genuinely suspends the shared seeded member, so restore it
-// afterwards — otherwise every later run (and the second Playwright project)
-// starts with a member who can no longer sign in.
+// This spec genuinely suspends (and bans) the shared seeded member. Restore
+// it both before and after: after, so later runs and the second Playwright
+// project aren't left with a member who cannot sign in; before, so this test
+// starts from a known-good state no matter what ran previously.
+test.beforeEach(reactivateTarget);
 test.afterEach(reactivateTarget);
 
 test("deactivating a user revokes their session", async ({ page, browser }) => {
@@ -26,7 +28,17 @@ test("deactivating a user revokes their session", async ({ page, browser }) => {
   // Deactivation is a sensitive action: complete the step-up dialog so the
   // action actually runs (it suspends the member and revokes their sessions).
   await completeReauth(page, OWNER.password);
-  await expect(targetRow).toContainText(/suspended/i, { timeout: 10_000 });
+  // Assert the persisted state rather than the dialog's optimistic refresh,
+  // re-reading the page until the suspension lands.
+  await expect
+    .poll(
+      async () => {
+        await page.reload();
+        return page.locator("table tbody tr", { hasText: TARGET.userId }).innerText();
+      },
+      { timeout: 20_000 },
+    )
+    .toMatch(/suspended/i);
 
   // The deactivated user loses access on their next request.
   await second.reload();

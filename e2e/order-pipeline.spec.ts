@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
-import { OWNER, signIn } from "./_fixtures";
+import { OWNER, signIn, uniqueFixtureName } from "./_fixtures";
 
 // Creates a category + product + one available "Standard" variant via the
 // existing (unchanged by this plan) seller Products screen, so the order
@@ -85,26 +85,31 @@ async function pickFirstDeliveryOption(page: Page): Promise<string> {
 test("owner creates a manual order, confirms with a fallback, and takes it through to close", async ({
   page,
 }) => {
+  // Full pipeline: catalog setup, manual order, confirm, weigh, run, settle.
+  // Too long for the default 30s budget on the slower (tablet) project.
+  test.setTimeout(120_000);
   // RECONCILIATION: "Mark departed" / "Mark completed" on /runs go through a
   // native window.confirm() before calling setRunStatus. Playwright
   // auto-dismisses unhandled dialogs, which would silently no-op the click.
   page.on("dialog", (dialog) => dialog.accept());
 
+  const productName = uniqueFixtureName("E2E Pipeline Chicken");
+  const customerName = uniqueFixtureName("E2E Pipeline Customer");
   await signIn(page, OWNER.email, OWNER.password);
-  await createSellableProduct(page, "E2E Pipeline Chicken");
+  await createSellableProduct(page, productName);
 
   // --- Create the manual order ---
   await page.goto("/ayam-norliza-pilot/orders/new");
   await expect(page.getByRole("heading", { name: /new order/i })).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole("button", { name: /new customer/i }).click();
-  await fieldAfterLabel(page, "Name *").fill("E2E Pipeline Customer");
+  await fieldAfterLabel(page, "Name *").fill(customerName);
   await fieldAfterLabel(page, "Phone *").fill("0123456789");
   await page.getByRole("button", { name: /save customer/i }).click();
-  await expect(page.getByText("E2E Pipeline Customer")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(customerName)).toBeVisible({ timeout: 10_000 });
 
   await fieldAfterLabel(page, "Product").click();
-  await page.getByRole("option", { name: "E2E Pipeline Chicken" }).click();
+  await page.getByRole("option", { name: productName }).click();
   await chooseSelect(fieldAfterLabel(page, "Mode"), "Kg");
   await fieldAfterLabel(page, "Quantity").fill("5");
   await fieldAfterLabel(page, "Size min (kg)").fill("1.5");
@@ -144,7 +149,7 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   await page.goto("/ayam-norliza-pilot/tasks");
   await expect(page.getByRole("heading", { name: /tasks/i })).toBeVisible({ timeout: 10_000 });
   const taskCard = page
-    .getByText("E2E Pipeline Customer", { exact: true })
+    .getByText(customerName, { exact: true })
     .locator("xpath=ancestor::div[contains(@class,'rounded-lg')][1]");
   await expect(taskCard).toBeVisible({ timeout: 10_000 });
   // RECONCILIATION: the task's weight/pieces fields are labeled "Weight
@@ -152,7 +157,7 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   await fieldAfterLabel(taskCard, "Weight (kg)").fill("5.2");
   await fieldAfterLabel(taskCard, "Pieces").fill("3");
   await taskCard.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByText("E2E Pipeline Customer")).toBeHidden({ timeout: 10_000 });
+  await expect(page.getByText(customerName)).toBeHidden({ timeout: 10_000 });
 
   // --- Run departs, then returns ---
   await page.goto("/ayam-norliza-pilot/runs");
@@ -160,7 +165,7 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   // RECONCILIATION: the date filter is a bare <input type="date"> with no
   // associated <label> at all.
   await page.locator('input[type="date"]').fill(deliveryDate);
-  await expect(page.getByText("E2E Pipeline Customer")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(customerName)).toBeVisible({ timeout: 10_000 });
   // RECONCILIATION (test bug, found via direct DB inspection): the "Mark
   // departed"/"Mark completed" BUTTONS themselves contain the words
   // "departed"/"completed" in their own labels and stay mounted right up
@@ -210,20 +215,22 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
 test("fallback = cancel cancels the order when the only line is unavailable at confirm", async ({
   page,
 }) => {
+  const productName = uniqueFixtureName("E2E Cancel Fallback Chicken");
+  const customerName = uniqueFixtureName("E2E Cancel Customer");
   await signIn(page, OWNER.email, OWNER.password);
-  await createSellableProduct(page, "E2E Cancel Fallback Chicken");
+  await createSellableProduct(page, productName);
 
   await page.goto("/ayam-norliza-pilot/orders/new");
   await expect(page.getByRole("heading", { name: /new order/i })).toBeVisible({ timeout: 10_000 });
 
   await page.getByRole("button", { name: /new customer/i }).click();
-  await fieldAfterLabel(page, "Name *").fill("E2E Cancel Customer");
+  await fieldAfterLabel(page, "Name *").fill(customerName);
   await fieldAfterLabel(page, "Phone *").fill("0123456780");
   await page.getByRole("button", { name: /save customer/i }).click();
-  await expect(page.getByText("E2E Cancel Customer")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText(customerName)).toBeVisible({ timeout: 10_000 });
 
   await fieldAfterLabel(page, "Product").click();
-  await page.getByRole("option", { name: "E2E Cancel Fallback Chicken" }).click();
+  await page.getByRole("option", { name: productName }).click();
   // Mode stays "Piece" — that's the line's default.
   await fieldAfterLabel(page, "Quantity").fill("4");
   await fieldAfterLabel(page, "Size min (kg)").fill("1.4");
