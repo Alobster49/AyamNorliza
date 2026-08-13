@@ -23,7 +23,7 @@ export default async function DispatchPage({
     await requireOrgRole(organizationSlug, DISPATCH_ROLES);
   } catch (error) {
     if (error instanceof OrderPermissionError) {
-      redirect(`/${organizationSlug}`);
+      redirect(`/${organizationSlug}/tasks`);
     }
     throw error;
   }
