@@ -225,7 +225,7 @@ begin
 
   select organization_id, status, delivery_date, run_id, assignment_source
   into v_org, v_status, v_date, v_old_run, v_source
-  from public.orders where id = p_order;
+  from public.orders where id = p_order for update;
 
   if v_org is null then
     raise exception using errcode = 'P0001', message = 'not_found';
@@ -239,16 +239,16 @@ begin
     raise exception using errcode = 'P0001', message = 'invalid_status';
   end if;
 
+  -- Auto never overrides manual.
+  if p_source = 'auto' and v_source = 'manual' then
+    return;
+  end if;
+
   if v_old_run is not null then
     select status into v_old_run_status from public.delivery_runs where id = v_old_run;
     if v_old_run_status = 'departed' then
       raise exception using errcode = 'P0001', message = 'run_departed';
     end if;
-  end if;
-
-  -- Auto never overrides manual.
-  if p_source = 'auto' and v_source = 'manual' then
-    return;
   end if;
 
   if not exists (
@@ -258,12 +258,10 @@ begin
     raise exception using errcode = 'P0001', message = 'invalid_truck';
   end if;
 
-  select id into v_run from public.delivery_runs where truck_id = p_truck and run_date = v_date;
-  if v_run is null then
-    insert into public.delivery_runs (organization_id, truck_id, run_date)
-    values (v_org, p_truck, v_date)
-    returning id into v_run;
-  end if;
+  insert into public.delivery_runs (organization_id, truck_id, run_date)
+  values (v_org, p_truck, v_date)
+  on conflict (truck_id, run_date) do update set truck_id = excluded.truck_id
+  returning id into v_run;
 
   if (select status from public.delivery_runs where id = v_run) = 'departed' then
     raise exception using errcode = 'P0001', message = 'run_departed';
