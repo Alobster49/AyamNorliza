@@ -24,10 +24,14 @@ export function PostcodeRangesPanel({
   organizationSlug,
   zones,
   ranges,
+  onRangeAdded,
+  onRangeDeleted,
 }: {
   organizationSlug: string;
   zones: DeliveryZone[];
   ranges: ZonePostcodeRange[];
+  onRangeAdded: (range: ZonePostcodeRange) => void;
+  onRangeDeleted: (rangeId: string) => void;
 }) {
   const [form, setForm] = useState({ zoneId: zones[0]?.id ?? "", postcodeStart: "", postcodeEnd: "" });
   const [message, setMessage] = useState<string | null>(null);
@@ -35,13 +39,6 @@ export function PostcodeRangesPanel({
 
   const zoneName = (id: string) => zones.find((z) => z.id === id)?.name ?? "?";
   const overlaps = useMemo(() => findOverlaps(ranges), [ranges]);
-
-  const run = (action: Promise<{ ok: boolean; message?: string }>) => {
-    startTransition(async () => {
-      const result = await action;
-      setMessage(result.ok ? null : (result.message ?? "Action failed"));
-    });
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -91,7 +88,15 @@ export function PostcodeRangesPanel({
         <button
           type="button"
           disabled={pending || form.zoneId === ""}
-          onClick={() => run(addPostcodeRange(organizationSlug, form))}
+          onClick={() => {
+            startTransition(async () => {
+              const result = await addPostcodeRange(organizationSlug, form);
+              setMessage(result.ok ? null : (result.message ?? "Action failed"));
+              if (result.ok) {
+                onRangeAdded(result.data);
+              }
+            });
+          }}
           className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
         >
           Add range
@@ -108,7 +113,16 @@ export function PostcodeRangesPanel({
             <button
               type="button"
               disabled={pending}
-              onClick={() => run(deletePostcodeRange(organizationSlug, r.id))}
+              onClick={() => {
+                const rangeId = r.id;
+                startTransition(async () => {
+                  const result = await deletePostcodeRange(organizationSlug, rangeId);
+                  setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                  if (result.ok) {
+                    onRangeDeleted(rangeId);
+                  }
+                });
+              }}
               className="text-xs text-destructive"
             >
               Delete

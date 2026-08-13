@@ -8,10 +8,12 @@ export function FacilityPanel({
   organizationSlug,
   facility,
   canEdit,
+  onSaved,
 }: {
   organizationSlug: string;
   facility: Facility | null;
   canEdit: boolean;
+  onSaved: (facility: Facility) => void;
 }) {
   const [form, setForm] = useState({
     name: facility?.name ?? "",
@@ -30,6 +32,9 @@ export function FacilityPanel({
     startTransition(async () => {
       const result = await updateFacility(organizationSlug, facility.id, form);
       setMessage(result.ok ? "Saved." : result.message);
+      if (result.ok) {
+        onSaved(result.data);
+      }
     });
   };
 

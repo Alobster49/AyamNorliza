@@ -25,6 +25,7 @@ import type {
   TruckZone,
 } from "@/features/orders/types";
 import type { LogisticsSetup } from "@/features/logistics/server/facility-actions";
+import type { Bay, Facility, ZonePostcodeRange } from "@/features/logistics/types";
 import { BaysPanel } from "@/features/logistics/components/bays-panel";
 import { FacilityPanel } from "@/features/logistics/components/facility-panel";
 import { PostcodeRangesPanel } from "@/features/logistics/components/postcode-ranges-panel";
@@ -75,6 +76,9 @@ export function DeliveryClient({
   const [truckZones, setTruckZonesList] = useState<TruckZone[]>(initialSetup.truckZones);
   const [slots, setSlots] = useState<DeliverySlot[]>(initialSetup.slots);
   const [blocks, setBlocks] = useState<ScheduleBlock[]>(initialSetup.blocks);
+  const [facility, setFacility] = useState<Facility | null>(logisticsSetup.facility);
+  const [bays, setBays] = useState<Bay[]>(logisticsSetup.bays);
+  const [ranges, setRanges] = useState<ZonePostcodeRange[]>(logisticsSetup.ranges);
 
   const [zoneDialog, setZoneDialog] = useState<ZoneDialogState>(null);
   const [truckDialog, setTruckDialog] = useState<TruckDialogState>(null);
@@ -264,6 +268,32 @@ export function DeliveryClient({
     }
     setBlocks((prev) => prev.filter((b) => b.id !== block.id));
     toast({ title: "Blocked date removed" });
+  }
+
+  // -- Facility / bays / postcode ranges -----------------------------------
+
+  function handleFacilitySaved(saved: Facility) {
+    setFacility(saved);
+  }
+
+  function handleBayCreated(bay: Bay) {
+    setBays((prev) => [...prev, bay]);
+  }
+
+  function handleBayDeleted(bayId: string) {
+    setBays((prev) => prev.filter((b) => b.id !== bayId));
+  }
+
+  function handleTruckBayChanged(truckId: string, bayId: string | null) {
+    setTrucks((prev) => prev.map((t) => (t.id === truckId ? { ...t, bay_id: bayId } : t)));
+  }
+
+  function handleRangeAdded(range: ZonePostcodeRange) {
+    setRanges((prev) => [...prev, range]);
+  }
+
+  function handleRangeDeleted(rangeId: string) {
+    setRanges((prev) => prev.filter((r) => r.id !== rangeId));
   }
 
   return (
@@ -613,17 +643,21 @@ export function DeliveryClient({
         <TabsContent value="factory" className="space-y-4">
           <FacilityPanel
             organizationSlug={organizationSlug}
-            facility={logisticsSetup.facility}
+            facility={facility}
             canEdit={role === "owner" || role === "org_admin"}
+            onSaved={handleFacilitySaved}
           />
         </TabsContent>
 
         <TabsContent value="bays" className="space-y-4">
           <BaysPanel
             organizationSlug={organizationSlug}
-            facilityId={logisticsSetup.facility?.id ?? null}
-            bays={logisticsSetup.bays}
+            facilityId={facility?.id ?? null}
+            bays={bays}
             trucks={trucks}
+            onBayCreated={handleBayCreated}
+            onBayDeleted={handleBayDeleted}
+            onTruckBayChanged={handleTruckBayChanged}
           />
         </TabsContent>
 
@@ -631,7 +665,9 @@ export function DeliveryClient({
           <PostcodeRangesPanel
             organizationSlug={organizationSlug}
             zones={zones}
-            ranges={logisticsSetup.ranges}
+            ranges={ranges}
+            onRangeAdded={handleRangeAdded}
+            onRangeDeleted={handleRangeDeleted}
           />
         </TabsContent>
       </Tabs>

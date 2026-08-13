@@ -10,22 +10,21 @@ export function BaysPanel({
   facilityId,
   bays,
   trucks,
+  onBayCreated,
+  onBayDeleted,
+  onTruckBayChanged,
 }: {
   organizationSlug: string;
   facilityId: string | null;
   bays: Bay[];
   trucks: Truck[];
+  onBayCreated: (bay: Bay) => void;
+  onBayDeleted: (bayId: string) => void;
+  onTruckBayChanged: (truckId: string, bayId: string | null) => void;
 }) {
   const [newName, setNewName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-
-  const run = (action: Promise<{ ok: boolean; message?: string }>) => {
-    startTransition(async () => {
-      const result = await action;
-      setMessage(result.ok ? null : (result.message ?? "Action failed"));
-    });
-  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -44,13 +43,18 @@ export function BaysPanel({
             type="button"
             disabled={pending || newName.trim() === ""}
             onClick={() => {
-              run(
-                createBay(organizationSlug, {
+              const name = newName.trim();
+              startTransition(async () => {
+                const result = await createBay(organizationSlug, {
                   facilityId,
-                  name: newName.trim(),
+                  name,
                   position: bays.length + 1,
-                }),
-              );
+                });
+                setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                if (result.ok) {
+                  onBayCreated(result.data);
+                }
+              });
               setNewName("");
             }}
             className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
@@ -69,7 +73,16 @@ export function BaysPanel({
             <button
               type="button"
               disabled={pending}
-              onClick={() => run(deleteBay(organizationSlug, bay.id))}
+              onClick={() => {
+                const bayId = bay.id;
+                startTransition(async () => {
+                  const result = await deleteBay(organizationSlug, bayId);
+                  setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                  if (result.ok) {
+                    onBayDeleted(bayId);
+                  }
+                });
+              }}
               className="text-xs text-destructive"
             >
               Delete
@@ -89,7 +102,17 @@ export function BaysPanel({
               <select
                 value={truck.bay_id ?? ""}
                 disabled={pending}
-                onChange={(e) => run(setTruckBay(organizationSlug, truck.id, e.target.value || null))}
+                onChange={(e) => {
+                  const truckId = truck.id;
+                  const bayId = e.target.value || null;
+                  startTransition(async () => {
+                    const result = await setTruckBay(organizationSlug, truckId, bayId);
+                    setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                    if (result.ok) {
+                      onTruckBayChanged(truckId, bayId);
+                    }
+                  });
+                }}
                 className="rounded border px-2 py-1 text-sm"
               >
                 <option value="">No bay</option>
