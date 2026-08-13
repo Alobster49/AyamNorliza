@@ -30,8 +30,9 @@ export type DispatchBoardView = {
 export function buildBoardView(data: DispatchBoardData, date: string): DispatchBoardView {
   const weekday = weekdayOf(date);
   const truckById = new Map(data.trucks.map((t) => [t.id, t]));
+  const activeBayIds = new Set(data.bays.filter((b) => b.is_active).map((b) => b.id));
   const onBoard = (t: DispatchTruck | undefined): t is DispatchTruck =>
-    t !== undefined && t.is_active && t.bay_id !== null;
+    t !== undefined && t.is_active && t.bay_id !== null && activeBayIds.has(t.bay_id);
 
   const pool: DispatchTicket[] = [];
   const byTruck = new Map<string, DispatchTicket[]>();
@@ -46,8 +47,10 @@ export function buildBoardView(data: DispatchBoardData, date: string): DispatchB
     }
   }
 
+  const slotStartById = new Map(data.slots.map((s) => [s.id, s.start_time]));
+  const slotStart = (t: DispatchTicket): string => slotStartById.get(t.slot_id) ?? "";
   const ticketSort = (a: DispatchTicket, b: DispatchTicket) =>
-    a.delivery_date.localeCompare(b.delivery_date) ||
+    slotStart(a).localeCompare(slotStart(b)) ||
     (a.customer?.name ?? "").localeCompare(b.customer?.name ?? "");
   pool.sort(ticketSort);
 

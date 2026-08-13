@@ -65,7 +65,7 @@ describe("buildBoardView", () => {
       DATE,
     );
     expect(view.pool.map((t) => t.id)).toEqual(["o-1"]);
-    const t1 = view.bays[0].trucks.find((t) => t.truck.id === "t-1")!;
+    const t1 = view.bays[0]!.trucks.find((t) => t.truck.id === "t-1")!;
     expect(t1.tickets.map((t) => t.id)).toEqual(["o-2"]);
     expect(t1.load).toBe(1);
     expect(t1.cap).toBe(5);
@@ -92,9 +92,46 @@ describe("buildBoardView", () => {
       }),
       DATE,
     );
-    const t1 = view.bays[0].trucks.find((t) => t.truck.id === "t-1")!;
+    const t1 = view.bays[0]!.trucks.find((t) => t.truck.id === "t-1")!;
     expect(t1.departed).toBe(true);
     expect(t1.run?.id).toBe("run-1");
+  });
+
+  it("sends a manually-assigned ticket back to the pool when the truck's bay is inactive", () => {
+    const view = buildBoardView(
+      data({
+        bays: [bay("bay-2", "Bay 2", 2), bay("bay-1", "Bay 1", 1, false)],
+        orders: [ticket("o-1", "t-1", "manual")],
+      }),
+      DATE,
+    );
+    expect(view.pool.map((t) => t.id)).toEqual(["o-1"]);
+  });
+
+  it("orders a truck's tickets by slot start time, not customer name", () => {
+    const view = buildBoardView(
+      data({
+        slots: [
+          {
+            id: "slot-1", organization_id: "org-1", truck_id: "t-1", weekday: 5,
+            start_time: "09:00:00", end_time: "12:00:00", max_orders: 5, is_active: true,
+            created_by: null, created_at: "", updated_at: "", version: 1,
+          },
+          {
+            id: "slot-2", organization_id: "org-1", truck_id: "t-1", weekday: 5,
+            start_time: "07:00:00", end_time: "09:00:00", max_orders: 5, is_active: true,
+            created_by: null, created_at: "", updated_at: "", version: 1,
+          },
+        ],
+        orders: [
+          { ...ticket("o-a", "t-1", "manual"), slot_id: "slot-1", customer: { name: "Alpha" } },
+          { ...ticket("o-z", "t-1", "manual"), slot_id: "slot-2", customer: { name: "Zulu" } },
+        ],
+      }),
+      DATE,
+    );
+    const t1 = view.bays[0]!.trucks.find((t) => t.truck.id === "t-1")!;
+    expect(t1.tickets.map((t) => t.id)).toEqual(["o-z", "o-a"]);
   });
 });
 
