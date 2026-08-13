@@ -34,6 +34,10 @@ const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: false,
+  // Pin the workspace root to this checkout. Without this, Turbopack infers
+  // the root from the outermost lockfile, which makes a git worktree under
+  // .claude/worktrees/ silently serve the parent checkout's src/app.
+  turbopack: { root: import.meta.dirname },
   // Allow HMR and other dev resources when accessing the dev server over the
   // LAN. Without this, browsers on a different host (e.g. http://192.168.x.x:3000)
   // see a partially-hydrated page where React event handlers never attach and
