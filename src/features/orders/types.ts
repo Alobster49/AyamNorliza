@@ -148,6 +148,8 @@ export type Order = {
   slot_id: string;
   truck_id: string;
   run_id: string | null;
+  postcode: string | null;
+  assignment_source: "none" | "auto" | "manual";
   notes: string | null;
   total_amount: number;
   closed_at: string | null;
