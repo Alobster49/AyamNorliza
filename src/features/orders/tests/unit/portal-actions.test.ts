@@ -99,6 +99,30 @@ describe("placeOrder", () => {
     expect(result).toEqual({ ok: true, data: { orderId: "order-1" } });
   });
 
+  it("passes the postcode through to the place_order rpc as p_postcode", async () => {
+    vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
+    const supabase = mockSupabase({ rpcResult: { data: "order-1", error: null } });
+
+    await placeOrder({ ...validPlaceOrderInput, postcode: "82000" });
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      "place_order",
+      expect.objectContaining({ p_postcode: "82000" }),
+    );
+  });
+
+  it("sends p_postcode: null when no postcode is given", async () => {
+    vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
+    const supabase = mockSupabase({ rpcResult: { data: "order-1", error: null } });
+
+    await placeOrder(validPlaceOrderInput);
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      "place_order",
+      expect.objectContaining({ p_postcode: null }),
+    );
+  });
+
   it("maps slot_full to a friendly conflict message", async () => {
     vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
     mockSupabase({ rpcResult: { data: null, error: { message: "slot_full" } } });

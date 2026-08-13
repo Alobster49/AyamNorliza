@@ -192,6 +192,7 @@ export async function placeOrder(
       sizeMaxKg: item.sizeMaxKg,
       fallback: item.fallback,
     })),
+    p_postcode: input.postcode ?? null,
   });
 
   if (error) {
@@ -200,15 +201,6 @@ export async function placeOrder(
   }
 
   const orderId = data as string;
-
-  // place_order's RPC signature has no postcode parameter -- write it back
-  // onto the freshly created row so dispatch auto-assignment (which reads
-  // orders.postcode) can match it to a zone. Orders placed without a
-  // postcode are still valid; they just land in the dispatch board's
-  // Unassigned pool for manual drag.
-  if (input.postcode) {
-    await supabase.from("orders").update({ postcode: input.postcode }).eq("id", orderId);
-  }
 
   revalidatePath(`/buyer_portal/${input.organizationSlug}/orders`);
   return ok({ orderId });

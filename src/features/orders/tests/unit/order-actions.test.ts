@@ -16,7 +16,13 @@ vi.mock("@/features/logistics/server/dispatch-actions", () => ({
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
-import { getTodayTasks, confirmOrder, closeOrder, getOrderDetail } from "../../server/order-actions";
+import {
+  getTodayTasks,
+  confirmOrder,
+  closeOrder,
+  getOrderDetail,
+  createManualOrder,
+} from "../../server/order-actions";
 import { mapRpcError } from "../../lib/rpc-errors";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
@@ -180,6 +186,60 @@ describe("closeOrder", () => {
     });
 
     expect(result).toEqual({ ok: true, data: { total: 245.5 } });
+  });
+});
+
+describe("createManualOrder", () => {
+  const CUSTOMER_ID = "77777777-7777-7777-7777-777777777777";
+  const ZONE_ID = "11111111-1111-1111-1111-111111111111";
+  const SLOT_ID = "22222222-2222-2222-2222-222222222222";
+  const PRODUCT_ID = "33333333-3333-3333-3333-333333333333";
+
+  const validInput = {
+    organizationSlug: "ayam-norliza-pilot",
+    customerId: CUSTOMER_ID,
+    zoneId: ZONE_ID,
+    slotId: SLOT_ID,
+    deliveryDate: "2026-08-15",
+    address: "123 Jalan Ayam",
+    items: [
+      {
+        productId: PRODUCT_ID,
+        mode: "kg" as const,
+        quantity: 2,
+        sizeMinKg: 1.5,
+        sizeMaxKg: 1.7,
+        fallback: "mix" as const,
+      },
+    ],
+  };
+
+  it("passes the postcode through to the place_order rpc as p_postcode", async () => {
+    const supabase = mockSupabaseFor({
+      role: "owner",
+      rpcResult: { data: ORDER_ID, error: null },
+    });
+
+    await createManualOrder({ ...validInput, postcode: "82000" });
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      "place_order",
+      expect.objectContaining({ p_postcode: "82000" }),
+    );
+  });
+
+  it("sends p_postcode: null when no postcode is given", async () => {
+    const supabase = mockSupabaseFor({
+      role: "owner",
+      rpcResult: { data: ORDER_ID, error: null },
+    });
+
+    await createManualOrder(validInput);
+
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      "place_order",
+      expect.objectContaining({ p_postcode: null }),
+    );
   });
 });
 
