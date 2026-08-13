@@ -197,7 +197,7 @@ export async function autoAssignOrder(
       .neq("id", orderId),
   ]);
 
-  if (zones.error || ranges.error || truckZones.error || trucks.error || slots.error || blocks.error || loadRows.error) {
+  if (zones.error || ranges.error || truckZones.error || trucks.error || slots.error || blocks.error || slotRow.error || loadRows.error) {
     return err("internal", "Failed to load assignment context");
   }
 
