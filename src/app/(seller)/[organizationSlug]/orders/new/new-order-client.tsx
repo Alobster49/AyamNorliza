@@ -78,6 +78,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
   const [deliveryOptions, setDeliveryOptions] = useState<DeliveryOption[]>([]);
   const [selectedOptionKey, setSelectedOptionKey] = useState("");
   const [address, setAddress] = useState("");
+  const [postcode, setPostcode] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -207,6 +208,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
       slotId: selectedOption.slotId,
       deliveryDate: selectedOption.date,
       address,
+      postcode: postcode.trim() || undefined,
       notes: notes || undefined,
       items,
     });
@@ -382,6 +384,18 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
             <div className="space-y-1">
               <Label className="text-xs">Delivery address</Label>
               <Textarea value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Street address" />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs">Postcode (optional)</Label>
+              <Input
+                value={postcode}
+                onChange={(e) => setPostcode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                placeholder="5-digit postcode"
+                inputMode="numeric"
+                maxLength={5}
+                className="sm:w-40"
+              />
             </div>
 
             <div className="space-y-1">

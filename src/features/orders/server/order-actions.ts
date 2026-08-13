@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
 import { requireOrgRole, OrderPermissionError } from "./guards";
 import { MANAGER_ROLES, STAFF_ROLES } from "../lib/roles";
 import { mapRpcError } from "../lib/rpc-errors";
@@ -189,8 +190,19 @@ export async function createManualOrder(
     return err(mapped.code as OrderErrorCode, mapped.message);
   }
 
+  const orderId = data as string;
+
+  // place_order's RPC signature has no postcode parameter -- write it back
+  // onto the freshly created row so dispatch auto-assignment (which reads
+  // orders.postcode) can match it to a zone. Orders placed without a
+  // postcode are still valid; they just land in the dispatch board's
+  // Unassigned pool for manual drag.
+  if (input.postcode) {
+    await supabase.from("orders").update({ postcode: input.postcode }).eq("id", orderId);
+  }
+
   revalidatePath(`/${input.organizationSlug}/orders`);
-  return ok({ orderId: data as string });
+  return ok({ orderId });
 }
 
 export async function confirmOrder(rawInput: unknown): Promise<ActionResult> {
@@ -216,6 +228,14 @@ export async function confirmOrder(rawInput: unknown): Promise<ActionResult> {
   if (error) {
     const mapped = mapRpcError(error.message);
     return err(mapped.code as OrderErrorCode, mapped.message);
+  }
+
+  // Fire-and-forget suggestion: a failed auto-assign must never fail the
+  // confirm -- the ticket just lands in the dispatch pool instead.
+  try {
+    await autoAssignOrder(input.organizationSlug, input.orderId);
+  } catch {
+    // ignore
   }
 
   revalidatePath(`/${input.organizationSlug}/orders`);

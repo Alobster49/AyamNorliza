@@ -11,6 +11,7 @@ import {
 } from "@/features/orders/server/portal-actions";
 import type { DeliveryZone, DeliveryOption } from "@/features/orders/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
@@ -52,6 +53,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string>("");
   const [address, setAddress] = useState("");
+  const [postcode, setPostcode] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
@@ -128,6 +130,7 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
       slotId: selectedOption.slotId,
       deliveryDate: selectedOption.date,
       address: address.trim(),
+      postcode: postcode.trim() || undefined,
       notes: notes.trim() || undefined,
       items: items.map((item) => ({
         productId: item.productId,
@@ -255,6 +258,19 @@ export default function CheckoutPage({ params }: CheckoutPageProps) {
                     onChange={(e) => setAddress(e.target.value)}
                     rows={3}
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="postcode">Postcode (Optional)</Label>
+                  <Input
+                    id="postcode"
+                    placeholder="5-digit postcode"
+                    value={postcode}
+                    onChange={(e) => setPostcode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                    inputMode="numeric"
+                    maxLength={5}
+                    className="max-w-[10rem]"
                   />
                 </div>
 

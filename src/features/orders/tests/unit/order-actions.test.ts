@@ -10,7 +10,12 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
 
+vi.mock("@/features/logistics/server/dispatch-actions", () => ({
+  autoAssignOrder: vi.fn().mockResolvedValue({ ok: true, data: { assigned: true } }),
+}));
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
 import { getTodayTasks, confirmOrder, closeOrder, getOrderDetail } from "../../server/order-actions";
 import { mapRpcError } from "../../lib/rpc-errors";
 
@@ -116,6 +121,51 @@ describe("confirmOrder", () => {
       p_order: ORDER_ID,
       p_decisions: [{ item_id: ITEM_ID, available: true }],
     });
+  });
+});
+
+describe("confirmOrder auto-assign", () => {
+  it("fires autoAssignOrder after a successful confirm", async () => {
+    mockSupabaseFor({ role: "seller", rpcResult: { data: null, error: null } });
+
+    const result = await confirmOrder({
+      organizationSlug: "ayam-norliza-pilot",
+      orderId: ORDER_ID,
+      decisions: [{ itemId: ITEM_ID, available: true }],
+    });
+
+    expect(result.ok).toBe(true);
+    expect(autoAssignOrder).toHaveBeenCalledWith("ayam-norliza-pilot", ORDER_ID);
+  });
+
+  it("does not fail the confirm when auto-assign errors", async () => {
+    vi.mocked(autoAssignOrder).mockResolvedValueOnce({
+      ok: false,
+      code: "internal",
+      message: "boom",
+    });
+    mockSupabaseFor({ role: "seller", rpcResult: { data: null, error: null } });
+
+    const result = await confirmOrder({
+      organizationSlug: "ayam-norliza-pilot",
+      orderId: ORDER_ID,
+      decisions: [{ itemId: ITEM_ID, available: true }],
+    });
+
+    expect(result.ok).toBe(true);
+  });
+
+  it("does not fail the confirm when auto-assign throws", async () => {
+    vi.mocked(autoAssignOrder).mockRejectedValueOnce(new Error("boom"));
+    mockSupabaseFor({ role: "seller", rpcResult: { data: null, error: null } });
+
+    const result = await confirmOrder({
+      organizationSlug: "ayam-norliza-pilot",
+      orderId: ORDER_ID,
+      decisions: [{ itemId: ITEM_ID, available: true }],
+    });
+
+    expect(result.ok).toBe(true);
   });
 });
 
