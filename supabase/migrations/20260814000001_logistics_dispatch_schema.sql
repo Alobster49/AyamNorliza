@@ -198,6 +198,18 @@ create policy "zone_postcode_ranges_delete" on public.zone_postcode_ranges
   );
 
 -- ---------------------------------------------------------------------------
+-- Grants
+--
+-- Same contract gap as 20260810000001_order_pipeline_schema.sql: tables
+-- owned by the migration role need explicit GRANTs or authenticated hits
+-- "permission denied for table X" (42501) at the GRANT layer before RLS is
+-- even evaluated. facilities/bays/zone_postcode_ranges are written directly
+-- from facility-actions.ts (not via RPC), so authenticated needs the full
+-- select/insert/update/delete set here, same as delivery_zones/trucks/etc.
+-- ---------------------------------------------------------------------------
+grant select, insert, update, delete on public.facilities, public.bays, public.zone_postcode_ranges to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- dispatch_assign_order: assign a confirmed/ready order to a truck.
 -- Upserts the truck+date delivery_runs row (mirrors confirm_order) and
 -- moves the order onto it. p_source='auto' never overwrites a manual
@@ -295,7 +307,7 @@ declare
   v_run_status public.delivery_run_status;
 begin
   select organization_id, status, run_id into v_org, v_status, v_run
-  from public.orders where id = p_order;
+  from public.orders where id = p_order for update;
 
   if v_org is null then
     raise exception using errcode = 'P0001', message = 'not_found';
@@ -316,7 +328,12 @@ begin
     end if;
   end if;
 
-  update public.orders set assignment_source = 'none' where id = p_order;
+  -- Clear run_id too, not just assignment_source: leaving the old run_id
+  -- behind blocks reassignment (dispatch_assign_order upserts the same
+  -- truck+date row) and lets set_run_status's completion sweep
+  -- (status='ready' and run_id = p_run) phantom-deliver a ticket that left
+  -- the run.
+  update public.orders set assignment_source = 'none', run_id = null where id = p_order;
 end;
 $$;
 
@@ -375,6 +392,53 @@ $$;
 
 revoke all on function public.set_run_status(uuid, public.delivery_run_status) from public;
 grant execute on function public.set_run_status(uuid, public.delivery_run_status) to authenticated;
+
+-- ---------------------------------------------------------------------------
+-- dispatch_depart_truck: depart the truck+date run and release any order
+-- that isn't 'ready' back to the pool (run_id/assignment_source cleared),
+-- matching the dispatch dialog's promise that non-ready orders "stay behind
+-- and return to the pool". Replaces the departTruck lookup + set_run_status
+-- pair so the release happens atomically with the transition.
+-- ---------------------------------------------------------------------------
+create or replace function public.dispatch_depart_truck(p_truck uuid, p_date date)
+returns void
+language plpgsql
+volatile
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_org uuid;
+  v_run uuid;
+  v_current public.delivery_run_status;
+begin
+  select id, organization_id, status into v_run, v_org, v_current
+  from public.delivery_runs
+  where truck_id = p_truck and run_date = p_date
+  for update;
+
+  if v_run is null then
+    raise exception using errcode = 'P0001', message = 'not_found';
+  end if;
+
+  if not public.has_org_role(v_org, array['owner', 'org_admin', 'seller', 'logistics']) then
+    raise exception using errcode = 'P0001', message = 'forbidden';
+  end if;
+
+  if v_current <> 'planned' then
+    raise exception using errcode = 'P0001', message = 'invalid_transition';
+  end if;
+
+  update public.orders
+  set run_id = null, assignment_source = 'none'
+  where run_id = v_run and status <> 'ready';
+
+  update public.delivery_runs set status = 'departed' where id = v_run;
+end;
+$$;
+
+revoke all on function public.dispatch_depart_truck(uuid, date) from public;
+grant execute on function public.dispatch_depart_truck(uuid, date) to authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Default facility row for every existing org (dev convenience; owner can

@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { assignOrder, unassignOrder, departTruck } from "../../server/dispatch-actions";
+import { assignOrder, unassignOrder, departTruck, autoAssignOrder } from "../../server/dispatch-actions";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
 
@@ -151,13 +151,36 @@ describe("unassignOrder", () => {
   });
 });
 
-describe("departTruck", () => {
-  it("errors when no run exists for the truck and date", async () => {
+describe("autoAssignOrder", () => {
+  it("returns assigned:false reason:manual without calling the RPC for a manually-assigned order", async () => {
     const supabase = mockSupabaseFor({
       role: "logistics",
-      tableResults: { delivery_runs: { data: null, error: null } },
+      tableResults: {
+        orders: {
+          data: {
+            id: "5b1f5c1e-0000-4000-8000-000000000001",
+            postcode: "82000",
+            delivery_date: "2026-08-14",
+            slot_id: "5b1f5c1e-0000-4000-8000-000000000003",
+            assignment_source: "manual",
+            status: "confirmed",
+          },
+          error: null,
+        },
+      },
     });
-    supabase.rpc.mockResolvedValue({ data: null, error: null });
+
+    const result = await autoAssignOrder("ayam-norliza-pilot", "5b1f5c1e-0000-4000-8000-000000000001");
+
+    expect(result).toEqual({ ok: true, data: { assigned: false, reason: "manual" } });
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+});
+
+describe("departTruck", () => {
+  it("errors when no run exists for the truck and date", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "not_found" } });
 
     const result = await departTruck("ayam-norliza-pilot", {
       truckId: "5b1f5c1e-0000-4000-8000-000000000002",
@@ -169,14 +192,14 @@ describe("departTruck", () => {
       code: "not_found",
       message: "No delivery run exists for this truck on this date.",
     });
-    expect(supabase.rpc).not.toHaveBeenCalled();
+    expect(supabase.rpc).toHaveBeenCalledWith("dispatch_depart_truck", {
+      p_truck: "5b1f5c1e-0000-4000-8000-000000000002",
+      p_date: "2026-08-14",
+    });
   });
 
-  it("departs the run via set_run_status", async () => {
-    const supabase = mockSupabaseFor({
-      role: "logistics",
-      tableResults: { delivery_runs: { data: { id: "run-1" }, error: null } },
-    });
+  it("departs the run via dispatch_depart_truck", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
     supabase.rpc.mockResolvedValue({ data: null, error: null });
 
     const result = await departTruck("ayam-norliza-pilot", {
@@ -185,9 +208,25 @@ describe("departTruck", () => {
     });
 
     expect(result.ok).toBe(true);
-    expect(supabase.rpc).toHaveBeenCalledWith("set_run_status", {
-      p_run: "run-1",
-      p_status: "departed",
+    expect(supabase.rpc).toHaveBeenCalledWith("dispatch_depart_truck", {
+      p_truck: "5b1f5c1e-0000-4000-8000-000000000002",
+      p_date: "2026-08-14",
+    });
+  });
+
+  it("maps invalid_transition RPC error to a conflict", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "invalid_transition" } });
+
+    const result = await departTruck("ayam-norliza-pilot", {
+      truckId: "5b1f5c1e-0000-4000-8000-000000000002",
+      date: "2026-08-14",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "This run cannot depart from its current status.",
     });
   });
 });

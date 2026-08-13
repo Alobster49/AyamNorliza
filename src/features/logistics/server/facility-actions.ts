@@ -150,6 +150,16 @@ export async function createBay(
   const input = parsed.data;
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: facility, error: facilityError } = await supabase
+    .from("facilities")
+    .select("id")
+    .eq("id", input.facilityId)
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  if (facilityError) return err("internal", facilityError.message);
+  if (!facility) return err("validation", "Unknown facility");
+
   const { data, error } = await supabase
     .from("bays")
     .insert({
@@ -245,6 +255,18 @@ export async function setTruckBay(
   }
 
   const supabase = await createSupabaseServerClient();
+
+  if (parsed.data !== null) {
+    const { data: bay, error: bayError } = await supabase
+      .from("bays")
+      .select("id")
+      .eq("id", parsed.data)
+      .eq("organization_id", orgId)
+      .maybeSingle();
+    if (bayError) return err("internal", bayError.message);
+    if (!bay) return err("validation", "Unknown bay");
+  }
+
   const { error } = await supabase
     .from("trucks")
     .update({ bay_id: parsed.data })
@@ -278,6 +300,16 @@ export async function addPostcodeRange(
   const input = parsed.data;
 
   const supabase = await createSupabaseServerClient();
+
+  const { data: zone, error: zoneError } = await supabase
+    .from("delivery_zones")
+    .select("id")
+    .eq("id", input.zoneId)
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  if (zoneError) return err("internal", zoneError.message);
+  if (!zone) return err("validation", "Unknown zone");
+
   const { data, error } = await supabase
     .from("zone_postcode_ranges")
     .insert({

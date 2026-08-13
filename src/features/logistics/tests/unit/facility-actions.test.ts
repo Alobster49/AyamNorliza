@@ -12,7 +12,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { updateFacility, createBay, addPostcodeRange } from "../../server/facility-actions";
+import { updateFacility, createBay, addPostcodeRange, setTruckBay } from "../../server/facility-actions";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
 
@@ -149,6 +149,7 @@ describe("createBay", () => {
     mockSupabaseFor({
       role: "seller",
       tableResults: {
+        facilities: { data: { id: "5b1f5c1e-0000-4000-8000-000000000001" }, error: null },
         bays: {
           data: {
             id: "bay-1", organization_id: "org-1", facility_id: "fac-1",
@@ -167,6 +168,22 @@ describe("createBay", () => {
 
     expect(result).toEqual({ ok: true, data: expect.objectContaining({ id: "bay-1" }) });
   });
+
+  it("rejects a facility id that does not resolve in this org", async () => {
+    mockSupabaseFor({
+      role: "seller",
+      tableResults: {
+        facilities: { data: null, error: null },
+      },
+    });
+
+    const result = await createBay("ayam-norliza-pilot", {
+      facilityId: "5b1f5c1e-0000-4000-8000-000000000001",
+      name: "Bay 1",
+    });
+
+    expect(result).toEqual({ ok: false, code: "validation", message: "Unknown facility" });
+  });
 });
 
 describe("addPostcodeRange", () => {
@@ -181,5 +198,41 @@ describe("addPostcodeRange", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("validation");
+  });
+
+  it("rejects a zone id that does not resolve in this org", async () => {
+    mockSupabaseFor({
+      role: "owner",
+      tableResults: {
+        delivery_zones: { data: null, error: null },
+      },
+    });
+
+    const result = await addPostcodeRange("ayam-norliza-pilot", {
+      zoneId: "5b1f5c1e-0000-4000-8000-000000000001",
+      postcodeStart: "82000",
+      postcodeEnd: "82300",
+    });
+
+    expect(result).toEqual({ ok: false, code: "validation", message: "Unknown zone" });
+  });
+});
+
+describe("setTruckBay", () => {
+  it("rejects a bay id that does not resolve in this org", async () => {
+    mockSupabaseFor({
+      role: "owner",
+      tableResults: {
+        bays: { data: null, error: null },
+      },
+    });
+
+    const result = await setTruckBay(
+      "ayam-norliza-pilot",
+      "5b1f5c1e-0000-4000-8000-000000000002",
+      "5b1f5c1e-0000-4000-8000-000000000003",
+    );
+
+    expect(result).toEqual({ ok: false, code: "validation", message: "Unknown bay" });
   });
 });

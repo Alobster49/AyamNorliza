@@ -252,27 +252,19 @@ export async function departTruck(
 ): Promise<ActionResult> {
   const guard = await guardDispatch(organizationSlug);
   if (!guard.ok) return guard;
-  const { orgId } = guard;
 
   const parsed = DepartInputSchema.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid depart input");
 
   const supabase = await createSupabaseServerClient();
-  const { data: run, error: runError } = await supabase
-    .from("delivery_runs")
-    .select("id")
-    .eq("organization_id", orgId)
-    .eq("truck_id", parsed.data.truckId)
-    .eq("run_date", parsed.data.date)
-    .maybeSingle();
-  if (runError) return err("internal", runError.message);
-  if (!run) return err("not_found", "No delivery run exists for this truck on this date.");
-
-  const { error } = await supabase.rpc("set_run_status", {
-    p_run: run.id,
-    p_status: "departed",
+  const { error } = await supabase.rpc("dispatch_depart_truck", {
+    p_truck: parsed.data.truckId,
+    p_date: parsed.data.date,
   });
   if (error) {
+    if (error.message.includes("not_found")) {
+      return err("not_found", "No delivery run exists for this truck on this date.");
+    }
     if (error.message.includes("invalid_transition")) {
       return err("conflict", "This run cannot depart from its current status.");
     }
