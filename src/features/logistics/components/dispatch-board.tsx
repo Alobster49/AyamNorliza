@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -17,6 +17,7 @@ import { resolveDispatchDrop, type DispatchDropTarget } from "../lib/dispatch-ru
 import { assignOrder, departTruck, getDispatchBoard, unassignOrder } from "../server/dispatch-actions";
 import { TicketCard } from "./ticket-card";
 import { TruckCard } from "./truck-card";
+import { useToast } from "@/hooks/use-toast";
 
 function PoolColumn({ tickets }: { tickets: DispatchTicket[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: "pool" });
@@ -46,9 +47,13 @@ export function DispatchBoard({
   initialData: DispatchBoardData;
 }) {
   const [date, setDate] = useState(initialDate);
+  const dateRef = useRef(date);
+  useEffect(() => {
+    dateRef.current = date;
+  }, [date]);
   const [data, setData] = useState(initialData);
   const [activeTicket, setActiveTicket] = useState<DispatchTicket | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const { toast } = useToast();
   const [override, setOverride] = useState<{ orderId: string; truckId: string; truckName: string } | null>(null);
   const [departConfirm, setDepartConfirm] = useState<{ truckId: string; notReady: number } | null>(null);
   const [departingTruckId, setDepartingTruckId] = useState<string | null>(null);
@@ -61,27 +66,30 @@ export function DispatchBoard({
     [activeTicket, data],
   );
 
-  const refetch = useCallback(
-    (forDate: string) => {
-      startTransition(async () => {
-        const result = await getDispatchBoard(organizationSlug, forDate);
-        if (result.ok) setData(result.data);
-        else setToast(result.message);
-      });
+  const showToast = useCallback(
+    (message: string, title = "Error") => {
+      toast({ title, description: message, variant: "destructive" });
     },
-    [organizationSlug],
+    [toast],
   );
 
-  const showToast = (message: string) => {
-    setToast(message);
-    setTimeout(() => setToast(null), 4000);
-  };
+  const refetch = useCallback(() => {
+    const forDate = dateRef.current;
+    startTransition(async () => {
+      const result = await getDispatchBoard(organizationSlug, forDate);
+      // The user may have switched dates while this request was in flight —
+      // don't clobber the currently selected date's board with stale data.
+      if (forDate !== dateRef.current) return;
+      if (result.ok) setData(result.data);
+      else showToast(result.message);
+    });
+  }, [organizationSlug, showToast]);
 
   const runAction = (action: Promise<{ ok: boolean; message?: string }>) => {
     startTransition(async () => {
       const result = await action;
       if (!result.ok) showToast(result.message ?? "Action failed");
-      refetch(date);
+      refetch();
     });
   };
 
@@ -123,7 +131,7 @@ export function DispatchBoard({
 
     if (resolution.kind === "noop") return;
     if (resolution.kind === "blocked") {
-      showToast(resolution.reason);
+      showToast(resolution.reason, "Move not allowed");
       return;
     }
     if (resolution.kind === "unassign") {
@@ -160,11 +168,13 @@ export function DispatchBoard({
         return;
       }
       // Let the slide-out animation play before the board re-renders the
-      // truck as departed. Matches the 300ms transition on TruckCard.
+      // truck as departed. Matches the 300ms transition on TruckCard. Skip
+      // the delay entirely when the user prefers reduced motion.
+      const delay = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 350;
       setTimeout(() => {
         setDepartingTruckId(null);
-        refetch(date);
-      }, 350);
+        refetch();
+      }, delay);
     });
   };
 
@@ -176,8 +186,10 @@ export function DispatchBoard({
           type="date"
           value={date}
           onChange={(e) => {
-            setDate(e.target.value);
-            refetch(e.target.value);
+            const nextDate = e.target.value;
+            setDate(nextDate);
+            dateRef.current = nextDate;
+            refetch();
           }}
           className="rounded border px-2 py-1 text-sm"
         />
@@ -213,12 +225,6 @@ export function DispatchBoard({
         </div>
         <DragOverlay>{activeTicket ? <TicketCard ticket={activeTicket} overlay /> : null}</DragOverlay>
       </DndContext>
-
-      {toast ? (
-        <div className="fixed bottom-4 right-4 rounded-md bg-destructive px-4 py-2 text-sm text-destructive-foreground shadow-lg">
-          {toast}
-        </div>
-      ) : null}
 
       {override ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
