@@ -38,6 +38,9 @@ async function guardDispatch(
 
 /** Maps RPC P0001 message codes to friendly ActionResults. */
 function mapRpcError<T = void>(message: string): ActionResult<T> {
+  if (message.includes("deadlock detected") || message.includes("40P01")) {
+    return err("conflict", "The board is busy — try that again.");
+  }
   if (message.includes("run_departed")) return err("conflict", "That run has already departed.");
   if (message.includes("invalid_status")) return err("conflict", "Only confirmed or ready orders can be dispatched.");
   if (message.includes("invalid_truck")) return err("conflict", "That truck is not active in this organization.");

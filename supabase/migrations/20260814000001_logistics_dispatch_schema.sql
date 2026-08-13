@@ -341,9 +341,12 @@ revoke all on function public.dispatch_unassign_order(uuid) from public;
 grant execute on function public.dispatch_unassign_order(uuid) to authenticated;
 
 -- ---------------------------------------------------------------------------
--- set_run_status: re-create with 'logistics' added to the allowed roles so
--- logistics staff can depart trucks from the dispatch board. Body otherwise
--- identical to 20260810000002.
+-- set_run_status: re-created (roles unchanged from 20260810000002 -- the
+-- dispatch board departs trucks through dispatch_depart_truck, which is the
+-- function that carries the 'logistics' role, so widening this one's role
+-- array would be unused privilege). On the transition into 'departed', also
+-- release any non-ready order still attached to the run back to the pool, so
+-- this path honors the same contract as dispatch_depart_truck.
 -- ---------------------------------------------------------------------------
 create or replace function public.set_run_status(p_run uuid, p_status public.delivery_run_status)
 returns void
@@ -362,7 +365,7 @@ begin
     raise exception using errcode = 'P0001', message = 'invalid_transition';
   end if;
 
-  if not public.has_org_role(v_org, array['owner', 'org_admin', 'seller', 'logistics']) then
+  if not public.has_org_role(v_org, array['owner', 'org_admin', 'seller']) then
     raise exception using errcode = 'P0001', message = 'forbidden';
   end if;
 
@@ -380,6 +383,12 @@ begin
     or (v_current = 'completed' and p_status = 'completed')
   ) then
     raise exception using errcode = 'P0001', message = 'invalid_transition';
+  end if;
+
+  if p_status = 'departed' then
+    update public.orders
+    set run_id = null, assignment_source = 'none'
+    where run_id = p_run and status <> 'ready';
   end if;
 
   update public.delivery_runs set status = p_status where id = p_run;

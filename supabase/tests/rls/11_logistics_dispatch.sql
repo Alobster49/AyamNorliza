@@ -9,7 +9,7 @@
 
 begin;
 
-select plan(16);
+select plan(22);
 
 create temporary table _scratch (label text primary key, order_id uuid);
 grant select, insert on _scratch to authenticated;
@@ -71,7 +71,9 @@ on conflict (id) do nothing;
 insert into public.trucks (id, organization_id, name, code, created_by)
 values
   ('c0000000-0000-0000-0000-000000000050', 'c0000000-0000-0000-0000-00000000000a', 'Dispatch Truck 1', 'DSP-1', 'c0000000-0000-0000-0000-000000000001'),
-  ('c0000000-0000-0000-0000-000000000051', 'c0000000-0000-0000-0000-00000000000a', 'Dispatch Truck 2', 'DSP-2', 'c0000000-0000-0000-0000-000000000001')
+  ('c0000000-0000-0000-0000-000000000051', 'c0000000-0000-0000-0000-00000000000a', 'Dispatch Truck 2', 'DSP-2', 'c0000000-0000-0000-0000-000000000001'),
+  ('c0000000-0000-0000-0000-000000000052', 'c0000000-0000-0000-0000-00000000000a', 'Dispatch Truck 3', 'DSP-3', 'c0000000-0000-0000-0000-000000000001'),
+  ('c0000000-0000-0000-0000-000000000053', 'c0000000-0000-0000-0000-00000000000a', 'Dispatch Truck 4', 'DSP-4', 'c0000000-0000-0000-0000-000000000001')
 on conflict (id) do nothing;
 
 insert into public.truck_zones (truck_id, zone_id, organization_id)
@@ -272,6 +274,19 @@ select results_eq(
   'the ready ticket stays attached to the departed run'
 );
 
+-- Unassigned ticket (starts on truck 3) used to exercise
+-- dispatch_unassign_order + reassignment after the vacated run departs.
+insert into public.orders (
+  id, organization_id, customer_id, created_by, source, status,
+  zone_id, delivery_address, delivery_date, slot_id, truck_id, assignment_source
+) values (
+  'c0000000-0000-0000-0000-000000000090', 'c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000040',
+  'c0000000-0000-0000-0000-000000000001', 'manual', 'confirmed',
+  'c0000000-0000-0000-0000-000000000020', '5 Unassign Street', current_date + 1, 'c0000000-0000-0000-0000-000000000060',
+  'c0000000-0000-0000-0000-000000000050', 'none'
+)
+on conflict (id) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- 7. place_order persists p_postcode.
 -- ---------------------------------------------------------------------------
@@ -302,6 +317,54 @@ select results_eq(
   $$ select postcode from public.orders where id = (select order_id from _scratch where label = 'postcode') $$,
   $$ values ('82000'::text) $$,
   'place_order persists p_postcode on the order row'
+);
+
+-- ---------------------------------------------------------------------------
+-- 8. dispatch_unassign_order clears run_id AND assignment_source, and once
+-- that run departs, the now-unassigned order can still be assigned to a
+-- different truck -- run_id was cleared on unassign, so dispatch_assign_order
+-- never sees the departed run and never raises run_departed.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$ select public.dispatch_assign_order('c0000000-0000-0000-0000-000000000090', 'c0000000-0000-0000-0000-000000000052', 'manual') $$,
+  'dispatch_assign_order assigns the unassign-test order to truck 3'
+);
+
+select lives_ok(
+  $$ select public.dispatch_unassign_order('c0000000-0000-0000-0000-000000000090') $$,
+  'dispatch_unassign_order does not raise'
+);
+
+reset role;
+
+select results_eq(
+  $$ select run_id, assignment_source::text from public.orders where id = 'c0000000-0000-0000-0000-000000000090' $$,
+  $$ values (null::uuid, 'none'::text) $$,
+  'dispatch_unassign_order clears run_id and assignment_source'
+);
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$ select public.dispatch_depart_truck('c0000000-0000-0000-0000-000000000052', current_date + 1) $$,
+  'dispatch_depart_truck departs truck 3''s now-vacated run'
+);
+
+select lives_ok(
+  $$ select public.dispatch_assign_order('c0000000-0000-0000-0000-000000000090', 'c0000000-0000-0000-0000-000000000053', 'manual') $$,
+  'the unassigned order can be reassigned to another truck after its old run departed (no run_departed)'
+);
+
+reset role;
+
+select results_eq(
+  $$ select truck_id, assignment_source::text from public.orders where id = 'c0000000-0000-0000-0000-000000000090' $$,
+  $$ values ('c0000000-0000-0000-0000-000000000053'::uuid, 'manual'::text) $$,
+  'the reassigned order now points at truck 4'
 );
 
 select * from finish();
