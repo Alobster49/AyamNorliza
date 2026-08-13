@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
 import { MANAGER_ROLES } from "@/features/orders/lib/roles";
 import { getDeliverySetup } from "@/features/orders/server/schedule-actions";
+import { getLogisticsSetup } from "@/features/logistics/server/facility-actions";
 import { DeliveryClient } from "./delivery-client";
 
 export default async function DeliveryPage({
@@ -11,19 +12,30 @@ export default async function DeliveryPage({
 }) {
   const { organizationSlug } = await params;
 
-  try {
-    await requireOrgRole(organizationSlug, MANAGER_ROLES);
-  } catch (error) {
-    if (error instanceof OrderPermissionError) {
-      redirect(`/${organizationSlug}/tasks`);
+  const ctx = await (async () => {
+    try {
+      return await requireOrgRole(organizationSlug, MANAGER_ROLES);
+    } catch (error) {
+      if (error instanceof OrderPermissionError) {
+        redirect(`/${organizationSlug}/tasks`);
+      }
+      throw error;
     }
-    throw error;
-  }
+  })();
 
-  const result = await getDeliverySetup(organizationSlug);
-  if (!result.ok) {
-    throw new Error(result.message);
-  }
+  const [result, logistics] = await Promise.all([
+    getDeliverySetup(organizationSlug),
+    getLogisticsSetup(organizationSlug),
+  ]);
+  if (!result.ok) throw new Error(result.message);
+  if (!logistics.ok) throw new Error(logistics.message);
 
-  return <DeliveryClient organizationSlug={organizationSlug} initialSetup={result.data} />;
+  return (
+    <DeliveryClient
+      organizationSlug={organizationSlug}
+      initialSetup={result.data}
+      logisticsSetup={logistics.data}
+      role={ctx.role}
+    />
+  );
 }

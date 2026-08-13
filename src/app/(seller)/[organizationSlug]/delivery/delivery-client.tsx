@@ -24,6 +24,10 @@ import type {
   Truck,
   TruckZone,
 } from "@/features/orders/types";
+import type { LogisticsSetup } from "@/features/logistics/server/facility-actions";
+import { BaysPanel } from "@/features/logistics/components/bays-panel";
+import { FacilityPanel } from "@/features/logistics/components/facility-panel";
+import { PostcodeRangesPanel } from "@/features/logistics/components/postcode-ranges-panel";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -55,9 +59,16 @@ type SlotDialogState = { truckId: string; slot?: DeliverySlot } | null;
 type DeliveryClientProps = {
   organizationSlug: string;
   initialSetup: DeliverySetup;
+  logisticsSetup: LogisticsSetup;
+  role: string;
 };
 
-export function DeliveryClient({ organizationSlug, initialSetup }: DeliveryClientProps) {
+export function DeliveryClient({
+  organizationSlug,
+  initialSetup,
+  logisticsSetup,
+  role,
+}: DeliveryClientProps) {
   const { toast } = useToast();
   const [zones, setZones] = useState<DeliveryZone[]>(initialSetup.zones);
   const [trucks, setTrucks] = useState<Truck[]>(initialSetup.trucks);
@@ -270,6 +281,9 @@ export function DeliveryClient({ organizationSlug, initialSetup }: DeliveryClien
           <TabsTrigger value="trucks">Trucks</TabsTrigger>
           <TabsTrigger value="slots">Slots</TabsTrigger>
           <TabsTrigger value="blocks">Blocked dates</TabsTrigger>
+          <TabsTrigger value="factory">Factory</TabsTrigger>
+          <TabsTrigger value="bays">Bays</TabsTrigger>
+          <TabsTrigger value="postcodes">Zone postcodes</TabsTrigger>
         </TabsList>
 
         <TabsContent value="zones" className="space-y-4">
@@ -594,6 +608,31 @@ export function DeliveryClient({ organizationSlug, initialSetup }: DeliveryClien
               </TableBody>
             </Table>
           </div>
+        </TabsContent>
+
+        <TabsContent value="factory" className="space-y-4">
+          <FacilityPanel
+            organizationSlug={organizationSlug}
+            facility={logisticsSetup.facility}
+            canEdit={role === "owner" || role === "org_admin"}
+          />
+        </TabsContent>
+
+        <TabsContent value="bays" className="space-y-4">
+          <BaysPanel
+            organizationSlug={organizationSlug}
+            facilityId={logisticsSetup.facility?.id ?? null}
+            bays={logisticsSetup.bays}
+            trucks={trucks}
+          />
+        </TabsContent>
+
+        <TabsContent value="postcodes" className="space-y-4">
+          <PostcodeRangesPanel
+            organizationSlug={organizationSlug}
+            zones={zones}
+            ranges={logisticsSetup.ranges}
+          />
         </TabsContent>
       </Tabs>
 

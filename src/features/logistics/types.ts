@@ -64,7 +64,9 @@ export type ZonePostcodeRange = {
 // Composites
 // ---------------------------------------------------------------------------
 
-export type DispatchTruck = Truck & { bay_id: string | null };
+/** Truck now carries bay_id natively (see @/features/orders/types); kept as
+ *  an alias so existing logistics call sites don't need to change. */
+export type DispatchTruck = Truck;
 
 export type DispatchTicket = Order & {
   customer?: { name: string };
