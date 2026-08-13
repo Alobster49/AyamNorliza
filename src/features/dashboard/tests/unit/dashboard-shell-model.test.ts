@@ -90,6 +90,18 @@ describe("dashboard shell model", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]?.title).toBe("Warehouse");
     expect(groups[0]?.items[0]).toMatchObject({ isActive: false });
+    expect(groups[0]?.items).toEqual([
+      {
+        title: "Warehouse tasks",
+        href: "/ayam-norliza-pilot/tasks",
+        isActive: false,
+      },
+      {
+        title: "Dispatch",
+        href: "/ayam-norliza-pilot/dispatch",
+        isActive: false,
+      },
+    ]);
   });
 
   it("returns the full nav with delivery segments for manager roles", () => {
@@ -106,6 +118,7 @@ describe("dashboard shell model", () => {
       "Orders",
       "Customers",
       "Delivery setup",
+      "Dispatch",
       "Delivery runs",
       "Warehouse tasks",
     ]);

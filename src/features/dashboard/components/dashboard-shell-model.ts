@@ -35,6 +35,7 @@ const routeGroups = [
       { title: "Orders", segment: "orders" },
       { title: "Customers", segment: "customers" },
       { title: "Delivery setup", segment: "delivery" },
+      { title: "Dispatch", segment: "dispatch" },
       { title: "Delivery runs", segment: "runs" },
       { title: "Warehouse tasks", segment: "tasks" },
     ],
@@ -52,10 +53,14 @@ export function getDashboardSidebarGroups({
   role,
 }: DashboardPathInput): DashboardRouteGroup[] {
   if (role && (STAFF_ONLY_ROLES as readonly string[]).includes(role)) {
-    const href = `/${organizationSlug}/tasks`;
+    const tasksHref = `/${organizationSlug}/tasks`;
     const items = [
-      { title: "Warehouse tasks", href, isActive: isRouteActive(pathname, href) },
+      { title: "Warehouse tasks", href: tasksHref, isActive: isRouteActive(pathname, tasksHref) },
     ];
+    if (role === "logistics") {
+      const dispatchHref = `/${organizationSlug}/dispatch`;
+      items.push({ title: "Dispatch", href: dispatchHref, isActive: isRouteActive(pathname, dispatchHref) });
+    }
     return [{ title: "Warehouse", isActive: items.some((item) => item.isActive), items }];
   }
 
