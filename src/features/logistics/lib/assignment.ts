@@ -36,7 +36,7 @@ export type AssignmentResult =
 /** "YYYY-MM-DD" -> 0..6 (0=Sunday). Parses as local date parts, no UTC drift. */
 export function weekdayOf(dateString: string): number {
   const [y, m, d] = dateString.split("-").map(Number);
-  return new Date(y, m - 1, d).getDay();
+  return new Date(y ?? 0, (m ?? 1) - 1, d ?? 1).getDay();
 }
 
 export function suggestTruck(
@@ -90,5 +90,5 @@ export function suggestTruck(
   underCap.sort(
     (a, b) => (ctx.loads[a.id] ?? 0) - (ctx.loads[b.id] ?? 0) || a.code.localeCompare(b.code),
   );
-  return { ok: true, truckId: underCap[0].id, zoneId };
+  return { ok: true, truckId: underCap[0]!.id, zoneId };
 }

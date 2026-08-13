@@ -37,5 +37,5 @@ export function matchZone(
     const nameB = zoneById.get(b.zone_id)!.name;
     return nameA.localeCompare(nameB) || a.zone_id.localeCompare(b.zone_id);
   });
-  return matched[0].zone_id;
+  return matched[0]!.zone_id;
 }
