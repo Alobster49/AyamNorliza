@@ -1,0 +1,285 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
+import type { ActionResult } from "@/features/orders/types";
+import { suggestTruck, type AssignmentContext } from "../lib/assignment";
+import { DISPATCH_ROLES } from "../lib/roles";
+import type { DispatchBoardData, DispatchTicket, DispatchTruck, Facility, Bay, ZonePostcodeRange } from "../types";
+
+type DispatchErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
+
+function err<T = never>(code: DispatchErrorCode, message: string): ActionResult<T> {
+  return { ok: false, code, message };
+}
+
+function ok<T>(data: T): ActionResult<T> {
+  return { ok: true, data };
+}
+
+async function guardDispatch(
+  organizationSlug: string,
+): Promise<
+  | { ok: true; orgId: string; userId: string }
+  | { ok: false; code: "forbidden"; message: string }
+> {
+  try {
+    const ctx = await requireOrgRole(organizationSlug, DISPATCH_ROLES);
+    return { ok: true, orgId: ctx.orgId, userId: ctx.userId };
+  } catch (e) {
+    if (e instanceof OrderPermissionError) {
+      return { ok: false, code: "forbidden", message: e.message };
+    }
+    throw e;
+  }
+}
+
+/** Maps RPC P0001 message codes to friendly ActionResults. */
+function mapRpcError<T = void>(message: string): ActionResult<T> {
+  if (message.includes("run_departed")) return err("conflict", "That run has already departed.");
+  if (message.includes("invalid_status")) return err("conflict", "Only confirmed or ready orders can be dispatched.");
+  if (message.includes("invalid_truck")) return err("conflict", "That truck is not active in this organization.");
+  if (message.includes("forbidden")) return err("forbidden", "You do not have access to dispatch.");
+  if (message.includes("not_found")) return err("not_found", "Order not found.");
+  return err("internal", message);
+}
+
+const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+
+// ---------------------------------------------------------------------------
+// Board read
+// ---------------------------------------------------------------------------
+
+export async function getDispatchBoard(
+  organizationSlug: string,
+  date: string,
+): Promise<ActionResult<DispatchBoardData>> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+  const { orgId } = guard;
+
+  if (!DATE_REGEX.test(date)) return err("validation", "Invalid date");
+
+  const supabase = await createSupabaseServerClient();
+  const [facility, bays, trucks, zones, ranges, truckZones, slots, blocks, runs, orders] =
+    await Promise.all([
+      supabase.from("facilities").select("*").eq("organization_id", orgId).eq("is_active", true).limit(1).maybeSingle(),
+      supabase.from("bays").select("*").eq("organization_id", orgId).order("position", { ascending: true }),
+      supabase.from("trucks").select("*").eq("organization_id", orgId).order("code", { ascending: true }),
+      supabase.from("delivery_zones").select("*").eq("organization_id", orgId).order("name", { ascending: true }),
+      supabase.from("zone_postcode_ranges").select("*").eq("organization_id", orgId),
+      supabase.from("truck_zones").select("*").eq("organization_id", orgId),
+      supabase.from("delivery_slots").select("*").eq("organization_id", orgId),
+      supabase.from("schedule_blocks").select("*").eq("organization_id", orgId).eq("block_date", date),
+      supabase.from("delivery_runs").select("*").eq("organization_id", orgId).eq("run_date", date),
+      supabase
+        .from("orders")
+        .select("*, customer:customers(name), zone:delivery_zones(name)")
+        .eq("organization_id", orgId)
+        .eq("delivery_date", date)
+        .in("status", ["confirmed", "ready"]),
+    ]);
+
+  if (
+    facility.error || bays.error || trucks.error || zones.error || ranges.error ||
+    truckZones.error || slots.error || blocks.error || runs.error || orders.error
+  ) {
+    return err("internal", "Failed to load the dispatch board");
+  }
+
+  return ok({
+    facility: (facility.data ?? null) as Facility | null,
+    bays: (bays.data ?? []) as Bay[],
+    trucks: (trucks.data ?? []) as DispatchTruck[],
+    zones: (zones.data ?? []) as DispatchBoardData["zones"],
+    ranges: (ranges.data ?? []) as ZonePostcodeRange[],
+    truckZones: (truckZones.data ?? []) as DispatchBoardData["truckZones"],
+    slots: (slots.data ?? []) as DispatchBoardData["slots"],
+    blocks: (blocks.data ?? []) as DispatchBoardData["blocks"],
+    runs: (runs.data ?? []) as DispatchBoardData["runs"],
+    orders: (orders.data ?? []) as DispatchTicket[],
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Assign / unassign
+// ---------------------------------------------------------------------------
+
+const AssignInputSchema = z.object({
+  orderId: z.string().uuid(),
+  truckId: z.string().uuid(),
+});
+
+export async function assignOrder(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+
+  const parsed = AssignInputSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid assignment input");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("dispatch_assign_order", {
+    p_order: parsed.data.orderId,
+    p_truck: parsed.data.truckId,
+    p_source: "manual",
+  });
+  if (error) return mapRpcError(error.message);
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  return ok(undefined);
+}
+
+const UnassignInputSchema = z.object({ orderId: z.string().uuid() });
+
+export async function unassignOrder(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+
+  const parsed = UnassignInputSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid input");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("dispatch_unassign_order", {
+    p_order: parsed.data.orderId,
+  });
+  if (error) return mapRpcError(error.message);
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  return ok(undefined);
+}
+
+// ---------------------------------------------------------------------------
+// Auto-assign (called after confirm; also usable from the board)
+// ---------------------------------------------------------------------------
+
+export async function autoAssignOrder(
+  organizationSlug: string,
+  orderId: string,
+): Promise<ActionResult<{ assigned: boolean; reason?: string }>> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+  const { orgId } = guard;
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .select("id, postcode, delivery_date, slot_id, assignment_source, status")
+    .eq("id", orderId)
+    .eq("organization_id", orgId)
+    .single();
+  if (orderError || !order) return err("not_found", "Order not found");
+  if (order.assignment_source === "manual") return ok({ assigned: false, reason: "manual" });
+
+  const [zones, ranges, truckZones, trucks, slots, blocks, slotRow, loadRows] = await Promise.all([
+    supabase.from("delivery_zones").select("*").eq("organization_id", orgId),
+    supabase.from("zone_postcode_ranges").select("*").eq("organization_id", orgId),
+    supabase.from("truck_zones").select("*").eq("organization_id", orgId),
+    supabase.from("trucks").select("*").eq("organization_id", orgId),
+    supabase.from("delivery_slots").select("*").eq("organization_id", orgId),
+    supabase.from("schedule_blocks").select("*").eq("organization_id", orgId).eq("block_date", order.delivery_date),
+    supabase.from("delivery_slots").select("start_time").eq("id", order.slot_id).maybeSingle(),
+    supabase
+      .from("orders")
+      .select("truck_id")
+      .eq("organization_id", orgId)
+      .eq("delivery_date", order.delivery_date)
+      .in("status", ["confirmed", "ready"])
+      .neq("assignment_source", "none")
+      .neq("id", orderId),
+  ]);
+
+  if (zones.error || ranges.error || truckZones.error || trucks.error || slots.error || blocks.error || loadRows.error) {
+    return err("internal", "Failed to load assignment context");
+  }
+
+  const loads: Record<string, number> = {};
+  for (const row of loadRows.data ?? []) {
+    loads[row.truck_id] = (loads[row.truck_id] ?? 0) + 1;
+  }
+
+  const ctx: AssignmentContext = {
+    zones: zones.data ?? [],
+    ranges: (ranges.data ?? []) as ZonePostcodeRange[],
+    truckZones: truckZones.data ?? [],
+    trucks: (trucks.data ?? []) as DispatchTruck[],
+    slots: slots.data ?? [],
+    blocks: blocks.data ?? [],
+    loads,
+  };
+
+  const suggestion = suggestTruck(
+    {
+      postcode: order.postcode,
+      delivery_date: order.delivery_date,
+      slot_start_time: slotRow.data?.start_time ?? null,
+    },
+    ctx,
+  );
+  if (!suggestion.ok) return ok({ assigned: false, reason: suggestion.reason });
+
+  const { error: rpcError } = await supabase.rpc("dispatch_assign_order", {
+    p_order: orderId,
+    p_truck: suggestion.truckId,
+    p_source: "auto",
+  });
+  if (rpcError) return mapRpcError(rpcError.message);
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  return ok({ assigned: true });
+}
+
+// ---------------------------------------------------------------------------
+// Depart
+// ---------------------------------------------------------------------------
+
+const DepartInputSchema = z.object({
+  truckId: z.string().uuid(),
+  date: z.string().regex(DATE_REGEX),
+});
+
+export async function departTruck(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+  const { orgId } = guard;
+
+  const parsed = DepartInputSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid depart input");
+
+  const supabase = await createSupabaseServerClient();
+  const { data: run, error: runError } = await supabase
+    .from("delivery_runs")
+    .select("id")
+    .eq("organization_id", orgId)
+    .eq("truck_id", parsed.data.truckId)
+    .eq("run_date", parsed.data.date)
+    .maybeSingle();
+  if (runError) return err("internal", runError.message);
+  if (!run) return err("not_found", "No delivery run exists for this truck on this date.");
+
+  const { error } = await supabase.rpc("set_run_status", {
+    p_run: run.id,
+    p_status: "departed",
+  });
+  if (error) {
+    if (error.message.includes("invalid_transition")) {
+      return err("conflict", "This run cannot depart from its current status.");
+    }
+    return mapRpcError(error.message);
+  }
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  revalidatePath(`/${organizationSlug}/runs`);
+  return ok(undefined);
+}
