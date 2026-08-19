@@ -90,8 +90,8 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
                   {row.departed ? " · on the road" : ""}
                 </p>
               </div>
-              <div className="relative h-16">
-                {view.hours.slice(1, -1).map((h, i) => (
+              <div className="relative" style={{ height: `${row.laneCount * 44 + 16}px` }}>
+                {view.hours.slice(1, -1).map((h) => (
                   <span
                     key={h}
                     className="absolute inset-y-0 border-l"
@@ -102,8 +102,13 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
                 {row.blocks.map((b) => (
                   <div
                     key={b.ticket.id}
-                    className={`absolute top-2 flex h-12 min-w-16 flex-col overflow-hidden rounded-md border px-2 py-1 ${BLOCK_CLASS[b.state]}`}
-                    style={{ left: `${b.startPct}%`, width: `${Math.max(b.widthPct, 6)}%` }}
+                    className={`absolute flex min-w-16 flex-col overflow-hidden rounded-md border px-2 py-1 ${BLOCK_CLASS[b.state]}`}
+                    style={{
+                      top: `${8 + b.lane * 44}px`,
+                      height: "40px",
+                      left: `${b.startPct}%`,
+                      width: `${Math.min(Math.max(b.widthPct, 6), 100 - b.startPct)}%`,
+                    }}
                     title={`${b.ticket.customer?.name ?? "Order"} · ${fmt(b.startMin)} · ${STATE_LABEL[b.state]}`}
                   >
                     <span className="truncate text-[11px] font-semibold">{b.ticket.customer?.name ?? "Order"}</span>

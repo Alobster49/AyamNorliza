@@ -96,6 +96,34 @@ describe("buildTimeline", () => {
     expect(buildTimeline(data, DATE, null).nowPct).toBeNull();
   });
 
+  it("stacks overlapping blocks into separate lanes", () => {
+    const data = baseData();
+    const truckId = data.trucks[0]!.id;
+    data.orders = [
+      order({ assignment_source: "auto", truck_id: truckId }),
+      order({ assignment_source: "auto", truck_id: truckId }),
+    ];
+    const row = buildTimeline(data, DATE, null).rows[0]!;
+    expect(row.laneCount).toBe(2);
+    expect(row.blocks.map((b) => b.lane).sort()).toEqual([0, 1]);
+  });
+
+  it("reuses lane 0 for blocks whose slots do not overlap", () => {
+    const data = baseData();
+    const truckId = data.trucks[0]!.id;
+    data.slots = [
+      data.slots[0]!,
+      { ...data.slots[0]!, id: "slot-2", start_time: "10:00:00", end_time: "11:00:00" },
+    ];
+    data.orders = [
+      order({ assignment_source: "auto", truck_id: truckId }),
+      order({ assignment_source: "auto", truck_id: truckId, slot_id: "slot-2" }),
+    ];
+    const row = buildTimeline(data, DATE, null).rows[0]!;
+    expect(row.laneCount).toBe(1);
+    expect(row.blocks.map((b) => b.lane)).toEqual([0, 0]);
+  });
+
   it("falls back to a 06:00-14:00 window when nothing is scheduled", () => {
     const view = buildTimeline(baseData(), DATE, null);
     expect(view.windowStart).toBe(360);

@@ -19,6 +19,8 @@ export type TimelineBlock = {
   startPct: number;
   widthPct: number;
   state: BlockState;
+  /** Stacking row within the truck lane; 0 is the topmost. */
+  lane: number;
 };
 
 export type TimelineRow = {
@@ -26,6 +28,8 @@ export type TimelineRow = {
   departed: boolean;
   blocks: TimelineBlock[];
   loadKg: number;
+  /** How many lanes this row needs to show overlapping blocks side by side. */
+  laneCount: number;
 };
 
 export type TimelineView = {
@@ -80,25 +84,49 @@ export function buildTimeline(
   const windowEnd = Number.isFinite(max) ? Math.max(Math.ceil(max / 60) * 60, windowStart + 120) : DEFAULT_END;
   const span = windowEnd - windowStart;
 
-  const rows: TimelineRow[] = boardTrucks.map((bt) => ({
-    truck: bt.truck,
-    departed: bt.departed,
-    loadKg: totalWeightKg(bt.tickets),
-    blocks: bt.tickets.flatMap((ticket) => {
-      const slot = slotById.get(ticket.slot_id);
-      if (!slot) return [];
-      const startMin = minutesOf(slot.start_time);
-      const endMin = Math.max(minutesOf(slot.end_time), startMin + 15);
-      return [{
-        ticket,
-        startMin,
-        endMin,
-        startPct: ((startMin - windowStart) / span) * 100,
-        widthPct: ((endMin - startMin) / span) * 100,
-        state: blockState(ticket, bt.departed, startMin, nowMinutes),
-      }];
-    }),
-  }));
+  const rows: TimelineRow[] = boardTrucks.map((bt) => {
+    const blocks: TimelineBlock[] = bt.tickets
+      .flatMap((ticket) => {
+        const slot = slotById.get(ticket.slot_id);
+        if (!slot) return [];
+        const startMin = minutesOf(slot.start_time);
+        const endMin = Math.max(minutesOf(slot.end_time), startMin + 15);
+        return [{
+          ticket,
+          startMin,
+          endMin,
+          startPct: ((startMin - windowStart) / span) * 100,
+          widthPct: ((endMin - startMin) / span) * 100,
+          state: blockState(ticket, bt.departed, startMin, nowMinutes),
+          lane: 0,
+        }];
+      })
+      .sort((a, b) => a.startMin - b.startMin || a.endMin - b.endMin);
+
+    // Greedy interval partitioning: reuse the first lane that has already
+    // ended by the time this block starts, otherwise open a new one. Without
+    // it, same-slot orders on one truck stack on top of each other and only
+    // the last is readable.
+    const laneEnds: number[] = [];
+    for (const block of blocks) {
+      let lane = laneEnds.findIndex((end) => end <= block.startMin);
+      if (lane === -1) {
+        lane = laneEnds.length;
+        laneEnds.push(block.endMin);
+      } else {
+        laneEnds[lane] = block.endMin;
+      }
+      block.lane = lane;
+    }
+
+    return {
+      truck: bt.truck,
+      departed: bt.departed,
+      loadKg: totalWeightKg(bt.tickets),
+      blocks,
+      laneCount: Math.max(laneEnds.length, 1),
+    };
+  });
 
   const hours: number[] = [];
   for (let h = windowStart / 60; h <= windowEnd / 60; h++) hours.push(h);
