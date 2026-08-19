@@ -87,6 +87,20 @@ describe("draftPlan", () => {
     expect(draft.proposals).toHaveLength(0);
     expect(draft.exceptions[0]!.kind).toBe("all_trucks_full");
   });
+
+  it("plans orders the board pools as a safety net (assigned to an off-board truck)", () => {
+    const data = baseData();
+    // Truck 2 has no bay, so the board refuses to show tickets on it and
+    // pools them instead — the plan must offer those a real truck too.
+    const offBoard = truck({ id: "truck-off".padEnd(36, "0"), code: "T2", bay_id: null });
+    data.trucks = [...data.trucks, offBoard];
+    data.orders = [order({ assignment_source: "manual", truck_id: offBoard.id })];
+
+    const draft = draftPlan(data, DATE);
+    expect(draft.poolCount).toBe(1);
+    expect(draft.proposals.length + draft.exceptions.length).toBe(1);
+    expect(draft.proposals[0]!.truckId).toBe(data.trucks[0]!.id);
+  });
 });
 
 describe("orderWeightKg", () => {

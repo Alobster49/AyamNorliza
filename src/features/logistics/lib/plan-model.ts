@@ -7,6 +7,7 @@
 
 import type { DispatchBoardData, DispatchTicket } from "../types";
 import { suggestTruck, type AssignmentContext, type AssignmentResult } from "./assignment";
+import { buildBoardView } from "./dispatch-board-model";
 
 export type PlanProposal = { orderId: string; truckId: string; zoneId: string; reason: string };
 export type ExceptionKind = Extract<AssignmentResult, { ok: false }>["reason"];
@@ -52,9 +53,10 @@ export function draftPlan(data: DispatchBoardData, date: string): PlanDraft {
     loads,
   };
 
-  const pool = data.orders
-    .filter((o) => o.assignment_source === "none")
-    .sort((a, b) => (slotStartById.get(a.slot_id) ?? "").localeCompare(slotStartById.get(b.slot_id) ?? ""));
+  // Plan from the board's pool, not the raw assignment_source: the board's
+  // display safety net also pools tickets sitting on an inactive/bay-less
+  // truck, and those need a proposal too (they already sort by slot start).
+  const pool = buildBoardView(data, date).pool;
 
   const proposals: PlanProposal[] = [];
   const exceptions: PlanException[] = [];
