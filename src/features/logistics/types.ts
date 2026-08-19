@@ -68,10 +68,20 @@ export type ZonePostcodeRange = {
  *  an alias so existing logistics call sites don't need to change. */
 export type DispatchTruck = Truck;
 
+export type TicketItem = {
+  quantity: number;
+  warehouse_weight_kg: number | null;
+  warehouse_pieces: number | null;
+  final_weight_kg: number | null;
+  is_cancelled: boolean;
+  product?: { name: string } | null;
+};
+
 export type DispatchTicket = Order & {
   customer?: { name: string };
   zone?: { name: string };
   item_count?: number;
+  items?: TicketItem[];
 };
 
 export type DispatchBoardData = {

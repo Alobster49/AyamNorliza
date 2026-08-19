@@ -79,7 +79,9 @@ export async function getDispatchBoard(
       supabase.from("delivery_runs").select("*").eq("organization_id", orgId).eq("run_date", date),
       supabase
         .from("orders")
-        .select("*, customer:customers(name), zone:delivery_zones(name)")
+        .select(
+          "*, customer:customers(name), zone:delivery_zones(name), items:order_items(quantity, warehouse_weight_kg, warehouse_pieces, final_weight_kg, is_cancelled, product:products(name))",
+        )
         .eq("organization_id", orgId)
         .eq("delivery_date", date)
         .in("status", ["confirmed", "ready"]),

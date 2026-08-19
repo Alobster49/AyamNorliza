@@ -13,7 +13,7 @@ function bay(id: string, name: string, position: number, active = true): Bay {
 function truck(id: string, code: string, bayId: string | null, active = true): DispatchTruck {
   return {
     id, organization_id: "org-1", name: `Truck ${code}`, code, is_active: active,
-    bay_id: bayId, created_by: null, created_at: "", updated_at: "", version: 1,
+    bay_id: bayId, capacity_kg: null, created_by: null, created_at: "", updated_at: "", version: 1,
   };
 }
 function ticket(id: string, truckId: string, source: "none" | "auto" | "manual", status: "confirmed" | "ready" = "confirmed"): DispatchTicket {
@@ -21,7 +21,8 @@ function ticket(id: string, truckId: string, source: "none" | "auto" | "manual",
     id, organization_id: "org-1", customer_id: "cust-1", created_by: null,
     source: "portal", status, zone_id: "z-south", delivery_address: "addr",
     delivery_date: DATE, slot_id: "slot-1", truck_id: truckId, run_id: null,
-    notes: null, total_amount: 0, closed_at: null, created_at: "", updated_at: "",
+    notes: null, total_amount: 0, closed_at: null, loaded_at: null, loaded_by: null,
+    created_at: "", updated_at: "",
     version: 1, postcode: "82100", assignment_source: source,
     customer: { name: `Customer ${id}` },
   };
