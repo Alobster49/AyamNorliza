@@ -36,6 +36,7 @@ const routeGroups = [
       { title: "Customers", segment: "customers" },
       { title: "Delivery setup", segment: "delivery" },
       { title: "Dispatch", segment: "dispatch" },
+      { title: "Loading", segment: "loading" },
       { title: "Delivery runs", segment: "runs" },
       { title: "Warehouse tasks", segment: "tasks" },
     ],
@@ -60,6 +61,8 @@ export function getDashboardSidebarGroups({
     if (role === "logistics") {
       const dispatchHref = `/${organizationSlug}/dispatch`;
       items.push({ title: "Dispatch", href: dispatchHref, isActive: isRouteActive(pathname, dispatchHref) });
+      const loadingHref = `/${organizationSlug}/loading`;
+      items.push({ title: "Loading", href: loadingHref, isActive: isRouteActive(pathname, loadingHref) });
     }
     return [{ title: "Warehouse", isActive: items.some((item) => item.isActive), items }];
   }
