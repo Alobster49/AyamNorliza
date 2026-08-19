@@ -44,6 +44,7 @@ function mapRpcError<T = void>(message: string): ActionResult<T> {
   if (message.includes("run_departed")) return err("conflict", "That run has already departed.");
   if (message.includes("invalid_status")) return err("conflict", "Only confirmed or ready orders can be dispatched.");
   if (message.includes("invalid_truck")) return err("conflict", "That truck is not active in this organization.");
+  if (message.includes("not_assigned")) return err("conflict", "That order is not on a truck yet.");
   if (message.includes("forbidden")) return err("forbidden", "You do not have access to dispatch.");
   if (message.includes("not_found")) return err("not_found", "Order not found.");
   return err("internal", message);
