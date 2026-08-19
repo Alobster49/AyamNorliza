@@ -280,3 +280,74 @@ export async function departTruck(
   revalidatePath(`/${organizationSlug}/runs`);
   return ok(undefined);
 }
+
+// ---------------------------------------------------------------------------
+// Plan apply (auto-plan deck) + loading confirmation
+// ---------------------------------------------------------------------------
+
+const ApplyPlanSchema = z.object({
+  assignments: z
+    .array(z.object({ orderId: z.string().uuid(), truckId: z.string().uuid() }))
+    .min(1)
+    .max(200),
+});
+
+export async function applyPlan(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult<{ applied: number; failed: { orderId: string; message: string }[] }>> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+
+  const parsed = ApplyPlanSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid plan payload");
+
+  const supabase = await createSupabaseServerClient();
+  let applied = 0;
+  const failed: { orderId: string; message: string }[] = [];
+  // Sequential on purpose: dispatch_assign_order locks order + run rows;
+  // firing 200 in parallel invites deadlocks the RPC then rejects.
+  for (const a of parsed.data.assignments) {
+    const { error } = await supabase.rpc("dispatch_assign_order", {
+      p_order: a.orderId,
+      p_truck: a.truckId,
+      p_source: "auto",
+    });
+    if (error) {
+      const mapped = mapRpcError(error.message) as { ok: false; message: string };
+      failed.push({ orderId: a.orderId, message: mapped.message });
+    } else {
+      applied += 1;
+    }
+  }
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  return ok({ applied, failed });
+}
+
+const SetLoadedSchema = z.object({
+  orderId: z.string().uuid(),
+  loaded: z.boolean(),
+});
+
+export async function setOrderLoaded(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult<void>> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+
+  const parsed = SetLoadedSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid input");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("dispatch_set_loaded", {
+    p_order: parsed.data.orderId,
+    p_loaded: parsed.data.loaded,
+  });
+  if (error) return mapRpcError(error.message);
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  revalidatePath(`/${organizationSlug}/loading`);
+  return ok(undefined);
+}

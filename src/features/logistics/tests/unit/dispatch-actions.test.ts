@@ -12,7 +12,14 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { assignOrder, unassignOrder, departTruck, autoAssignOrder } from "../../server/dispatch-actions";
+import {
+  assignOrder,
+  unassignOrder,
+  departTruck,
+  autoAssignOrder,
+  applyPlan,
+  setOrderLoaded,
+} from "../../server/dispatch-actions";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
 
@@ -227,6 +234,83 @@ describe("departTruck", () => {
       ok: false,
       code: "conflict",
       message: "This run cannot depart from its current status.",
+    });
+  });
+});
+
+describe("applyPlan", () => {
+  it("rejects a malformed payload with a validation error", async () => {
+    mockSupabaseFor({ role: "logistics" });
+
+    const result = await applyPlan("ayam-norliza-pilot", { assignments: [] });
+
+    expect(result.ok).toBe(false);
+    expect(result).toMatchObject({ ok: false, code: "validation" });
+  });
+
+  it("applies each assignment via dispatch_assign_order with p_source auto and counts failures per order", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc
+      .mockResolvedValueOnce({ data: null, error: null })
+      .mockResolvedValueOnce({ data: null, error: { message: "invalid_status" } });
+
+    const result = await applyPlan("ayam-norliza-pilot", {
+      assignments: [
+        { orderId: "5b1f5c1e-0000-4000-8000-000000000001", truckId: "5b1f5c1e-0000-4000-8000-000000000002" },
+        { orderId: "5b1f5c1e-0000-4000-8000-000000000003", truckId: "5b1f5c1e-0000-4000-8000-000000000004" },
+      ],
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok result");
+    expect(result.data.applied).toBe(1);
+    expect(result.data.failed).toHaveLength(1);
+    expect(result.data.failed[0]?.orderId).toBe("5b1f5c1e-0000-4000-8000-000000000003");
+    expect(result.data.failed[0]?.message).toContain("confirmed or ready");
+
+    expect(supabase.rpc).toHaveBeenNthCalledWith(1, "dispatch_assign_order", {
+      p_order: "5b1f5c1e-0000-4000-8000-000000000001",
+      p_truck: "5b1f5c1e-0000-4000-8000-000000000002",
+      p_source: "auto",
+    });
+    expect(supabase.rpc).toHaveBeenNthCalledWith(2, "dispatch_assign_order", {
+      p_order: "5b1f5c1e-0000-4000-8000-000000000003",
+      p_truck: "5b1f5c1e-0000-4000-8000-000000000004",
+      p_source: "auto",
+    });
+  });
+});
+
+describe("setOrderLoaded", () => {
+  it("calls dispatch_set_loaded with the parsed flags", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: null });
+
+    const result = await setOrderLoaded("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      loaded: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(supabase.rpc).toHaveBeenCalledWith("dispatch_set_loaded", {
+      p_order: "5b1f5c1e-0000-4000-8000-000000000001",
+      p_loaded: true,
+    });
+  });
+
+  it("maps run_departed rpc errors to a conflict", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "run_departed" } });
+
+    const result = await setOrderLoaded("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      loaded: false,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "That run has already departed.",
     });
   });
 });
