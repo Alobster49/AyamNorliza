@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   catalogSummary,
+  countArchived,
   countByCategory,
   filterByCategory,
+  filterCatalog,
   priceRangeLabel,
   sortCategories,
   type CatalogProduct,
@@ -161,5 +163,46 @@ describe("catalogSummary", () => {
 
   it("handles empty catalog", () => {
     expect(catalogSummary([])).toEqual({ productCount: 0, variantCount: 0, soldOutCount: 0 });
+  });
+});
+
+describe("filterCatalog", () => {
+  const active = product({ id: "p1", category_id: "cat-1", is_active: true });
+  const otherCategory = product({ id: "p2", category_id: "cat-2", is_active: true });
+  const archived = product({ id: "p3", category_id: "cat-1", is_active: false });
+  const products = [active, otherCategory, archived];
+
+  it("hides archived products from the live catalog", () => {
+    expect(filterCatalog(products, null).map((p) => p.id)).toEqual(["p1", "p2"]);
+  });
+
+  it("shows only archived products in the archived view", () => {
+    expect(filterCatalog(products, "archived").map((p) => p.id)).toEqual(["p3"]);
+  });
+
+  it("filters to a category without showing its archived products", () => {
+    expect(filterCatalog(products, "cat-1").map((p) => p.id)).toEqual(["p1"]);
+  });
+});
+
+describe("countByCategory with archived products", () => {
+  it("excludes archived products from category counts", () => {
+    const counts = countByCategory([
+      product({ id: "p1", category_id: "cat-1", is_active: true }),
+      product({ id: "p2", category_id: "cat-1", is_active: false }),
+    ]);
+    expect(counts.get("cat-1")).toBe(1);
+  });
+});
+
+describe("countArchived", () => {
+  it("counts archived products", () => {
+    expect(
+      countArchived([
+        product({ id: "p1", is_active: true }),
+        product({ id: "p2", is_active: false }),
+        product({ id: "p3", is_active: false }),
+      ]),
+    ).toBe(2);
   });
 });

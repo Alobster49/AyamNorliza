@@ -6,11 +6,14 @@ import { UNIT_TYPE_LABELS } from "@/features/seller/types";
 import { priceRangeLabel, type CatalogProduct } from "@/features/seller/lib/catalog-model";
 import { formatPrice } from "@/features/seller/lib/pricing";
 import { AvailabilitySwitch } from "./availability-switch";
+import { ProductActionsMenu } from "./product-actions-menu";
 
 type ProductLedgerProps = {
   products: CatalogProduct[];
   onEditProduct: (product: CatalogProduct) => void;
   onDeleteProduct: (product: CatalogProduct) => void;
+  onArchiveProduct: (product: CatalogProduct) => void;
+  onRestoreProduct: (product: CatalogProduct) => void;
   onAddVariant: (product: CatalogProduct) => void;
   onEditVariant: (product: CatalogProduct, variant: ProductVariant) => void;
   onDeleteVariant: (product: CatalogProduct, variant: ProductVariant) => void;
@@ -25,6 +28,8 @@ export function ProductLedger({
   products,
   onEditProduct,
   onDeleteProduct,
+  onArchiveProduct,
+  onRestoreProduct,
   onAddVariant,
   onEditVariant,
   onDeleteVariant,
@@ -46,19 +51,19 @@ export function ProductLedger({
           <div className="group flex items-center gap-2 border-b bg-muted/30 px-4 py-2">
             <span className="min-w-0 truncate text-sm font-semibold">{product.name}</span>
             {!product.is_active && (
-              <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                Inactive
+              <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                Archived
               </span>
             )}
             <span className="ml-auto hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
               {priceRangeLabel(product) ?? "no sizes yet"}
             </span>
-            <span className="flex shrink-0 items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <span className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => onAddVariant(product)}
                 aria-label={`Add size to ${product.name}`}
-                className="rounded p-1 text-muted-foreground hover:text-foreground"
+                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -66,18 +71,18 @@ export function ProductLedger({
                 type="button"
                 onClick={() => onEditProduct(product)}
                 aria-label={`Edit ${product.name}`}
-                className="rounded p-1 text-muted-foreground hover:text-foreground"
+                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
-              <button
-                type="button"
-                onClick={() => onDeleteProduct(product)}
-                aria-label={`Delete ${product.name}`}
-                className="rounded p-1 text-muted-foreground hover:text-destructive"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              <ProductActionsMenu
+                product={product}
+                onEdit={() => onEditProduct(product)}
+                onAddVariant={() => onAddVariant(product)}
+                onArchive={() => onArchiveProduct(product)}
+                onRestore={() => onRestoreProduct(product)}
+                onDelete={() => onDeleteProduct(product)}
+              />
             </span>
           </div>
 

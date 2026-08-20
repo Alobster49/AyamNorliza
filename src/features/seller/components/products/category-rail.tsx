@@ -1,14 +1,16 @@
 "use client";
 
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, Pencil, Plus, Trash2 } from "lucide-react";
 import type { Category } from "@/features/seller/types";
+import { ARCHIVED_VIEW, type CatalogFilter } from "@/features/seller/lib/catalog-model";
 
 type CategoryRailProps = {
   categories: Category[];
   counts: Map<string, number>;
   totalCount: number;
-  selectedCategoryId: string | null;
-  onSelectCategory: (categoryId: string | null) => void;
+  archivedCount: number;
+  selectedCategoryId: CatalogFilter;
+  onSelectCategory: (filter: CatalogFilter) => void;
   onAddCategory: () => void;
   onEditCategory: (category: Category) => void;
   onDeleteCategory: (category: Category) => void;
@@ -22,6 +24,7 @@ export function CategoryRail({
   categories,
   counts,
   totalCount,
+  archivedCount,
   selectedCategoryId,
   onSelectCategory,
   onAddCategory,
@@ -65,6 +68,18 @@ export function CategoryRail({
         />
       ))}
 
+      {/* Stays visible while it is the current view, so restoring the last
+          archived product doesn't strand the user on a filter with no entry. */}
+      {(archivedCount > 0 || selectedCategoryId === ARCHIVED_VIEW) && (
+        <RailItem
+          label="Archived"
+          count={archivedCount}
+          icon={<Archive className="h-3.5 w-3.5 shrink-0 opacity-70" />}
+          selected={selectedCategoryId === ARCHIVED_VIEW}
+          onSelect={() => onSelectCategory(ARCHIVED_VIEW)}
+        />
+      )}
+
       <div className="hidden border-t border-dashed px-3 py-2 md:block">
         <button
           type="button"
@@ -85,9 +100,10 @@ type RailItemProps = {
   onSelect: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
+  icon?: React.ReactNode;
 };
 
-function RailItem({ label, count, selected, onSelect, onEdit, onDelete }: RailItemProps) {
+function RailItem({ label, count, selected, onSelect, onEdit, onDelete, icon }: RailItemProps) {
   return (
     <div
       className={`group flex shrink-0 items-center rounded-full md:w-full md:rounded-none md:border-l-2 ${
@@ -102,6 +118,7 @@ function RailItem({ label, count, selected, onSelect, onEdit, onDelete }: RailIt
         aria-current={selected ? "true" : undefined}
         className="flex min-w-0 flex-1 items-center gap-2 px-3.5 py-2 text-left text-sm md:px-3"
       >
+        {icon}
         <span className="truncate font-medium">{label}</span>
         <span className="text-xs tabular-nums opacity-60">{count}</span>
       </button>

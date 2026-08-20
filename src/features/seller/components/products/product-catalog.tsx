@@ -4,9 +4,12 @@ import { useEffect, useState } from "react";
 import { LayoutGrid, Rows3 } from "lucide-react";
 import type { Category, ProductVariant } from "@/features/seller/types";
 import {
+  ARCHIVED_VIEW,
+  countArchived,
   countByCategory,
-  filterByCategory,
+  filterCatalog,
   sortCategories,
+  type CatalogFilter,
   type CatalogProduct,
 } from "@/features/seller/lib/catalog-model";
 import { CategoryRail } from "./category-rail";
@@ -20,13 +23,15 @@ const VIEW_STORAGE_KEY = "seller-catalog-view";
 type ProductCatalogProps = {
   categories: Category[];
   products: CatalogProduct[];
-  selectedCategoryId: string | null;
-  onSelectCategory: (categoryId: string | null) => void;
+  selectedCategoryId: CatalogFilter;
+  onSelectCategory: (filter: CatalogFilter) => void;
   onAddCategory: () => void;
   onEditCategory: (category: Category) => void;
   onDeleteCategory: (category: Category) => void;
   onEditProduct: (product: CatalogProduct) => void;
   onDeleteProduct: (product: CatalogProduct) => void;
+  onArchiveProduct: (product: CatalogProduct) => void;
+  onRestoreProduct: (product: CatalogProduct) => void;
   onAddVariant: (product: CatalogProduct) => void;
   onEditVariant: (product: CatalogProduct, variant: ProductVariant) => void;
   onDeleteVariant: (product: CatalogProduct, variant: ProductVariant) => void;
@@ -43,6 +48,8 @@ export function ProductCatalog({
   onDeleteCategory,
   onEditProduct,
   onDeleteProduct,
+  onArchiveProduct,
+  onRestoreProduct,
   onAddVariant,
   onEditVariant,
   onDeleteVariant,
@@ -64,14 +71,17 @@ export function ProductCatalog({
 
   const sorted = sortCategories(categories);
   const counts = countByCategory(products);
-  const visible = filterByCategory(products, selectedCategoryId);
+  const archivedCount = countArchived(products);
+  const visible = filterCatalog(products, selectedCategoryId);
+  const viewingArchive = selectedCategoryId === ARCHIVED_VIEW;
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
       <CategoryRail
         categories={sorted}
         counts={counts}
-        totalCount={products.length}
+        totalCount={products.length - archivedCount}
+        archivedCount={archivedCount}
         selectedCategoryId={selectedCategoryId}
         onSelectCategory={onSelectCategory}
         onAddCategory={onAddCategory}
@@ -101,11 +111,20 @@ export function ProductCatalog({
           </div>
         </div>
 
+        {viewingArchive && visible.length > 0 && (
+          <p className="rounded-lg border border-dashed bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground">
+            Archived products are hidden from the buyer portal, but their past orders stay intact.
+            Restore one to put it back on sale.
+          </p>
+        )}
+
         {visible.length === 0 ? (
           <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-            {categories.length === 0
-              ? "Create your first category, then add products to it."
-              : "No products in this category yet. Click “Add Product” to create one."}
+            {viewingArchive
+              ? "Nothing archived."
+              : categories.length === 0
+                ? "Create your first category, then add products to it."
+                : "No products in this category yet. Click “Add Product” to create one."}
           </div>
         ) : view === "cards" ? (
           <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-3">
@@ -115,6 +134,8 @@ export function ProductCatalog({
                 product={product}
                 onEdit={() => onEditProduct(product)}
                 onDelete={() => onDeleteProduct(product)}
+                onArchive={() => onArchiveProduct(product)}
+                onRestore={() => onRestoreProduct(product)}
                 onAddVariant={() => onAddVariant(product)}
                 onEditVariant={(variant) => onEditVariant(product, variant)}
                 onDeleteVariant={(variant) => onDeleteVariant(product, variant)}
@@ -127,6 +148,8 @@ export function ProductCatalog({
             products={visible}
             onEditProduct={onEditProduct}
             onDeleteProduct={onDeleteProduct}
+            onArchiveProduct={onArchiveProduct}
+            onRestoreProduct={onRestoreProduct}
             onAddVariant={onAddVariant}
             onEditVariant={onEditVariant}
             onDeleteVariant={onDeleteVariant}

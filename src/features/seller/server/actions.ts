@@ -158,13 +158,45 @@ export async function updateProduct(id: string, input: ProductUpdate, orgSlug?: 
   return data;
 }
 
+/**
+ * Archiving is the normal way to retire a product: it disappears from the buyer
+ * portal and the seller's live catalog, but every past order line still points
+ * at a row that exists. Hard delete stays available only for products that have
+ * never been ordered (enforced by order_items.product_id ON DELETE RESTRICT).
+ */
+export async function setProductArchived(id: string, archived: boolean, orgSlug?: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("products")
+    .update({ is_active: !archived })
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  revalidateSellerPath(orgSlug, "products");
+  return data;
+}
+
+/** How many historical order lines reference this product. */
+export async function countProductOrderItems(id: string): Promise<number> {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("order_items")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", id);
+
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
 export async function deleteProduct(id: string, orgSlug?: string) {
   const supabase = await createClient();
   const { error } = await supabase.from("products").delete().eq("id", id);
   if (error) {
     if (error.code === "23503") {
       throw new Error(
-        "This product has been ordered before and cannot be deleted. Mark its sizes/options unavailable instead.",
+        "This product has past orders, so deleting it would destroy order history. Archive it instead — it disappears from the shop but the orders stay intact.",
       );
     }
     throw new Error(error.message);

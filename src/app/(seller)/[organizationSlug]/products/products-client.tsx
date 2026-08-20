@@ -3,13 +3,20 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import {
+  countProductOrderItems,
   deleteCategory,
   deleteProduct,
   deleteVariant,
+  setProductArchived,
   updateVariant,
 } from "@/features/seller/server/actions";
 import type { Category, Product, ProductVariant } from "@/features/seller/types";
-import { catalogSummary, type CatalogProduct } from "@/features/seller/lib/catalog-model";
+import {
+  ARCHIVED_VIEW,
+  catalogSummary,
+  type CatalogFilter,
+  type CatalogProduct,
+} from "@/features/seller/lib/catalog-model";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { CategoryDialog } from "@/features/seller/components/products/category-dialog";
@@ -39,7 +46,7 @@ export function ProductsClient({
   const { toast } = useToast();
   const [categories, setCategories] = useState(initialCategories);
   const [products, setProducts] = useState(initialProducts);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<CatalogFilter>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
 
   const closeDialog = (open: boolean) => {
@@ -96,9 +103,50 @@ export function ProductsClient({
     }
   };
 
-  const handleDeleteProduct = async (product: CatalogProduct) => {
-    if (!confirm(`Delete product "${product.name}"?`)) return;
+  const handleArchiveProduct = async (product: CatalogProduct, archived: boolean) => {
     try {
+      const saved = await setProductArchived(product.id, archived, organizationSlug);
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, ...saved } : p)));
+      toast({
+        title: archived ? "Product archived" : "Product restored",
+        description: archived
+          ? `${product.name} is hidden from the shop. Past orders are untouched.`
+          : `${product.name} is back on sale.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
+  };
+
+  /**
+   * Hard delete is only offered for products no order has ever referenced.
+   * Anything with history is pushed towards archive, which is reversible and
+   * keeps invoices and revenue reports whole.
+   */
+  const handleDeleteProduct = async (product: CatalogProduct) => {
+    try {
+      const orderCount = await countProductOrderItems(product.id);
+      if (orderCount > 0) {
+        toast({
+          title: "Cannot delete — this product has order history",
+          description: `${product.name} appears on ${orderCount} past order ${
+            orderCount === 1 ? "line" : "lines"
+          }. Archive it instead: it disappears from the shop and the orders stay intact.`,
+          variant: "destructive",
+        });
+        return;
+      }
+      if (
+        !confirm(
+          `Permanently delete "${product.name}" and its sizes? It has never been ordered, so nothing else is affected.`,
+        )
+      ) {
+        return;
+      }
       await deleteProduct(product.id, organizationSlug);
       setProducts((prev) => prev.filter((p) => p.id !== product.id));
       toast({ title: "Product deleted" });
@@ -167,7 +215,11 @@ export function ProductsClient({
     }
   };
 
-  const summary = catalogSummary(products);
+  // "archived" is a view, not a category, so it must not preselect one.
+  const activeCategoryId =
+    selectedCategoryId === ARCHIVED_VIEW ? undefined : (selectedCategoryId ?? undefined);
+
+  const summary = catalogSummary(products.filter((p) => p.is_active));
   const subtitle = [
     `${summary.productCount} ${summary.productCount === 1 ? "product" : "products"}`,
     `${summary.variantCount} ${summary.variantCount === 1 ? "size" : "sizes"}`,
@@ -183,7 +235,7 @@ export function ProductsClient({
         </div>
         <Button
           onClick={() =>
-            setDialog({ kind: "product", defaultCategoryId: selectedCategoryId ?? undefined })
+            setDialog({ kind: "product", defaultCategoryId: activeCategoryId })
           }
           disabled={categories.length === 0}
         >
@@ -202,6 +254,8 @@ export function ProductsClient({
         onDeleteCategory={handleDeleteCategory}
         onEditProduct={(product) => setDialog({ kind: "product", product })}
         onDeleteProduct={handleDeleteProduct}
+        onArchiveProduct={(product) => handleArchiveProduct(product, true)}
+        onRestoreProduct={(product) => handleArchiveProduct(product, false)}
         onAddVariant={(product) => setDialog({ kind: "variant", productId: product.id })}
         onEditVariant={(product, variant) =>
           setDialog({ kind: "variant", productId: product.id, variant })

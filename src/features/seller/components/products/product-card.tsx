@@ -6,11 +6,14 @@ import type { ProductVariant, UnitType } from "@/features/seller/types";
 import type { CatalogProduct } from "@/features/seller/lib/catalog-model";
 import { formatVariantPrice } from "@/features/seller/lib/pricing";
 import { AvailabilitySwitch } from "./availability-switch";
+import { ProductActionsMenu } from "./product-actions-menu";
 
 type SellerProductCardProps = {
   product: CatalogProduct;
   onEdit: () => void;
   onDelete: () => void;
+  onArchive: () => void;
+  onRestore: () => void;
   onAddVariant: () => void;
   onEditVariant: (variant: ProductVariant) => void;
   onDeleteVariant: (variant: ProductVariant) => void;
@@ -21,13 +24,19 @@ export function SellerProductCard({
   product,
   onEdit,
   onDelete,
+  onArchive,
+  onRestore,
   onAddVariant,
   onEditVariant,
   onDeleteVariant,
   onToggleVariant,
 }: SellerProductCardProps) {
   return (
-    <article className="group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md">
+    <article
+      className={`group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md ${
+        product.is_active ? "" : "border-dashed"
+      }`}
+    >
       {/* Image with the name laid over a scrim, so long names never reflow the card */}
       <div className="relative aspect-[5/3] bg-muted">
         {product.image_url ? (
@@ -47,11 +56,11 @@ export function SellerProductCard({
           </span>
         )}
         {!product.is_active && (
-          <span className="absolute left-2 top-8 rounded-full bg-stone-900/80 px-2 py-0.5 text-xs text-white">
-            Inactive
+          <span className="absolute left-2 top-8 rounded-full bg-stone-900/85 px-2 py-0.5 text-xs font-medium text-white">
+            Archived
           </span>
         )}
-        <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+        <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open=true]:opacity-100">
           <button
             type="button"
             onClick={onEdit}
@@ -60,14 +69,15 @@ export function SellerProductCard({
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            aria-label={`Delete ${product.name}`}
-            className="grid h-8 w-8 place-items-center rounded-lg bg-white/85 text-red-700 shadow backdrop-blur-sm hover:bg-white"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          <ProductActionsMenu
+            product={product}
+            onEdit={onEdit}
+            onAddVariant={onAddVariant}
+            onArchive={onArchive}
+            onRestore={onRestore}
+            onDelete={onDelete}
+            className="grid h-8 w-8 place-items-center rounded-lg bg-white/85 text-stone-900 shadow backdrop-blur-sm hover:bg-white"
+          />
         </div>
         <h3 className="absolute inset-x-3 bottom-2.5 truncate text-base font-semibold text-white [text-shadow:0_1px_8px_rgba(0,0,0,.4)]">
           {product.name}

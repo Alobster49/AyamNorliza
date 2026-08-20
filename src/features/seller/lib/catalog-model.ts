@@ -18,9 +18,33 @@ export function filterByCategory(
   return products.filter((p) => p.category_id === categoryId);
 }
 
+/**
+ * Archived products (is_active = false) are hidden from the buyer portal and
+ * from every seller view except the archive itself.
+ */
+export const ARCHIVED_VIEW = "archived" as const;
+
+/** null = all live products, "archived" = the archive, otherwise a category id. */
+export type CatalogFilter = string | null;
+
+export function filterCatalog(
+  products: CatalogProduct[],
+  filter: CatalogFilter,
+): CatalogProduct[] {
+  if (filter === ARCHIVED_VIEW) return products.filter((p) => !p.is_active);
+  const live = products.filter((p) => p.is_active);
+  return filter === null ? live : live.filter((p) => p.category_id === filter);
+}
+
+export function countArchived(products: CatalogProduct[]): number {
+  return products.filter((p) => !p.is_active).length;
+}
+
+/** Counts only live products, matching what the category views actually show. */
 export function countByCategory(products: CatalogProduct[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const p of products) {
+    if (!p.is_active) continue;
     counts.set(p.category_id, (counts.get(p.category_id) ?? 0) + 1);
   }
   return counts;
