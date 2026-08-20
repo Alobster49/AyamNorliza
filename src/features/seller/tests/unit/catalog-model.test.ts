@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  catalogSummary,
   countByCategory,
   filterByCategory,
+  priceRangeLabel,
   sortCategories,
   type CatalogProduct,
 } from "../../lib/catalog-model";
-import type { Category } from "../../types";
+import { formatPrice } from "../../lib/pricing";
+import type { Category, ProductVariant } from "../../types";
 
 function category(overrides: Partial<Category>): Category {
   return {
@@ -79,5 +82,84 @@ describe("sortCategories", () => {
     const sorted = sortCategories(input);
     expect(sorted.map((c) => c.id)).toEqual(["c3", "c2", "c1"]);
     expect(input.map((c) => c.id)).toEqual(["c1", "c2", "c3"]);
+  });
+});
+
+describe("priceRangeLabel", () => {
+  const variant = (over: Partial<ProductVariant>): ProductVariant => ({
+    id: "v1",
+    organization_id: "org-1",
+    product_id: "prod-1",
+    name: "Whole",
+    unit_type: "per_kg",
+    price_per_unit: 9.5,
+    is_available: true,
+    created_by: null,
+    created_at: "2026-07-01T00:00:00Z",
+    updated_at: "2026-07-01T00:00:00Z",
+    version: 1,
+    ...over,
+  });
+
+  it("returns null for no variants", () => {
+    expect(priceRangeLabel(product({ variants: [] }))).toBeNull();
+  });
+
+  it("shows single price for one variant", () => {
+    const p = product({ variants: [variant({})] });
+    expect(priceRangeLabel(p)).toBe(`${formatPrice(9.5)} · 1 size`);
+  });
+
+  it("shows min–max for several variants", () => {
+    const p = product({
+      variants: [
+        variant({ id: "v1", price_per_unit: 9.5 }),
+        variant({ id: "v2", price_per_unit: 16 }),
+        variant({ id: "v3", price_per_unit: 10.2 }),
+      ],
+    });
+    expect(priceRangeLabel(p)).toBe(`${formatPrice(9.5)} – ${formatPrice(16)} · 3 sizes`);
+  });
+
+  it("collapses equal min and max", () => {
+    const p = product({
+      variants: [
+        variant({ id: "v1", price_per_unit: 9.5 }),
+        variant({ id: "v2", price_per_unit: 9.5 }),
+      ],
+    });
+    expect(priceRangeLabel(p)).toBe(`${formatPrice(9.5)} · 2 sizes`);
+  });
+});
+
+describe("catalogSummary", () => {
+  const variant = (over: Partial<ProductVariant>): ProductVariant => ({
+    id: "v1",
+    organization_id: "org-1",
+    product_id: "prod-1",
+    name: "Whole",
+    unit_type: "per_kg",
+    price_per_unit: 9.5,
+    is_available: true,
+    created_by: null,
+    created_at: "2026-07-01T00:00:00Z",
+    updated_at: "2026-07-01T00:00:00Z",
+    version: 1,
+    ...over,
+  });
+
+  it("counts products, sizes and sold-out sizes", () => {
+    const summary = catalogSummary([
+      product({
+        id: "p1",
+        variants: [variant({ id: "v1" }), variant({ id: "v2", is_available: false })],
+      }),
+      product({ id: "p2", variants: [variant({ id: "v3" })] }),
+    ]);
+    expect(summary).toEqual({ productCount: 2, variantCount: 3, soldOutCount: 1 });
+  });
+
+  it("handles empty catalog", () => {
+    expect(catalogSummary([])).toEqual({ productCount: 0, variantCount: 0, soldOutCount: 0 });
   });
 });

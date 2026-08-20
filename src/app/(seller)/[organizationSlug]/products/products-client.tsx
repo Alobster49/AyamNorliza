@@ -6,9 +6,10 @@ import {
   deleteCategory,
   deleteProduct,
   deleteVariant,
+  updateVariant,
 } from "@/features/seller/server/actions";
 import type { Category, Product, ProductVariant } from "@/features/seller/types";
-import type { CatalogProduct } from "@/features/seller/lib/catalog-model";
+import { catalogSummary, type CatalogProduct } from "@/features/seller/lib/catalog-model";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { CategoryDialog } from "@/features/seller/components/products/category-dialog";
@@ -110,6 +111,41 @@ export function ProductsClient({
     }
   };
 
+  const setVariantAvailability = (variantId: string, productId: string, available: boolean) => {
+    setProducts((prev) =>
+      prev.map((p) =>
+        p.id === productId
+          ? {
+              ...p,
+              variants: p.variants.map((v) =>
+                v.id === variantId ? { ...v, is_available: available } : v,
+              ),
+            }
+          : p,
+      ),
+    );
+  };
+
+  // Optimistic one-tap sold-out toggle; rolls back on failure.
+  const handleToggleVariant = async (product: CatalogProduct, variant: ProductVariant) => {
+    const next = !variant.is_available;
+    setVariantAvailability(variant.id, product.id, next);
+    try {
+      await updateVariant(variant.id, { is_available: next }, organizationSlug);
+      toast({
+        title: next ? "Marked available" : "Marked sold out",
+        description: `${product.name} — ${variant.name}`,
+      });
+    } catch (error) {
+      setVariantAvailability(variant.id, product.id, !next);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleDeleteVariant = async (product: CatalogProduct, variant: ProductVariant) => {
     if (!confirm(`Delete "${variant.name}" from ${product.name}?`)) return;
     try {
@@ -131,28 +167,29 @@ export function ProductsClient({
     }
   };
 
+  const summary = catalogSummary(products);
+  const subtitle = [
+    `${summary.productCount} ${summary.productCount === 1 ? "product" : "products"}`,
+    `${summary.variantCount} ${summary.variantCount === 1 ? "size" : "sizes"}`,
+    ...(summary.soldOutCount > 0 ? [`${summary.soldOutCount} sold out`] : []),
+  ].join(" · ");
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Products &amp; Catalog</h1>
-          <p className="text-muted-foreground">Manage categories, products, and pricing</p>
+          <p className="text-muted-foreground">{subtitle}</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setDialog({ kind: "category" })}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Category
-          </Button>
-          <Button
-            onClick={() =>
-              setDialog({ kind: "product", defaultCategoryId: selectedCategoryId ?? undefined })
-            }
-            disabled={categories.length === 0}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-        </div>
+        <Button
+          onClick={() =>
+            setDialog({ kind: "product", defaultCategoryId: selectedCategoryId ?? undefined })
+          }
+          disabled={categories.length === 0}
+        >
+          <Plus className="mr-2 h-4 w-4" />
+          Add Product
+        </Button>
       </div>
 
       <ProductCatalog
@@ -160,6 +197,7 @@ export function ProductsClient({
         products={products}
         selectedCategoryId={selectedCategoryId}
         onSelectCategory={setSelectedCategoryId}
+        onAddCategory={() => setDialog({ kind: "category" })}
         onEditCategory={(category) => setDialog({ kind: "category", category })}
         onDeleteCategory={handleDeleteCategory}
         onEditProduct={(product) => setDialog({ kind: "product", product })}
@@ -169,6 +207,7 @@ export function ProductsClient({
           setDialog({ kind: "variant", productId: product.id, variant })
         }
         onDeleteVariant={handleDeleteVariant}
+        onToggleVariant={handleToggleVariant}
       />
 
       <CategoryDialog
