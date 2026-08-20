@@ -23,7 +23,7 @@ function range(zoneId: string, start: string, end: string): ZonePostcodeRange {
 function truck(id: string, code: string, bayId: string | null, active = true): DispatchTruck {
   return {
     id, organization_id: "org-1", name: `Truck ${code}`, code, is_active: active,
-    bay_id: bayId, created_by: null, created_at: "", updated_at: "", version: 1,
+    bay_id: bayId, capacity_kg: null, created_by: null, created_at: "", updated_at: "", version: 1,
   };
 }
 function slot(truckId: string, weekday: number, start: string, maxOrders: number | null): DeliverySlot {

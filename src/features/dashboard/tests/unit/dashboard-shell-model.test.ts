@@ -101,6 +101,11 @@ describe("dashboard shell model", () => {
         href: "/ayam-norliza-pilot/dispatch",
         isActive: false,
       },
+      {
+        title: "Loading",
+        href: "/ayam-norliza-pilot/loading",
+        isActive: false,
+      },
     ]);
   });
 
@@ -119,6 +124,7 @@ describe("dashboard shell model", () => {
       "Customers",
       "Delivery setup",
       "Dispatch",
+      "Loading",
       "Delivery runs",
       "Warehouse tasks",
     ]);

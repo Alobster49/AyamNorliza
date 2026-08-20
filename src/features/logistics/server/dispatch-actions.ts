@@ -44,6 +44,7 @@ function mapRpcError<T = void>(message: string): ActionResult<T> {
   if (message.includes("run_departed")) return err("conflict", "That run has already departed.");
   if (message.includes("invalid_status")) return err("conflict", "Only confirmed or ready orders can be dispatched.");
   if (message.includes("invalid_truck")) return err("conflict", "That truck is not active in this organization.");
+  if (message.includes("not_assigned")) return err("conflict", "That order is not on a truck yet.");
   if (message.includes("forbidden")) return err("forbidden", "You do not have access to dispatch.");
   if (message.includes("not_found")) return err("not_found", "Order not found.");
   return err("internal", message);
@@ -79,7 +80,9 @@ export async function getDispatchBoard(
       supabase.from("delivery_runs").select("*").eq("organization_id", orgId).eq("run_date", date),
       supabase
         .from("orders")
-        .select("*, customer:customers(name), zone:delivery_zones(name)")
+        .select(
+          "*, customer:customers(name), zone:delivery_zones(name), items:order_items(quantity, warehouse_weight_kg, warehouse_pieces, final_weight_kg, is_cancelled, product:products(name))",
+        )
         .eq("organization_id", orgId)
         .eq("delivery_date", date)
         .in("status", ["confirmed", "ready"]),
@@ -276,5 +279,76 @@ export async function departTruck(
 
   revalidatePath(`/${organizationSlug}/dispatch`);
   revalidatePath(`/${organizationSlug}/runs`);
+  return ok(undefined);
+}
+
+// ---------------------------------------------------------------------------
+// Plan apply (auto-plan deck) + loading confirmation
+// ---------------------------------------------------------------------------
+
+const ApplyPlanSchema = z.object({
+  assignments: z
+    .array(z.object({ orderId: z.string().uuid(), truckId: z.string().uuid() }))
+    .min(1)
+    .max(200),
+});
+
+export async function applyPlan(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult<{ applied: number; failed: { orderId: string; message: string }[] }>> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+
+  const parsed = ApplyPlanSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid plan payload");
+
+  const supabase = await createSupabaseServerClient();
+  let applied = 0;
+  const failed: { orderId: string; message: string }[] = [];
+  // Sequential on purpose: dispatch_assign_order locks order + run rows;
+  // firing 200 in parallel invites deadlocks the RPC then rejects.
+  for (const a of parsed.data.assignments) {
+    const { error } = await supabase.rpc("dispatch_assign_order", {
+      p_order: a.orderId,
+      p_truck: a.truckId,
+      p_source: "auto",
+    });
+    if (error) {
+      const mapped = mapRpcError(error.message) as { ok: false; message: string };
+      failed.push({ orderId: a.orderId, message: mapped.message });
+    } else {
+      applied += 1;
+    }
+  }
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  return ok({ applied, failed });
+}
+
+const SetLoadedSchema = z.object({
+  orderId: z.string().uuid(),
+  loaded: z.boolean(),
+});
+
+export async function setOrderLoaded(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult<void>> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+
+  const parsed = SetLoadedSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid input");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("dispatch_set_loaded", {
+    p_order: parsed.data.orderId,
+    p_loaded: parsed.data.loaded,
+  });
+  if (error) return mapRpcError(error.message);
+
+  revalidatePath(`/${organizationSlug}/dispatch`);
+  revalidatePath(`/${organizationSlug}/loading`);
   return ok(undefined);
 }

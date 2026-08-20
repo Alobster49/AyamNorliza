@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -14,7 +14,7 @@ import {
 import type { DispatchBoardData, DispatchTicket } from "../types";
 import { buildBoardView, compatibleTruckIds } from "../lib/dispatch-board-model";
 import { resolveDispatchDrop, type DispatchDropTarget } from "../lib/dispatch-rules";
-import { assignOrder, departTruck, getDispatchBoard, unassignOrder } from "../server/dispatch-actions";
+import { assignOrder, departTruck, unassignOrder } from "../server/dispatch-actions";
 import { TicketCard } from "./ticket-card";
 import { TruckCard } from "./truck-card";
 import { useToast } from "@/hooks/use-toast";
@@ -39,19 +39,15 @@ function PoolColumn({ tickets }: { tickets: DispatchTicket[] }) {
 
 export function DispatchBoard({
   organizationSlug,
-  initialDate,
-  initialData,
+  date,
+  data,
+  refetch,
 }: {
   organizationSlug: string;
-  initialDate: string;
-  initialData: DispatchBoardData;
+  date: string;
+  data: DispatchBoardData;
+  refetch: () => void;
 }) {
-  const [date, setDate] = useState(initialDate);
-  const dateRef = useRef(date);
-  useEffect(() => {
-    dateRef.current = date;
-  }, [date]);
-  const [data, setData] = useState(initialData);
   const [activeTicket, setActiveTicket] = useState<DispatchTicket | null>(null);
   const { toast } = useToast();
   const [override, setOverride] = useState<{ orderId: string; truckId: string; truckName: string } | null>(null);
@@ -72,18 +68,6 @@ export function DispatchBoard({
     },
     [toast],
   );
-
-  const refetch = useCallback(() => {
-    const forDate = dateRef.current;
-    startTransition(async () => {
-      const result = await getDispatchBoard(organizationSlug, forDate);
-      // The user may have switched dates while this request was in flight —
-      // don't clobber the currently selected date's board with stale data.
-      if (forDate !== dateRef.current) return;
-      if (result.ok) setData(result.data);
-      else showToast(result.message);
-    });
-  }, [organizationSlug, showToast]);
 
   const runAction = (action: Promise<{ ok: boolean; message?: string }>) => {
     startTransition(async () => {
@@ -179,27 +163,7 @@ export function DispatchBoard({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <h1 className="text-lg font-semibold">Dispatch</h1>
-        <input
-          type="date"
-          value={date}
-          onChange={(e) => {
-            const nextDate = e.target.value;
-            setDate(nextDate);
-            dateRef.current = nextDate;
-            refetch();
-          }}
-          className="rounded border px-2 py-1 text-sm"
-        />
-        {data.facility ? (
-          <span className="text-sm text-muted-foreground">
-            {data.facility.name} — {data.facility.address_line}, {data.facility.postcode}
-          </span>
-        ) : null}
-      </div>
-
+    <>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex items-start gap-4 overflow-x-auto pb-4">
           <PoolColumn tickets={view.pool} />
@@ -274,6 +238,6 @@ export function DispatchBoard({
           </div>
         </div>
       ) : null}
-    </div>
+    </>
   );
 }

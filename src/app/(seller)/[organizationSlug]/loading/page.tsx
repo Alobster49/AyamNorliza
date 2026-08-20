@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
 import { DISPATCH_ROLES } from "@/features/logistics/lib/roles";
 import { getDispatchBoard } from "@/features/logistics/server/dispatch-actions";
-import { DispatchClient } from "@/features/logistics/components/dispatch-client";
+import { LoadingClient } from "@/features/logistics/components/loading-client";
 
 function todayIsoDate(): string {
   const now = new Date();
@@ -12,7 +12,7 @@ function todayIsoDate(): string {
   return `${y}-${m}-${d}`;
 }
 
-export default async function DispatchPage({
+export default async function LoadingPage({
   params,
 }: {
   params: Promise<{ organizationSlug: string }>;
@@ -35,6 +35,6 @@ export default async function DispatchPage({
   }
 
   return (
-    <DispatchClient organizationSlug={organizationSlug} initialDate={date} initialData={result.data} />
+    <LoadingClient organizationSlug={organizationSlug} initialDate={date} initialData={result.data} />
   );
 }

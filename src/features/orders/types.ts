@@ -87,6 +87,7 @@ export type Truck = {
   code: string;
   is_active: boolean;
   bay_id: string | null;
+  capacity_kg: number | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -154,6 +155,8 @@ export type Order = {
   notes: string | null;
   total_amount: number;
   closed_at: string | null;
+  loaded_at: string | null;
+  loaded_by: string | null;
   created_at: string;
   updated_at: string;
   version: number;

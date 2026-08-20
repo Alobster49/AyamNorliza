@@ -5,11 +5,13 @@
 -- evaluated), role-gated writes, cross-org read isolation, the
 -- auto-never-overrides-manual guarantee on dispatch_assign_order, the
 -- release-on-depart behavior of dispatch_depart_truck (the I2 fix), and
--- place_order persisting p_postcode (20260814000002).
+-- place_order persisting p_postcode (20260814000002), and the
+-- dispatch_set_loaded guards + loaded_at lifecycle across assign/unassign
+-- (20260820000001 / 20260820000002).
 
 begin;
 
-select plan(22);
+select plan(37);
 
 create temporary table _scratch (label text primary key, order_id uuid);
 grant select, insert on _scratch to authenticated;
@@ -26,14 +28,16 @@ on conflict (id) do nothing;
 insert into auth.users (id) values
   ('c0000000-0000-0000-0000-000000000001'), -- owner (org A)
   ('c0000000-0000-0000-0000-000000000002'), -- seller (org A)
-  ('c0000000-0000-0000-0000-000000000003')  -- logistics (org A)
+  ('c0000000-0000-0000-0000-000000000003'), -- logistics (org A)
+  ('c0000000-0000-0000-0000-000000000004')  -- inventory (org A, no dispatch rights)
 on conflict (id) do nothing;
 
 insert into public.organization_members (organization_id, user_id, role, status)
 values
   ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000001', 'owner', 'active'),
   ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000002', 'seller', 'active'),
-  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000003', 'logistics', 'active')
+  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000003', 'logistics', 'active'),
+  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000004', 'inventory', 'active')
 on conflict (organization_id, user_id) do nothing;
 
 -- Facility/bay for org A, plus a facility for org B used only to prove
@@ -365,6 +369,155 @@ select results_eq(
   $$ select truck_id, assignment_source::text from public.orders where id = 'c0000000-0000-0000-0000-000000000090' $$,
   $$ values ('c0000000-0000-0000-0000-000000000053'::uuid, 'manual'::text) $$,
   'the reassigned order now points at truck 4'
+);
+
+-- ---------------------------------------------------------------------------
+-- 9. dispatch_set_loaded (20260820000001) + the loaded_at lifecycle
+-- (20260820000002): the mark only exists while the order is actually sitting
+-- on the truck it was loaded onto.
+-- ---------------------------------------------------------------------------
+
+-- Loading fixtures on truck 1 (which already carries the manual ticket 070):
+-- 0091 is the happy-path ticket, 0092 is still pending, 0093 sits in the pool.
+insert into public.orders (
+  id, organization_id, customer_id, created_by, source, status,
+  zone_id, delivery_address, delivery_date, slot_id, truck_id, assignment_source
+) values
+  (
+    'c0000000-0000-0000-0000-000000000091', 'c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000040',
+    'c0000000-0000-0000-0000-000000000001', 'manual', 'confirmed',
+    'c0000000-0000-0000-0000-000000000020', '6 Loading Street', current_date + 1, 'c0000000-0000-0000-0000-000000000060',
+    'c0000000-0000-0000-0000-000000000050', 'none'
+  ),
+  (
+    'c0000000-0000-0000-0000-000000000092', 'c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000040',
+    'c0000000-0000-0000-0000-000000000001', 'manual', 'pending',
+    'c0000000-0000-0000-0000-000000000020', '7 Loading Street', current_date + 1, 'c0000000-0000-0000-0000-000000000060',
+    'c0000000-0000-0000-0000-000000000050', 'none'
+  ),
+  (
+    'c0000000-0000-0000-0000-000000000093', 'c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000040',
+    'c0000000-0000-0000-0000-000000000001', 'manual', 'confirmed',
+    'c0000000-0000-0000-0000-000000000020', '8 Loading Street', current_date + 1, 'c0000000-0000-0000-0000-000000000060',
+    'c0000000-0000-0000-0000-000000000050', 'none'
+  )
+on conflict (id) do nothing;
+
+-- 9a. Guards.
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000004';
+
+select throws_ok(
+  $$ select public.dispatch_set_loaded('c0000000-0000-0000-0000-000000000091', true) $$,
+  'P0001',
+  'forbidden',
+  'dispatch_set_loaded is forbidden for a non-dispatch role'
+);
+
+reset role;
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
+
+select throws_ok(
+  $$ select public.dispatch_set_loaded('c0000000-0000-0000-0000-000000000092', true) $$,
+  'P0001',
+  'invalid_status',
+  'dispatch_set_loaded rejects a pending order (invalid_status)'
+);
+
+select throws_ok(
+  $$ select public.dispatch_set_loaded('c0000000-0000-0000-0000-000000000093', true) $$,
+  'P0001',
+  'not_assigned',
+  'dispatch_set_loaded rejects an order with no run (not_assigned)'
+);
+
+-- 9b. Happy path: assign to truck 1, then confirm the load.
+select lives_ok(
+  $$ select public.dispatch_assign_order('c0000000-0000-0000-0000-000000000091', 'c0000000-0000-0000-0000-000000000050', 'manual') $$,
+  'dispatch_assign_order puts the loading-test order on truck 1'
+);
+
+select lives_ok(
+  $$ select public.dispatch_set_loaded('c0000000-0000-0000-0000-000000000091', true) $$,
+  'a logistics member can confirm a load'
+);
+
+reset role;
+
+select is(
+  (select loaded_at is not null from public.orders where id = 'c0000000-0000-0000-0000-000000000091'),
+  true,
+  'dispatch_set_loaded stamps loaded_at'
+);
+
+select results_eq(
+  $$ select loaded_by from public.orders where id = 'c0000000-0000-0000-0000-000000000091' $$,
+  $$ values ('c0000000-0000-0000-0000-000000000003'::uuid) $$,
+  'dispatch_set_loaded records the confirming loader in loaded_by'
+);
+
+-- 9c. Unassigning back to the pool clears the mark.
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$ select public.dispatch_unassign_order('c0000000-0000-0000-0000-000000000091') $$,
+  'dispatch_unassign_order does not raise on a loaded order'
+);
+
+reset role;
+
+select results_eq(
+  $$ select loaded_at, loaded_by from public.orders where id = 'c0000000-0000-0000-0000-000000000091' $$,
+  $$ values (null::timestamptz, null::uuid) $$,
+  'dispatch_unassign_order clears loaded_at/loaded_by'
+);
+
+-- 9d. Re-assigning to the SAME truck keeps the load; moving to a DIFFERENT
+-- truck clears it. (Trucks 2 and 3 already departed above, so truck 4 --
+-- still on a planned run -- is the "different truck" here.)
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$ select public.dispatch_assign_order('c0000000-0000-0000-0000-000000000091', 'c0000000-0000-0000-0000-000000000050', 'manual') $$,
+  'the unassigned loading-test order goes back onto truck 1'
+);
+
+select lives_ok(
+  $$ select public.dispatch_set_loaded('c0000000-0000-0000-0000-000000000091', true) $$,
+  'the order is confirmed loaded again'
+);
+
+select lives_ok(
+  $$ select public.dispatch_assign_order('c0000000-0000-0000-0000-000000000091', 'c0000000-0000-0000-0000-000000000050', 'manual') $$,
+  're-assigning a loaded order to the same truck does not raise'
+);
+
+reset role;
+
+select is(
+  (select loaded_at is not null from public.orders where id = 'c0000000-0000-0000-0000-000000000091'),
+  true,
+  'a same-truck re-assign keeps the load confirmation'
+);
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
+
+select lives_ok(
+  $$ select public.dispatch_assign_order('c0000000-0000-0000-0000-000000000091', 'c0000000-0000-0000-0000-000000000053', 'manual') $$,
+  'a loaded order can be moved to a different truck'
+);
+
+reset role;
+
+select results_eq(
+  $$ select loaded_at, loaded_by from public.orders where id = 'c0000000-0000-0000-0000-000000000091' $$,
+  $$ values (null::timestamptz, null::uuid) $$,
+  'moving a loaded order to a different truck clears loaded_at/loaded_by'
 );
 
 select * from finish();
