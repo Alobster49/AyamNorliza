@@ -117,8 +117,13 @@ All rows use deterministic UUIDs and belong to the caller's organization.
 - **Runs:** 2 `delivery_runs` — one for today in loading state carrying the
   ready orders, one completed yesterday with delivered orders and
   `run_stop_events` history.
-- **Buyer orders:** 2 `buyer_orders` for the existing E2E buyer (skipped
-  silently if no buyer exists, e.g. in production).
+- ~~**Buyer orders:** 2 `buyer_orders` for the existing E2E buyer.~~
+  **Implementation deviation (2026-08-22):** `buyer_orders` /
+  `buyer_order_items` were dropped by migration 20260810000001 when portal
+  orders were unified into `public.orders` (`source='portal'`); this spec
+  item predated that discovery and was removed from the seed. Buyer logins
+  still get a relinked `customers` row, so they can place portal orders
+  themselves.
 
 Dates are computed relative to `now()` inside the RPC, so the data always
 looks fresh no matter when seeding runs.
