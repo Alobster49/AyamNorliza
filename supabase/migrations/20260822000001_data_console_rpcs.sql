@@ -217,10 +217,13 @@ begin
   -- Orders -------------------------------------------------------------------
   -- 4 pending, 2 confirmed w/ open task, 1 confirmed weighed, 4 ready on run
   -- A (2 loaded), 3 delivered on run B, 1 cancelled = 15.
+  -- run_sequence is not set here: the orders_set_run_sequence_trg BEFORE
+  -- INSERT trigger assigns it in insertion order, so the VALUES row order of
+  -- run-assigned orders below is what determines stop sequence.
   insert into public.orders (
     id, organization_id, customer_id, created_by, source, status, zone_id,
     delivery_address, postcode, delivery_date, slot_id, truck_id, run_id,
-    run_sequence, assignment_source, total_amount, loaded_at, loaded_by, closed_at
+    assignment_source, total_amount, loaded_at, loaded_by, closed_at
   )
   select
     o.id, p_organization_id, o.customer_id, v_actor, 'manual', o.status::public.order_status,
@@ -230,7 +233,7 @@ begin
     (select s.id from public.delivery_slots s
       where s.organization_id = p_organization_id and s.truck_id = o.truck_id
         and s.weekday = extract(dow from v_today + o.date_offset)::smallint limit 1),
-    o.truck_id, o.run_id, o.run_sequence,
+    o.truck_id, o.run_id,
     (case when o.run_id is null then 'none' else 'auto' end)::public.assignment_source,
     o.total_amount,
     case when o.loaded then now() - interval '2 hours' else null end,
@@ -238,27 +241,27 @@ begin
     case when o.status = 'delivered' then now() - interval '20 hours' else null end
   from (values
     -- pending
-    ('dd000000-0000-0000-0000-000000000801'::uuid, 'dd000000-0000-0000-0000-000000000301'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000401'::uuid, '80000', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null::uuid, null::int, 0::numeric, false),
-    ('dd000000-0000-0000-0000-000000000802'::uuid, 'dd000000-0000-0000-0000-000000000302'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000401'::uuid, '81100', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, null, 0, false),
-    ('dd000000-0000-0000-0000-000000000803'::uuid, 'dd000000-0000-0000-0000-000000000306'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000402'::uuid, '83000', 2, 'dd000000-0000-0000-0000-000000000602'::uuid, null, null, 0, false),
-    ('dd000000-0000-0000-0000-000000000804'::uuid, 'dd000000-0000-0000-0000-000000000309'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000403'::uuid, '85000', 3, 'dd000000-0000-0000-0000-000000000603'::uuid, null, null, 0, false),
+    ('dd000000-0000-0000-0000-000000000801'::uuid, 'dd000000-0000-0000-0000-000000000301'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000401'::uuid, '80000', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null::uuid, 0::numeric, false),
+    ('dd000000-0000-0000-0000-000000000802'::uuid, 'dd000000-0000-0000-0000-000000000302'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000401'::uuid, '81100', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, 0, false),
+    ('dd000000-0000-0000-0000-000000000803'::uuid, 'dd000000-0000-0000-0000-000000000306'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000402'::uuid, '83000', 2, 'dd000000-0000-0000-0000-000000000602'::uuid, null, 0, false),
+    ('dd000000-0000-0000-0000-000000000804'::uuid, 'dd000000-0000-0000-0000-000000000309'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000403'::uuid, '85000', 3, 'dd000000-0000-0000-0000-000000000603'::uuid, null, 0, false),
     -- confirmed, task open
-    ('dd000000-0000-0000-0000-000000000805'::uuid, 'dd000000-0000-0000-0000-000000000303'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000401'::uuid, '81300', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, null, 0, false),
-    ('dd000000-0000-0000-0000-000000000806'::uuid, 'dd000000-0000-0000-0000-000000000307'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000402'::uuid, '84000', 2, 'dd000000-0000-0000-0000-000000000602'::uuid, null, null, 0, false),
+    ('dd000000-0000-0000-0000-000000000805'::uuid, 'dd000000-0000-0000-0000-000000000303'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000401'::uuid, '81300', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, 0, false),
+    ('dd000000-0000-0000-0000-000000000806'::uuid, 'dd000000-0000-0000-0000-000000000307'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000402'::uuid, '84000', 2, 'dd000000-0000-0000-0000-000000000602'::uuid, null, 0, false),
     -- confirmed, warehouse weighed (task done)
-    ('dd000000-0000-0000-0000-000000000807'::uuid, 'dd000000-0000-0000-0000-000000000304'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000401'::uuid, '79100', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, null, 0, false),
+    ('dd000000-0000-0000-0000-000000000807'::uuid, 'dd000000-0000-0000-0000-000000000304'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000401'::uuid, '79100', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, 0, false),
     -- ready on run A (today, TRK-A); first two already loaded
-    ('dd000000-0000-0000-0000-000000000808'::uuid, 'dd000000-0000-0000-0000-000000000301'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '80000', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 1, 0, true),
-    ('dd000000-0000-0000-0000-000000000809'::uuid, 'dd000000-0000-0000-0000-000000000302'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '81100', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 2, 0, true),
-    ('dd000000-0000-0000-0000-00000000080a'::uuid, 'dd000000-0000-0000-0000-000000000303'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '81300', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 3, 0, false),
-    ('dd000000-0000-0000-0000-00000000080b'::uuid, 'dd000000-0000-0000-0000-000000000305'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '80350', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 4, 0, false),
+    ('dd000000-0000-0000-0000-000000000808'::uuid, 'dd000000-0000-0000-0000-000000000301'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '80000', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, true),
+    ('dd000000-0000-0000-0000-000000000809'::uuid, 'dd000000-0000-0000-0000-000000000302'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '81100', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, true),
+    ('dd000000-0000-0000-0000-00000000080a'::uuid, 'dd000000-0000-0000-0000-000000000303'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '81300', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, false),
+    ('dd000000-0000-0000-0000-00000000080b'::uuid, 'dd000000-0000-0000-0000-000000000305'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '80350', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, false),
     -- delivered yesterday on run B (TRK-B)
-    ('dd000000-0000-0000-0000-00000000080c'::uuid, 'dd000000-0000-0000-0000-000000000306'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '83000', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 1, 187.20, false),
-    ('dd000000-0000-0000-0000-00000000080d'::uuid, 'dd000000-0000-0000-0000-000000000307'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '84000', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 2, 97.50, false),
-    ('dd000000-0000-0000-0000-00000000080e'::uuid, 'dd000000-0000-0000-0000-000000000308'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '83700', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 3, 138.00, false),
+    ('dd000000-0000-0000-0000-00000000080c'::uuid, 'dd000000-0000-0000-0000-000000000306'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '83000', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 187.20, false),
+    ('dd000000-0000-0000-0000-00000000080d'::uuid, 'dd000000-0000-0000-0000-000000000307'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '84000', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 97.50, false),
+    ('dd000000-0000-0000-0000-00000000080e'::uuid, 'dd000000-0000-0000-0000-000000000308'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '83700', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 138.00, false),
     -- cancelled
-    ('dd000000-0000-0000-0000-00000000080f'::uuid, 'dd000000-0000-0000-0000-00000000030a'::uuid, 'cancelled', 'dd000000-0000-0000-0000-000000000403'::uuid, '86000', 2, 'dd000000-0000-0000-0000-000000000603'::uuid, null, null, 0, false)
-  ) as o(id, customer_id, status, zone_id, postcode, date_offset, truck_id, run_id, run_sequence, total_amount, loaded);
+    ('dd000000-0000-0000-0000-00000000080f'::uuid, 'dd000000-0000-0000-0000-00000000030a'::uuid, 'cancelled', 'dd000000-0000-0000-0000-000000000403'::uuid, '86000', 2, 'dd000000-0000-0000-0000-000000000603'::uuid, null, 0, false)
+  ) as o(id, customer_id, status, zone_id, postcode, date_offset, truck_id, run_id, total_amount, loaded);
 
   -- Order items --------------------------------------------------------------
   -- Weighed/delivered lines carry warehouse and/or final weights + price.
@@ -347,7 +350,12 @@ begin
   -- public.orders (source='portal') via buyers.customer_id, so that step is
   -- omitted here; the relinked buyer above already keeps that identity live.
 
-  return jsonb_build_object('products', 13, 'customers', 10, 'orders', 15, 'runs', 2);
+  return jsonb_build_object(
+    'products',  (select count(*) from public.products  where organization_id = p_organization_id),
+    'customers', (select count(*) from public.customers where organization_id = p_organization_id),
+    'orders',    (select count(*) from public.orders    where organization_id = p_organization_id),
+    'runs',      (select count(*) from public.delivery_runs where organization_id = p_organization_id)
+  );
 end;
 $$;
 
