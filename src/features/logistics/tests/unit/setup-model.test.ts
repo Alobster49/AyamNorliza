@@ -40,8 +40,8 @@ function facility() {
 /** A snapshot with zero issues: one factory, one zone with a range, one truck
  *  covering it with an active slot. Every test starts here and breaks one thing. */
 function healthy(): SetupSnapshot {
-  const z = zone({ id: "zone-1".padEnd(36, "0") });
-  const t = truck({ id: "truck-1".padEnd(36, "0") });
+  const z = zone({ id: ZONE_ID });
+  const t = truck({ id: TRUCK_ID });
   return {
     zones: [z],
     trucks: [t],
@@ -57,6 +57,9 @@ function healthy(): SetupSnapshot {
   };
 }
 
+const ZONE_ID = "zone-1".padEnd(36, "0");
+const TRUCK_ID = "truck-1".padEnd(36, "0");
+
 const ids = (issues: ReturnType<typeof findIssues>) => issues.map((i) => i.id);
 
 describe("findIssues — relationships", () => {
@@ -68,28 +71,28 @@ describe("findIssues — relationships", () => {
     const s = healthy();
     s.truckZones = [];
     const issues = findIssues(s);
-    expect(ids(issues)).toContain(`truck-no-zone:${s.trucks[0].id}`);
+    expect(ids(issues)).toContain(`truck-no-zone:${TRUCK_ID}`);
     expect(issues.find((i) => i.id.startsWith("truck-no-zone"))?.severity).toBe("warning");
   });
 
   it("flags an active truck with no active slots", () => {
     const s = healthy();
-    s.slots = [slot({ truck_id: s.trucks[0].id, is_active: false })];
-    expect(ids(findIssues(s))).toContain(`truck-no-slots:${s.trucks[0].id}`);
+    s.slots = [slot({ truck_id: TRUCK_ID, is_active: false })];
+    expect(ids(findIssues(s))).toContain(`truck-no-slots:${TRUCK_ID}`);
   });
 
   it("flags an active zone no active truck covers", () => {
     const s = healthy();
-    s.trucks = [truck({ id: s.trucks[0].id, is_active: false })];
-    expect(ids(findIssues(s))).toContain(`zone-no-truck:${s.zones[0].id}`);
+    s.trucks = [truck({ id: TRUCK_ID, is_active: false })];
+    expect(ids(findIssues(s))).toContain(`zone-no-truck:${ZONE_ID}`);
   });
 
   it("flags an active zone with no postcode ranges as a blocker", () => {
     const s = healthy();
     s.ranges = [];
-    const issue = findIssues(s).find((i) => i.id === `zone-no-postcodes:${s.zones[0].id}`);
+    const issue = findIssues(s).find((i) => i.id === `zone-no-postcodes:${ZONE_ID}`);
     expect(issue?.severity).toBe("blocker");
-    expect(issue?.target).toEqual({ entity: "postcodes", recordId: s.zones[0].id });
+    expect(issue?.target).toEqual({ entity: "postcodes", recordId: ZONE_ID });
   });
 
   it("flags a missing factory as a blocker", () => {
@@ -122,7 +125,7 @@ describe("findIssues — overlaps and completeness", () => {
     const other = zone({ id: "zone-2".padEnd(36, "0"), name: "Zone 2" });
     s.zones = [...s.zones, other];
     s.truckZones = [...s.truckZones, {
-      truck_id: s.trucks[0].id, zone_id: other.id, organization_id: "org",
+      truck_id: TRUCK_ID, zone_id: other.id, organization_id: "org",
     }];
     s.ranges = [...s.ranges, {
       id: uid("range"), organization_id: "org", zone_id: other.id,
@@ -136,7 +139,7 @@ describe("findIssues — overlaps and completeness", () => {
   it("does not flag two ranges of the same zone overlapping", () => {
     const s = healthy();
     s.ranges = [...s.ranges, {
-      id: uid("range"), organization_id: "org", zone_id: s.zones[0].id,
+      id: uid("range"), organization_id: "org", zone_id: ZONE_ID,
       postcode_start: "47500", postcode_end: "47900", created_by: null, created_at: "",
     }];
     expect(ids(findIssues(s)).some((i) => i.startsWith("postcode-overlap:"))).toBe(false);
@@ -145,7 +148,7 @@ describe("findIssues — overlaps and completeness", () => {
   it("flags a range whose start is after its end", () => {
     const s = healthy();
     s.ranges = [{
-      id: "range-bad".padEnd(36, "0"), organization_id: "org", zone_id: s.zones[0].id,
+      id: "range-bad".padEnd(36, "0"), organization_id: "org", zone_id: ZONE_ID,
       postcode_start: "47800", postcode_end: "47000", created_by: null, created_at: "",
     }];
     expect(ids(findIssues(s))).toContain(`range-inverted:${"range-bad".padEnd(36, "0")}`);
@@ -153,7 +156,7 @@ describe("findIssues — overlaps and completeness", () => {
 
   it("flags two active slots overlapping on the same truck and weekday", () => {
     const s = healthy();
-    const t = s.trucks[0].id;
+    const t = TRUCK_ID;
     s.slots = [
       slot({ id: "slot-a".padEnd(36, "0"), truck_id: t, weekday: 1, start_time: "08:00:00", end_time: "12:00:00" }),
       slot({ id: "slot-b".padEnd(36, "0"), truck_id: t, weekday: 1, start_time: "11:00:00", end_time: "14:00:00" }),
@@ -163,7 +166,7 @@ describe("findIssues — overlaps and completeness", () => {
 
   it("does not flag slots that merely touch at the boundary", () => {
     const s = healthy();
-    const t = s.trucks[0].id;
+    const t = TRUCK_ID;
     s.slots = [
       slot({ truck_id: t, weekday: 1, start_time: "08:00:00", end_time: "12:00:00" }),
       slot({ truck_id: t, weekday: 1, start_time: "12:00:00", end_time: "16:00:00" }),
@@ -173,7 +176,7 @@ describe("findIssues — overlaps and completeness", () => {
 
   it("does not flag overlapping slots on different weekdays", () => {
     const s = healthy();
-    const t = s.trucks[0].id;
+    const t = TRUCK_ID;
     s.slots = [
       slot({ truck_id: t, weekday: 1, start_time: "08:00:00", end_time: "12:00:00" }),
       slot({ truck_id: t, weekday: 2, start_time: "08:00:00", end_time: "12:00:00" }),
@@ -183,7 +186,7 @@ describe("findIssues — overlaps and completeness", () => {
 
   it("reports a truck with no capacity as info, not a warning", () => {
     const s = healthy();
-    s.trucks = [truck({ id: s.trucks[0].id, capacity_kg: null })];
+    s.trucks = [truck({ id: TRUCK_ID, capacity_kg: null })];
     const issue = findIssues(s).find((i) => i.id.startsWith("truck-no-capacity:"));
     expect(issue?.severity).toBe("info");
   });
@@ -196,11 +199,11 @@ describe("searchSetup", () => {
 
   it("matches a truck by name, case-insensitively", () => {
     const hits = searchSetup(healthy(), "canter");
-    expect(hits[0]).toMatchObject({ entity: "trucks", label: "Canter 01" });
+    expect(hits.at(0)).toMatchObject({ entity: "trucks", label: "Canter 01" });
   });
 
   it("matches a truck by code", () => {
-    expect(searchSetup(healthy(), "T1")[0].entity).toBe("trucks");
+    expect(searchSetup(healthy(), "T1").at(0)?.entity).toBe("trucks");
   });
 
   it("matches a zone by name", () => {
@@ -226,12 +229,12 @@ describe("searchSetup", () => {
       id: "block-1".padEnd(36, "0"), organization_id: "org", block_date: "2026-08-30",
       truck_id: null, reason: "Hari Raya Haji", created_by: null, created_at: "",
     }];
-    expect(searchSetup(s, "raya")[0].entity).toBe("blocks");
+    expect(searchSetup(s, "raya").at(0)?.entity).toBe("blocks");
   });
 
   it("ignores archived records", () => {
     const s = healthy();
-    s.trucks = [truck({ id: s.trucks[0].id, name: "Canter 01", is_active: false })];
+    s.trucks = [truck({ id: TRUCK_ID, name: "Canter 01", is_active: false })];
     expect(searchSetup(s, "canter")).toEqual([]);
   });
 });

@@ -346,6 +346,10 @@ export const TruckInputSchema = z.object({
   name: z.string().min(1).max(100),
   code: z.string().min(1).max(20),
   isActive: z.boolean().default(true),
+  /** null = not recorded; load planning skips the overbooking warning. */
+  capacityKg: z.number().int().positive().nullable().default(null),
+  /** null = unassigned; the bay can also be set from the Bays panel. */
+  bayId: z.string().uuid().nullable().default(null),
 });
 export type TruckInput = z.infer<typeof TruckInputSchema>;
 

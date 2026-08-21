@@ -62,6 +62,15 @@ function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): b
   return aStart < bEnd && bStart < aEnd;
 }
 
+/** Every unordered pair, so overlap checks read as a single loop. */
+function pairs<T>(items: T[]): Array<[T, T]> {
+  const out: Array<[T, T]> = [];
+  for (const [index, a] of items.entries()) {
+    for (const b of items.slice(index + 1)) out.push([a, b]);
+  }
+  return out;
+}
+
 export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
   const issues: SetupIssue[] = [];
   const liveZones = snapshot.zones.filter((z) => z.is_active);
@@ -155,43 +164,35 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
   const zoneName = (id: string) =>
     snapshot.zones.find((z) => z.id === id)?.name ?? "Unknown zone";
 
-  for (let i = 0; i < liveRanges.length; i += 1) {
-    for (let j = i + 1; j < liveRanges.length; j += 1) {
-      const a = liveRanges[i];
-      const b = liveRanges[j];
-      if (a.zone_id === b.zone_id) continue;
-      if (a.postcode_start > b.postcode_end || b.postcode_start > a.postcode_end) continue;
-      issues.push({
-        id: `postcode-overlap:${a.zone_id}:${b.zone_id}`,
-        severity: "blocker",
-        title: `${zoneName(a.zone_id)} and ${zoneName(b.zone_id)} claim the same postcodes`,
-        detail: `${a.postcode_start}–${a.postcode_end} overlaps ${b.postcode_start}–${b.postcode_end}. Whichever zone sorts first silently wins.`,
-        target: { entity: "postcodes", recordId: a.zone_id },
-      });
-    }
+  for (const [a, b] of pairs(liveRanges)) {
+    if (a.zone_id === b.zone_id) continue;
+    if (a.postcode_start > b.postcode_end || b.postcode_start > a.postcode_end) continue;
+    issues.push({
+      id: `postcode-overlap:${a.zone_id}:${b.zone_id}`,
+      severity: "blocker",
+      title: `${zoneName(a.zone_id)} and ${zoneName(b.zone_id)} claim the same postcodes`,
+      detail: `${a.postcode_start}–${a.postcode_end} overlaps ${b.postcode_start}–${b.postcode_end}. Whichever zone sorts first silently wins.`,
+      target: { entity: "postcodes", recordId: a.zone_id },
+    });
   }
 
-  for (let i = 0; i < activeSlots.length; i += 1) {
-    for (let j = i + 1; j < activeSlots.length; j += 1) {
-      const a = activeSlots[i];
-      const b = activeSlots[j];
-      if (a.truck_id !== b.truck_id || a.weekday !== b.weekday) continue;
-      const isOverlapping = overlaps(
-        minutesOfTime(a.start_time),
-        minutesOfTime(a.end_time),
-        minutesOfTime(b.start_time),
-        minutesOfTime(b.end_time),
-      );
-      if (!isOverlapping) continue;
-      const name = snapshot.trucks.find((t) => t.id === a.truck_id)?.name ?? "Truck";
-      issues.push({
-        id: `slot-overlap:${a.id}:${b.id}`,
-        severity: "warning",
-        title: `${name} has two slots at the same time`,
-        detail: `${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} overlaps ${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}. Capacity is counted twice.`,
-        target: { entity: "slots", recordId: a.truck_id },
-      });
-    }
+  for (const [a, b] of pairs(activeSlots)) {
+    if (a.truck_id !== b.truck_id || a.weekday !== b.weekday) continue;
+    const isOverlapping = overlaps(
+      minutesOfTime(a.start_time),
+      minutesOfTime(a.end_time),
+      minutesOfTime(b.start_time),
+      minutesOfTime(b.end_time),
+    );
+    if (!isOverlapping) continue;
+    const name = snapshot.trucks.find((t) => t.id === a.truck_id)?.name ?? "Truck";
+    issues.push({
+      id: `slot-overlap:${a.id}:${b.id}`,
+      severity: "warning",
+      title: `${name} has two slots at the same time`,
+      detail: `${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} overlaps ${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}. Capacity is counted twice.`,
+      target: { entity: "slots", recordId: a.truck_id },
+    });
   }
 
   return issues.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);

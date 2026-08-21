@@ -222,6 +222,8 @@ export async function createTruck(
       name: input.name,
       code: input.code,
       is_active: input.isActive,
+      capacity_kg: input.capacityKg,
+      bay_id: input.bayId,
       created_by: userId,
     })
     .select()
@@ -260,6 +262,8 @@ export async function updateTruck(
       name: input.name,
       code: input.code,
       is_active: input.isActive,
+      capacity_kg: input.capacityKg,
+      bay_id: input.bayId,
     })
     .eq("id", truckId)
     .eq("organization_id", orgId)
