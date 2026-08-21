@@ -155,4 +155,75 @@ export const admin = {
     });
     if (error) throw error;
   },
+
+  /**
+   * Create a password login if the email is unknown, otherwise reset the
+   * existing user's password. Data console only. Returns the user id.
+   */
+  async ensureUserWithPassword(input: {
+    email: string;
+    password: string;
+    displayName: string;
+  }): Promise<string> {
+    const c = client();
+    const { data, error } = await c.auth.admin.createUser({
+      email: input.email,
+      password: input.password,
+      email_confirm: true,
+      user_metadata: { display_name: input.displayName },
+    });
+    if (!error && data.user) return data.user.id;
+
+    // Already registered -> find the account and align its password.
+    const { data: list, error: listError } = await c.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (listError) throw listError;
+    const existing = list.users.find(
+      (u) => u.email?.toLowerCase() === input.email.toLowerCase(),
+    );
+    if (!existing) throw error ?? new Error("ensureUserWithPassword: user not found");
+    const { error: updateError } = await c.auth.admin.updateUserById(existing.id, {
+      password: input.password,
+    });
+    if (updateError) throw updateError;
+    return existing.id;
+  },
+
+  /**
+   * Idempotent profile + active org membership for a console account.
+   * Data console only.
+   */
+  async upsertProfileAndMembership(input: {
+    userId: string;
+    displayName: string;
+    organizationId: string;
+    role: string;
+    invitedBy: string;
+  }): Promise<void> {
+    const c = client();
+    const { error: profileError } = await c.from("profiles").upsert(
+      {
+        user_id: input.userId,
+        display_name: input.displayName,
+        locale: "en",
+        time_zone: "Asia/Kuala_Lumpur",
+        status: "active",
+      },
+      { onConflict: "user_id" },
+    );
+    if (profileError) throw profileError;
+    const { error: memberError } = await c.from("organization_members").upsert(
+      {
+        organization_id: input.organizationId,
+        user_id: input.userId,
+        role: input.role,
+        status: "active",
+        invited_by: input.invitedBy,
+      },
+      { onConflict: "organization_id,user_id" },
+    );
+    if (memberError) throw memberError;
+  },
 };
