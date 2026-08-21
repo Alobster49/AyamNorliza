@@ -131,6 +131,8 @@ export type DeliveryRun = {
   truck_id: string;
   run_date: string;
   status: RunStatus;
+  /** The user driving this run. Scopes what a driver-role member can read. */
+  driver_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
@@ -150,6 +152,8 @@ export type Order = {
   slot_id: string;
   truck_id: string;
   run_id: string | null;
+  /** 1-based position of this stop in its run; null when not on a run. */
+  run_sequence: number | null;
   postcode: string | null;
   assignment_source: "none" | "auto" | "manual";
   notes: string | null;
@@ -198,6 +202,68 @@ export type OrderTask = {
   version: number;
 };
 
+// ---------------------------------------------------------------------------
+// Driver write path (arrive/leave marks and delivery attempts)
+// ---------------------------------------------------------------------------
+
+export type StopEventKind = "arrive" | "leave";
+export type DeliveryOutcome = "delivered" | "failed";
+
+export const DELIVERY_FAILURE_REASONS = [
+  "shop_closed",
+  "rejected",
+  "no_cash",
+  "wrong_address",
+  "other",
+] as const;
+export type DeliveryFailureReason = (typeof DELIVERY_FAILURE_REASONS)[number];
+
+export const DELIVERY_FAILURE_LABELS: Record<DeliveryFailureReason, string> = {
+  shop_closed: "Shop closed",
+  rejected: "Customer rejected the goods",
+  no_cash: "No cash on hand",
+  wrong_address: "Wrong address",
+  other: "Something else",
+};
+
+export const DELIVERY_NEXT_ACTIONS = ["retry_today", "move_tomorrow", "return_to_yard"] as const;
+export type DeliveryNextAction = (typeof DELIVERY_NEXT_ACTIONS)[number];
+
+export const DELIVERY_NEXT_ACTION_LABELS: Record<DeliveryNextAction, string> = {
+  retry_today: "Retry at the end of the run",
+  move_tomorrow: "Move to tomorrow",
+  return_to_yard: "Return to the yard",
+};
+
+export type RunStopEvent = {
+  id: string;
+  organization_id: string;
+  run_id: string;
+  order_id: string;
+  kind: StopEventKind;
+  at: string;
+  recorded_by: string;
+  created_at: string;
+};
+
+export type DeliveryAttempt = {
+  id: string;
+  organization_id: string;
+  run_id: string;
+  order_id: string;
+  outcome: DeliveryOutcome;
+  reason: DeliveryFailureReason | null;
+  next_action: DeliveryNextAction | null;
+  note: string | null;
+  received_by: string | null;
+  signature_path: string | null;
+  photo_path: string | null;
+  cash_collected: number | null;
+  attempted_at: string;
+  recorded_by: string;
+  created_at: string;
+};
+
 export type OrderWeightLog = {
   id: string;
   organization_id: string;
@@ -235,6 +301,9 @@ export type OrderWithItems = Order & {
   customer?: { id: string; name: string; phone: string };
   tasks?: OrderTask[];
   weight_log?: OrderWeightLog[];
+  /** Newest first when present. Only loaded by the screens that need it. */
+  attempts?: DeliveryAttempt[];
+  stop_events?: RunStopEvent[];
 };
 
 export type OrderListItem = Order & {
@@ -244,7 +313,13 @@ export type OrderListItem = Order & {
 
 export type TaskWithOrder = OrderTask & { order: OrderWithItems };
 
-export type RunWithOrders = DeliveryRun & { truck?: Truck; orders: OrderWithItems[] };
+export type RunDriver = { userId: string; name: string };
+
+export type RunWithOrders = DeliveryRun & {
+  truck?: Truck;
+  driver?: RunDriver | null;
+  orders: OrderWithItems[];
+};
 
 export type DeliverySetup = {
   zones: DeliveryZone[];

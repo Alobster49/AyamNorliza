@@ -21,7 +21,7 @@ function order(over: Partial<DispatchTicket> = {}): DispatchTicket {
     id: uid("order"), organization_id: "org", customer_id: "c", created_by: null,
     source: "manual", status: "confirmed", zone_id: "zone-1",
     delivery_address: "addr", delivery_date: DATE, slot_id: "slot-1",
-    truck_id: "truck-x", run_id: null, postcode: "82000",
+    truck_id: "truck-x", run_id: null, run_sequence: null, postcode: "82000",
     assignment_source: "none", notes: null, total_amount: 0, closed_at: null,
     loaded_at: null, loaded_by: null,
     created_at: "", updated_at: "", version: 1,
@@ -81,7 +81,7 @@ describe("buildTimeline", () => {
   it("marks blocks departed when the truck's run has departed", () => {
     const data = baseData();
     const truckId = data.trucks[0]!.id;
-    data.runs = [{ id: "run-1", organization_id: "org", truck_id: truckId, run_date: DATE, status: "departed", notes: null, created_at: "", updated_at: "", version: 1 }];
+    data.runs = [{ id: "run-1", organization_id: "org", truck_id: truckId, run_date: DATE, status: "departed", driver_id: null, notes: null, created_at: "", updated_at: "", version: 1 }];
     data.orders = [order({ assignment_source: "auto", truck_id: truckId, status: "ready", run_id: "run-1" })];
     const view = buildTimeline(data, DATE, 540);
     expect(view.rows[0]!.departed).toBe(true);
@@ -122,6 +122,27 @@ describe("buildTimeline", () => {
     const row = buildTimeline(data, DATE, null).rows[0]!;
     expect(row.laneCount).toBe(1);
     expect(row.blocks.map((b) => b.lane)).toEqual([0, 0]);
+  });
+
+  it("pads the window an hour either side so a lone slot does not fill the axis", () => {
+    const data = baseData();
+    data.orders = [order({ assignment_source: "auto", truck_id: data.trucks[0]!.id })];
+    const view = buildTimeline(data, DATE, null);
+    // Slot is 08:00-09:00, so the axis runs 07:00-10:00.
+    expect(view.windowStart).toBe(420);
+    expect(view.windowEnd).toBe(600);
+    const block = view.rows[0]!.blocks[0]!;
+    expect(block.startPct).toBeGreaterThan(0);
+    expect(block.startPct + block.widthPct).toBeLessThan(100);
+  });
+
+  it("clamps the padded window to the calendar day", () => {
+    const data = baseData();
+    data.slots = [{ ...data.slots[0]!, start_time: "00:00:00", end_time: "23:30:00" }];
+    data.orders = [order({ assignment_source: "auto", truck_id: data.trucks[0]!.id })];
+    const view = buildTimeline(data, DATE, null);
+    expect(view.windowStart).toBe(0);
+    expect(view.windowEnd).toBe(1440);
   });
 
   it("falls back to a 06:00-14:00 window when nothing is scheduled", () => {

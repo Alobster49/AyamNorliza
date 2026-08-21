@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useCart } from "@/features/buyer/components/cart-context";
 import { buyerSignInAction, buyerSignUpAction } from "@/features/buyer-auth/server/auth-actions";
 import { Button } from "@/components/ui/button";
@@ -17,7 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ShoppingCart } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 type LoginPageProps = {
   params: Promise<{ organizationSlug: string }>;
@@ -141,8 +142,14 @@ export default function LoginPage({ params }: LoginPageProps) {
     <div className="flex min-h-[70vh] items-center justify-center">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <ShoppingCart className="h-6 w-6" />
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-white">
+            <Image
+              src="/logo-nb-poultry.webp"
+              alt="NB Poultry Processing Industries"
+              width={48}
+              height={48}
+              className="size-full rounded-lg object-contain"
+            />
           </div>
           <CardTitle className="text-2xl">
             {mode === "login" ? "Welcome Back" : "Create Account"}

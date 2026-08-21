@@ -1,6 +1,8 @@
 /**
  * Pure day-timeline view: trucks as rows, the day as an hour axis, each
- * assigned order as a block at its delivery slot. Risk is derived, never
+ * assigned order as a block at its delivery slot. The hour axis is padded an
+ * hour either side of the scheduled work so blocks read as bars rather than
+ * filling the row. Risk is derived, never
  * stored: an unready order whose slot start is near (or past) "now" turns
  * amber (atRisk) or red (late). nowMinutes is injected for testability;
  * the client passes local minutes for today and null for other dates.
@@ -44,6 +46,13 @@ export type TimelineView = {
 const AT_RISK_LEAD_MIN = 60;
 const DEFAULT_START = 6 * 60;
 const DEFAULT_END = 14 * 60;
+const DAY_END = 24 * 60;
+/**
+ * Breathing room either side of the scheduled work. Without it a day with a
+ * single slot draws every block edge to edge and the axis carries no
+ * information at all.
+ */
+const WINDOW_PAD_MIN = 60;
 
 export function minutesOf(time: string): number {
   const [h = 0, m = 0] = time.split(":").map(Number);
@@ -80,8 +89,12 @@ export function buildTimeline(
       max = Math.max(max, minutesOf(slot.end_time));
     }
   }
-  const windowStart = Number.isFinite(min) ? Math.floor(min / 60) * 60 : DEFAULT_START;
-  const windowEnd = Number.isFinite(max) ? Math.max(Math.ceil(max / 60) * 60, windowStart + 120) : DEFAULT_END;
+  const windowStart = Number.isFinite(min)
+    ? Math.max(0, Math.floor(min / 60) * 60 - WINDOW_PAD_MIN)
+    : DEFAULT_START;
+  const windowEnd = Number.isFinite(max)
+    ? Math.min(DAY_END, Math.max(Math.ceil(max / 60) * 60 + WINDOW_PAD_MIN, windowStart + 120))
+    : DEFAULT_END;
   const span = windowEnd - windowStart;
 
   const rows: TimelineRow[] = boardTrucks.map((bt) => {

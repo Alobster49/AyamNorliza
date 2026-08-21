@@ -4,7 +4,7 @@
   "private": true,
   "description": "MOD-01 Tenant, identity and access foundation for the AyamNorliza chicken-coop operations platform (Next.js App Router + Supabase).",
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 9999",
     "build": "next build",
     "start": "next start",
     "lint": "eslint src",

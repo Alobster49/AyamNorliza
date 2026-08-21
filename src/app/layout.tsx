@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { ThemeProvider } from "@/components/providers/theme-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/toaster";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,9 @@ const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = {
   title: "AyamNorliza Ops",
   description: "Chicken-coop operations platform (MOD-01 phase).",
+  icons: {
+    icon: "/logo-nb-poultry.webp",
+  },
 };
 
 export const viewport: Viewport = {

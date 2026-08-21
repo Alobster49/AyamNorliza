@@ -11,6 +11,8 @@ export default defineConfig({
     },
   },
   test: {
+    // Cap worker processes — uncapped runs spawned 11 × ~3GB workers and swamped the machine
+    maxWorkers: 4,
     environment: "node",
     include: [
       "src/features/**/tests/unit/**/*.test.ts",

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -64,9 +65,13 @@ export function BuyerHeader({
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href={`/buyer_portal/${organizationSlug}/shop`} className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <ShoppingCart className="h-5 w-5" />
-          </div>
+          <Image
+            src="/logo-nb-poultry.webp"
+            alt="NB Poultry Processing Industries"
+            width={36}
+            height={36}
+            className="h-9 w-9 rounded-lg object-contain"
+          />
           <span className="hidden font-semibold sm:inline-block">
             Shop
           </span>

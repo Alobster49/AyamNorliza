@@ -23,6 +23,7 @@ export const ROLES = [
   "owner",
   "org_admin",
   "seller",
+  "driver",
   "farm_manager",
   "supervisor",
   "caretaker",
@@ -88,6 +89,10 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
     "customers.manage",
     "step_up.reauth",
   ]),
+  // A driver only ever works one run at a time on a phone. Everything they
+  // may read is scoped by RLS to the run they are assigned to, so they hold
+  // no org-wide capability at all.
+  driver: new Set<Capability>([]),
   farm_manager: new Set<Capability>([
     "membership.invite",
     "membership.scope.change",
@@ -133,6 +138,7 @@ const roleRank: Record<Role, number> = {
   org_admin: 80,
   seller: 60,
   farm_manager: 60,
+  driver: 30,
   supervisor: 50,
   veterinarian: 50,
   biosecurity_qa: 50,

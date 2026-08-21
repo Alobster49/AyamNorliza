@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   CAPABILITIES,
   can,
+  getRoleRank,
   ROLES,
   type Capability,
   type Role,
@@ -14,25 +15,11 @@ describe("buildCapabilityMatrix", () => {
     const rowRoles = matrix.rows.map((r) => r.role);
     expect(rowRoles[0]).toBe("owner");
     expect(rowRoles[rowRoles.length - 1]).toBe("support");
-    expect(rowRoles).toEqual([...ROLES].sort((a, b) => {
-      // rank descending: owner has highest
-      const ranks: Record<Role, number> = {
-        owner: 100,
-        org_admin: 80,
-        seller: 60,
-        farm_manager: 60,
-        supervisor: 50,
-        veterinarian: 50,
-        biosecurity_qa: 50,
-        maintenance: 40,
-        inventory: 40,
-        logistics: 40,
-        caretaker: 30,
-        auditor: 20,
-        support: 10,
-      };
-      return ranks[b] - ranks[a];
-    }));
+    // Ranks come from the permissions module rather than a copy here: a new
+    // role (driver) only has to be ranked in one place.
+    expect(rowRoles).toEqual(
+      [...ROLES].sort((a, b) => getRoleRank(b) - getRoleRank(a)),
+    );
   });
 
   it("every cell exposes hasCapability matching can(role, capability)", () => {

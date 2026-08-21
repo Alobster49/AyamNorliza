@@ -20,7 +20,7 @@ function ticket(id: string, truckId: string, source: "none" | "auto" | "manual",
   return {
     id, organization_id: "org-1", customer_id: "cust-1", created_by: null,
     source: "portal", status, zone_id: "z-south", delivery_address: "addr",
-    delivery_date: DATE, slot_id: "slot-1", truck_id: truckId, run_id: null,
+    delivery_date: DATE, slot_id: "slot-1", truck_id: truckId, run_id: null, run_sequence: null,
     notes: null, total_amount: 0, closed_at: null, loaded_at: null, loaded_by: null,
     created_at: "", updated_at: "",
     version: 1, postcode: "82100", assignment_source: source,
@@ -88,7 +88,7 @@ describe("buildBoardView", () => {
       data({
         runs: [{
           id: "run-1", organization_id: "org-1", truck_id: "t-1", run_date: DATE,
-          status: "departed", notes: null, created_at: "", updated_at: "", version: 1,
+          status: "departed", driver_id: null, notes: null, created_at: "", updated_at: "", version: 1,
         }],
       }),
       DATE,

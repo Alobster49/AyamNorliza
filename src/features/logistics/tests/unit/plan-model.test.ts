@@ -21,7 +21,7 @@ function order(over: Partial<DispatchTicket> = {}): DispatchTicket {
     id: uid("order"), organization_id: "org", customer_id: "c", created_by: null,
     source: "manual", status: "confirmed", zone_id: "zone-1",
     delivery_address: "addr", delivery_date: DATE, slot_id: "slot-1",
-    truck_id: "truck-x", run_id: null, postcode: "82000",
+    truck_id: "truck-x", run_id: null, run_sequence: null, postcode: "82000",
     assignment_source: "none", notes: null, total_amount: 0, closed_at: null,
     loaded_at: null, loaded_by: null,
     created_at: "", updated_at: "", version: 1,

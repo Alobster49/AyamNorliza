@@ -169,6 +169,11 @@ const ROLE_LABELS: Record<Role, { label: string; description: string; rank: numb
     description: "Manages products, orders, and customer relationships.",
     rank: 60,
   },
+  driver: {
+    label: "Driver",
+    description: "Delivers one run at a time. Sees only the stops on the run they are assigned.",
+    rank: 30,
+  },
   farm_manager: {
     label: "Farm manager",
     description: "Operational leadership over sites and assignments.",

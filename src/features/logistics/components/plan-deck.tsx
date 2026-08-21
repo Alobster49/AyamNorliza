@@ -127,7 +127,11 @@ export function PlanDeck({
 }) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
-  const [dismissed, setDismissed] = useState(false);
+  // Dismissal belongs to the date it was made on. Plain boolean state would
+  // survive a date change and silently hide the next day's draft, with a page
+  // reload as the only way back.
+  const [dismissedFor, setDismissedFor] = useState<string | null>(null);
+  const dismissed = dismissedFor === date;
 
   const view = useMemo(() => buildBoardView(data, date), [data, date]);
   const draft: PlanDraft = useMemo(() => draftPlan(data, date), [data, date]);
@@ -192,7 +196,7 @@ export function PlanDeck({
             </p>
           </div>
           <div className="ml-auto flex gap-2">
-            <button type="button" className="min-h-9 rounded border px-3 text-sm" onClick={() => setDismissed(true)}>
+            <button type="button" className="min-h-9 rounded border px-3 text-sm" onClick={() => setDismissedFor(date)}>
               Dismiss
             </button>
             <button
@@ -209,6 +213,16 @@ export function PlanDeck({
 
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         <aside className="flex flex-col gap-2">
+          {draft.proposals.length > 0 && dismissed ? (
+            <button
+              type="button"
+              className="min-h-9 rounded-lg border border-dashed px-3 text-sm text-muted-foreground hover:text-foreground"
+              onClick={() => setDismissedFor(null)}
+            >
+              Show draft plan · {draft.proposals.length}
+            </button>
+          ) : null}
+
           {draft.exceptions.length > 0 ? (
             <>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -262,9 +276,16 @@ export function PlanDeck({
             );
           })}
           {draft.poolCount === 0 ? (
-            <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">
-              Pool is empty — every order for this date has a truck.
-            </p>
+            <div className="rounded-lg border border-dashed p-3">
+              <p className="text-sm font-medium">
+                {data.orders.length === 0 ? "No orders for this date" : "Every order has a truck"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {data.orders.length === 0
+                  ? "Orders appear here once they are scheduled for delivery on this date."
+                  : "Nothing left to assign — check the Board or the Timeline."}
+              </p>
+            </div>
           ) : null}
         </aside>
 

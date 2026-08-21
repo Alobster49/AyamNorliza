@@ -238,6 +238,60 @@ export type Database = {
           },
         ]
       }
+      bays: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          facility_id: string
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          position: number
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          facility_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          position?: number
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          facility_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          position?: number
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bays_facility_id_fkey"
+            columns: ["facility_id"]
+            isOneToOne: false
+            referencedRelation: "facilities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bays_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       break_glass_events: {
         Row: {
           approved_by: string | null
@@ -436,6 +490,7 @@ export type Database = {
       delivery_runs: {
         Row: {
           created_at: string
+          driver_id: string | null
           id: string
           notes: string | null
           organization_id: string
@@ -447,6 +502,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          driver_id?: string | null
           id?: string
           notes?: string | null
           organization_id: string
@@ -458,6 +514,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          driver_id?: string | null
           id?: string
           notes?: string | null
           organization_id?: string
@@ -581,6 +638,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "delivery_zones_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      facilities: {
+        Row: {
+          address_line: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          name: string
+          organization_id: string
+          postcode: string
+          state: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          address_line: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          organization_id: string
+          postcode: string
+          state: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          address_line?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          organization_id?: string
+          postcode?: string
+          state?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "facilities_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -887,6 +994,7 @@ export type Database = {
       }
       orders: {
         Row: {
+          assignment_source: Database["public"]["Enums"]["assignment_source"]
           closed_at: string | null
           created_at: string
           created_by: string | null
@@ -894,9 +1002,13 @@ export type Database = {
           delivery_address: string
           delivery_date: string
           id: string
+          loaded_at: string | null
+          loaded_by: string | null
           notes: string | null
           organization_id: string
+          postcode: string | null
           run_id: string | null
+          run_sequence: number | null
           slot_id: string
           source: string
           status: Database["public"]["Enums"]["order_status"]
@@ -907,6 +1019,7 @@ export type Database = {
           zone_id: string
         }
         Insert: {
+          assignment_source?: Database["public"]["Enums"]["assignment_source"]
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -914,9 +1027,13 @@ export type Database = {
           delivery_address: string
           delivery_date: string
           id?: string
+          loaded_at?: string | null
+          loaded_by?: string | null
           notes?: string | null
           organization_id: string
+          postcode?: string | null
           run_id?: string | null
+          run_sequence?: number | null
           slot_id: string
           source?: string
           status?: Database["public"]["Enums"]["order_status"]
@@ -927,6 +1044,7 @@ export type Database = {
           zone_id: string
         }
         Update: {
+          assignment_source?: Database["public"]["Enums"]["assignment_source"]
           closed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -934,9 +1052,13 @@ export type Database = {
           delivery_address?: string
           delivery_date?: string
           id?: string
+          loaded_at?: string | null
+          loaded_by?: string | null
           notes?: string | null
           organization_id?: string
+          postcode?: string | null
           run_id?: string | null
+          run_sequence?: number | null
           slot_id?: string
           source?: string
           status?: Database["public"]["Enums"]["order_status"]
@@ -1426,6 +1548,8 @@ export type Database = {
       }
       trucks: {
         Row: {
+          bay_id: string | null
+          capacity_kg: number | null
           code: string
           created_at: string
           created_by: string | null
@@ -1437,6 +1561,8 @@ export type Database = {
           version: number
         }
         Insert: {
+          bay_id?: string | null
+          capacity_kg?: number | null
           code: string
           created_at?: string
           created_by?: string | null
@@ -1448,6 +1574,8 @@ export type Database = {
           version?: number
         }
         Update: {
+          bay_id?: string | null
+          capacity_kg?: number | null
           code?: string
           created_at?: string
           created_by?: string | null
@@ -1460,10 +1588,62 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "trucks_bay_id_fkey"
+            columns: ["bay_id"]
+            isOneToOne: false
+            referencedRelation: "bays"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "trucks_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zone_postcode_ranges: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          organization_id: string
+          postcode_end: string
+          postcode_start: string
+          zone_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id: string
+          postcode_end: string
+          postcode_start: string
+          zone_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          organization_id?: string
+          postcode_end?: string
+          postcode_start?: string
+          zone_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zone_postcode_ranges_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zone_postcode_ranges_zone_id_fkey"
+            columns: ["zone_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_zones"
             referencedColumns: ["id"]
           },
         ]
@@ -1473,16 +1653,86 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _order_safe_boolean: { Args: { p_text: string }; Returns: boolean }
+      _order_safe_integer: { Args: { p_text: string }; Returns: number }
+      _order_safe_numeric: { Args: { p_text: string }; Returns: number }
+      _order_safe_uuid: { Args: { p_text: string }; Returns: string }
+      cancel_order: {
+        Args: { p_order: string; p_reason: string }
+        Returns: undefined
+      }
+      close_order: { Args: { p_lines: Json; p_order: string }; Returns: number }
+      complete_order_task: {
+        Args: { p_task: string; p_weights: Json }
+        Returns: undefined
+      }
+      confirm_order: {
+        Args: { p_decisions: Json; p_order: string }
+        Returns: undefined
+      }
       current_actor_session_id: { Args: never; Returns: string }
+      dispatch_assign_driver: {
+        Args: { p_driver: string; p_run: string }
+        Returns: undefined
+      }
+      dispatch_assign_order: {
+        Args: {
+          p_order: string
+          p_source: Database["public"]["Enums"]["assignment_source"]
+          p_truck: string
+        }
+        Returns: undefined
+      }
+      dispatch_depart_truck: {
+        Args: { p_date: string; p_truck: string }
+        Returns: undefined
+      }
+      dispatch_reorder_run: {
+        Args: { p_order_ids: string[]; p_run: string }
+        Returns: undefined
+      }
+      dispatch_set_loaded: {
+        Args: { p_loaded: boolean; p_order: string }
+        Returns: undefined
+      }
+      dispatch_unassign_order: { Args: { p_order: string }; Returns: undefined }
+      driver_run_ids: { Args: never; Returns: string[] }
       effective_capabilities:
         | { Args: { p_org: string }; Returns: Json }
         | { Args: { p_org: string; p_role: string }; Returns: Json }
+      get_delivery_options: {
+        Args: { p_org: string; p_zone: string }
+        Returns: {
+          end_time: string
+          option_date: string
+          remaining: number
+          slot_id: string
+          start_time: string
+          truck_id: string
+          truck_name: string
+        }[]
+      }
       has_org_role: {
         Args: { roles: string[]; target_org: string }
         Returns: boolean
       }
       is_active_org_member: { Args: { target_org: string }; Returns: boolean }
       is_break_glass_active: { Args: { target_org: string }; Returns: boolean }
+      is_org_driver: { Args: { target_org: string }; Returns: boolean }
+      place_order: {
+        Args: {
+          p_address: string
+          p_customer?: string
+          p_date: string
+          p_items: Json
+          p_notes: string
+          p_org: string
+          p_postcode?: string
+          p_slot: string
+          p_zone: string
+        }
+        Returns: string
+      }
       record_audit_event: {
         Args: {
           p_after: Json
@@ -1508,9 +1758,21 @@ export type Database = {
         }
         Returns: string
       }
+      reopen_order: {
+        Args: { p_order: string; p_reason: string }
+        Returns: undefined
+      }
       role_rank: { Args: { role: string }; Returns: number }
+      set_run_status: {
+        Args: {
+          p_run: string
+          p_status: Database["public"]["Enums"]["delivery_run_status"]
+        }
+        Returns: undefined
+      }
     }
     Enums: {
+      assignment_source: "none" | "auto" | "manual"
       delivery_run_status: "planned" | "departed" | "completed"
       order_fallback: "cancel" | "mix" | "upsize" | "downsize"
       order_item_mode: "piece" | "kg"
@@ -2198,6 +2460,7 @@ export const Constants = {
   },
   public: {
     Enums: {
+      assignment_source: ["none", "auto", "manual"],
       delivery_run_status: ["planned", "departed", "completed"],
       order_fallback: ["cancel", "mix", "upsize", "downsize"],
       order_item_mode: ["piece", "kg"],

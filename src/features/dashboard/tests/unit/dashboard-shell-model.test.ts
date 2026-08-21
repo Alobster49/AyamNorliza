@@ -12,11 +12,11 @@ describe("dashboard shell model", () => {
       pathname: "/ayam-norliza-pilot/settings/organization",
     });
 
-    expect(groups[0]).toMatchObject({
+    expect(groups[1]).toMatchObject({
       title: "Access control",
       isActive: true,
     });
-    const orgItem = groups[0]?.items.find((item) => item.title === "Organization");
+    const orgItem = groups[1]?.items.find((item) => item.title === "Organization");
     expect(orgItem).toMatchObject({
       title: "Organization",
       href: "/ayam-norliza-pilot/settings/organization",
@@ -30,7 +30,7 @@ describe("dashboard shell model", () => {
       pathname: "/ayam-norliza-pilot/settings/users",
     });
 
-    expect(groups[0]).toMatchObject({ title: "Access control", isActive: true });
+    expect(groups[1]).toMatchObject({ title: "Access control", isActive: true });
   });
 
   it("returns page context for nested access control routes", () => {
@@ -117,7 +117,7 @@ describe("dashboard shell model", () => {
     });
 
     expect(groups).toHaveLength(2);
-    const salesTitles = groups[1]?.items.map((item) => item.title);
+    const salesTitles = groups[0]?.items.map((item) => item.title);
     expect(salesTitles).toEqual([
       "Products",
       "Orders",
@@ -128,7 +128,7 @@ describe("dashboard shell model", () => {
       "Delivery runs",
       "Warehouse tasks",
     ]);
-    const deliverySetup = groups[1]?.items.find((item) => item.title === "Delivery setup");
+    const deliverySetup = groups[0]?.items.find((item) => item.title === "Delivery setup");
     expect(deliverySetup).toMatchObject({
       href: "/ayam-norliza-pilot/delivery",
       isActive: true,
@@ -142,7 +142,7 @@ describe("dashboard shell model", () => {
     });
 
     expect(groups).toHaveLength(2);
-    const runsItem = groups[1]?.items.find((item) => item.title === "Delivery runs");
+    const runsItem = groups[0]?.items.find((item) => item.title === "Delivery runs");
     expect(runsItem).toMatchObject({
       href: "/ayam-norliza-pilot/runs",
       isActive: true,

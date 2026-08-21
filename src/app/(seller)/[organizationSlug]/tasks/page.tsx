@@ -6,10 +6,13 @@ import { TasksClient } from "./tasks-client";
 
 export default async function TasksPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ organizationSlug: string }>;
+  searchParams: Promise<{ order?: string }>;
 }) {
   const { organizationSlug } = await params;
+  const { order: focusOrderId } = await searchParams;
 
   try {
     await requireOrgRole(organizationSlug, STAFF_ROLES);
@@ -23,6 +26,10 @@ export default async function TasksPage({
   const result = await getTodayTasks(organizationSlug);
 
   return (
-    <TasksClient organizationSlug={organizationSlug} initialTasks={result.ok ? result.data : []} />
+    <TasksClient
+      organizationSlug={organizationSlug}
+      initialTasks={result.ok ? result.data : []}
+      focusOrderId={focusOrderId}
+    />
   );
 }

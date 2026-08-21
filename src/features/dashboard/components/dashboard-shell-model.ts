@@ -18,17 +18,6 @@ type DashboardPathInput = {
 
 const routeGroups = [
   {
-    title: "Access control",
-    items: [
-      { title: "Organization", segment: "settings/organization" },
-      { title: "Users", segment: "settings/users" },
-      { title: "Roles", segment: "settings/roles" },
-      { title: "Access reviews", segment: "settings/access-reviews" },
-      { title: "Support sessions", segment: "settings/support-sessions" },
-      { title: "Audit log", segment: "settings/audit-log" },
-    ],
-  },
-  {
     title: "Sales",
     items: [
       { title: "Products", segment: "products" },
@@ -39,6 +28,17 @@ const routeGroups = [
       { title: "Loading", segment: "loading" },
       { title: "Delivery runs", segment: "runs" },
       { title: "Warehouse tasks", segment: "tasks" },
+    ],
+  },
+  {
+    title: "Access control",
+    items: [
+      { title: "Organization", segment: "settings/organization" },
+      { title: "Users", segment: "settings/users" },
+      { title: "Roles", segment: "settings/roles" },
+      { title: "Access reviews", segment: "settings/access-reviews" },
+      { title: "Support sessions", segment: "settings/support-sessions" },
+      { title: "Audit log", segment: "settings/audit-log" },
     ],
   },
 ] as const;

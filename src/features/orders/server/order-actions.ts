@@ -18,6 +18,7 @@ import {
   type OrderWithItems,
   type TaskWithOrder,
   type RunWithOrders,
+  type RunDriver,
   type DeliveryRun,
   type Truck,
   type DeliveryOption,
@@ -371,7 +372,8 @@ export async function getRuns(
         zone:delivery_zones(*),
         slot:delivery_slots(*),
         customer:customers(id, name, phone),
-        items:order_items(*, product:products(id, name, image_url))
+        items:order_items(*, product:products(id, name, image_url)),
+        attempts:delivery_attempts(*)
       `,
       )
       .in("run_id", runIds);
@@ -384,12 +386,83 @@ export async function getRuns(
     }
   }
 
+  // Driver names come from profiles, not from the runs join: delivery_runs
+  // points at auth.users, which PostgREST will not traverse.
+  const driverIds = Array.from(
+    new Set((runs ?? []).map((r: DeliveryRun) => r.driver_id).filter((id): id is string => id !== null)),
+  );
+  const driverNames = new Map<string, string>();
+  if (driverIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", driverIds);
+    for (const profile of profiles ?? []) {
+      driverNames.set(profile.user_id, profile.display_name ?? "Driver");
+    }
+  }
+
   return ok(
     (runs ?? []).map((run: DeliveryRun & { truck?: Truck }) => ({
       ...run,
+      driver: run.driver_id
+        ? { userId: run.driver_id, name: driverNames.get(run.driver_id) ?? "Driver" }
+        : null,
       orders: ordersByRun.get(run.id) ?? [],
     })) as RunWithOrders[],
   );
+}
+
+/** Active driver-role members, for the run header's driver picker. */
+export async function getOrgDrivers(organizationSlug: string): Promise<ActionResult<RunDriver[]>> {
+  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  if (!guard.ok) return guard;
+  const { orgId } = guard;
+
+  const supabase = await createSupabaseServerClient();
+  const { data: members, error } = await supabase
+    .from("organization_members")
+    .select("user_id")
+    .eq("organization_id", orgId)
+    .eq("role", "driver")
+    .eq("status", "active");
+
+  if (error) return err("internal", "Failed to load drivers");
+
+  const userIds = (members ?? []).map((m) => m.user_id);
+  if (userIds.length === 0) return ok([]);
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("user_id, display_name")
+    .in("user_id", userIds);
+
+  const names = new Map((profiles ?? []).map((p) => [p.user_id, p.display_name ?? "Driver"]));
+  return ok(userIds.map((userId) => ({ userId, name: names.get(userId) ?? "Driver" })));
+}
+
+/** Put a driver on a run, or pass null to take them off it. */
+export async function assignRunDriver(
+  organizationSlug: string,
+  runId: string,
+  driverId: string | null,
+): Promise<ActionResult> {
+  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  if (!guard.ok) return guard;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("dispatch_assign_driver", {
+    p_run: runId,
+    p_driver: driverId,
+  });
+
+  if (error) {
+    const mapped = mapRpcError(error.message);
+    return err(mapped.code as OrderErrorCode, mapped.message);
+  }
+
+  revalidatePath(`/${organizationSlug}/runs`);
+  return ok(undefined);
 }
 
 export async function setRunStatus(
@@ -404,6 +477,33 @@ export async function setRunStatus(
   const { error } = await supabase.rpc("set_run_status", {
     p_run: runId,
     p_status: status,
+  });
+
+  if (error) {
+    const mapped = mapRpcError(error.message);
+    return err(mapped.code as OrderErrorCode, mapped.message);
+  }
+
+  revalidatePath(`/${organizationSlug}/runs`);
+  return ok(undefined);
+}
+
+/**
+ * Rewrite a run's route order. The RPC insists on the complete set of the
+ * run's orders, so the caller sends the whole list, not a single move.
+ */
+export async function reorderRun(
+  organizationSlug: string,
+  runId: string,
+  orderIds: string[],
+): Promise<ActionResult> {
+  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  if (!guard.ok) return guard;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("dispatch_reorder_run", {
+    p_run: runId,
+    p_order_ids: orderIds,
   });
 
   if (error) {

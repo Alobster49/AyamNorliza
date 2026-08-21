@@ -54,6 +54,22 @@ export function mapRpcError(message: string): { code: string; message: string } 
       return { code: "validation", message: "Weight must be greater than zero." };
     case "invalid_price":
       return { code: "validation", message: "Price per kg cannot be negative." };
+    case "invalid_order_set":
+      return {
+        code: "conflict",
+        message: "This run changed while you were reordering it. Reload and try again.",
+      };
+    case "run_completed":
+      return { code: "conflict", message: "A closed run cannot be reordered." };
+    case "run_not_departed":
+      return {
+        code: "conflict",
+        message: "This run has not left the yard yet.",
+      };
+    case "invalid_amount":
+      return { code: "validation", message: "Cash collected cannot be negative." };
+    case "invalid_driver":
+      return { code: "validation", message: "That person is not an active driver in this organization." };
     case "invalid_transition":
       return { code: "conflict", message: "That run status change is not allowed." };
     default:

@@ -45,6 +45,11 @@ const nextConfig = {
   allowedDevOrigins: ["192.168.50.100", "192.168.50.*", "localhost", "127.0.0.1"],
   images: {
     remotePatterns,
+    // Next 16 blocks upstream images that resolve to a private/loopback IP
+    // by default (SSRF hardening). Local Supabase storage runs on
+    // 127.0.0.1/localhost, so allow it in dev only — remotePatterns above
+    // still restricts which hosts/paths are reachable.
+    ...(process.env.NODE_ENV !== "production" && { dangerouslyAllowLocalIP: true }),
   },
   // Whitelist which env vars are exposed to the browser. Anything else must
   // stay server-only; see `src/lib/env.ts` and the SECURITY section of

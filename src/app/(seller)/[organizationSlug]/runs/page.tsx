@@ -1,8 +1,13 @@
 import { getRuns } from "@/features/orders/server/order-actions";
 import { RunsClient } from "./runs-client";
 
+/**
+ * Local calendar date, not UTC: the depot runs on Malaysian time, and
+ * toISOString() would serve yesterday's runs to the early-morning shift.
+ */
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 export default async function RunsPage({

@@ -166,8 +166,10 @@ body {
   line-height: 1.5;
 }
 
-a {
-  color: var(--primary);
+@layer base {
+  a {
+    color: var(--primary);
+  }
 }
 
 button {

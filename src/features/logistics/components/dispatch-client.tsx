@@ -69,8 +69,14 @@ export function DispatchClient({
               type="button"
               role="tab"
               aria-selected={view === v.id}
+              // bg-background would make the selected chip *darker* than the
+              // muted track in dark mode, which reads as a hole rather than a
+              // selection. A foreground-alpha fill lifts it above the track in
+              // dark and drops it below in light — active either way.
               className={`min-h-9 rounded-md px-3 text-sm transition-colors motion-reduce:transition-none ${
-                view === v.id ? "bg-background font-medium shadow-sm" : "text-muted-foreground"
+                view === v.id
+                  ? "bg-foreground/10 font-medium text-foreground"
+                  : "text-muted-foreground hover:bg-foreground/5 hover:text-foreground"
               }`}
               onClick={() => setView(v.id)}
             >
