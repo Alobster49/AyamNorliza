@@ -51,6 +51,17 @@ export type SetupSnapshot = {
 
 const SEVERITY_ORDER: Record<IssueSeverity, number> = { blocker: 0, warning: 1, info: 2 };
 
+/** "08:00:00" and "08:00" both become 480. */
+export function minutesOfTime(value: string): number {
+  const [h, m] = value.split(":");
+  return Number(h) * 60 + Number(m);
+}
+
+/** Half-open intervals: touching at a boundary is not an overlap. */
+function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
 export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
   const issues: SetupIssue[] = [];
   const liveZones = snapshot.zones.filter((z) => z.is_active);
@@ -112,6 +123,73 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
         title: `${truck.name} has no delivery slots`,
         detail: "Customers cannot book a delivery date on this truck.",
         target: { entity: "slots", recordId: truck.id },
+      });
+    }
+  }
+
+  for (const truck of liveTrucks) {
+    if (truck.capacity_kg === null) {
+      issues.push({
+        id: `truck-no-capacity:${truck.id}`,
+        severity: "info",
+        title: `${truck.name} has no capacity set`,
+        detail: "Load planning cannot warn when this truck is overbooked.",
+        target: { entity: "trucks", recordId: truck.id },
+      });
+    }
+  }
+
+  const liveRanges = snapshot.ranges.filter((r) => liveZoneIds.has(r.zone_id));
+  for (const range of liveRanges) {
+    if (range.postcode_start > range.postcode_end) {
+      issues.push({
+        id: `range-inverted:${range.id}`,
+        severity: "warning",
+        title: `Postcode range ${range.postcode_start}–${range.postcode_end} is backwards`,
+        detail: "The start is higher than the end, so it matches nothing.",
+        target: { entity: "postcodes", recordId: range.zone_id },
+      });
+    }
+  }
+
+  const zoneName = (id: string) =>
+    snapshot.zones.find((z) => z.id === id)?.name ?? "Unknown zone";
+
+  for (let i = 0; i < liveRanges.length; i += 1) {
+    for (let j = i + 1; j < liveRanges.length; j += 1) {
+      const a = liveRanges[i];
+      const b = liveRanges[j];
+      if (a.zone_id === b.zone_id) continue;
+      if (a.postcode_start > b.postcode_end || b.postcode_start > a.postcode_end) continue;
+      issues.push({
+        id: `postcode-overlap:${a.zone_id}:${b.zone_id}`,
+        severity: "blocker",
+        title: `${zoneName(a.zone_id)} and ${zoneName(b.zone_id)} claim the same postcodes`,
+        detail: `${a.postcode_start}–${a.postcode_end} overlaps ${b.postcode_start}–${b.postcode_end}. Whichever zone sorts first silently wins.`,
+        target: { entity: "postcodes", recordId: a.zone_id },
+      });
+    }
+  }
+
+  for (let i = 0; i < activeSlots.length; i += 1) {
+    for (let j = i + 1; j < activeSlots.length; j += 1) {
+      const a = activeSlots[i];
+      const b = activeSlots[j];
+      if (a.truck_id !== b.truck_id || a.weekday !== b.weekday) continue;
+      const isOverlapping = overlaps(
+        minutesOfTime(a.start_time),
+        minutesOfTime(a.end_time),
+        minutesOfTime(b.start_time),
+        minutesOfTime(b.end_time),
+      );
+      if (!isOverlapping) continue;
+      const name = snapshot.trucks.find((t) => t.id === a.truck_id)?.name ?? "Truck";
+      issues.push({
+        id: `slot-overlap:${a.id}:${b.id}`,
+        severity: "warning",
+        title: `${name} has two slots at the same time`,
+        detail: `${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} overlaps ${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}. Capacity is counted twice.`,
+        target: { entity: "slots", recordId: a.truck_id },
       });
     }
   }

@@ -114,3 +114,76 @@ describe("findIssues — relationships", () => {
     expect(severities.indexOf("blocker")).toBeLessThan(severities.indexOf("warning"));
   });
 });
+
+describe("findIssues — overlaps and completeness", () => {
+  it("flags two zones claiming the same postcodes", () => {
+    const s = healthy();
+    const other = zone({ id: "zone-2".padEnd(36, "0"), name: "Zone 2" });
+    s.zones = [...s.zones, other];
+    s.truckZones = [...s.truckZones, {
+      truck_id: s.trucks[0].id, zone_id: other.id, organization_id: "org",
+    }];
+    s.ranges = [...s.ranges, {
+      id: uid("range"), organization_id: "org", zone_id: other.id,
+      postcode_start: "47500", postcode_end: "47900", created_by: null, created_at: "",
+    }];
+    const issue = findIssues(s).find((i) => i.id.startsWith("postcode-overlap:"));
+    expect(issue?.severity).toBe("blocker");
+    expect(issue?.detail).toContain("47500");
+  });
+
+  it("does not flag two ranges of the same zone overlapping", () => {
+    const s = healthy();
+    s.ranges = [...s.ranges, {
+      id: uid("range"), organization_id: "org", zone_id: s.zones[0].id,
+      postcode_start: "47500", postcode_end: "47900", created_by: null, created_at: "",
+    }];
+    expect(ids(findIssues(s)).some((i) => i.startsWith("postcode-overlap:"))).toBe(false);
+  });
+
+  it("flags a range whose start is after its end", () => {
+    const s = healthy();
+    s.ranges = [{
+      id: "range-bad".padEnd(36, "0"), organization_id: "org", zone_id: s.zones[0].id,
+      postcode_start: "47800", postcode_end: "47000", created_by: null, created_at: "",
+    }];
+    expect(ids(findIssues(s))).toContain(`range-inverted:${"range-bad".padEnd(36, "0")}`);
+  });
+
+  it("flags two active slots overlapping on the same truck and weekday", () => {
+    const s = healthy();
+    const t = s.trucks[0].id;
+    s.slots = [
+      slot({ id: "slot-a".padEnd(36, "0"), truck_id: t, weekday: 1, start_time: "08:00:00", end_time: "12:00:00" }),
+      slot({ id: "slot-b".padEnd(36, "0"), truck_id: t, weekday: 1, start_time: "11:00:00", end_time: "14:00:00" }),
+    ];
+    expect(ids(findIssues(s)).some((i) => i.startsWith("slot-overlap:"))).toBe(true);
+  });
+
+  it("does not flag slots that merely touch at the boundary", () => {
+    const s = healthy();
+    const t = s.trucks[0].id;
+    s.slots = [
+      slot({ truck_id: t, weekday: 1, start_time: "08:00:00", end_time: "12:00:00" }),
+      slot({ truck_id: t, weekday: 1, start_time: "12:00:00", end_time: "16:00:00" }),
+    ];
+    expect(ids(findIssues(s)).some((i) => i.startsWith("slot-overlap:"))).toBe(false);
+  });
+
+  it("does not flag overlapping slots on different weekdays", () => {
+    const s = healthy();
+    const t = s.trucks[0].id;
+    s.slots = [
+      slot({ truck_id: t, weekday: 1, start_time: "08:00:00", end_time: "12:00:00" }),
+      slot({ truck_id: t, weekday: 2, start_time: "08:00:00", end_time: "12:00:00" }),
+    ];
+    expect(ids(findIssues(s)).some((i) => i.startsWith("slot-overlap:"))).toBe(false);
+  });
+
+  it("reports a truck with no capacity as info, not a warning", () => {
+    const s = healthy();
+    s.trucks = [truck({ id: s.trucks[0].id, capacity_kg: null })];
+    const issue = findIssues(s).find((i) => i.id.startsWith("truck-no-capacity:"));
+    expect(issue?.severity).toBe("info");
+  });
+});
