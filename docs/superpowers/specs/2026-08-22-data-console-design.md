@@ -63,9 +63,11 @@ pipeline functions.
 - **Sidebar:** entry in `app-sidebar.tsx`, visible to owners only, labelled
   "Data console".
 - **UI:** two cards.
-  - **Clear all data** — destructive card. Button opens a confirm dialog that
-    requires typing `PADAM SEMUA` before the action is enabled. Calls a server
-    action that invokes `admin_clear_org_data`.
+  - **Clear all data** — destructive card. Requires typing `PADAM SEMUA`
+    before the button enables, then calls a server action that invokes
+    `admin_clear_org_data`. *Implementation deviation (2026-08-22):* the
+    type-to-confirm input sits inline on the card rather than inside a
+    dialog; the safety property (typed phrase gates the button) is intact.
   - **Seed demo data** — button with a short summary of what gets created.
     Confirm dialog (plain confirm, no typed phrase — it is destructive too,
     since it clears first, so the dialog says so). Calls a server action that
