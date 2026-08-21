@@ -7,6 +7,24 @@
 begin;
 
 -- ---------------------------------------------------------------------------
+-- _dc_uuid: deterministic per-organization id for admin_seed_demo_data.
+-- The seed used to hardcode a fixed set of 'dd000000-...' UUID literals as
+-- primary keys, which collide across organizations seeding the same
+-- database. This derives a stable-but-org-scoped uuid from the org id and a
+-- fixed label, so every org gets its own non-colliding set of ids while the
+-- same (org, label) pair always resolves to the same id (idempotent reseed).
+-- md5()::uuid sets no UUID version/variant bits, which is fine for plain
+-- Postgres uuid columns (no uuid-version assumptions elsewhere in schema).
+-- ---------------------------------------------------------------------------
+create or replace function public._dc_uuid(p_org uuid, p_label text)
+returns uuid
+language sql
+immutable
+as $$ select (md5(p_org::text || ':' || p_label))::uuid $$;
+
+revoke all on function public._dc_uuid(uuid, text) from public;
+
+-- ---------------------------------------------------------------------------
 -- admin_clear_org_data
 -- ---------------------------------------------------------------------------
 create or replace function public.admin_clear_org_data(p_organization_id uuid)
@@ -96,60 +114,60 @@ begin
 
   -- Catalog ------------------------------------------------------------------
   insert into public.categories (id, organization_id, name, description, created_by)
-  values ('dd000000-0000-0000-0000-00000000c001', p_organization_id, 'Ayam Segar',
+  values (public._dc_uuid(p_organization_id, 'c001'), p_organization_id, 'Ayam Segar',
           'Fresh chicken, whole birds and cuts', v_actor);
 
   insert into public.products (id, organization_id, category_id, name, image_url, created_by)
-  select x.id, p_organization_id, 'dd000000-0000-0000-0000-00000000c001', x.name, x.image_url, v_actor
+  select x.id, p_organization_id, public._dc_uuid(p_organization_id, 'c001'), x.name, x.image_url, v_actor
   from (values
-    ('dd000000-0000-0000-0000-000000000101'::uuid, 'Ayam Pedaging Seekor (Standard)', '/product/ayam-pedaging.jpg'),
-    ('dd000000-0000-0000-0000-000000000102'::uuid, 'Ayam Kampung Seekor',             '/product/ayam-kampung.jpg'),
-    ('dd000000-0000-0000-0000-000000000103'::uuid, 'Ayam Tua / Penelur Seekor',       '/product/ayam-tua.jpg'),
-    ('dd000000-0000-0000-0000-000000000104'::uuid, 'Dada Ayam',                       '/product/dada-ayam.png'),
-    ('dd000000-0000-0000-0000-000000000105'::uuid, 'Peha Ayam',                       '/product/peha-ayam.jpg'),
-    ('dd000000-0000-0000-0000-000000000106'::uuid, 'Pangkal Peha',                    '/product/pangkal-peha.jpg'),
-    ('dd000000-0000-0000-0000-000000000107'::uuid, 'Kepak Ayam',                      '/product/kepak-ayam.jpg'),
-    ('dd000000-0000-0000-0000-000000000108'::uuid, 'Chicken Wing (3-Joint)',          '/product/chicken-wing.jpg'),
-    ('dd000000-0000-0000-0000-000000000109'::uuid, 'Kaki Ayam',                       '/product/kaki-ayam.jpg'),
-    ('dd000000-0000-0000-0000-00000000010a'::uuid, 'Leher Ayam',                      '/product/leher-ayam.jpg'),
-    ('dd000000-0000-0000-0000-00000000010b'::uuid, 'Hati Ayam',                       '/product/hati-ayam.jpg'),
-    ('dd000000-0000-0000-0000-00000000010c'::uuid, 'Rangka Ayam',                     '/product/rangka-ayam.jpg'),
-    ('dd000000-0000-0000-0000-00000000010d'::uuid, 'Cop Ayam',                        '/product/cop-ayam.jpg')
+    (public._dc_uuid(p_organization_id, '101'), 'Ayam Pedaging Seekor (Standard)', '/product/ayam-pedaging.jpg'),
+    (public._dc_uuid(p_organization_id, '102'), 'Ayam Kampung Seekor',             '/product/ayam-kampung.jpg'),
+    (public._dc_uuid(p_organization_id, '103'), 'Ayam Tua / Penelur Seekor',       '/product/ayam-tua.jpg'),
+    (public._dc_uuid(p_organization_id, '104'), 'Dada Ayam',                       '/product/dada-ayam.png'),
+    (public._dc_uuid(p_organization_id, '105'), 'Peha Ayam',                       '/product/peha-ayam.jpg'),
+    (public._dc_uuid(p_organization_id, '106'), 'Pangkal Peha',                    '/product/pangkal-peha.jpg'),
+    (public._dc_uuid(p_organization_id, '107'), 'Kepak Ayam',                      '/product/kepak-ayam.jpg'),
+    (public._dc_uuid(p_organization_id, '108'), 'Chicken Wing (3-Joint)',          '/product/chicken-wing.jpg'),
+    (public._dc_uuid(p_organization_id, '109'), 'Kaki Ayam',                       '/product/kaki-ayam.jpg'),
+    (public._dc_uuid(p_organization_id, '10a'), 'Leher Ayam',                      '/product/leher-ayam.jpg'),
+    (public._dc_uuid(p_organization_id, '10b'), 'Hati Ayam',                       '/product/hati-ayam.jpg'),
+    (public._dc_uuid(p_organization_id, '10c'), 'Rangka Ayam',                     '/product/rangka-ayam.jpg'),
+    (public._dc_uuid(p_organization_id, '10d'), 'Cop Ayam',                        '/product/cop-ayam.jpg')
   ) as x(id, name, image_url);
 
   insert into public.product_variants (id, organization_id, product_id, name, price_per_unit, created_by)
   select x.id, p_organization_id, x.product_id, x.name, x.price, v_actor
   from (values
-    ('dd000000-0000-0000-0000-000000000201'::uuid, 'dd000000-0000-0000-0000-000000000101'::uuid, 'Per kg',    11.50),
-    ('dd000000-0000-0000-0000-000000000202'::uuid, 'dd000000-0000-0000-0000-000000000101'::uuid, 'Per ekor',  16.00),
-    ('dd000000-0000-0000-0000-000000000203'::uuid, 'dd000000-0000-0000-0000-000000000102'::uuid, 'Per ekor',  28.00),
-    ('dd000000-0000-0000-0000-000000000204'::uuid, 'dd000000-0000-0000-0000-000000000103'::uuid, 'Per ekor',  14.00),
-    ('dd000000-0000-0000-0000-000000000205'::uuid, 'dd000000-0000-0000-0000-000000000104'::uuid, 'Per kg',    15.00),
-    ('dd000000-0000-0000-0000-000000000206'::uuid, 'dd000000-0000-0000-0000-000000000105'::uuid, 'Per kg',    13.00),
-    ('dd000000-0000-0000-0000-000000000207'::uuid, 'dd000000-0000-0000-0000-000000000106'::uuid, 'Per kg',    13.50),
-    ('dd000000-0000-0000-0000-000000000208'::uuid, 'dd000000-0000-0000-0000-000000000107'::uuid, 'Per kg',    16.00),
-    ('dd000000-0000-0000-0000-000000000209'::uuid, 'dd000000-0000-0000-0000-000000000108'::uuid, 'Per kg',    15.00),
-    ('dd000000-0000-0000-0000-00000000020a'::uuid, 'dd000000-0000-0000-0000-000000000109'::uuid, 'Per kg',     6.00),
-    ('dd000000-0000-0000-0000-00000000020b'::uuid, 'dd000000-0000-0000-0000-00000000010a'::uuid, 'Per kg',     7.00),
-    ('dd000000-0000-0000-0000-00000000020c'::uuid, 'dd000000-0000-0000-0000-00000000010b'::uuid, 'Per kg',     9.00),
-    ('dd000000-0000-0000-0000-00000000020d'::uuid, 'dd000000-0000-0000-0000-00000000010c'::uuid, 'Per kg',     5.00),
-    ('dd000000-0000-0000-0000-00000000020e'::uuid, 'dd000000-0000-0000-0000-00000000010d'::uuid, 'Per kg',    12.00)
+    (public._dc_uuid(p_organization_id, '201'), public._dc_uuid(p_organization_id, '101'), 'Per kg',    11.50),
+    (public._dc_uuid(p_organization_id, '202'), public._dc_uuid(p_organization_id, '101'), 'Per ekor',  16.00),
+    (public._dc_uuid(p_organization_id, '203'), public._dc_uuid(p_organization_id, '102'), 'Per ekor',  28.00),
+    (public._dc_uuid(p_organization_id, '204'), public._dc_uuid(p_organization_id, '103'), 'Per ekor',  14.00),
+    (public._dc_uuid(p_organization_id, '205'), public._dc_uuid(p_organization_id, '104'), 'Per kg',    15.00),
+    (public._dc_uuid(p_organization_id, '206'), public._dc_uuid(p_organization_id, '105'), 'Per kg',    13.00),
+    (public._dc_uuid(p_organization_id, '207'), public._dc_uuid(p_organization_id, '106'), 'Per kg',    13.50),
+    (public._dc_uuid(p_organization_id, '208'), public._dc_uuid(p_organization_id, '107'), 'Per kg',    16.00),
+    (public._dc_uuid(p_organization_id, '209'), public._dc_uuid(p_organization_id, '108'), 'Per kg',    15.00),
+    (public._dc_uuid(p_organization_id, '20a'), public._dc_uuid(p_organization_id, '109'), 'Per kg',     6.00),
+    (public._dc_uuid(p_organization_id, '20b'), public._dc_uuid(p_organization_id, '10a'), 'Per kg',     7.00),
+    (public._dc_uuid(p_organization_id, '20c'), public._dc_uuid(p_organization_id, '10b'), 'Per kg',     9.00),
+    (public._dc_uuid(p_organization_id, '20d'), public._dc_uuid(p_organization_id, '10c'), 'Per kg',     5.00),
+    (public._dc_uuid(p_organization_id, '20e'), public._dc_uuid(p_organization_id, '10d'), 'Per kg',    12.00)
   ) as x(id, product_id, name, price);
 
   -- Customers ----------------------------------------------------------------
   insert into public.customers (id, organization_id, name, phone, address, created_by)
   select x.id, p_organization_id, x.name, x.phone, x.address, v_actor
   from (values
-    ('dd000000-0000-0000-0000-000000000301'::uuid, 'Restoran Nasi Ayam Hj Salleh', '012-7011234', '12 Jalan Dhoby, 80000 Johor Bahru'),
-    ('dd000000-0000-0000-0000-000000000302'::uuid, 'Kedai Makan Mak Timah',        '013-7405566', '8 Jalan Molek 1/9, 81100 Johor Bahru'),
-    ('dd000000-0000-0000-0000-000000000303'::uuid, 'Pasar Raya Aneka Skudai',      '07-5566788',  '2 Jalan Kebudayaan 4, 81300 Skudai'),
-    ('dd000000-0000-0000-0000-000000000304'::uuid, 'Restoran Selera Kampung',      '011-10998877','5 Persiaran Puteri Selatan, 79100 Iskandar Puteri'),
-    ('dd000000-0000-0000-0000-000000000305'::uuid, 'Ayamas Frozen Mart',           '012-7223344', '31 Jalan Sutera Tanjung 8/2, 80350 Johor Bahru'),
-    ('dd000000-0000-0000-0000-000000000306'::uuid, 'Restoran Wan Sup Ayam',        '013-7778899', '14 Jalan Rahmat, 83000 Batu Pahat'),
-    ('dd000000-0000-0000-0000-000000000307'::uuid, 'Kak Ros Catering',             '019-7551122', '3 Jalan Bakri, 84000 Muar'),
-    ('dd000000-0000-0000-0000-000000000308'::uuid, 'Gerai Ayam Goreng Abu',        '017-7663355', '21 Jalan Besar, 83700 Yong Peng'),
-    ('dd000000-0000-0000-0000-000000000309'::uuid, 'Restoran Bismillah Segamat',   '012-6889900', '9 Jalan Genuang, 85000 Segamat'),
-    ('dd000000-0000-0000-0000-00000000030a'::uuid, 'Kluang Fresh Mart',            '018-7112233', '17 Jalan Duku, 86000 Kluang')
+    (public._dc_uuid(p_organization_id, '301'), 'Restoran Nasi Ayam Hj Salleh', '012-7011234', '12 Jalan Dhoby, 80000 Johor Bahru'),
+    (public._dc_uuid(p_organization_id, '302'), 'Kedai Makan Mak Timah',        '013-7405566', '8 Jalan Molek 1/9, 81100 Johor Bahru'),
+    (public._dc_uuid(p_organization_id, '303'), 'Pasar Raya Aneka Skudai',      '07-5566788',  '2 Jalan Kebudayaan 4, 81300 Skudai'),
+    (public._dc_uuid(p_organization_id, '304'), 'Restoran Selera Kampung',      '011-10998877','5 Persiaran Puteri Selatan, 79100 Iskandar Puteri'),
+    (public._dc_uuid(p_organization_id, '305'), 'Ayamas Frozen Mart',           '012-7223344', '31 Jalan Sutera Tanjung 8/2, 80350 Johor Bahru'),
+    (public._dc_uuid(p_organization_id, '306'), 'Restoran Wan Sup Ayam',        '013-7778899', '14 Jalan Rahmat, 83000 Batu Pahat'),
+    (public._dc_uuid(p_organization_id, '307'), 'Kak Ros Catering',             '019-7551122', '3 Jalan Bakri, 84000 Muar'),
+    (public._dc_uuid(p_organization_id, '308'), 'Gerai Ayam Goreng Abu',        '017-7663355', '21 Jalan Besar, 83700 Yong Peng'),
+    (public._dc_uuid(p_organization_id, '309'), 'Restoran Bismillah Segamat',   '012-6889900', '9 Jalan Genuang, 85000 Segamat'),
+    (public._dc_uuid(p_organization_id, '30a'), 'Kluang Fresh Mart',            '018-7112233', '17 Jalan Duku, 86000 Kluang')
   ) as x(id, name, phone, address);
 
   -- Relink existing buyer accounts to fresh customer rows so buyer logins
@@ -165,45 +183,45 @@ begin
 
   -- Logistics setup (matches the delivery setup console) ---------------------
   insert into public.facilities (id, organization_id, name, address_line, postcode, state, created_by)
-  values ('dd000000-0000-0000-0000-000000000501', p_organization_id, 'Depoh Utama',
+  values (public._dc_uuid(p_organization_id, '501'), p_organization_id, 'Depoh Utama',
           'Lot 8, Jalan Perindustrian Senai 3', '81400', 'Johor', v_actor);
 
   insert into public.bays (id, organization_id, facility_id, name, position, created_by)
   values
-    ('dd000000-0000-0000-0000-000000000511', p_organization_id, 'dd000000-0000-0000-0000-000000000501', 'Bay A', 0, v_actor),
-    ('dd000000-0000-0000-0000-000000000512', p_organization_id, 'dd000000-0000-0000-0000-000000000501', 'Bay B', 1, v_actor);
+    (public._dc_uuid(p_organization_id, '511'), p_organization_id, public._dc_uuid(p_organization_id, '501'), 'Bay A', 0, v_actor),
+    (public._dc_uuid(p_organization_id, '512'), p_organization_id, public._dc_uuid(p_organization_id, '501'), 'Bay B', 1, v_actor);
 
   insert into public.delivery_zones (id, organization_id, name, display_order, created_by)
   values
-    ('dd000000-0000-0000-0000-000000000401', p_organization_id, 'Zone 1', 0, v_actor),
-    ('dd000000-0000-0000-0000-000000000402', p_organization_id, 'Zone 2', 1, v_actor),
-    ('dd000000-0000-0000-0000-000000000403', p_organization_id, 'Zone 3', 2, v_actor);
+    (public._dc_uuid(p_organization_id, '401'), p_organization_id, 'Zone 1', 0, v_actor),
+    (public._dc_uuid(p_organization_id, '402'), p_organization_id, 'Zone 2', 1, v_actor),
+    (public._dc_uuid(p_organization_id, '403'), p_organization_id, 'Zone 3', 2, v_actor);
 
   insert into public.zone_postcode_ranges (id, organization_id, zone_id, postcode_start, postcode_end, created_by)
   values
-    ('dd000000-0000-0000-0000-000000000411', p_organization_id, 'dd000000-0000-0000-0000-000000000401', '79000', '82999', v_actor),
-    ('dd000000-0000-0000-0000-000000000412', p_organization_id, 'dd000000-0000-0000-0000-000000000402', '83000', '84999', v_actor),
-    ('dd000000-0000-0000-0000-000000000413', p_organization_id, 'dd000000-0000-0000-0000-000000000403', '85000', '86999', v_actor);
+    (public._dc_uuid(p_organization_id, '411'), p_organization_id, public._dc_uuid(p_organization_id, '401'), '79000', '82999', v_actor),
+    (public._dc_uuid(p_organization_id, '412'), p_organization_id, public._dc_uuid(p_organization_id, '402'), '83000', '84999', v_actor),
+    (public._dc_uuid(p_organization_id, '413'), p_organization_id, public._dc_uuid(p_organization_id, '403'), '85000', '86999', v_actor);
 
   insert into public.trucks (id, organization_id, name, code, bay_id, capacity_kg, created_by)
   values
-    ('dd000000-0000-0000-0000-000000000601', p_organization_id, 'Truck South Zone',        'TRK-A', 'dd000000-0000-0000-0000-000000000511', 800, v_actor),
-    ('dd000000-0000-0000-0000-000000000602', p_organization_id, 'Truck West Coast Zone',   'TRK-B', 'dd000000-0000-0000-0000-000000000512', 800, v_actor),
-    ('dd000000-0000-0000-0000-000000000603', p_organization_id, 'Truck North & East Zone', 'TRK-C', null, 600, v_actor);
+    (public._dc_uuid(p_organization_id, '601'), p_organization_id, 'Truck South Zone',        'TRK-A', public._dc_uuid(p_organization_id, '511'), 800, v_actor),
+    (public._dc_uuid(p_organization_id, '602'), p_organization_id, 'Truck West Coast Zone',   'TRK-B', public._dc_uuid(p_organization_id, '512'), 800, v_actor),
+    (public._dc_uuid(p_organization_id, '603'), p_organization_id, 'Truck North & East Zone', 'TRK-C', null, 600, v_actor);
 
   insert into public.truck_zones (truck_id, zone_id, organization_id)
   values
-    ('dd000000-0000-0000-0000-000000000601', 'dd000000-0000-0000-0000-000000000401', p_organization_id),
-    ('dd000000-0000-0000-0000-000000000602', 'dd000000-0000-0000-0000-000000000402', p_organization_id),
-    ('dd000000-0000-0000-0000-000000000603', 'dd000000-0000-0000-0000-000000000403', p_organization_id);
+    (public._dc_uuid(p_organization_id, '601'), public._dc_uuid(p_organization_id, '401'), p_organization_id),
+    (public._dc_uuid(p_organization_id, '602'), public._dc_uuid(p_organization_id, '402'), p_organization_id),
+    (public._dc_uuid(p_organization_id, '603'), public._dc_uuid(p_organization_id, '403'), p_organization_id);
 
   -- One 09:00-13:00 slot per truck per weekday, so any delivery date works.
   insert into public.delivery_slots (organization_id, truck_id, weekday, start_time, end_time, created_by)
   select p_organization_id, t.id, d.weekday::smallint, '09:00'::time, '13:00'::time, v_actor
   from (values
-    ('dd000000-0000-0000-0000-000000000601'::uuid),
-    ('dd000000-0000-0000-0000-000000000602'::uuid),
-    ('dd000000-0000-0000-0000-000000000603'::uuid)
+    (public._dc_uuid(p_organization_id, '601')),
+    (public._dc_uuid(p_organization_id, '602')),
+    (public._dc_uuid(p_organization_id, '603'))
   ) as t(id)
   cross join generate_series(0, 6) as d(weekday);
 
@@ -211,8 +229,8 @@ begin
   -- Run A: today, TRK-A, being loaded. Run B: yesterday, TRK-B, completed.
   insert into public.delivery_runs (id, organization_id, truck_id, run_date, status)
   values
-    ('dd000000-0000-0000-0000-000000000701', p_organization_id, 'dd000000-0000-0000-0000-000000000601', v_today, 'planned'),
-    ('dd000000-0000-0000-0000-000000000702', p_organization_id, 'dd000000-0000-0000-0000-000000000602', v_today - 1, 'completed');
+    (public._dc_uuid(p_organization_id, '701'), p_organization_id, public._dc_uuid(p_organization_id, '601'), v_today, 'planned'),
+    (public._dc_uuid(p_organization_id, '702'), p_organization_id, public._dc_uuid(p_organization_id, '602'), v_today - 1, 'completed');
 
   -- Orders -------------------------------------------------------------------
   -- 4 pending, 2 confirmed w/ open task, 1 confirmed weighed, 4 ready on run
@@ -241,26 +259,26 @@ begin
     case when o.status = 'delivered' then now() - interval '20 hours' else null end
   from (values
     -- pending
-    ('dd000000-0000-0000-0000-000000000801'::uuid, 'dd000000-0000-0000-0000-000000000301'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000401'::uuid, '80000', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null::uuid, 0::numeric, false),
-    ('dd000000-0000-0000-0000-000000000802'::uuid, 'dd000000-0000-0000-0000-000000000302'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000401'::uuid, '81100', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, 0, false),
-    ('dd000000-0000-0000-0000-000000000803'::uuid, 'dd000000-0000-0000-0000-000000000306'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000402'::uuid, '83000', 2, 'dd000000-0000-0000-0000-000000000602'::uuid, null, 0, false),
-    ('dd000000-0000-0000-0000-000000000804'::uuid, 'dd000000-0000-0000-0000-000000000309'::uuid, 'pending',   'dd000000-0000-0000-0000-000000000403'::uuid, '85000', 3, 'dd000000-0000-0000-0000-000000000603'::uuid, null, 0, false),
+    (public._dc_uuid(p_organization_id, '801'), public._dc_uuid(p_organization_id, '301'), 'pending',   public._dc_uuid(p_organization_id, '401'), '80000', 1, public._dc_uuid(p_organization_id, '601'), null::uuid, 0::numeric, false),
+    (public._dc_uuid(p_organization_id, '802'), public._dc_uuid(p_organization_id, '302'), 'pending',   public._dc_uuid(p_organization_id, '401'), '81100', 1, public._dc_uuid(p_organization_id, '601'), null, 0, false),
+    (public._dc_uuid(p_organization_id, '803'), public._dc_uuid(p_organization_id, '306'), 'pending',   public._dc_uuid(p_organization_id, '402'), '83000', 2, public._dc_uuid(p_organization_id, '602'), null, 0, false),
+    (public._dc_uuid(p_organization_id, '804'), public._dc_uuid(p_organization_id, '309'), 'pending',   public._dc_uuid(p_organization_id, '403'), '85000', 3, public._dc_uuid(p_organization_id, '603'), null, 0, false),
     -- confirmed, task open
-    ('dd000000-0000-0000-0000-000000000805'::uuid, 'dd000000-0000-0000-0000-000000000303'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000401'::uuid, '81300', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, 0, false),
-    ('dd000000-0000-0000-0000-000000000806'::uuid, 'dd000000-0000-0000-0000-000000000307'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000402'::uuid, '84000', 2, 'dd000000-0000-0000-0000-000000000602'::uuid, null, 0, false),
+    (public._dc_uuid(p_organization_id, '805'), public._dc_uuid(p_organization_id, '303'), 'confirmed', public._dc_uuid(p_organization_id, '401'), '81300', 1, public._dc_uuid(p_organization_id, '601'), null, 0, false),
+    (public._dc_uuid(p_organization_id, '806'), public._dc_uuid(p_organization_id, '307'), 'confirmed', public._dc_uuid(p_organization_id, '402'), '84000', 2, public._dc_uuid(p_organization_id, '602'), null, 0, false),
     -- confirmed, warehouse weighed (task done)
-    ('dd000000-0000-0000-0000-000000000807'::uuid, 'dd000000-0000-0000-0000-000000000304'::uuid, 'confirmed', 'dd000000-0000-0000-0000-000000000401'::uuid, '79100', 1, 'dd000000-0000-0000-0000-000000000601'::uuid, null, 0, false),
+    (public._dc_uuid(p_organization_id, '807'), public._dc_uuid(p_organization_id, '304'), 'confirmed', public._dc_uuid(p_organization_id, '401'), '79100', 1, public._dc_uuid(p_organization_id, '601'), null, 0, false),
     -- ready on run A (today, TRK-A); first two already loaded
-    ('dd000000-0000-0000-0000-000000000808'::uuid, 'dd000000-0000-0000-0000-000000000301'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '80000', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, true),
-    ('dd000000-0000-0000-0000-000000000809'::uuid, 'dd000000-0000-0000-0000-000000000302'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '81100', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, true),
-    ('dd000000-0000-0000-0000-00000000080a'::uuid, 'dd000000-0000-0000-0000-000000000303'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '81300', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, false),
-    ('dd000000-0000-0000-0000-00000000080b'::uuid, 'dd000000-0000-0000-0000-000000000305'::uuid, 'ready',     'dd000000-0000-0000-0000-000000000401'::uuid, '80350', 0, 'dd000000-0000-0000-0000-000000000601'::uuid, 'dd000000-0000-0000-0000-000000000701'::uuid, 0, false),
+    (public._dc_uuid(p_organization_id, '808'), public._dc_uuid(p_organization_id, '301'), 'ready',     public._dc_uuid(p_organization_id, '401'), '80000', 0, public._dc_uuid(p_organization_id, '601'), public._dc_uuid(p_organization_id, '701'), 0, true),
+    (public._dc_uuid(p_organization_id, '809'), public._dc_uuid(p_organization_id, '302'), 'ready',     public._dc_uuid(p_organization_id, '401'), '81100', 0, public._dc_uuid(p_organization_id, '601'), public._dc_uuid(p_organization_id, '701'), 0, true),
+    (public._dc_uuid(p_organization_id, '80a'), public._dc_uuid(p_organization_id, '303'), 'ready',     public._dc_uuid(p_organization_id, '401'), '81300', 0, public._dc_uuid(p_organization_id, '601'), public._dc_uuid(p_organization_id, '701'), 0, false),
+    (public._dc_uuid(p_organization_id, '80b'), public._dc_uuid(p_organization_id, '305'), 'ready',     public._dc_uuid(p_organization_id, '401'), '80350', 0, public._dc_uuid(p_organization_id, '601'), public._dc_uuid(p_organization_id, '701'), 0, false),
     -- delivered yesterday on run B (TRK-B)
-    ('dd000000-0000-0000-0000-00000000080c'::uuid, 'dd000000-0000-0000-0000-000000000306'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '83000', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 187.20, false),
-    ('dd000000-0000-0000-0000-00000000080d'::uuid, 'dd000000-0000-0000-0000-000000000307'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '84000', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 97.50, false),
-    ('dd000000-0000-0000-0000-00000000080e'::uuid, 'dd000000-0000-0000-0000-000000000308'::uuid, 'delivered', 'dd000000-0000-0000-0000-000000000402'::uuid, '83700', -1, 'dd000000-0000-0000-0000-000000000602'::uuid, 'dd000000-0000-0000-0000-000000000702'::uuid, 138.00, false),
+    (public._dc_uuid(p_organization_id, '80c'), public._dc_uuid(p_organization_id, '306'), 'delivered', public._dc_uuid(p_organization_id, '402'), '83000', -1, public._dc_uuid(p_organization_id, '602'), public._dc_uuid(p_organization_id, '702'), 187.20, false),
+    (public._dc_uuid(p_organization_id, '80d'), public._dc_uuid(p_organization_id, '307'), 'delivered', public._dc_uuid(p_organization_id, '402'), '84000', -1, public._dc_uuid(p_organization_id, '602'), public._dc_uuid(p_organization_id, '702'), 97.50, false),
+    (public._dc_uuid(p_organization_id, '80e'), public._dc_uuid(p_organization_id, '308'), 'delivered', public._dc_uuid(p_organization_id, '402'), '83700', -1, public._dc_uuid(p_organization_id, '602'), public._dc_uuid(p_organization_id, '702'), 138.00, false),
     -- cancelled
-    ('dd000000-0000-0000-0000-00000000080f'::uuid, 'dd000000-0000-0000-0000-00000000030a'::uuid, 'cancelled', 'dd000000-0000-0000-0000-000000000403'::uuid, '86000', 2, 'dd000000-0000-0000-0000-000000000603'::uuid, null, 0, false)
+    (public._dc_uuid(p_organization_id, '80f'), public._dc_uuid(p_organization_id, '30a'), 'cancelled', public._dc_uuid(p_organization_id, '403'), '86000', 2, public._dc_uuid(p_organization_id, '603'), null, 0, false)
   ) as o(id, customer_id, status, zone_id, postcode, date_offset, truck_id, run_id, total_amount, loaded);
 
   -- Order items --------------------------------------------------------------
@@ -273,28 +291,28 @@ begin
          x.smin, x.smax, 'mix'::public.order_fallback, x.wkg, x.fkg, x.price
   from (values
     -- pending orders: raw requests only
-    ('dd000000-0000-0000-0000-000000000901'::uuid, 'dd000000-0000-0000-0000-000000000801'::uuid, 'dd000000-0000-0000-0000-000000000101'::uuid, 'piece', 10::numeric, 1.3::numeric, 1.6::numeric, null::numeric, null::numeric, null::numeric),
-    ('dd000000-0000-0000-0000-000000000902'::uuid, 'dd000000-0000-0000-0000-000000000801'::uuid, 'dd000000-0000-0000-0000-000000000104'::uuid, 'kg',     5, 0.3, 0.5, null, null, null),
-    ('dd000000-0000-0000-0000-000000000903'::uuid, 'dd000000-0000-0000-0000-000000000802'::uuid, 'dd000000-0000-0000-0000-000000000102'::uuid, 'piece',  4, 1.1, 1.4, null, null, null),
-    ('dd000000-0000-0000-0000-000000000904'::uuid, 'dd000000-0000-0000-0000-000000000803'::uuid, 'dd000000-0000-0000-0000-000000000105'::uuid, 'kg',     8, 0.2, 0.4, null, null, null),
-    ('dd000000-0000-0000-0000-000000000905'::uuid, 'dd000000-0000-0000-0000-000000000804'::uuid, 'dd000000-0000-0000-0000-000000000107'::uuid, 'kg',     6, 0.1, 0.3, null, null, null),
+    (public._dc_uuid(p_organization_id, '901'), public._dc_uuid(p_organization_id, '801'), public._dc_uuid(p_organization_id, '101'), 'piece', 10::numeric, 1.3::numeric, 1.6::numeric, null::numeric, null::numeric, null::numeric),
+    (public._dc_uuid(p_organization_id, '902'), public._dc_uuid(p_organization_id, '801'), public._dc_uuid(p_organization_id, '104'), 'kg',     5, 0.3, 0.5, null, null, null),
+    (public._dc_uuid(p_organization_id, '903'), public._dc_uuid(p_organization_id, '802'), public._dc_uuid(p_organization_id, '102'), 'piece',  4, 1.1, 1.4, null, null, null),
+    (public._dc_uuid(p_organization_id, '904'), public._dc_uuid(p_organization_id, '803'), public._dc_uuid(p_organization_id, '105'), 'kg',     8, 0.2, 0.4, null, null, null),
+    (public._dc_uuid(p_organization_id, '905'), public._dc_uuid(p_organization_id, '804'), public._dc_uuid(p_organization_id, '107'), 'kg',     6, 0.1, 0.3, null, null, null),
     -- confirmed, task open
-    ('dd000000-0000-0000-0000-000000000906'::uuid, 'dd000000-0000-0000-0000-000000000805'::uuid, 'dd000000-0000-0000-0000-000000000101'::uuid, 'piece', 20, 1.4, 1.8, null, null, null),
-    ('dd000000-0000-0000-0000-000000000907'::uuid, 'dd000000-0000-0000-0000-000000000806'::uuid, 'dd000000-0000-0000-0000-00000000010b'::uuid, 'kg',     3, 0.1, 0.2, null, null, null),
+    (public._dc_uuid(p_organization_id, '906'), public._dc_uuid(p_organization_id, '805'), public._dc_uuid(p_organization_id, '101'), 'piece', 20, 1.4, 1.8, null, null, null),
+    (public._dc_uuid(p_organization_id, '907'), public._dc_uuid(p_organization_id, '806'), public._dc_uuid(p_organization_id, '10b'), 'kg',     3, 0.1, 0.2, null, null, null),
     -- confirmed, warehouse weighed
-    ('dd000000-0000-0000-0000-000000000908'::uuid, 'dd000000-0000-0000-0000-000000000807'::uuid, 'dd000000-0000-0000-0000-000000000101'::uuid, 'piece', 15, 1.3, 1.7, 23.4, null, null),
+    (public._dc_uuid(p_organization_id, '908'), public._dc_uuid(p_organization_id, '807'), public._dc_uuid(p_organization_id, '101'), 'piece', 15, 1.3, 1.7, 23.4, null, null),
     -- ready on run A: warehouse weighed
-    ('dd000000-0000-0000-0000-000000000909'::uuid, 'dd000000-0000-0000-0000-000000000808'::uuid, 'dd000000-0000-0000-0000-000000000101'::uuid, 'piece', 12, 1.3, 1.6, 17.8, null, null),
-    ('dd000000-0000-0000-0000-00000000090a'::uuid, 'dd000000-0000-0000-0000-000000000808'::uuid, 'dd000000-0000-0000-0000-000000000109'::uuid, 'kg',     4, 0.1, 0.2,  4.1, null, null),
-    ('dd000000-0000-0000-0000-00000000090b'::uuid, 'dd000000-0000-0000-0000-000000000809'::uuid, 'dd000000-0000-0000-0000-000000000106'::uuid, 'kg',    10, 0.2, 0.4, 10.3, null, null),
-    ('dd000000-0000-0000-0000-00000000090c'::uuid, 'dd000000-0000-0000-0000-00000000080a'::uuid, 'dd000000-0000-0000-0000-000000000104'::uuid, 'kg',     6, 0.3, 0.5,  6.2, null, null),
-    ('dd000000-0000-0000-0000-00000000090d'::uuid, 'dd000000-0000-0000-0000-00000000080b'::uuid, 'dd000000-0000-0000-0000-00000000010c'::uuid, 'kg',    12, 0.5, 0.9, 12.6, null, null),
+    (public._dc_uuid(p_organization_id, '909'), public._dc_uuid(p_organization_id, '808'), public._dc_uuid(p_organization_id, '101'), 'piece', 12, 1.3, 1.6, 17.8, null, null),
+    (public._dc_uuid(p_organization_id, '90a'), public._dc_uuid(p_organization_id, '808'), public._dc_uuid(p_organization_id, '109'), 'kg',     4, 0.1, 0.2,  4.1, null, null),
+    (public._dc_uuid(p_organization_id, '90b'), public._dc_uuid(p_organization_id, '809'), public._dc_uuid(p_organization_id, '106'), 'kg',    10, 0.2, 0.4, 10.3, null, null),
+    (public._dc_uuid(p_organization_id, '90c'), public._dc_uuid(p_organization_id, '80a'), public._dc_uuid(p_organization_id, '104'), 'kg',     6, 0.3, 0.5,  6.2, null, null),
+    (public._dc_uuid(p_organization_id, '90d'), public._dc_uuid(p_organization_id, '80b'), public._dc_uuid(p_organization_id, '10c'), 'kg',    12, 0.5, 0.9, 12.6, null, null),
     -- delivered: final weight + price (line totals sum to the order totals)
-    ('dd000000-0000-0000-0000-00000000090e'::uuid, 'dd000000-0000-0000-0000-00000000080c'::uuid, 'dd000000-0000-0000-0000-000000000101'::uuid, 'piece', 10, 1.4, 1.8, 16.5, 16.0, 11.70),
-    ('dd000000-0000-0000-0000-00000000090f'::uuid, 'dd000000-0000-0000-0000-00000000080d'::uuid, 'dd000000-0000-0000-0000-000000000105'::uuid, 'kg',     7, 0.2, 0.4,  7.6,  7.5, 13.00),
-    ('dd000000-0000-0000-0000-000000000910'::uuid, 'dd000000-0000-0000-0000-00000000080e'::uuid, 'dd000000-0000-0000-0000-000000000107'::uuid, 'kg',     9, 0.1, 0.3,  8.8,  8.625, 16.00),
+    (public._dc_uuid(p_organization_id, '90e'), public._dc_uuid(p_organization_id, '80c'), public._dc_uuid(p_organization_id, '101'), 'piece', 10, 1.4, 1.8, 16.5, 16.0, 11.70),
+    (public._dc_uuid(p_organization_id, '90f'), public._dc_uuid(p_organization_id, '80d'), public._dc_uuid(p_organization_id, '105'), 'kg',     7, 0.2, 0.4,  7.6,  7.5, 13.00),
+    (public._dc_uuid(p_organization_id, '910'), public._dc_uuid(p_organization_id, '80e'), public._dc_uuid(p_organization_id, '107'), 'kg',     9, 0.1, 0.3,  8.8,  8.625, 16.00),
     -- cancelled
-    ('dd000000-0000-0000-0000-000000000911'::uuid, 'dd000000-0000-0000-0000-00000000080f'::uuid, 'dd000000-0000-0000-0000-000000000103'::uuid, 'piece',  5, 1.0, 1.4, null, null, null)
+    (public._dc_uuid(p_organization_id, '911'), public._dc_uuid(p_organization_id, '80f'), public._dc_uuid(p_organization_id, '103'), 'piece',  5, 1.0, 1.4, null, null, null)
   ) as x(id, order_id, product_id, mode, qty, smin, smax, wkg, fkg, price);
 
   -- Tasks: open for 805/806, done for the weighed/ready/delivered orders.
@@ -303,16 +321,16 @@ begin
          case when x.status = 'done' then v_actor end,
          case when x.status = 'done' then now() - interval '5 hours' end
   from (values
-    ('dd000000-0000-0000-0000-000000000805'::uuid, 'pending'),
-    ('dd000000-0000-0000-0000-000000000806'::uuid, 'pending'),
-    ('dd000000-0000-0000-0000-000000000807'::uuid, 'done'),
-    ('dd000000-0000-0000-0000-000000000808'::uuid, 'done'),
-    ('dd000000-0000-0000-0000-000000000809'::uuid, 'done'),
-    ('dd000000-0000-0000-0000-00000000080a'::uuid, 'done'),
-    ('dd000000-0000-0000-0000-00000000080b'::uuid, 'done'),
-    ('dd000000-0000-0000-0000-00000000080c'::uuid, 'done'),
-    ('dd000000-0000-0000-0000-00000000080d'::uuid, 'done'),
-    ('dd000000-0000-0000-0000-00000000080e'::uuid, 'done')
+    (public._dc_uuid(p_organization_id, '805'), 'pending'),
+    (public._dc_uuid(p_organization_id, '806'), 'pending'),
+    (public._dc_uuid(p_organization_id, '807'), 'done'),
+    (public._dc_uuid(p_organization_id, '808'), 'done'),
+    (public._dc_uuid(p_organization_id, '809'), 'done'),
+    (public._dc_uuid(p_organization_id, '80a'), 'done'),
+    (public._dc_uuid(p_organization_id, '80b'), 'done'),
+    (public._dc_uuid(p_organization_id, '80c'), 'done'),
+    (public._dc_uuid(p_organization_id, '80d'), 'done'),
+    (public._dc_uuid(p_organization_id, '80e'), 'done')
   ) as x(order_id, status);
 
   -- Warehouse weight log entries for every weighed line.
@@ -324,24 +342,24 @@ begin
 
   -- Run B history: arrive/leave marks + delivered attempts for each stop.
   insert into public.run_stop_events (organization_id, run_id, order_id, kind, at, recorded_by)
-  select p_organization_id, 'dd000000-0000-0000-0000-000000000702', x.order_id,
+  select p_organization_id, public._dc_uuid(p_organization_id, '702'), x.order_id,
          x.kind::public.stop_event_kind, now() - interval '24 hours' + x.offset_min * interval '1 minute', v_actor
   from (values
-    ('dd000000-0000-0000-0000-00000000080c'::uuid, 'arrive',  0),
-    ('dd000000-0000-0000-0000-00000000080c'::uuid, 'leave',  12),
-    ('dd000000-0000-0000-0000-00000000080d'::uuid, 'arrive', 45),
-    ('dd000000-0000-0000-0000-00000000080d'::uuid, 'leave',  58),
-    ('dd000000-0000-0000-0000-00000000080e'::uuid, 'arrive', 95),
-    ('dd000000-0000-0000-0000-00000000080e'::uuid, 'leave', 110)
+    (public._dc_uuid(p_organization_id, '80c'), 'arrive',  0),
+    (public._dc_uuid(p_organization_id, '80c'), 'leave',  12),
+    (public._dc_uuid(p_organization_id, '80d'), 'arrive', 45),
+    (public._dc_uuid(p_organization_id, '80d'), 'leave',  58),
+    (public._dc_uuid(p_organization_id, '80e'), 'arrive', 95),
+    (public._dc_uuid(p_organization_id, '80e'), 'leave', 110)
   ) as x(order_id, kind, offset_min);
 
   insert into public.delivery_attempts (organization_id, run_id, order_id, outcome, received_by, cash_collected, attempted_at, recorded_by)
-  select p_organization_id, 'dd000000-0000-0000-0000-000000000702', x.order_id, 'delivered',
+  select p_organization_id, public._dc_uuid(p_organization_id, '702'), x.order_id, 'delivered',
          x.received_by, x.cash, now() - interval '24 hours' + x.offset_min * interval '1 minute', v_actor
   from (values
-    ('dd000000-0000-0000-0000-00000000080c'::uuid, 'Wan',      187.20::numeric, 10),
-    ('dd000000-0000-0000-0000-00000000080d'::uuid, 'Kak Ros',   97.50, 56),
-    ('dd000000-0000-0000-0000-00000000080e'::uuid, 'Abu',      138.00, 108)
+    (public._dc_uuid(p_organization_id, '80c'), 'Wan',      187.20::numeric, 10),
+    (public._dc_uuid(p_organization_id, '80d'), 'Kak Ros',   97.50, 56),
+    (public._dc_uuid(p_organization_id, '80e'), 'Abu',      138.00, 108)
   ) as x(order_id, received_by, cash, offset_min);
 
   -- Note: the brief's "buyer portal" step inserted into public.buyer_orders /
