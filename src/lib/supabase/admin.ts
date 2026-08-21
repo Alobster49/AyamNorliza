@@ -17,7 +17,7 @@
 
 import "server-only";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, isAuthApiError, type SupabaseClient } from "@supabase/supabase-js";
 import { serverEnv } from "@/lib/env";
 
 let cachedClient: SupabaseClient | null = null;
@@ -174,7 +174,22 @@ export const admin = {
     });
     if (!error && data.user) return data.user.id;
 
+    // Only fall through to the password-reset path when createUser failed
+    // because the email is already registered; any other error (network,
+    // validation, rate limit, ...) should surface as-is rather than risk
+    // resetting an unrelated account's password.
+    const emailAlreadyExists =
+      error != null &&
+      isAuthApiError(error) &&
+      (error.code === "email_exists" || error.status === 422);
+    if (!emailAlreadyExists) {
+      throw error ?? new Error("ensureUserWithPassword: createUser returned no user");
+    }
+
     // Already registered -> find the account and align its password.
+    // A 1000-user page is fine at pilot scale; if the account isn't found
+    // in that page, the lookup fails safe below by throwing rather than
+    // silently resetting the wrong (or no) account.
     const { data: list, error: listError } = await c.auth.admin.listUsers({
       page: 1,
       perPage: 1000,
@@ -193,7 +208,9 @@ export const admin = {
 
   /**
    * Idempotent profile + active org membership for a console account.
-   * Data console only.
+   * Data console only. Overwrites role/status on every call by design:
+   * console accounts are pinned to their spec'd role, so re-seeding must
+   * always re-assert it rather than leave a manually-changed role in place.
    */
   async upsertProfileAndMembership(input: {
     userId: string;
