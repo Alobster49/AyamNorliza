@@ -348,7 +348,7 @@ export function SetupConsole({
                 type="button"
                 variant="outline"
                 size="sm"
-                className="min-h-11 sm:min-h-9"
+                className="min-h-11 lg:min-h-9"
                 onClick={() => {
                   if (selection.recordId === null) return;
                   void handlers.archive(
@@ -368,7 +368,7 @@ export function SetupConsole({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="min-h-11 sm:min-h-9"
+                    className="min-h-11 lg:min-h-9"
                     aria-label="More actions"
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -396,7 +396,7 @@ export function SetupConsole({
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
-            <Button type="submit" size="sm" className="min-h-11 sm:min-h-9" disabled={saving}>
+            <Button type="submit" size="sm" className="min-h-11 lg:min-h-9" disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </Button>
           </div>
@@ -415,7 +415,7 @@ export function SetupConsole({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search trucks, zones, slots — or type a postcode"
-          className="pl-9"
+          className="min-h-11 pl-9 lg:min-h-10"
           aria-label="Search delivery setup"
         />
       </div>

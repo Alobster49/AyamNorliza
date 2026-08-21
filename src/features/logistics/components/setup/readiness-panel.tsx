@@ -66,7 +66,7 @@ export function ReadinessPanel({
               <Button
                 variant={issue.severity === "blocker" ? "default" : "outline"}
                 size="sm"
-                className="min-h-11 w-full sm:min-h-9 sm:w-auto"
+                className="min-h-11 w-full lg:min-h-9 sm:w-auto"
                 onClick={() => onFix(issue.target)}
               >
                 Fix

@@ -2,13 +2,28 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { DeliverySlot, DeliveryZone, Truck } from "@/features/orders/types";
+import type {
+  DeliverySlot,
+  DeliveryZone,
+  Truck,
+} from "@/features/orders/types";
 import type { Bay } from "../../types";
 
-export const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+export const WEEKDAY_LABELS = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+] as const;
 
 const selectClass =
-  "flex min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm";
+  "flex min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-sm lg:min-h-10";
+
+/** Comfortable on a warehouse tablet; back to the app default on desktop. */
+const inputClass = "min-h-11 lg:min-h-10";
 
 function ActiveToggle({ defaultChecked }: { defaultChecked: boolean }) {
   return (
@@ -29,7 +44,13 @@ export function ZoneFields({ zone }: { zone?: DeliveryZone }) {
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="zone-name">Name</Label>
-        <Input id="zone-name" name="name" defaultValue={zone?.name ?? ""} required />
+        <Input
+          id="zone-name"
+          name="name"
+          defaultValue={zone?.name ?? ""}
+          required
+          className={inputClass}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="zone-order">Display order</Label>
@@ -38,6 +59,7 @@ export function ZoneFields({ zone }: { zone?: DeliveryZone }) {
           name="displayOrder"
           type="number"
           defaultValue={zone?.display_order ?? 0}
+          className={inputClass}
         />
       </div>
       <div className="flex items-end">
@@ -52,20 +74,35 @@ export function TruckFields({ truck, bays }: { truck?: Truck; bays: Bay[] }) {
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2">
         <Label htmlFor="truck-name">Name</Label>
-        <Input id="truck-name" name="name" defaultValue={truck?.name ?? ""} required />
+        <Input
+          id="truck-name"
+          name="name"
+          defaultValue={truck?.name ?? ""}
+          required
+          className={inputClass}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="truck-code">Code</Label>
-        <Input id="truck-code" name="code" defaultValue={truck?.code ?? ""} required />
+        <Input
+          id="truck-code"
+          name="code"
+          defaultValue={truck?.code ?? ""}
+          required
+          className={inputClass}
+        />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="truck-capacity">Capacity kg (blank = not recorded)</Label>
+        <Label htmlFor="truck-capacity">
+          Capacity kg (blank = not recorded)
+        </Label>
         <Input
           id="truck-capacity"
           name="capacityKg"
           type="number"
           min="1"
           defaultValue={truck?.capacity_kg ?? ""}
+          className={inputClass}
         />
       </div>
       <div className="space-y-2">
@@ -140,6 +177,7 @@ export function SlotFields({
           type="time"
           defaultValue={slot?.start_time?.slice(0, 5) ?? "09:00"}
           required
+          className={inputClass}
         />
       </div>
       <div className="space-y-2">
@@ -150,6 +188,7 @@ export function SlotFields({
           type="time"
           defaultValue={slot?.end_time?.slice(0, 5) ?? "12:00"}
           required
+          className={inputClass}
         />
       </div>
       <div className="space-y-2">
@@ -160,6 +199,7 @@ export function SlotFields({
           type="number"
           min="1"
           defaultValue={slot?.max_orders ?? ""}
+          className={inputClass}
         />
       </div>
       <div className="flex items-end">
@@ -174,11 +214,22 @@ export function BlockFields({ trucks }: { trucks: Truck[] }) {
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2">
         <Label htmlFor="block-date">Date</Label>
-        <Input id="block-date" name="blockDate" type="date" required />
+        <Input
+          id="block-date"
+          name="blockDate"
+          type="date"
+          required
+          className={inputClass}
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="block-truck">Truck</Label>
-        <select id="block-truck" name="truckId" defaultValue="all" className={selectClass}>
+        <select
+          id="block-truck"
+          name="truckId"
+          defaultValue="all"
+          className={selectClass}
+        >
           <option value="all">All trucks</option>
           {trucks.map((truck) => (
             <option key={truck.id} value={truck.id}>
@@ -189,7 +240,12 @@ export function BlockFields({ trucks }: { trucks: Truck[] }) {
       </div>
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="block-reason">Reason</Label>
-        <Input id="block-reason" name="reason" placeholder="e.g. Hari Raya Haji" />
+        <Input
+          id="block-reason"
+          name="reason"
+          placeholder="e.g. Hari Raya Haji"
+          className={inputClass}
+        />
       </div>
     </div>
   );
