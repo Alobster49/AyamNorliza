@@ -45,6 +45,18 @@ describe("dashboard shell model", () => {
     });
   });
 
+  it("returns the System section for the data console page", () => {
+    expect(
+      getDashboardPageContext({
+        organizationSlug: "ayam-norliza-pilot",
+        pathname: "/ayam-norliza-pilot/data-console",
+      }),
+    ).toEqual({
+      section: "System",
+      title: "Data console",
+    });
+  });
+
   it("returns access control as default page context for unknown routes", () => {
     expect(
       getDashboardPageContext({

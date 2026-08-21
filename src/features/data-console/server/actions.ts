@@ -1,8 +1,10 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { admin } from "@/lib/supabase/admin";
+import { admin, type AdminContext } from "@/lib/supabase/admin";
+import { recordAudit } from "@/lib/audit/events";
 import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
 import { CONSOLE_ACCOUNTS } from "../lib/accounts";
 
@@ -23,6 +25,10 @@ async function guardOwner(organizationSlug: string) {
   }
 }
 
+function ctxFor(userId: string): AdminContext {
+  return { actorUserId: userId, correlationId: randomUUID() };
+}
+
 export async function clearAllData(
   organizationSlug: string,
 ): Promise<ActionResult<{ counts: Record<string, number> }>> {
@@ -41,8 +47,26 @@ export async function clearAllData(
       message: forbidden ? "Owner only." : "Clearing failed — nothing was deleted.",
     };
   }
+  const counts = (data ?? {}) as Record<string, number>;
+
+  const auditCtx = ctxFor(ctx.userId);
+  await recordAudit(
+    {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      actorRole: ctx.role,
+      eventType: "org.data_cleared",
+      entityType: "organization",
+      entityId: ctx.orgId,
+      after: counts,
+      correlationId: auditCtx.correlationId,
+      source: "web",
+    },
+    auditCtx,
+  );
+
   revalidatePath(`/${organizationSlug}`, "layout");
-  return { ok: true, data: { counts: (data ?? {}) as Record<string, number> } };
+  return { ok: true, data: { counts } };
 }
 
 export async function seedDemoData(
@@ -66,11 +90,12 @@ export async function seedDemoData(
         invitedBy: ctx.userId,
       });
     }
-  } catch {
+  } catch (e) {
+    const detail = e instanceof Error ? e.message : "";
     return {
       ok: false,
       code: "internal",
-      message: "Could not ensure the console accounts — seeding was not started.",
+      message: `Could not ensure the console accounts — seeding was not started.${detail ? ` ${detail}` : ""}`,
     };
   }
 
@@ -86,6 +111,24 @@ export async function seedDemoData(
       message: forbidden ? "Owner only." : "Seeding failed and was rolled back.",
     };
   }
+  const summary = (data ?? {}) as Record<string, number>;
+
+  const auditCtx = ctxFor(ctx.userId);
+  await recordAudit(
+    {
+      organizationId: ctx.orgId,
+      actorUserId: ctx.userId,
+      actorRole: ctx.role,
+      eventType: "org.data_seeded",
+      entityType: "organization",
+      entityId: ctx.orgId,
+      after: summary,
+      correlationId: auditCtx.correlationId,
+      source: "web",
+    },
+    auditCtx,
+  );
+
   revalidatePath(`/${organizationSlug}`, "layout");
-  return { ok: true, data: { summary: (data ?? {}) as Record<string, number> } };
+  return { ok: true, data: { summary } };
 }

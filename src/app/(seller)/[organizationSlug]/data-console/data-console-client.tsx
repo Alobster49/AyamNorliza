@@ -48,10 +48,10 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
       if (result.ok) {
         const total = Object.values(result.data.counts).reduce((a, b) => a + b, 0);
         setMessage(`Cleared ${total} rows. Users were kept.`);
+        setConfirmText("");
       } else {
         setError(result.message);
       }
-      setConfirmText("");
     } finally {
       setBusy(false);
     }
@@ -88,6 +88,8 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
 
       {(message || error) && (
         <p
+          role="status"
+          aria-live="polite"
           className={
             error
               ? "rounded-lg border border-destructive/50 bg-destructive/5 px-3 py-2 text-sm text-destructive"
