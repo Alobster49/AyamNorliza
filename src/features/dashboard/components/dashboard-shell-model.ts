@@ -67,7 +67,7 @@ export function getDashboardSidebarGroups({
     return [{ title: "Warehouse", isActive: items.some((item) => item.isActive), items }];
   }
 
-  return routeGroups.map((group) => {
+  const groups: DashboardRouteGroup[] = routeGroups.map((group) => {
     const items = group.items.map((item) => {
       const href = `/${organizationSlug}/${item.segment}`;
       return {
@@ -83,6 +83,23 @@ export function getDashboardSidebarGroups({
       items,
     };
   });
+
+  if (role === "owner") {
+    const consoleHref = `/${organizationSlug}/data-console`;
+    groups.push({
+      title: "System",
+      isActive: isRouteActive(pathname, consoleHref),
+      items: [
+        {
+          title: "Data console",
+          href: consoleHref,
+          isActive: isRouteActive(pathname, consoleHref),
+        },
+      ],
+    });
+  }
+
+  return groups;
 }
 
 export function getDashboardPageContext({

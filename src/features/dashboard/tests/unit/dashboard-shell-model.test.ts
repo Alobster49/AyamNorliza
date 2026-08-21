@@ -148,4 +148,25 @@ describe("dashboard shell model", () => {
       isActive: true,
     });
   });
+
+  it("shows the Data console group to owners only", () => {
+    const ownerGroups = getDashboardSidebarGroups({
+      organizationSlug: "org",
+      pathname: "/org/data-console",
+      role: "owner",
+    });
+    const system = ownerGroups.find((g) => g.title === "System");
+    expect(system?.items).toEqual([
+      { title: "Data console", href: "/org/data-console", isActive: true },
+    ]);
+
+    for (const role of ["seller", "org_admin", undefined]) {
+      const groups = getDashboardSidebarGroups({
+        organizationSlug: "org",
+        pathname: "/org/products",
+        role,
+      });
+      expect(groups.find((g) => g.title === "System")).toBeUndefined();
+    }
+  });
 });

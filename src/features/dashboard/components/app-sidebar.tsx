@@ -9,6 +9,7 @@ import {
   Building2,
   ChevronRight,
   ChevronsUpDown,
+  Database,
   LogOut,
   Settings,
   ShieldCheck,
@@ -68,6 +69,7 @@ const groupIcons: Record<string, LucideIcon> = {
   "Access control": ShieldCheck,
   Sales: ShoppingCart,
   Warehouse: Warehouse,
+  System: Database,
 } as const;
 
 export function AppSidebar({
