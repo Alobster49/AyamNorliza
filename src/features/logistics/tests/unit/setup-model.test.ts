@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SetupSnapshot } from "../../lib/setup-model";
 import { findIssues } from "../../lib/setup-model";
+import { searchSetup } from "../../lib/setup-model";
 
 let n = 0;
 const uid = (p: string) => `${p}-${++n}`.padEnd(36, "0");
@@ -185,5 +186,52 @@ describe("findIssues — overlaps and completeness", () => {
     s.trucks = [truck({ id: s.trucks[0].id, capacity_kg: null })];
     const issue = findIssues(s).find((i) => i.id.startsWith("truck-no-capacity:"));
     expect(issue?.severity).toBe("info");
+  });
+});
+
+describe("searchSetup", () => {
+  it("returns nothing for a blank query", () => {
+    expect(searchSetup(healthy(), "   ")).toEqual([]);
+  });
+
+  it("matches a truck by name, case-insensitively", () => {
+    const hits = searchSetup(healthy(), "canter");
+    expect(hits[0]).toMatchObject({ entity: "trucks", label: "Canter 01" });
+  });
+
+  it("matches a truck by code", () => {
+    expect(searchSetup(healthy(), "T1")[0].entity).toBe("trucks");
+  });
+
+  it("matches a zone by name", () => {
+    const hits = searchSetup(healthy(), "Zone 1");
+    expect(hits.some((h) => h.entity === "zones")).toBe(true);
+  });
+
+  it("resolves a bare postcode to the zone whose range contains it", () => {
+    const hits = searchSetup(healthy(), "47100");
+    const hit = hits.find((h) => h.entity === "postcodes");
+    expect(hit?.recordId).toBe("zone-1".padEnd(36, "0"));
+    expect(hit?.context).toContain("47000");
+  });
+
+  it("does not resolve a postcode outside every range", () => {
+    const hits = searchSetup(healthy(), "99999");
+    expect(hits.some((h) => h.entity === "postcodes")).toBe(false);
+  });
+
+  it("matches a blocked date by its reason", () => {
+    const s = healthy();
+    s.blocks = [{
+      id: "block-1".padEnd(36, "0"), organization_id: "org", block_date: "2026-08-30",
+      truck_id: null, reason: "Hari Raya Haji", created_by: null, created_at: "",
+    }];
+    expect(searchSetup(s, "raya")[0].entity).toBe("blocks");
+  });
+
+  it("ignores archived records", () => {
+    const s = healthy();
+    s.trucks = [truck({ id: s.trucks[0].id, name: "Canter 01", is_active: false })];
+    expect(searchSetup(s, "canter")).toEqual([]);
   });
 });

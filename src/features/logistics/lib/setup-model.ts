@@ -196,3 +196,112 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
 
   return issues.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
 }
+
+export type SearchHit = {
+  entity: SetupEntity;
+  /** The record to select in the list pane; null selects the entity only. */
+  recordId: string | null;
+  label: string;
+  /** Why it matched, shown as secondary text. */
+  context: string;
+};
+
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+/**
+ * One box over all seven entities. A bare five-digit number is treated as a
+ * postcode and resolved to the zone that owns it — the question the office
+ * gets asked on the phone most often.
+ */
+export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[] {
+  const q = query.trim().toLowerCase();
+  if (q === "") return [];
+
+  const hits: SearchHit[] = [];
+  const liveZones = snapshot.zones.filter((z) => z.is_active);
+  const liveTrucks = snapshot.trucks.filter((t) => t.is_active);
+
+  for (const truck of liveTrucks) {
+    if (truck.name.toLowerCase().includes(q) || truck.code.toLowerCase().includes(q)) {
+      hits.push({
+        entity: "trucks",
+        recordId: truck.id,
+        label: truck.name,
+        context: `Truck · ${truck.code}`,
+      });
+    }
+  }
+
+  for (const zone of liveZones) {
+    if (zone.name.toLowerCase().includes(q)) {
+      hits.push({
+        entity: "zones",
+        recordId: zone.id,
+        label: zone.name,
+        context: "Zone",
+      });
+    }
+  }
+
+  if (/^\d{5}$/.test(q)) {
+    for (const range of snapshot.ranges) {
+      if (q < range.postcode_start || q > range.postcode_end) continue;
+      const zone = liveZones.find((z) => z.id === range.zone_id);
+      if (!zone) continue;
+      hits.push({
+        entity: "postcodes",
+        recordId: zone.id,
+        label: `${q} is in ${zone.name}`,
+        context: `Range ${range.postcode_start}–${range.postcode_end}`,
+      });
+    }
+  }
+
+  for (const block of snapshot.blocks) {
+    const reason = block.reason ?? "";
+    if (!reason.toLowerCase().includes(q) && !block.block_date.includes(q)) continue;
+    const truckName = block.truck_id
+      ? (snapshot.trucks.find((t) => t.id === block.truck_id)?.name ?? "Unknown truck")
+      : "All trucks";
+    hits.push({
+      entity: "blocks",
+      recordId: block.id,
+      label: reason === "" ? block.block_date : `${block.block_date} · ${reason}`,
+      context: `Blocked · ${truckName}`,
+    });
+  }
+
+  for (const bay of snapshot.bays) {
+    if (!bay.name.toLowerCase().includes(q)) continue;
+    hits.push({ entity: "bays", recordId: bay.id, label: bay.name, context: "Bay" });
+  }
+
+  if (
+    snapshot.facility &&
+    (snapshot.facility.name.toLowerCase().includes(q) ||
+      snapshot.facility.postcode.includes(q))
+  ) {
+    hits.push({
+      entity: "factory",
+      recordId: snapshot.facility.id,
+      label: snapshot.facility.name,
+      context: `Factory · ${snapshot.facility.postcode}`,
+    });
+  }
+
+  for (const slot of snapshot.slots) {
+    if (!slot.is_active) continue;
+    const truck = liveTrucks.find((t) => t.id === slot.truck_id);
+    if (!truck) continue;
+    const label = `${WEEKDAYS[slot.weekday]} ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`;
+    if (!label.toLowerCase().includes(q)) continue;
+    hits.push({
+      entity: "slots",
+      recordId: slot.truck_id,
+      label,
+      context: `Slot · ${truck.name}`,
+    });
+  }
+
+  return hits;
+}
