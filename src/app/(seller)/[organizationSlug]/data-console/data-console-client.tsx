@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { AlertTriangle, Database, RefreshCw } from "lucide-react";
 import { clearAllData, seedDemoData } from "@/features/data-console/server/actions";
 import { CONSOLE_ACCOUNTS } from "@/features/data-console/lib/accounts";
@@ -36,10 +36,12 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
   const [confirmText, setConfirmText] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [busy, setBusy] = useState(false);
 
-  function runClear() {
-    startTransition(async () => {
+  async function runClear() {
+    if (busy) return;
+    setBusy(true);
+    try {
       setMessage(null);
       setError(null);
       const result = await clearAllData(organizationSlug);
@@ -50,11 +52,15 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
         setError(result.message);
       }
       setConfirmText("");
-    });
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function runSeed() {
-    startTransition(async () => {
+  async function runSeed() {
+    if (busy) return;
+    setBusy(true);
+    try {
       setMessage(null);
       setError(null);
       const result = await seedDemoData(organizationSlug);
@@ -66,7 +72,9 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
       } else {
         setError(result.message);
       }
-    });
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -110,13 +118,13 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
               onChange={(event) => setConfirmText(event.target.value)}
               placeholder={CONFIRM_PHRASE}
               autoComplete="off"
-              disabled={isPending}
+              disabled={busy}
             />
           </CardContent>
           <CardFooter>
             <Button
               variant="destructive"
-              disabled={isPending || confirmText !== CONFIRM_PHRASE}
+              disabled={busy || confirmText !== CONFIRM_PHRASE}
               onClick={runClear}
             >
               Clear all data
@@ -147,7 +155,7 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
           <CardFooter>
             <Dialog>
               <DialogTrigger asChild>
-                <Button disabled={isPending}>
+                <Button disabled={busy}>
                   <RefreshCw className="size-4" />
                   Seed demo data
                 </Button>
@@ -165,7 +173,7 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
                     <Button variant="outline">Cancel</Button>
                   </DialogClose>
                   <DialogClose asChild>
-                    <Button disabled={isPending} onClick={runSeed}>
+                    <Button disabled={busy} onClick={runSeed}>
                       Seed demo data
                     </Button>
                   </DialogClose>
