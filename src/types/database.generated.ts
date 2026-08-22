@@ -487,6 +487,88 @@ export type Database = {
           },
         ]
       }
+      delivery_attempts: {
+        Row: {
+          attempted_at: string
+          cash_collected: number | null
+          created_at: string
+          id: string
+          next_action:
+            | Database["public"]["Enums"]["delivery_next_action"]
+            | null
+          note: string | null
+          order_id: string
+          organization_id: string
+          outcome: Database["public"]["Enums"]["delivery_outcome"]
+          photo_path: string | null
+          reason: Database["public"]["Enums"]["delivery_failure_reason"] | null
+          received_by: string | null
+          recorded_by: string
+          run_id: string
+          signature_path: string | null
+        }
+        Insert: {
+          attempted_at?: string
+          cash_collected?: number | null
+          created_at?: string
+          id?: string
+          next_action?:
+            | Database["public"]["Enums"]["delivery_next_action"]
+            | null
+          note?: string | null
+          order_id: string
+          organization_id: string
+          outcome: Database["public"]["Enums"]["delivery_outcome"]
+          photo_path?: string | null
+          reason?: Database["public"]["Enums"]["delivery_failure_reason"] | null
+          received_by?: string | null
+          recorded_by: string
+          run_id: string
+          signature_path?: string | null
+        }
+        Update: {
+          attempted_at?: string
+          cash_collected?: number | null
+          created_at?: string
+          id?: string
+          next_action?:
+            | Database["public"]["Enums"]["delivery_next_action"]
+            | null
+          note?: string | null
+          order_id?: string
+          organization_id?: string
+          outcome?: Database["public"]["Enums"]["delivery_outcome"]
+          photo_path?: string | null
+          reason?: Database["public"]["Enums"]["delivery_failure_reason"] | null
+          received_by?: string | null
+          recorded_by?: string
+          run_id?: string
+          signature_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_attempts_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_attempts_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_attempts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_runs: {
         Row: {
           created_at: string
@@ -743,6 +825,89 @@ export type Database = {
             foreignKeyName: "invitations_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      market_premises: {
+        Row: {
+          district: string | null
+          premise_code: number
+          state: string
+          synced_at: string
+        }
+        Insert: {
+          district?: string | null
+          premise_code: number
+          state: string
+          synced_at?: string
+        }
+        Update: {
+          district?: string | null
+          premise_code?: number
+          state?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
+      market_prices: {
+        Row: {
+          avg_price: number
+          created_at: string
+          item_code: number
+          max_price: number
+          median_price: number
+          min_price: number
+          premise_count: number
+          price_date: string
+          state: string
+        }
+        Insert: {
+          avg_price: number
+          created_at?: string
+          item_code: number
+          max_price: number
+          median_price: number
+          min_price: number
+          premise_count: number
+          price_date: string
+          state: string
+        }
+        Update: {
+          avg_price?: number
+          created_at?: string
+          item_code?: number
+          max_price?: number
+          median_price?: number
+          min_price?: number
+          premise_count?: number
+          price_date?: string
+          state?: string
+        }
+        Relationships: []
+      }
+      market_settings: {
+        Row: {
+          org_id: string
+          states: string[]
+          updated_at: string
+        }
+        Insert: {
+          org_id: string
+          states?: string[]
+          updated_at?: string
+        }
+        Update: {
+          org_id?: string
+          states?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
             referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
@@ -1223,6 +1388,9 @@ export type Database = {
           created_by: string | null
           id: string
           is_available: boolean
+          market_item_code: number | null
+          market_margin_type: string | null
+          market_margin_value: number | null
           name: string
           organization_id: string
           price_per_unit: number
@@ -1236,6 +1404,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_available?: boolean
+          market_item_code?: number | null
+          market_margin_type?: string | null
+          market_margin_value?: number | null
           name: string
           organization_id: string
           price_per_unit: number
@@ -1249,6 +1420,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_available?: boolean
+          market_item_code?: number | null
+          market_margin_type?: string | null
+          market_margin_value?: number | null
           name?: string
           organization_id?: string
           price_per_unit?: number
@@ -1407,6 +1581,61 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      run_stop_events: {
+        Row: {
+          at: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["stop_event_kind"]
+          order_id: string
+          organization_id: string
+          recorded_by: string
+          run_id: string
+        }
+        Insert: {
+          at?: string
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["stop_event_kind"]
+          order_id: string
+          organization_id: string
+          recorded_by: string
+          run_id: string
+        }
+        Update: {
+          at?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["stop_event_kind"]
+          order_id?: string
+          organization_id?: string
+          recorded_by?: string
+          run_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "run_stop_events_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_stop_events_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "run_stop_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -1653,10 +1882,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _dc_uuid: { Args: { p_label: string; p_org: string }; Returns: string }
       _order_safe_boolean: { Args: { p_text: string }; Returns: boolean }
       _order_safe_integer: { Args: { p_text: string }; Returns: number }
       _order_safe_numeric: { Args: { p_text: string }; Returns: number }
       _order_safe_uuid: { Args: { p_text: string }; Returns: string }
+      admin_clear_org_data: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      admin_seed_demo_data: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      can_record_stop: {
+        Args: { p_org: string; p_run: string }
+        Returns: boolean
+      }
       cancel_order: {
         Args: { p_order: string; p_reason: string }
         Returns: undefined
@@ -1696,6 +1938,26 @@ export type Database = {
         Returns: undefined
       }
       dispatch_unassign_order: { Args: { p_order: string }; Returns: undefined }
+      driver_arrive_stop: { Args: { p_order: string }; Returns: undefined }
+      driver_deliver_stop: {
+        Args: {
+          p_cash_collected?: number
+          p_order: string
+          p_photo_path?: string
+          p_received_by?: string
+          p_signature_path?: string
+        }
+        Returns: undefined
+      }
+      driver_fail_stop: {
+        Args: {
+          p_next_action?: Database["public"]["Enums"]["delivery_next_action"]
+          p_note?: string
+          p_order: string
+          p_reason: Database["public"]["Enums"]["delivery_failure_reason"]
+        }
+        Returns: undefined
+      }
       driver_run_ids: { Args: never; Returns: string[] }
       effective_capabilities:
         | { Args: { p_org: string }; Returns: Json }
@@ -1710,6 +1972,20 @@ export type Database = {
           start_time: string
           truck_id: string
           truck_name: string
+        }[]
+      }
+      get_market_suggestions: {
+        Args: { p_organization_id: string }
+        Returns: {
+          current_price: number
+          latest_price_date: string
+          market_base: number
+          market_item_code: number
+          product_name: string
+          stale: boolean
+          suggested_price: number
+          variant_id: string
+          variant_name: string
         }[]
       }
       has_org_role: {
@@ -1773,6 +2049,14 @@ export type Database = {
     }
     Enums: {
       assignment_source: "none" | "auto" | "manual"
+      delivery_failure_reason:
+        | "shop_closed"
+        | "rejected"
+        | "no_cash"
+        | "wrong_address"
+        | "other"
+      delivery_next_action: "retry_today" | "move_tomorrow" | "return_to_yard"
+      delivery_outcome: "delivered" | "failed"
       delivery_run_status: "planned" | "departed" | "completed"
       order_fallback: "cancel" | "mix" | "upsize" | "downsize"
       order_item_mode: "piece" | "kg"
@@ -1784,6 +2068,7 @@ export type Database = {
         | "closed"
         | "cancelled"
       order_task_status: "pending" | "done"
+      stop_event_kind: "arrive" | "leave"
       weight_log_kind: "warehouse" | "final"
     }
     CompositeTypes: {
@@ -2461,6 +2746,15 @@ export const Constants = {
   public: {
     Enums: {
       assignment_source: ["none", "auto", "manual"],
+      delivery_failure_reason: [
+        "shop_closed",
+        "rejected",
+        "no_cash",
+        "wrong_address",
+        "other",
+      ],
+      delivery_next_action: ["retry_today", "move_tomorrow", "return_to_yard"],
+      delivery_outcome: ["delivered", "failed"],
       delivery_run_status: ["planned", "departed", "completed"],
       order_fallback: ["cancel", "mix", "upsize", "downsize"],
       order_item_mode: ["piece", "kg"],
@@ -2473,6 +2767,7 @@ export const Constants = {
         "cancelled",
       ],
       order_task_status: ["pending", "done"],
+      stop_event_kind: ["arrive", "leave"],
       weight_log_kind: ["warehouse", "final"],
     },
   },
