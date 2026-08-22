@@ -6,13 +6,13 @@ begin;
 
 select plan(3);
 
--- 1. Anonymous user cannot see any organization.
+-- 1. Anonymous CAN read organizations: the buyer portal resolves an org by
+--    slug while signed out (policy organizations_select_public from
+--    20260719000001 + anon grant from 20260822000003).
 set local role anon;
-select throws_ok(
+select lives_ok(
   $$ select count(*) from public.organizations $$,
-  '42501',
-  null,
-  'anon cannot list organizations'
+  'anon can read organizations for buyer portal browsing'
 );
 reset role;
 
