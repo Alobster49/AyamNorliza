@@ -1,31 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
-import { OWNER, BUYER, signIn, signInBuyer, uniqueFixtureName } from "./_fixtures";
-
-async function createSellableProduct(page: Page, productName: string) {
-  await page.goto("/ayam-norliza-pilot/products");
-  await page.getByRole("button", { name: "Add Category" }).click();
-  await page.getByLabel("Category Name").fill(`${productName} Category`);
-  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
-
-  await page.getByRole("button", { name: "Add Product" }).click();
-  await page.getByLabel("Product Name").fill(productName);
-  await page.getByRole("combobox").click();
-  await page.getByRole("option", { name: `${productName} Category` }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
-
-  // RECONCILIATION: "Add Size/Option" is rendered once per product card, so
-  // once more than one product exists in the org (true across a full suite
-  // run against a persisted DB, workers: 1) the bare role query is
-  // ambiguous. Scope to the card for the product just created.
-  const card = page.locator('[data-slot="card"]').filter({ hasText: productName });
-  await card.getByRole("button", { name: "Add Size/Option" }).click();
-  await page.getByLabel(/name \(e\.g\., standard/i).fill("Standard");
-  await page.getByLabel(/price/i).fill("15.00");
-  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
-}
+import {
+  OWNER,
+  BUYER,
+  checkoutWithNewAddress,
+  createSellableProduct,
+  seedZoneWithCoverage,
+  signIn,
+  signInBuyer,
+  uniqueFixtureName,
+} from "./_fixtures";
 
 test("buyer adds a product with a size range and fallback, checks out, and sees the order as Pending", async ({
   page,
@@ -35,6 +18,14 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
   const productName = uniqueFixtureName("E2E Buyer Portal Chicken");
   await signIn(page, OWNER.email, OWNER.password);
   await createSellableProduct(page, productName);
+  // Checkout resolves the zone from the postcode, so the org needs a zone
+  // covering 50000 with a slot on tomorrow's weekday.
+  await seedZoneWithCoverage(
+    page,
+    uniqueFixtureName("E2E Buyer Zone"),
+    uniqueFixtureName("E2E Buyer Truck"),
+    uniqueFixtureName("TRK").slice(0, 20),
+  );
 
   // Shop as the buyer in a second tab (same pattern as e2e/deactivation.spec.ts).
   const buyerPage = await context.newPage();
@@ -75,23 +66,19 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
     timeout: 10_000,
   });
 
-  // RECONCILIATION: on checkout (unlike the seller's New order page), the
-  // zone Select *is* labeled via htmlFor ("Delivery Zone"), so its
-  // accessible name is the label text, not the "Select a zone" placeholder.
-  await buyerPage.getByRole("combobox", { name: /delivery zone/i }).click();
-  await buyerPage.getByRole("option", { name: "Zone 1" }).click();
-  await buyerPage.getByLabel(/delivery address/i).fill("77 Jalan Pembeli, Kuala Lumpur");
-  // Here the delivery slot picker genuinely is a radiogroup of role="radio"
-  // buttons, matching the brief's assumption (unlike the seller's Select).
-  const firstOption = buyerPage.getByRole("radio").first();
-  await expect(firstOption).toBeVisible({ timeout: 10_000 });
-  await firstOption.click();
+  // RECONCILIATION: checkout no longer asks for a zone - the buyer types an
+  // address + postcode and the zone is resolved server-side from it.
+  await checkoutWithNewAddress(buyerPage, "77 Jalan Pembeli");
   await buyerPage.getByRole("button", { name: /place order/i }).click();
 
   // RECONCILIATION: placeOrder doesn't redirect to /orders. It stays on
   // /checkout and swaps in an inline "Order Placed!" confirmation card with
   // its own "View My Orders" button, which must be clicked to navigate.
-  await expect(buyerPage.getByText("Order Placed!")).toBeVisible({ timeout: 10_000 });
+  // The lowercase toast title ("Order placed!") and its aria-live
+  // announcement also match without an exact, case-sensitive check.
+  await expect(buyerPage.getByText("Order Placed!", { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
   await buyerPage.getByRole("button", { name: /view my orders/i }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/orders/, {
     timeout: 10_000,
@@ -106,6 +93,14 @@ test("buyer cancels a pending order", async ({ page, context }) => {
   const productName = uniqueFixtureName("E2E Buyer Cancel Chicken");
   await signIn(page, OWNER.email, OWNER.password);
   await createSellableProduct(page, productName);
+  // Checkout resolves the zone from the postcode, so the org needs a zone
+  // covering 50000 with a slot on tomorrow's weekday.
+  await seedZoneWithCoverage(
+    page,
+    uniqueFixtureName("E2E Buyer Zone"),
+    uniqueFixtureName("E2E Buyer Truck"),
+    uniqueFixtureName("TRK").slice(0, 20),
+  );
 
   const buyerPage = await context.newPage();
   await signInBuyer(buyerPage, BUYER.email, BUYER.password);
@@ -133,14 +128,13 @@ test("buyer cancels a pending order", async ({ page, context }) => {
     timeout: 10_000,
   });
 
-  await buyerPage.getByRole("combobox", { name: /delivery zone/i }).click();
-  await buyerPage.getByRole("option", { name: "Zone 1" }).click();
-  await buyerPage.getByLabel(/delivery address/i).fill("21 Jalan Batal, Kuala Lumpur");
-  const firstOption = buyerPage.getByRole("radio").first();
-  await expect(firstOption).toBeVisible({ timeout: 10_000 });
-  await firstOption.click();
+  await checkoutWithNewAddress(buyerPage, "21 Jalan Batal");
   await buyerPage.getByRole("button", { name: /place order/i }).click();
-  await expect(buyerPage.getByText("Order Placed!")).toBeVisible({ timeout: 10_000 });
+  // The lowercase toast title ("Order placed!") and its aria-live
+  // announcement also match without an exact, case-sensitive check.
+  await expect(buyerPage.getByText("Order Placed!", { exact: true })).toBeVisible({
+    timeout: 10_000,
+  });
   await buyerPage.getByRole("button", { name: /view my orders/i }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/orders/, {
     timeout: 10_000,

@@ -1,36 +1,12 @@
 import { expect, test, type Page, type Locator } from "@playwright/test";
-import { OWNER, signIn, uniqueFixtureName } from "./_fixtures";
-
-// Creates a category + product + one available "Standard" variant via the
-// existing (unchanged by this plan) seller Products screen, so the order
-// pipeline has something sellable to order. `productName` also becomes the
-// category name (suffixed) so each test's fixtures are self-contained and
-// never collide with another test's.
-async function createSellableProduct(page: Page, productName: string) {
-  await page.goto("/ayam-norliza-pilot/products");
-  await page.getByRole("button", { name: "Add Category" }).click();
-  await page.getByLabel("Category Name").fill(`${productName} Category`);
-  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
-
-  await page.getByRole("button", { name: "Add Product" }).click();
-  await page.getByLabel("Product Name").fill(productName);
-  await page.getByRole("combobox").click();
-  await page.getByRole("option", { name: `${productName} Category` }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
-
-  // RECONCILIATION: "Add Size/Option" is rendered once per product card, so
-  // once more than one product exists in the org (true across a full suite
-  // run against a persisted DB, workers: 1) the bare role query is
-  // ambiguous. Scope to the card for the product just created.
-  const card = page.locator('[data-slot="card"]').filter({ hasText: productName });
-  await card.getByRole("button", { name: "Add Size/Option" }).click();
-  await page.getByLabel(/name \(e\.g\., standard/i).fill("Standard");
-  await page.getByLabel(/price/i).fill("12.00");
-  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
-  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
-}
+import {
+  OWNER,
+  createSellableProduct,
+  seedZoneWithCoverage,
+  shiftOrderToToday,
+  signIn,
+  uniqueFixtureName,
+} from "./_fixtures";
 
 // RECONCILIATION: several fields on the New order / order detail screens
 // render their <Label> as a plain sibling of the <input>/<textarea> with no
@@ -97,6 +73,14 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   const customerName = uniqueFixtureName("E2E Pipeline Customer");
   await signIn(page, OWNER.email, OWNER.password);
   await createSellableProduct(page, productName);
+  // Seed a zone whose only slot falls on tomorrow's weekday. The seeded
+  // "Zone 1" runs Mon-Sat, so on a day whose tomorrow is a Sunday the
+  // earliest bookable date is two days out - past getTodayTasks' horizon
+  // (current_date + 1), which would leave the warehouse step with an empty
+  // queue for reasons that have nothing to do with the pipeline.
+  const zoneName = uniqueFixtureName("E2E Pipeline Zone");
+  const truckName = uniqueFixtureName("E2E Pipeline Truck");
+  await seedZoneWithCoverage(page, zoneName, truckName, uniqueFixtureName("TRK").slice(0, 20));
 
   // --- Create the manual order ---
   await page.goto("/ayam-norliza-pilot/orders/new");
@@ -120,7 +104,7 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   await chooseSelect(fieldAfterLabel(page, "If size unavailable"), "Mix sizes");
 
   await fieldAfterLabel(page, "Zone").click();
-  await page.getByRole("option", { name: "Zone 1" }).click();
+  await page.getByRole("option", { name: zoneName }).click();
   await fieldAfterLabel(page, "Delivery address").fill("12 Jalan Uji, Kuala Lumpur");
   const deliveryDate = await pickFirstDeliveryOption(page);
 
@@ -129,6 +113,7 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   // page (/orders/[orderId]), not back to the orders list, so there is no
   // row/"View" button to click here — the detail page is already loaded.
   await expect(page).toHaveURL(/\/ayam-norliza-pilot\/orders\/[0-9a-f-]{36}/, { timeout: 10_000 });
+  const orderId = page.url().split("/").pop()!;
 
   // --- Confirm, applying the pre-declared fallback on the one line ---
   // RECONCILIATION: the pending panel doesn't ask a Yes/No question per
@@ -147,46 +132,61 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   // NOTE: getTodayTasks includes orders due tomorrow (not only strictly
   // today), so a freshly placed order's task shows up here right away.
   await page.goto("/ayam-norliza-pilot/tasks");
-  await expect(page.getByRole("heading", { name: /tasks/i })).toBeVisible({ timeout: 10_000 });
-  const taskCard = page
-    .getByText(customerName, { exact: true })
-    .locator("xpath=ancestor::div[contains(@class,'rounded-lg')][1]");
-  await expect(taskCard).toBeVisible({ timeout: 10_000 });
-  // RECONCILIATION: the task's weight/pieces fields are labeled "Weight
-  // (kg)" / "Pieces", not "Warehouse weight" / "Warehouse pieces".
-  await fieldAfterLabel(taskCard, "Weight (kg)").fill("5.2");
-  await fieldAfterLabel(taskCard, "Pieces").fill("3");
-  await taskCard.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByText(customerName)).toBeHidden({ timeout: 10_000 });
+  // RECONCILIATION: the per-task cards with "Weight (kg)"/"Pieces"/"Done" are
+  // gone. Tasks is now a kiosk (WeighStation on md+, SwipeDeck on mobile):
+  // one line at a time, the current customer's name as the <h1>, digits typed
+  // into a scale-style readout, Enter to confirm the line. The order submits
+  // itself once its last line is confirmed - there is no save button.
+  // The kiosk opens on whichever order is first in the queue, and the shared
+  // database usually holds other pending tasks, so jump to this one via the
+  // queue rail.
+  await page.getByRole("button", { name: customerName }).first().click();
+  const station = page.getByRole("heading", { name: customerName, exact: true });
+  await expect(station).toBeVisible({ timeout: 10_000 });
+  await page.keyboard.type("5.2");
+  await page.keyboard.press("Enter");
+  // Pieces are optional (isPiecesValid treats "" as valid), so one weight is
+  // enough for this single-line order to auto-complete and leave the queue.
+  await expect(station).toBeHidden({ timeout: 10_000 });
 
-  // --- Run departs, then returns ---
+  // --- Truck is loaded, departs, then comes back ---
+  // The Loading board is today-only by design, but an order can only be
+  // booked from tomorrow onwards, so a run created in this test can never be
+  // loaded on the day it is created. Move the order and its run to today so
+  // the load -> depart -> close chain is reachable in a single suite run.
+  const runDate = await shiftOrderToToday(orderId);
+
+  await page.goto("/ayam-norliza-pilot/loading");
+  await page.getByRole("button", { name: `Mark ${customerName} loaded` }).click();
+
   await page.goto("/ayam-norliza-pilot/runs");
   await expect(page.getByRole("heading", { name: /runs/i })).toBeVisible({ timeout: 10_000 });
   // RECONCILIATION: the date filter is a bare <input type="date"> with no
   // associated <label> at all.
-  await page.locator('input[type="date"]').fill(deliveryDate);
-  await expect(page.getByText(customerName)).toBeVisible({ timeout: 10_000 });
-  // RECONCILIATION (test bug, found via direct DB inspection): the "Mark
-  // departed"/"Mark completed" BUTTONS themselves contain the words
-  // "departed"/"completed" in their own labels and stay mounted right up
-  // until the transition actually lands, so a loose `getByText(/departed/i)`
-  // is satisfied by the *button* immediately on click — before setRunStatus
-  // has actually round-tripped to the server. That let the very next
-  // `page.goto` abort the in-flight request (observed as the run silently
-  // stuck on "departed" in the DB after "Mark completed" was clicked, only
-  // on the tablet/WebKit project, presumably because WebKit cancels
-  // in-flight requests on navigation more eagerly than Chromium). Scope to
-  // the status Badge specifically so the wait is tied to the real state.
-  await page.getByRole("button", { name: /mark departed/i }).click();
-  await expect(
-    page.locator('[data-slot="badge"]').filter({ hasText: "Departed" }).first(),
-  ).toBeVisible({ timeout: 10_000 });
-  // RECONCILIATION: the return-trip action is labeled "Mark completed", not
-  // "Truck returned".
-  await page.getByRole("button", { name: /mark completed/i }).click();
-  await expect(
-    page.locator('[data-slot="badge"]').filter({ hasText: "Completed" }).first(),
-  ).toBeVisible({ timeout: 10_000 });
+  await page.locator('input[type="date"]').fill(runDate);
+  // Runs are now one tab per truck: pick this test's truck, then work inside
+  // its panel. Other runs for the same date belong to earlier test runs.
+  await page
+    .getByRole("tablist", { name: /trucks running today/i })
+    .getByRole("button", { name: new RegExp(truckName) })
+    .click();
+  // The name shows up in several places on a run card (stop row, stop
+  // counter, and the reorder controls), so take the first match rather than
+  // requiring a single one.
+  await expect(page.getByText(customerName).first()).toBeVisible({ timeout: 10_000 });
+
+  // RECONCILIATION: departure and closing now go through an in-page confirm
+  // step ("Send out" / "Close run"), not window.confirm, and the status chip
+  // reads "In the yard" / "On the road" / "Back in". Assert on the chip so
+  // the wait is tied to the real state rather than to the button that is
+  // still mounted mid-request.
+  await page.getByRole("button", { name: "Mark departed" }).click();
+  await page.getByRole("button", { name: "Send out" }).click();
+  await expect(page.getByText("On the road").first()).toBeVisible({ timeout: 10_000 });
+
+  await page.getByRole("button", { name: "Close run" }).first().click();
+  await page.getByRole("button", { name: "Close run" }).last().click();
+  await expect(page.getByText("Back in").first()).toBeVisible({ timeout: 10_000 });
 
   // --- Close with final weights and today's price ---
   await page.goto("/ayam-norliza-pilot/orders");
@@ -242,8 +242,10 @@ test("fallback = cancel cancels the order when the only line is unavailable at c
   await fieldAfterLabel(page, "Size max (kg)").fill("1.6");
   await chooseSelect(fieldAfterLabel(page, "If size unavailable"), "Cancel my order");
 
+  // This order is cancelled at confirm, so it never reaches the warehouse
+  // queue - the stock "Zone 1" is enough here.
   await fieldAfterLabel(page, "Zone").click();
-  await page.getByRole("option", { name: "Zone 1" }).click();
+  await page.getByRole("option", { name: "Zone 1", exact: true }).click();
   await fieldAfterLabel(page, "Delivery address").fill("9 Jalan Uji, Kuala Lumpur");
   await pickFirstDeliveryOption(page);
 

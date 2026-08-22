@@ -1,4 +1,21 @@
+import { readFileSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
+
+// The dev server reads .env.local through Next, but the Playwright process
+// does not - and fixtures like `reactivateTarget` need the service-role key
+// to restore shared DB state between runs. Load it here, without clobbering
+// anything already exported in the shell.
+try {
+  for (const line of readFileSync(".env.local", "utf8").split("\n")) {
+    const match = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
+    if (!match) continue;
+    const [, key, rawValue] = match;
+    if (process.env[key!] !== undefined) continue;
+    process.env[key!] = rawValue!.trim().replace(/^["']|["']$/g, "");
+  }
+} catch {
+  // No .env.local (CI exports the variables directly) - nothing to load.
+}
 
 /**
  * Playwright config for the MOD-01 vertical slice.
