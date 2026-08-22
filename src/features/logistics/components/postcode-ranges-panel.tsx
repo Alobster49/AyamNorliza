@@ -103,7 +103,7 @@ export function PostcodeRangesPanel({
         </button>
       </div>
 
-      <ul className="flex flex-col gap-2">
+      <ul aria-label="Zone postcode ranges" className="flex flex-col gap-2">
         {ranges.map((r) => (
           <li key={r.id} className="flex items-center justify-between rounded border p-2 text-sm">
             <span>

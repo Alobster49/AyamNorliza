@@ -1,6 +1,6 @@
 "use client";
 
-import { Archive, Pencil, Plus, Trash2 } from "lucide-react";
+import { Archive, Pencil, Trash2 } from "lucide-react";
 import type { Category } from "@/features/seller/types";
 import { ARCHIVED_VIEW, type CatalogFilter } from "@/features/seller/lib/catalog-model";
 
@@ -36,18 +36,10 @@ export function CategoryRail({
       aria-label="Categories"
       className="flex items-center gap-1 overflow-x-auto rounded-full border bg-card p-1 md:block md:w-56 md:shrink-0 md:overflow-visible md:rounded-lg md:p-0"
     >
-      <div className="hidden items-center justify-between px-3 pb-1 pt-3 md:flex">
+      <div className="hidden px-3 pb-1 pt-3 md:block">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Categories
         </span>
-        <button
-          type="button"
-          onClick={onAddCategory}
-          className="rounded p-0.5 text-muted-foreground hover:text-foreground"
-          aria-label="Add category"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
       </div>
 
       <RailItem
