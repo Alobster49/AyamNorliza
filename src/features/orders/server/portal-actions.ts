@@ -292,3 +292,42 @@ export async function cancelMyOrder(orderId: string, reason?: string): Promise<A
 
   return ok(undefined);
 }
+
+export async function resolveZoneForPostcode(
+  organizationSlug: string,
+  postcode: string,
+): Promise<ActionResult<{ zoneId: string | null }>> {
+  try {
+    await requireBuyer();
+  } catch (e) {
+    if (e instanceof NotABuyerError) {
+      return err("unauthenticated", e.message);
+    }
+    throw e;
+  }
+
+  if (!/^[0-9]{5}$/.test(postcode)) {
+    return err("validation", "Enter a 5-digit postcode");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("slug", organizationSlug)
+    .single();
+  if (!org) {
+    return err("not_found", "Organization not found");
+  }
+
+  const { data, error } = await supabase.rpc("resolve_zone_for_postcode", {
+    p_org: org.id,
+    p_postcode: postcode,
+  });
+
+  if (error) {
+    return err("internal", "Failed to check delivery coverage");
+  }
+
+  return ok({ zoneId: (data as string | null) ?? null });
+}

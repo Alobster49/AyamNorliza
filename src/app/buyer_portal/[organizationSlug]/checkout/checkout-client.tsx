@@ -5,22 +5,17 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { useCart } from "@/features/buyer/components/cart-context";
 import {
-  getActiveZones,
   getDeliveryOptions,
   placeOrder,
+  resolveZoneForPostcode,
 } from "@/features/orders/server/portal-actions";
-import type { DeliveryZone, DeliveryOption } from "@/features/orders/types";
+import type { DeliveryOption } from "@/features/orders/types";
+import { listMyAddresses, createAddress } from "@/features/buyer/server/address-actions";
+import type { BuyerAddress } from "@/features/buyer/types";
+import { AddressFields, type AddressValue } from "@/features/buyer/components/address-fields";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Card,
   CardContent,
@@ -45,35 +40,82 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
   const { items, clearCart } = useCart();
   const { toast } = useToast();
 
-  const [zones, setZones] = useState<DeliveryZone[]>([]);
-  const [zonesLoading, setZonesLoading] = useState(true);
-  const [zoneId, setZoneId] = useState<string>("");
+  const [savedAddresses, setSavedAddresses] = useState<BuyerAddress[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(true);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
+  const [newAddress, setNewAddress] = useState<AddressValue>({
+    addressLine: "",
+    postcode: "",
+    state: "",
+    area: "",
+  });
+  const [zoneId, setZoneId] = useState<string | null>(null);
+  const [zoneState, setZoneState] = useState<"idle" | "resolving" | "resolved" | "uncovered">(
+    "idle",
+  );
   const [options, setOptions] = useState<DeliveryOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string>("");
-  const [address, setAddress] = useState("");
-  const [postcode, setPostcode] = useState("");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
   const [orderId, setOrderId] = useState<string>("");
 
   useEffect(() => {
-    if (!organizationSlug) return;
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setZonesLoading(true);
-    getActiveZones(organizationSlug).then((result) => {
+    listMyAddresses().then((result) => {
       if (cancelled) return;
       if (result.ok) {
-        setZones(result.data);
+        setSavedAddresses(result.data);
+        const preferred = result.data.find((a) => a.isDefault) ?? result.data[0];
+        if (preferred) setSelectedAddressId(preferred.id);
       }
-      setZonesLoading(false);
+      setAddressesLoading(false);
     });
     return () => {
       cancelled = true;
     };
-  }, [organizationSlug]);
+  }, []);
+
+  const activeAddress: AddressValue | null = useMemo(() => {
+    if (selectedAddressId !== "new") {
+      const saved = savedAddresses.find((a) => a.id === selectedAddressId);
+      return saved
+        ? {
+            addressLine: saved.addressLine,
+            postcode: saved.postcode,
+            state: saved.state,
+            area: saved.area,
+          }
+        : null;
+    }
+    return newAddress;
+  }, [selectedAddressId, savedAddresses, newAddress]);
+
+  useEffect(() => {
+    const postcode = activeAddress?.postcode ?? "";
+    if (!/^[0-9]{5}$/.test(postcode)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setZoneId(null);
+      setZoneState("idle");
+      return;
+    }
+    let cancelled = false;
+    setZoneState("resolving");
+    resolveZoneForPostcode(organizationSlug, postcode).then((result) => {
+      if (cancelled) return;
+      if (result.ok && result.data.zoneId) {
+        setZoneId(result.data.zoneId);
+        setZoneState("resolved");
+      } else {
+        setZoneId(null);
+        setZoneState("uncovered");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [organizationSlug, activeAddress?.postcode]);
 
   useEffect(() => {
     if (!organizationSlug || !zoneId) {
@@ -109,23 +151,29 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
 
   const canSubmit =
     items.length > 0 &&
-    zoneId !== "" &&
-    address.trim().length > 0 &&
+    activeAddress !== null &&
+    activeAddress.addressLine.trim().length > 0 &&
+    /^[0-9]{5}$/.test(activeAddress.postcode) &&
+    activeAddress.state !== "" &&
+    activeAddress.area !== "" &&
+    zoneState === "resolved" &&
+    zoneId !== null &&
     selectedOption !== null &&
     !submitting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!canSubmit || !selectedOption) return;
+    if (!canSubmit || !selectedOption || !activeAddress || zoneId === null) return;
 
     setSubmitting(true);
+    const composedAddress = `${activeAddress.addressLine.trim()}, ${activeAddress.postcode} ${activeAddress.area}, ${activeAddress.state}`;
     const result = await placeOrder({
       organizationSlug,
       zoneId,
       slotId: selectedOption.slotId,
       deliveryDate: selectedOption.date,
-      address: address.trim(),
-      postcode: postcode.trim() || undefined,
+      address: composedAddress,
+      postcode: activeAddress.postcode,
       notes: notes.trim() || undefined,
       items: items.map((item) => ({
         productId: item.productId,
@@ -145,6 +193,17 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
         variant: "destructive",
       });
       return;
+    }
+
+    if (selectedAddressId === "new") {
+      // Fire-and-ignore: the order already succeeded, so a failure to save
+      // this address for next time must not break the success screen.
+      createAddress({
+        addressLine: newAddress.addressLine.trim(),
+        postcode: newAddress.postcode,
+        state: newAddress.state,
+        area: newAddress.area,
+      }).catch(() => {});
     }
 
     setOrderId(result.data.orderId);
@@ -218,56 +277,74 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
               <CardHeader>
                 <CardTitle>Delivery Details</CardTitle>
                 <CardDescription>
-                  Pick your delivery zone, address, and a time slot.
+                  Pick a delivery address and add any notes for your order.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="zone">Delivery Zone</Label>
-                  <Select
-                    value={zoneId}
-                    onValueChange={(v) => setZoneId(v)}
-                    disabled={zonesLoading || zones.length === 0}
-                  >
-                    <SelectTrigger id="zone" className="w-full">
-                      <SelectValue
-                        placeholder={zonesLoading ? "Loading zones..." : "Select a zone"}
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {zones.map((zone) => (
-                        <SelectItem key={zone.id} value={zone.id}>
-                          {zone.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {addressesLoading && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading your addresses...
+                  </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="address">Delivery Address</Label>
-                  <Textarea
-                    id="address"
-                    placeholder="Enter your full delivery address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                    rows={3}
-                    required
-                  />
-                </div>
+                {!addressesLoading && savedAddresses.length > 0 && (
+                  <div className="space-y-2" role="radiogroup" aria-label="Delivery address">
+                    {savedAddresses.map((addr) => {
+                      const isSelected = selectedAddressId === addr.id;
+                      return (
+                        <button
+                          key={addr.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          onClick={() => setSelectedAddressId(addr.id)}
+                          className={`w-full rounded-2xl border p-3 text-left text-sm transition-colors ${
+                            isSelected
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:bg-muted"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{addr.addressLine}</p>
+                            {addr.isDefault && (
+                              <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                Default
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-muted-foreground">
+                            {addr.area}, {addr.postcode} {addr.state}
+                          </p>
+                        </button>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={selectedAddressId === "new"}
+                      onClick={() => setSelectedAddressId("new")}
+                      className={`w-full rounded-2xl border p-3 text-left text-sm transition-colors ${
+                        selectedAddressId === "new"
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:bg-muted"
+                      }`}
+                    >
+                      <p className="font-medium">+ New address</p>
+                    </button>
+                  </div>
+                )}
 
-                <div className="space-y-2">
-                  <Label htmlFor="postcode">Postcode (Optional)</Label>
-                  <Input
-                    id="postcode"
-                    placeholder="5-digit postcode"
-                    value={postcode}
-                    onChange={(e) => setPostcode(e.target.value.replace(/\D/g, "").slice(0, 5))}
-                    inputMode="numeric"
-                    maxLength={5}
-                    className="max-w-[10rem]"
-                  />
-                </div>
+                {selectedAddressId === "new" && (
+                  <AddressFields value={newAddress} onChange={setNewAddress} disabled={submitting} />
+                )}
+
+                {zoneState === "uncovered" && (
+                  <p className="text-sm text-destructive">No delivery to your area yet.</p>
+                )}
+                {zoneState === "resolving" && (
+                  <p className="text-sm text-muted-foreground">Checking delivery coverage…</p>
+                )}
 
                 <div className="space-y-2">
                   <Label htmlFor="notes">Order Notes (Optional)</Label>
@@ -286,19 +363,19 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
               <CardHeader>
                 <CardTitle>Delivery Slot</CardTitle>
                 <CardDescription>
-                  {zoneId === ""
-                    ? "Select a zone to see delivery dates and times."
+                  {zoneId === null
+                    ? "Add a covered address to see delivery dates and times."
                     : "Choose a date and truck time window."}
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {zoneId !== "" && optionsLoading && (
+                {zoneId !== null && optionsLoading && (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Loading delivery options...
                   </div>
                 )}
-                {zoneId !== "" && !optionsLoading && groupedOptions.length === 0 && (
+                {zoneId !== null && !optionsLoading && groupedOptions.length === 0 && (
                   <p className="text-sm text-muted-foreground">
                     No delivery available for this area yet.
                   </p>
