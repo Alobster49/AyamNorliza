@@ -8,6 +8,7 @@
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/identity-access/server/actions";
+import { normalizeMalaysianMobile } from "../lib/phone";
 
 type AuthErrorCode = "validation" | "unauthenticated" | "internal" | "conflict";
 
@@ -27,6 +28,7 @@ const BuyerSignupInput = z.object({
   email: z.string().email().max(254),
   password: z.string().min(8).max(200),
   displayName: z.string().min(1).max(150),
+  phone: z.string().min(1).max(30),
   organizationSlug: z.string().min(1).max(100),
 });
 
@@ -38,6 +40,13 @@ export async function buyerSignUpAction(
     return err("validation", "Invalid signup", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
+
+  const phone = normalizeMalaysianMobile(input.phone);
+  if (!phone) {
+    return err("validation", "Enter a Malaysian mobile number, e.g. 012-345 6789", {
+      phone: ["Enter a Malaysian mobile number, e.g. 012-345 6789"],
+    });
+  }
 
   const supabase = await createSupabaseServerClient();
 
@@ -74,6 +83,7 @@ export async function buyerSignUpAction(
     id: data.user.id,
     organization_id: org.id,
     display_name: input.displayName,
+    phone,
   });
 
   if (buyerError) {

@@ -41,6 +41,7 @@ export default function LoginPage({ params }: LoginPageProps) {
   const [signupData, setSignupData] = useState({
     displayName: "",
     email: "",
+    phone: "",
     password: "",
     confirmPassword: "",
   });
@@ -115,6 +116,7 @@ export default function LoginPage({ params }: LoginPageProps) {
       email: signupData.email,
       password: signupData.password,
       displayName: signupData.displayName,
+      phone: signupData.phone,
       organizationSlug,
     });
 
@@ -123,7 +125,7 @@ export default function LoginPage({ params }: LoginPageProps) {
     if (!result.ok) {
       toast({
         title: "Sign up failed",
-        description: result.message || "Could not create account.",
+        description: result.fieldErrors?.phone?.[0] || result.message || "Could not create account.",
         variant: "destructive",
       });
       return;
@@ -225,6 +227,20 @@ export default function LoginPage({ params }: LoginPageProps) {
                   value={signupData.email}
                   onChange={(e) =>
                     setSignupData({ ...signupData, email: e.target.value })
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="signup-phone">Phone (for WhatsApp)</Label>
+                <Input
+                  id="signup-phone"
+                  type="tel"
+                  inputMode="tel"
+                  placeholder="012-345 6789"
+                  value={signupData.phone}
+                  onChange={(e) =>
+                    setSignupData({ ...signupData, phone: e.target.value })
                   }
                   required
                 />
