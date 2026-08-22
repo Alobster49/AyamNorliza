@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { createCustomer, updateCustomer, deleteCustomer } from "@/features/seller/server/actions";
-import type { Customer } from "@/features/seller/types";
+import type { CustomerWithPortal } from "@/features/seller/types";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +36,7 @@ import { useToast } from "@/hooks/use-toast";
 type CustomersClientProps = {
   organizationSlug: string;
   organizationId: string;
-  initialCustomers: Customer[];
+  initialCustomers: CustomerWithPortal[];
 };
 
 export function CustomersClient({
@@ -47,10 +48,11 @@ export function CustomersClient({
   const [customers, setCustomers] = useState(initialCustomers);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<CustomerWithPortal | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    email: "",
     address: "",
     notes: "",
   });
@@ -58,20 +60,22 @@ export function CustomersClient({
   const filteredCustomers = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.phone.includes(search)
+      c.phone.includes(search) ||
+      (c.email ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   const openCreateDialog = () => {
     setEditingCustomer(null);
-    setFormData({ name: "", phone: "", address: "", notes: "" });
+    setFormData({ name: "", phone: "", email: "", address: "", notes: "" });
     setDialogOpen(true);
   };
 
-  const openEditDialog = (customer: Customer) => {
+  const openEditDialog = (customer: CustomerWithPortal) => {
     setEditingCustomer(customer);
     setFormData({
       name: customer.name,
       phone: customer.phone,
+      email: customer.email || "",
       address: customer.address || "",
       notes: customer.notes || "",
     });
@@ -85,19 +89,27 @@ export function CustomersClient({
         const updated = await updateCustomer(editingCustomer.id, {
           name: formData.name,
           phone: formData.phone,
+          email: formData.email || null,
           address: formData.address || null,
           notes: formData.notes || null,
         });
-        setCustomers(customers.map((c) => (c.id === updated.id ? updated : c)));
+        setCustomers(
+          customers.map((c) =>
+            c.id === updated.id
+              ? { ...updated, has_portal_account: c.has_portal_account }
+              : c
+          )
+        );
         toast({ title: "Customer updated" });
       } else {
         const newCustomer = await createCustomer(organizationId, {
           name: formData.name,
           phone: formData.phone,
+          email: formData.email || null,
           address: formData.address || null,
           notes: formData.notes || null,
         });
-        setCustomers([...customers, newCustomer]);
+        setCustomers([...customers, { ...newCustomer, has_portal_account: false }]);
         toast({ title: "Customer created" });
       }
       setDialogOpen(false);
@@ -172,7 +184,19 @@ export function CustomersClient({
             ) : (
               filteredCustomers.map((customer) => (
                 <TableRow key={customer.id}>
-                  <TableCell className="font-medium">{customer.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      <span>{customer.name}</span>
+                      {customer.has_portal_account && (
+                        <Badge variant="secondary">Portal</Badge>
+                      )}
+                    </div>
+                    {customer.email && (
+                      <div className="text-xs font-normal text-muted-foreground">
+                        {customer.email}
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Phone className="h-4 w-4 text-muted-foreground" />
@@ -254,6 +278,15 @@ export function CustomersClient({
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
             <div className="space-y-2">
