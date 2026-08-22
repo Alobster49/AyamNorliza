@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { useCart } from "@/features/buyer/components/cart-context";
@@ -26,8 +26,17 @@ type LoginPageProps = {
 
 type Mode = "login" | "signup";
 
-export default function LoginPage({ params }: LoginPageProps) {
+export default function LoginPage(props: LoginPageProps) {
+  return (
+    <Suspense>
+      <LoginPageInner {...props} />
+    </Suspense>
+  );
+}
+
+function LoginPageInner({ params }: LoginPageProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
@@ -85,7 +94,14 @@ export default function LoginPage({ params }: LoginPageProps) {
       description: "You have been signed in.",
     });
 
-    router.push(`/buyer_portal/${organizationSlug}/shop`);
+    const rawNext = searchParams.get("next");
+    // Same-portal relative paths only — never redirect off-portal or cross-org.
+    const nextPath =
+      rawNext && rawNext.startsWith(`/buyer_portal/${organizationSlug}/`)
+        ? rawNext
+        : null;
+
+    router.push(nextPath ?? `/buyer_portal/${organizationSlug}/shop`);
     router.refresh();
   };
 
@@ -136,7 +152,14 @@ export default function LoginPage({ params }: LoginPageProps) {
       description: "Welcome! You can now start shopping.",
     });
 
-    router.push(`/buyer_portal/${organizationSlug}/shop`);
+    const rawNext = searchParams.get("next");
+    // Same-portal relative paths only — never redirect off-portal or cross-org.
+    const nextPath =
+      rawNext && rawNext.startsWith(`/buyer_portal/${organizationSlug}/`)
+        ? rawNext
+        : null;
+
+    router.push(nextPath ?? `/buyer_portal/${organizationSlug}/shop`);
     router.refresh();
   };
 
