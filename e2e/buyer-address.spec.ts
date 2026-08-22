@@ -1,11 +1,128 @@
-import { expect, test } from "@playwright/test";
-import {
-  OWNER,
-  createSellableProduct,
-  seedZoneWithCoverage,
-  signIn,
-  uniqueFixtureName,
-} from "./_fixtures";
+import { expect, test, type Page } from "@playwright/test";
+import { OWNER, signIn, uniqueFixtureName } from "./_fixtures";
+
+// TEMPORARY LOCAL COPIES pending the fixtures-consolidation landing: these
+// two helpers exist in the working-tree WIP version of ./_fixtures but are
+// not yet committed there, so a clean checkout of this spec would otherwise
+// fail typecheck. Delete these once _fixtures.ts exports them for real.
+
+/**
+ * Seed a category + product + one available "Standard" variant through the
+ * seller Products screen, so order/checkout tests have something sellable.
+ * `productName` also becomes the category name (suffixed) so each test's
+ * fixtures are self-contained and never collide with another test's.
+ *
+ * Lives here rather than in each spec: three specs used to keep their own
+ * copy, and every Products markup change broke the stale ones one at a time.
+ */
+async function createSellableProduct(page: Page, productName: string, price = "15.00") {
+  await page.goto("/ayam-norliza-pilot/products");
+  await page.getByRole("button", { name: "Add category" }).click();
+  await page.getByLabel("Category Name").fill(`${productName} Category`);
+  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
+
+  await page.getByRole("button", { name: "Add Product" }).click();
+  await page.getByLabel("Product Name").fill(productName);
+  await page.getByRole("combobox").click();
+  await page.getByRole("option", { name: `${productName} Category` }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
+
+  // The card is a plain <article> (see product-card.tsx) and its trigger
+  // reads "Add size"; the dialog it opens still titles itself
+  // "Add Size/Option". One trigger per card, so scope to the card for the
+  // product just created - a full suite run leaves many products behind.
+  const card = page.getByRole("article").filter({ hasText: productName });
+  await card.getByRole("button", { name: "Add size" }).click();
+  await page.getByLabel(/name \(e\.g\., standard/i).fill("Standard");
+  await page.getByLabel(/price/i).fill(price);
+  await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
+}
+
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+/**
+ * Seed a zone with postcode coverage 50000-59999, a truck that serves it,
+ * and a delivery slot on the weekday that falls tomorrow (so it always
+ * lands inside get_delivery_options' `current_date + 1 .. + 14` lookahead
+ * window regardless of which day the suite actually runs).
+ */
+async function seedZoneWithCoverage(
+  page: Page,
+  zoneName: string,
+  truckName: string,
+  truckCode: string,
+) {
+  await page.goto("/ayam-norliza-pilot/delivery");
+  const rail = page.getByRole("navigation", { name: "Setup sections" });
+
+  // Zone
+  await rail.getByRole("button", { name: /^Zones/ }).click();
+  await page.getByRole("button", { name: "Add zone" }).click();
+  await page.getByLabel("Name", { exact: true }).fill(zoneName);
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Zone created", { exact: true })).toBeVisible({ timeout: 20_000 });
+
+  // Truck
+  await rail.getByRole("button", { name: /^Trucks/ }).click();
+  await page.getByRole("button", { name: "Add truck" }).click();
+  await page.getByLabel("Name", { exact: true }).fill(truckName);
+  await page.getByLabel("Code", { exact: true }).fill(truckCode);
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Truck created", { exact: true })).toBeVisible({ timeout: 20_000 });
+
+  // "Zones served" is only rendered for an existing (just-saved) truck
+  // record, and toggling a checkbox saves immediately ("Saved automatically.").
+  // RECONCILIATION: the checkbox's `checked` is derived from snapshot state,
+  // not toggled locally, so it stays unchecked until the toggleTruckZone
+  // server action resolves and the parent re-renders — `.check()`'s
+  // built-in re-click-if-unchanged retry fights that round trip and errors
+  // out. Use a plain `.click()` and poll for the eventual `toBeChecked()`.
+  const zoneCheckbox = page.getByRole("checkbox", { name: zoneName });
+  await zoneCheckbox.click();
+  await expect(zoneCheckbox).toBeChecked({ timeout: 20_000 });
+
+  // Slot — weekday = tomorrow's day-of-week, so the option surfaces at the
+  // earliest possible date the checkout page's lookahead window can show.
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const weekdayLabel = WEEKDAY_LABELS[tomorrow.getDay()]!;
+
+  await rail.getByRole("button", { name: /^Slots/ }).click();
+  await page.getByRole("button", { name: "Add slot" }).click();
+  await page.getByLabel("Truck").selectOption({ label: truckName });
+  await page.getByLabel("Weekday").selectOption({ label: weekdayLabel });
+  await page.getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Slot created", { exact: true })).toBeVisible({ timeout: 20_000 });
+
+  // Postcode range
+  await rail.getByRole("button", { name: /^Zone postcodes/ }).click();
+  // RECONCILIATION: these three fields are plain <label> elements wrapping
+  // their control (no htmlFor/id), not shadcn <Label>s. getByLabel's
+  // default substring match makes "To" hit "Toggle Sidebar" / "Toggle color
+  // theme" chrome elsewhere on the page; getByLabel(..., { exact: true })
+  // instead never resolves at all here (some accessible-name quirk with
+  // this wrapping-label + native-<select>/<input> shape). Go straight at
+  // the <label> element by its own text and descend into its control.
+  const zoneField = page.locator("label").filter({ hasText: "Zone" });
+  await zoneField.locator("select").selectOption({ label: zoneName });
+  const fromField = page.locator("label").filter({ hasText: "From" });
+  await fromField.locator("input").fill("50000");
+  const toField = page.locator("label").filter({ hasText: "To" });
+  await toField.locator("input").fill("59999");
+  await page.getByRole("button", { name: "Add range" }).click();
+  // Scope to the ranges list: a persisted DB accumulates zones from earlier
+  // runs, and the overlap warnings above the list also name this zone, so a
+  // bare `li` filter matches those too.
+  await expect(
+    page
+      .getByRole("list", { name: "Zone postcode ranges" })
+      .getByRole("listitem")
+      .filter({ hasText: zoneName }),
+  ).toBeVisible({ timeout: 20_000 });
+}
 
 test("buyer signs up with phone, checks out with a new address, then reuses it from the address book", async ({
   page,

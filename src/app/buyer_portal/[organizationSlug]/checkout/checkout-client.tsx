@@ -63,15 +63,20 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
 
   useEffect(() => {
     let cancelled = false;
-    listMyAddresses().then((result) => {
-      if (cancelled) return;
-      if (result.ok) {
-        setSavedAddresses(result.data);
-        const preferred = result.data.find((a) => a.isDefault) ?? result.data[0];
-        if (preferred) setSelectedAddressId(preferred.id);
-      }
-      setAddressesLoading(false);
-    });
+    listMyAddresses()
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok) {
+          setSavedAddresses(result.data);
+          const preferred = result.data.find((a) => a.isDefault) ?? result.data[0];
+          if (preferred) setSelectedAddressId(preferred.id);
+        }
+        setAddressesLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setAddressesLoading(false);
+      });
     return () => {
       cancelled = true;
     };
@@ -102,16 +107,25 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
     }
     let cancelled = false;
     setZoneState("resolving");
-    resolveZoneForPostcode(organizationSlug, postcode).then((result) => {
-      if (cancelled) return;
-      if (result.ok && result.data.zoneId) {
-        setZoneId(result.data.zoneId);
-        setZoneState("resolved");
-      } else {
+    resolveZoneForPostcode(organizationSlug, postcode)
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok && result.data.zoneId) {
+          setZoneId(result.data.zoneId);
+          setZoneState("resolved");
+        } else {
+          setZoneId(null);
+          setZoneState("uncovered");
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // A rejected lookup collapses to "uncovered" rather than a distinct
+        // error state — surfacing lookup failures separately is a filed
+        // follow-up; for now this just keeps checkout from hanging forever.
         setZoneId(null);
         setZoneState("uncovered");
-      }
-    });
+      });
     return () => {
       cancelled = true;
     };
@@ -335,7 +349,7 @@ export default function CheckoutClient({ organizationSlug }: CheckoutClientProps
                   </div>
                 )}
 
-                {selectedAddressId === "new" && (
+                {!addressesLoading && selectedAddressId === "new" && (
                   <AddressFields value={newAddress} onChange={setNewAddress} disabled={submitting} />
                 )}
 

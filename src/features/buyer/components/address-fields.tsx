@@ -59,6 +59,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
           value={value.addressLine}
           onChange={(e) => onChange({ ...value, addressLine: e.target.value })}
           rows={3}
+          maxLength={450}
           disabled={disabled}
           required
         />
