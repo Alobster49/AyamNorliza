@@ -208,7 +208,7 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   // kg"), and the submit button reads "Close order", not "Close".
   await fieldAfterLabel(page, "Final weight (kg)").fill("5.4");
   await fieldAfterLabel(page, "Final pieces").fill("3");
-  await fieldAfterLabel(page, "Price / kg").fill("12.50");
+  await fieldAfterLabel(page, "Price / kg (RM)").fill("12.50");
   await page.getByRole("button", { name: "Close order" }).click();
 
   await expect(
