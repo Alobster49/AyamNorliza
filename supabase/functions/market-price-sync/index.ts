@@ -56,10 +56,11 @@ async function refreshPremisesIfStale(): Promise<void> {
   const res = await fetch(`${DATA_BASE}/lookup_premise.csv`);
   if (!res.ok) throw new Error(`lookup_premise.csv HTTP ${res.status}`);
 
-  const rows: { premise_code: number; state: string; district: string | null }[] = [];
+  const now = new Date().toISOString();
+  const rows: { premise_code: number; state: string; district: string | null; synced_at: string }[] = [];
   for await (const line of lines(res)) {
     const parsed = parsePremiseRow(line);
-    if (parsed) rows.push(parsed);
+    if (parsed) rows.push({ ...parsed, synced_at: now });
   }
   if (rows.length === 0) throw new Error("lookup_premise.csv parsed to 0 rows");
 
@@ -75,7 +76,9 @@ async function configuredStates(): Promise<Set<string>> {
   const { data, error } = await admin.from("market_settings").select("states");
   if (error) throw new Error(`market_settings: ${error.message}`);
   const states = new Set<string>((data ?? []).flatMap((r) => r.states ?? []));
-  for (const s of DEFAULT_STATES) states.add(s);
+  if (states.size === 0) {
+    for (const s of DEFAULT_STATES) states.add(s);
+  }
   return states;
 }
 
@@ -107,7 +110,13 @@ Deno.serve(async () => {
       for await (const line of lines(res)) {
         const parsed = parsePriceRow(line);
         // Filter as we stream so memory stays proportional to tracked rows.
-        if (parsed && TRACKED_ITEM_CODES.has(parsed.item_code)) rows.push(parsed);
+        if (
+          parsed &&
+          TRACKED_ITEM_CODES.has(parsed.item_code) &&
+          states.has(premises.get(parsed.premise_code) ?? "")
+        ) {
+          rows.push(parsed);
+        }
       }
     }
 
@@ -119,10 +128,16 @@ Deno.serve(async () => {
       if (error) throw new Error(`market_prices upsert: ${error.message}`);
     }
 
-    return new Response(JSON.stringify({ upserted: aggregates.length, months }), { status: 200 });
+    return new Response(JSON.stringify({ upserted: aggregates.length, months }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (e) {
     console.error("market-price-sync failed", e);
     const message = e instanceof Error ? e.message : String(e);
-    return new Response(JSON.stringify({ error: message }), { status: 500 });
+    return new Response(JSON.stringify({ error: message }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 });
