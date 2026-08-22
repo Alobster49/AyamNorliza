@@ -6,13 +6,12 @@ begin;
 
 select plan(2);
 
--- 1. Anonymous cannot see any organization row.
+-- 1. Anonymous CAN read organizations (buyer portal public read:
+--    policy from 20260719000001, anon grant from 20260822000003).
 set local role anon;
-select throws_ok(
+select lives_ok(
   $$ select count(*) from public.organizations $$,
-  '42501',
-  null,
-  'anonymous cannot list organizations'
+  'anonymous can read organizations for buyer portal browsing'
 );
 reset role;
 
