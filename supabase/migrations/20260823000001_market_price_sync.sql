@@ -200,3 +200,4 @@ as $$
 $$;
 
 grant execute on function public.get_market_suggestions(uuid) to authenticated;
+revoke execute on function public.get_market_suggestions(uuid) from public, anon;

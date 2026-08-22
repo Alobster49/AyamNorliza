@@ -183,70 +183,72 @@ export function MarketPricesClient({
               Products and pick a benchmark to get suggestions here.
             </p>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="text-left text-muted-foreground">
-                <tr>
-                  <th className="py-2 font-medium">Variant</th>
-                  <th className="py-2 font-medium">Benchmark</th>
-                  <th className="py-2 font-medium">Market base</th>
-                  <th className="py-2 font-medium">Current</th>
-                  <th className="py-2 font-medium">Suggested</th>
-                  <th className="py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {suggestions.map((s) => {
-                  const delta =
-                    s.suggested_price != null
-                      ? priceDelta(s.current_price, s.suggested_price)
-                      : null;
-                  const matches =
-                    s.suggested_price != null && delta !== null && delta.amount === 0;
-                  return (
-                    <tr key={s.variant_id} className="border-t">
-                      <td className="py-2">
-                        {s.product_name} — {s.variant_name}
-                      </td>
-                      <td className="py-2">{marketItemLabel(s.market_item_code)}</td>
-                      <td className="py-2">
-                        {s.market_base != null ? formatPrice(s.market_base) : "Tiada data"}
-                      </td>
-                      <td className="py-2">{formatPrice(s.current_price)}</td>
-                      <td className="py-2">
-                        {s.suggested_price != null ? (
-                          <span>
-                            {formatPrice(s.suggested_price)}{" "}
-                            {delta && delta.amount !== 0 && (
-                              <span
-                                className={
-                                  delta.amount > 0 ? "text-emerald-600" : "text-red-600"
-                                }
-                              >
-                                ({delta.amount > 0 ? "+" : ""}
-                                {delta.pct}%)
-                              </span>
-                            )}
-                          </span>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="py-2 text-right">
-                        <Button
-                          size="sm"
-                          disabled={
-                            s.suggested_price == null || matches || applyingId === s.variant_id
-                          }
-                          onClick={() => handleApply(s)}
-                        >
-                          {matches ? "Up to date" : "Apply"}
-                        </Button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-left text-muted-foreground">
+                  <tr>
+                    <th className="py-2 font-medium">Variant</th>
+                    <th className="py-2 font-medium">Benchmark</th>
+                    <th className="py-2 font-medium">Market base</th>
+                    <th className="py-2 font-medium">Current</th>
+                    <th className="py-2 font-medium">Suggested</th>
+                    <th className="py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {suggestions.map((s) => {
+                    const delta =
+                      s.suggested_price != null
+                        ? priceDelta(s.current_price, s.suggested_price)
+                        : null;
+                    const matches =
+                      s.suggested_price != null && delta !== null && delta.amount === 0;
+                    return (
+                      <tr key={s.variant_id} className="border-t">
+                        <td className="py-2">
+                          {s.product_name} — {s.variant_name}
+                        </td>
+                        <td className="py-2">{marketItemLabel(s.market_item_code)}</td>
+                        <td className="py-2">
+                          {s.market_base != null ? formatPrice(s.market_base) : "Tiada data"}
+                        </td>
+                        <td className="py-2">{formatPrice(s.current_price)}</td>
+                        <td className="py-2">
+                          {s.suggested_price != null ? (
+                            <span>
+                              {formatPrice(s.suggested_price)}{" "}
+                              {delta && delta.amount !== 0 && (
+                                <span
+                                  className={
+                                    delta.amount > 0 ? "text-emerald-600" : "text-red-600"
+                                  }
+                                >
+                                  ({delta.amount > 0 ? "+" : ""}
+                                  {delta.pct}%)
+                                </span>
+                              )}
+                            </span>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="py-2 text-right">
+                          <Button
+                            size="sm"
+                            disabled={
+                              s.suggested_price == null || matches || applyingId === s.variant_id
+                            }
+                            onClick={() => handleApply(s)}
+                          >
+                            {matches ? "Up to date" : "Apply"}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>

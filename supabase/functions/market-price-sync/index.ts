@@ -49,26 +49,36 @@ async function refreshPremisesIfStale(): Promise<void> {
     .limit(1);
   if (error) throw new Error(`market_premises check: ${error.message}`);
 
+  const hasCache = (data?.length ?? 0) > 0;
   const newest = data?.[0]?.synced_at ? new Date(data[0].synced_at) : null;
   const staleBefore = Date.now() - PREMISE_TTL_DAYS * 24 * 60 * 60 * 1000;
   if (newest && newest.getTime() > staleBefore) return;
 
-  const res = await fetch(`${DATA_BASE}/lookup_premise.csv`);
-  if (!res.ok) throw new Error(`lookup_premise.csv HTTP ${res.status}`);
+  // A cache already exists (merely stale) -- a lookup_premise.csv failure
+  // here must not abort the price sync; fall back to the existing cache.
+  // Only propagate when there is NO cache at all, since the sync cannot
+  // proceed meaningfully without any premise->state mapping.
+  try {
+    const res = await fetch(`${DATA_BASE}/lookup_premise.csv`);
+    if (!res.ok) throw new Error(`lookup_premise.csv HTTP ${res.status}`);
 
-  const now = new Date().toISOString();
-  const rows: { premise_code: number; state: string; district: string | null; synced_at: string }[] = [];
-  for await (const line of lines(res)) {
-    const parsed = parsePremiseRow(line);
-    if (parsed) rows.push({ ...parsed, synced_at: now });
-  }
-  if (rows.length === 0) throw new Error("lookup_premise.csv parsed to 0 rows");
+    const now = new Date().toISOString();
+    const rows: { premise_code: number; state: string; district: string | null; synced_at: string }[] = [];
+    for await (const line of lines(res)) {
+      const parsed = parsePremiseRow(line);
+      if (parsed) rows.push({ ...parsed, synced_at: now });
+    }
+    if (rows.length === 0) throw new Error("lookup_premise.csv parsed to 0 rows");
 
-  for (let i = 0; i < rows.length; i += 500) {
-    const { error: upsertError } = await admin
-      .from("market_premises")
-      .upsert(rows.slice(i, i + 500), { onConflict: "premise_code" });
-    if (upsertError) throw new Error(`market_premises upsert: ${upsertError.message}`);
+    for (let i = 0; i < rows.length; i += 500) {
+      const { error: upsertError } = await admin
+        .from("market_premises")
+        .upsert(rows.slice(i, i + 500), { onConflict: "premise_code" });
+      if (upsertError) throw new Error(`market_premises upsert: ${upsertError.message}`);
+    }
+  } catch (e) {
+    if (!hasCache) throw e;
+    console.error("premise refresh failed, using existing (stale) cache", e);
   }
 }
 
@@ -102,11 +112,26 @@ Deno.serve(async () => {
     await refreshPremisesIfStale();
     const [states, premises] = await Promise.all([configuredStates(), premiseStateMap()]);
 
-    const months = monthKeys(new Date());
+    const candidateMonths = monthKeys(new Date());
     const rows: PriceRow[] = [];
-    for (const month of months) {
-      const res = await fetch(`${DATA_BASE}/pricecatcher_${month}.csv`);
-      if (!res.ok) throw new Error(`pricecatcher_${month}.csv HTTP ${res.status}`);
+    const months: string[] = [];
+    for (const month of candidateMonths) {
+      // Each month file is fetched independently: on days 1-3 the current
+      // month's file may not exist yet at 13:15 MYT, but the previous
+      // month (which holds the month's last day) must still be fetched.
+      // A missing file for one month must not abort the whole run.
+      let res: Response;
+      try {
+        res = await fetch(`${DATA_BASE}/pricecatcher_${month}.csv`);
+      } catch (e) {
+        console.error(`pricecatcher_${month}.csv fetch failed`, e);
+        continue;
+      }
+      if (!res.ok) {
+        console.error(`pricecatcher_${month}.csv HTTP ${res.status}`);
+        continue;
+      }
+      months.push(month);
       for await (const line of lines(res)) {
         const parsed = parsePriceRow(line);
         // Filter as we stream so memory stays proportional to tracked rows.
@@ -118,6 +143,9 @@ Deno.serve(async () => {
           rows.push(parsed);
         }
       }
+    }
+    if (months.length === 0) {
+      throw new Error(`No month files fetched successfully (tried: ${candidateMonths.join(", ")})`);
     }
 
     const aggregates = aggregate(rows, premises, states, TRACKED_ITEM_CODES);

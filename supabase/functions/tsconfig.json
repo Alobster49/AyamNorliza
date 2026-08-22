@@ -16,6 +16,7 @@
     "_shared/**/*.ts",
     "invitation-accept/**/*.ts",
     "access-review-reminder/**/*.ts",
-    "temporary-access-expiry/**/*.ts"
+    "temporary-access-expiry/**/*.ts",
+    "market-price-sync/**/*.ts"
   ]
 }

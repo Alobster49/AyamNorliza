@@ -1,4 +1,6 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
+import { MANAGER_ROLES } from "@/features/orders/lib/roles";
 import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
 import {
   getMarketState,
@@ -13,6 +15,18 @@ export default async function MarketPricesPage({
   params: Promise<{ organizationSlug: string }>;
 }) {
   const { organizationSlug } = await params;
+
+  await (async () => {
+    try {
+      return await requireOrgRole(organizationSlug, MANAGER_ROLES);
+    } catch (error) {
+      if (error instanceof OrderPermissionError) {
+        redirect(`/${organizationSlug}/tasks`);
+      }
+      throw error;
+    }
+  })();
+
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
 
