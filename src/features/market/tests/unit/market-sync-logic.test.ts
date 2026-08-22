@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   aggregate,
+  createAggregator,
   monthKeys,
   parsePremiseRow,
   parsePriceRow,
@@ -72,10 +73,7 @@ describe("aggregate", () => {
     ({ date, premise_code: premise, item_code: item, price });
 
   it("computes median/avg/min/max/count per (date,item,state)", () => {
-    const out = aggregate(
-      [row(1, 9.0), row(2, 10.0), row(3, 12.0)],
-      premiseState, new Set(["Selangor"]), TRACKED_ITEM_CODES,
-    );
+    const out = aggregate([row(1, 9.0), row(2, 10.0), row(3, 12.0)], premiseState, TRACKED_ITEM_CODES);
     expect(out).toEqual([{
       price_date: "2026-08-22", item_code: 1, state: "Selangor",
       median_price: 10.0, avg_price: 10.33, min_price: 9.0, max_price: 12.0,
@@ -86,17 +84,35 @@ describe("aggregate", () => {
   it("uses mean of middle two for even counts", () => {
     const out = aggregate(
       [row(1, 9.0), row(2, 10.0), row(3, 12.0), row(3, 13.0)],
-      premiseState, new Set(["Selangor"]), TRACKED_ITEM_CODES,
+      premiseState, TRACKED_ITEM_CODES,
     );
     expect(out[0]!.median_price).toBe(11.0);
   });
 
-  it("drops non-tracked items, unknown premises, and other states", () => {
+  it("drops non-tracked items and premises missing from the lookup", () => {
     const out = aggregate(
-      [row(1, 9.0), row(99, 9.0), row(4, 9.0), row(1, 5.0, 118)],
-      premiseState, new Set(["Selangor"]), TRACKED_ITEM_CODES,
+      [row(1, 9.0), row(99, 9.0), row(1, 5.0, 118)],
+      premiseState, TRACKED_ITEM_CODES,
     );
     expect(out).toHaveLength(1);
     expect(out[0]!.premise_count).toBe(1);
+  });
+
+  it("keeps every state, not just the one an org configured", () => {
+    const out = aggregate([row(1, 9.0), row(4, 11.0)], premiseState, TRACKED_ITEM_CODES);
+    expect(out.map((a) => a.state)).toEqual(["Johor", "Selangor"]);
+  });
+});
+
+describe("createAggregator", () => {
+  it("matches aggregate() when rows are fed one at a time", () => {
+    const premiseState = new Map<number, string>([[1, "Sabah"], [2, "Sabah"]]);
+    const rows: PriceRow[] = [
+      { date: "2026-08-22", premise_code: 1, item_code: 2, price: 11.0 },
+      { date: "2026-08-22", premise_code: 2, item_code: 2, price: 12.0 },
+    ];
+    const agg = createAggregator(premiseState, TRACKED_ITEM_CODES);
+    for (const r of rows) agg.add(r);
+    expect(agg.finish()).toEqual(aggregate(rows, premiseState, TRACKED_ITEM_CODES));
   });
 });
