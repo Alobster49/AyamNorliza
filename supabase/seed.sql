@@ -250,6 +250,7 @@ on conflict (id) do update
 -- re-link.
 update public.buyers
 set customer_id = '30000000-0000-0000-0000-0000000000aa'
-where phone = '0123456789' and customer_id is null;
+where id = (select id from auth.users where email = 'buyer@ayam-norliza-pilot.example')
+  and customer_id is null;
 
 commit;

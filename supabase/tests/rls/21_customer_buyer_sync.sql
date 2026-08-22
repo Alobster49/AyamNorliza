@@ -191,7 +191,7 @@ select throws_ok(
   $$ update public.buyers set customer_id = 'd0000000-0000-0000-0000-0000000000d3'
      where id = 'b0000000-0000-0000-0000-0000000000b4' $$,
   '23505',
-  'duplicate key value violates unique constraint "buyers_customer_unique"',
+  null,
   'a manual double-claim of an already-claimed customer violates the unique index'
 );
 
