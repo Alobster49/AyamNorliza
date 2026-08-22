@@ -1,14 +1,19 @@
 -- supabase/tests/rls/18_market_prices.sql
 -- market_prices / market_premises: readable by authenticated, not writable.
 -- market_settings: org members only. get_market_suggestions: computes
--- suggested price from seeded market data.
+-- suggested price from seeded market data, scoped to the caller's own org
+-- membership (not just product_variants RLS, which is not org-scoped for
+-- available variants).
 
 begin;
-select plan(8);
+select plan(9);
 
 -- Seed: org, seller user, product + mapped variant, market rows.
+-- 000005 is authenticated but NOT a member of the test org — used to prove
+-- get_market_suggestions cannot be used to read another org's suggestions.
 insert into auth.users (id) values
-  ('10000000-0000-0000-0000-000000000001') -- seller
+  ('10000000-0000-0000-0000-000000000001'), -- seller (org member)
+  ('10000000-0000-0000-0000-000000000005')  -- outsider, no membership
 on conflict (id) do nothing;
 
 insert into public.organizations (id, name, slug)
@@ -102,6 +107,17 @@ select results_eq(
      from public.get_market_suggestions('20000000-0000-0000-0000-000000000002') $$,
   $$ values (10.23::numeric(10,2)) $$,
   'pct margin applied');
+
+-- 9. an authenticated user who is not a member of the org gets zero rows,
+-- even though product_variants_select_public would let them read the
+-- underlying variant directly.
+reset role;
+set local role authenticated;
+set local "request.jwt.claim.sub" to '10000000-0000-0000-0000-000000000005';
+select results_eq(
+  $$ select count(*)::int
+     from public.get_market_suggestions('20000000-0000-0000-0000-000000000002') $$,
+  array[0], 'non-member gets zero rows from get_market_suggestions');
 
 select * from finish();
 rollback;

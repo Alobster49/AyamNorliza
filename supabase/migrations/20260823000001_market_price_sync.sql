@@ -80,7 +80,7 @@ create policy "market_prices_select" on public.market_prices
 
 -- Org-scoped settings, same shape as categories_* policies.
 create policy "market_settings_select" on public.market_settings
-  for select using (
+  for select to authenticated using (
     org_id in (
       select organization_id from public.organization_members
       where user_id = auth.uid() and status = 'active'
@@ -88,7 +88,7 @@ create policy "market_settings_select" on public.market_settings
   );
 
 create policy "market_settings_insert" on public.market_settings
-  for insert with check (
+  for insert to authenticated with check (
     org_id in (
       select organization_id from public.organization_members
       where user_id = auth.uid() and status = 'active'
@@ -97,7 +97,7 @@ create policy "market_settings_insert" on public.market_settings
   );
 
 create policy "market_settings_update" on public.market_settings
-  for update using (
+  for update to authenticated using (
     org_id in (
       select organization_id from public.organization_members
       where user_id = auth.uid() and status = 'active'
@@ -112,7 +112,12 @@ grant all on public.market_premises, public.market_prices, public.market_setting
 
 -- ---------------------------------------------------------------------------
 -- get_market_suggestions: suggested price per mapped variant.
--- SECURITY INVOKER: product_variants RLS restricts output to the caller's org.
+-- SECURITY INVOKER, but product_variants RLS does NOT scope this by itself:
+-- product_variants_select_public (20260718120000_buyer_portal.sql) grants
+-- anon/authenticated read of any *available* variant regardless of org, and
+-- permissive policies OR together. The `mapped` CTE below adds an explicit
+-- active-membership check against p_organization_id so a caller can only
+-- ever see suggestions for an org they actually belong to.
 -- ---------------------------------------------------------------------------
 create or replace function public.get_market_suggestions(p_organization_id uuid)
 returns table (
@@ -145,6 +150,12 @@ as $$
     join public.products pr on pr.id = pv.product_id
     where pv.organization_id = p_organization_id
       and pv.market_item_code is not null
+      and exists (
+        select 1 from public.organization_members om
+        where om.organization_id = p_organization_id
+          and om.user_id = auth.uid()
+          and om.status = 'active'
+      )
   ),
   latest as (
     -- newest available date per item within the org's states
