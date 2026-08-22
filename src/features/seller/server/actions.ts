@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
+import { parseCustomerEmail } from "../lib/customer-schema";
 import type {
   CategoryInsert,
   CategoryUpdate,
@@ -11,6 +12,7 @@ import type {
   ProductVariantUpdate,
   CustomerInsert,
   CustomerUpdate,
+  CustomerWithPortal,
 } from "../types";
 
 export async function getOrganizationId(orgSlug: string): Promise<string | null> {
@@ -253,14 +255,17 @@ export async function deleteVariant(id: string, orgSlug?: string) {
 // ---------------------------------------------------------------------------
 // Customers
 // ---------------------------------------------------------------------------
-export async function getCustomers(orgId: string) {
+export async function getCustomers(orgId: string): Promise<CustomerWithPortal[]> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("customers")
-    .select("*")
+    .select("*, buyers(id)")
     .eq("organization_id", orgId)
     .order("name");
-  return data ?? [];
+  return (data ?? []).map(({ buyers, ...customer }) => ({
+    ...customer,
+    has_portal_account: (buyers?.length ?? 0) > 0,
+  }));
 }
 
 export async function searchCustomers(orgId: string, query: string) {
@@ -283,9 +288,11 @@ export async function createCustomer(
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) throw new Error("Not authenticated");
 
+  const email = parseCustomerEmail(input.email);
+
   const { data, error } = await supabase
     .from("customers")
-    .insert({ ...input, organization_id: orgId, created_by: user.user.id })
+    .insert({ ...input, email, organization_id: orgId, created_by: user.user.id })
     .select()
     .single();
 
@@ -296,9 +303,11 @@ export async function createCustomer(
 
 export async function updateCustomer(id: string, input: CustomerUpdate, orgSlug?: string) {
   const supabase = await createClient();
+  const patch = "email" in input ? { ...input, email: parseCustomerEmail(input.email) } : input;
+
   const { data, error } = await supabase
     .from("customers")
-    .update(input)
+    .update(patch)
     .eq("id", id)
     .select()
     .single();

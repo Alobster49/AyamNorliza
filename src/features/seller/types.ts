@@ -15,6 +15,7 @@ export type ProductVariantUpdate = Database["public"]["Tables"]["product_variant
 export type Customer = Database["public"]["Tables"]["customers"]["Row"];
 export type CustomerInsert = Database["public"]["Tables"]["customers"]["Insert"];
 export type CustomerUpdate = Database["public"]["Tables"]["customers"]["Update"];
+export type CustomerWithPortal = Customer & { has_portal_account: boolean };
 
 export type CatalogWithProducts = Category & {
   products: (Product & { variants: ProductVariant[] })[];

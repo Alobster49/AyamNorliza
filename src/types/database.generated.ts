@@ -489,11 +489,13 @@ export type Database = {
           address: string | null
           created_at: string
           created_by: string
+          email: string | null
           id: string
           name: string
           notes: string | null
           organization_id: string
           phone: string
+          phone_normalized: string | null
           updated_at: string
           version: number
         }
@@ -501,11 +503,13 @@ export type Database = {
           address?: string | null
           created_at?: string
           created_by: string
+          email?: string | null
           id?: string
           name: string
           notes?: string | null
           organization_id: string
           phone: string
+          phone_normalized?: string | null
           updated_at?: string
           version?: number
         }
@@ -513,11 +517,13 @@ export type Database = {
           address?: string | null
           created_at?: string
           created_by?: string
+          email?: string | null
           id?: string
           name?: string
           notes?: string | null
           organization_id?: string
           phone?: string
+          phone_normalized?: string | null
           updated_at?: string
           version?: number
         }
@@ -2039,6 +2045,11 @@ export type Database = {
       is_active_org_member: { Args: { target_org: string }; Returns: boolean }
       is_break_glass_active: { Args: { target_org: string }; Returns: boolean }
       is_org_driver: { Args: { target_org: string }; Returns: boolean }
+      link_or_create_customer_for_buyer: {
+        Args: { p_buyer_id: string }
+        Returns: undefined
+      }
+      normalize_phone: { Args: { p_raw: string }; Returns: string }
       place_order: {
         Args: {
           p_address: string
