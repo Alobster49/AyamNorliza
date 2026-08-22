@@ -104,15 +104,19 @@ describe("resolveZoneForPostcode", () => {
   });
 
   it("returns zoneId null when the RPC finds no covering zone", async () => {
-    mockSupabaseFor({ rpcResult: { data: null, error: null } });
+    const supabase = mockSupabaseFor({ rpcResult: { data: null, error: null } });
 
     const result = await resolveZoneForPostcode("ayam-norliza-pilot", "82000");
 
     expect(result).toEqual({ ok: true, data: { zoneId: null } });
+    expect(supabase.rpc).toHaveBeenCalledWith("resolve_zone_for_postcode", {
+      p_org: "org-1",
+      p_postcode: "82000",
+    });
   });
 
   it("returns the zone id when the RPC resolves one", async () => {
-    mockSupabaseFor({
+    const supabase = mockSupabaseFor({
       rpcResult: { data: "44444444-4444-4444-4444-444444444444", error: null },
     });
 
@@ -121,6 +125,10 @@ describe("resolveZoneForPostcode", () => {
     expect(result).toEqual({
       ok: true,
       data: { zoneId: "44444444-4444-4444-4444-444444444444" },
+    });
+    expect(supabase.rpc).toHaveBeenCalledWith("resolve_zone_for_postcode", {
+      p_org: "org-1",
+      p_postcode: "82000",
     });
   });
 
