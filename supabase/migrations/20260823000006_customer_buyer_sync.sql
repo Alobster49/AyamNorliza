@@ -66,6 +66,12 @@ begin
   v_norm := public.normalize_phone(v_buyer.phone);
 
   if v_norm <> '' then
+    -- Serialize concurrent signups for the same org+phone so the
+    -- not-exists (unclaimed) check below cannot double-match one row.
+    perform pg_advisory_xact_lock(
+      hashtextextended(v_buyer.organization_id::text || ':' || v_norm, 0)
+    );
+
     -- Oldest unclaimed phone match in the same org wins; claimed rows are
     -- never re-linked (no stealing).
     select c.id

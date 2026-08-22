@@ -222,6 +222,16 @@ on conflict (provider, provider_id) do update
       identity_data = excluded.identity_data,
       updated_at = now();
 
+-- Linked customers row so the buyer already has an order-ready CRM identity.
+-- Seeded before the buyer row so the buyers_sync_customer trigger (phone
+-- match) links to this pre-existing customer instead of creating a new one.
+insert into public.customers (id, organization_id, name, phone, created_by)
+select '30000000-0000-0000-0000-0000000000aa', o.id, 'E2E Pilot Buyer', '0123456789', u.id
+from auth.users u
+cross join (select id from public.organizations where slug = 'ayam-norliza-pilot') as o
+where u.email = 'buyer@ayam-norliza-pilot.example'
+on conflict (id) do nothing;
+
 insert into public.buyers (id, organization_id, display_name, phone)
 select u.id, o.id, 'E2E Pilot Buyer', '0123456789'
 from auth.users u
@@ -232,17 +242,7 @@ on conflict (id) do update
       phone = excluded.phone,
       updated_at = now();
 
--- Linked customers row so the buyer already has an order-ready CRM identity.
-insert into public.customers (id, organization_id, name, phone, created_by)
-select '30000000-0000-0000-0000-0000000000aa', o.id, 'E2E Pilot Buyer', '0123456789', u.id
-from auth.users u
-cross join (select id from public.organizations where slug = 'ayam-norliza-pilot') as o
-where u.email = 'buyer@ayam-norliza-pilot.example'
-on conflict (id) do nothing;
-
-update public.buyers
-set customer_id = '30000000-0000-0000-0000-0000000000aa'
-where id = (select id from auth.users where email = 'buyer@ayam-norliza-pilot.example')
-  and customer_id is distinct from '30000000-0000-0000-0000-0000000000aa'::uuid;
+-- The buyers_sync_customer trigger links this buyer to the pre-seeded
+-- customer row above automatically (phone match); no manual update needed.
 
 commit;
