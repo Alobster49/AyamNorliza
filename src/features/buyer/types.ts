@@ -49,3 +49,13 @@ export type CatalogCategory = Category & {
 export type CatalogWithProducts = Category & {
   products: (Product & { variants?: ProductVariant[] })[];
 };
+
+export type BuyerAddress = {
+  id: string;
+  addressLine: string;
+  postcode: string;
+  state: string;
+  area: string;
+  isDefault: boolean;
+  createdAt: string;
+};
