@@ -45,7 +45,10 @@ enabled = true
 site_url = "http://localhost:9999"
 additional_redirect_urls = ["http://localhost:9999/auth/callback"]
 jwt_expiry = 3600
-enable_signup = false
+# Master switch: must stay true or it overrides [auth.email].enable_signup
+# below and blocks buyer self-registration ("Signups not allowed for this
+# instance"). Dashboard/seller access stays invite-gated by org membership.
+enable_signup = true
 enable_anonymous_sign_ins = false
 enable_manual_linking = false
 
