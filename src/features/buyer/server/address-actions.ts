@@ -97,12 +97,24 @@ export async function createAddress(
 
   const supabase = await createSupabaseServerClient();
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from("buyer_addresses")
     .select("id", { count: "exact", head: true });
+  if (countError) return err("internal", "Failed to load addresses");
   const makeDefault = input.makeDefault || !count;
 
+  // If we're about to clear the current default, remember which row it was
+  // first: the clear and the insert are two separate round-trips, and if
+  // the insert fails afterward we want to be able to restore it rather
+  // than leave the buyer with no default address at all.
+  let previousDefaultId: string | null = null;
   if (makeDefault && count) {
+    const { data: currentDefault } = await supabase
+      .from("buyer_addresses")
+      .select("id")
+      .eq("is_default", true)
+      .maybeSingle();
+    previousDefaultId = (currentDefault as { id: string } | null)?.id ?? null;
     await supabase.from("buyer_addresses").update({ is_default: false }).eq("is_default", true);
   }
 
@@ -119,7 +131,17 @@ export async function createAddress(
     .select("*")
     .single();
 
-  if (error || !data) return err("internal", "Failed to save address");
+  if (error || !data) {
+    if (previousDefaultId) {
+      // Best-effort restore of the previous default; the insert failed
+      // so there is nothing else to roll back.
+      await supabase
+        .from("buyer_addresses")
+        .update({ is_default: true })
+        .eq("id", previousDefaultId);
+    }
+    return err("internal", "Failed to save address");
+  }
   return ok(mapRow(data as AddressRow));
 }
 
@@ -133,6 +155,20 @@ export async function setDefaultAddress(
   if ("ok" in g) return g;
 
   const supabase = await createSupabaseServerClient();
+
+  // Verify the target row exists (and belongs to this buyer, via RLS)
+  // before touching the current default. Clearing the current default
+  // first and only then discovering the target is stale/nonexistent
+  // would leave the buyer with no default address at all.
+  const { data: target, error: targetError } = await supabase
+    .from("buyer_addresses")
+    .select("id")
+    .eq("id", addressId)
+    .maybeSingle();
+  if (targetError || !target) return err("not_found", "Address not found");
+
+  // The clear must still precede the set: the partial unique index only
+  // allows one `is_default = true` row per buyer at a time.
   await supabase.from("buyer_addresses").update({ is_default: false }).eq("is_default", true);
   const { data, error } = await supabase
     .from("buyer_addresses")
@@ -174,6 +210,9 @@ export async function deleteAddress(
       .limit(1)
       .maybeSingle();
     if (oldest) {
+      // Best-effort promotion: the row is already gone either way, so a
+      // failure here just leaves the buyer without a default until they
+      // pick one manually — it does not change the outcome of the delete.
       await supabase.from("buyer_addresses").update({ is_default: true }).eq("id", oldest.id);
     }
   }

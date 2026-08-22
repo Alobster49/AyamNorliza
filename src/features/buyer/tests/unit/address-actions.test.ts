@@ -60,12 +60,17 @@ const defaultBuyerRow = {
   updated_at: "2026-08-01T00:00:00Z",
 };
 
+type Builder = ReturnType<typeof chain>;
+
 /**
  * Builds a mock Supabase client. `from("buyers")` is wired to satisfy
  * `requireBuyer`; any other table name is served from `tableResults`,
  * consumed in order for repeated calls against the same table (the last
  * entry repeats once the array is exhausted), falling back to
- * `{ data: null, error: null }`.
+ * `{ data: null, error: null }`. Every builder returned from `from()` is
+ * recorded in `buildersByTable`, in call order, so a test can reach back
+ * into a specific call (e.g. "the insert call") and assert on its mock —
+ * not just on the value it echoed back.
  */
 function mockSupabaseFor({
   userId = "buyer-1",
@@ -77,6 +82,26 @@ function mockSupabaseFor({
   tableResults?: Record<string, QueryResult | QueryResult[]>;
 }) {
   const callCounts: Record<string, number> = {};
+  const buildersByTable: Record<string, Builder[]> = {};
+  const from = vi.fn((table: string) => {
+    let builder: Builder;
+    if (table === "buyers") {
+      builder = chain({ data: userId ? buyerRow : null, error: null });
+    } else {
+      const entry = tableResults[table];
+      if (!entry) {
+        builder = chain({ data: null, error: null });
+      } else {
+        const results = Array.isArray(entry) ? entry : [entry];
+        const idx = Math.min(callCounts[table] ?? 0, results.length - 1);
+        callCounts[table] = (callCounts[table] ?? 0) + 1;
+        builder = chain(results[idx] ?? { data: null, error: null });
+      }
+    }
+    buildersByTable[table] = buildersByTable[table] ?? [];
+    buildersByTable[table].push(builder);
+    return builder;
+  });
   const supabase = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
@@ -84,22 +109,12 @@ function mockSupabaseFor({
         error: null,
       }),
     },
-    from: vi.fn((table: string) => {
-      if (table === "buyers") {
-        return chain({ data: userId ? buyerRow : null, error: null });
-      }
-      const entry = tableResults[table];
-      if (!entry) return chain({ data: null, error: null });
-      const results = Array.isArray(entry) ? entry : [entry];
-      const idx = Math.min(callCounts[table] ?? 0, results.length - 1);
-      callCounts[table] = (callCounts[table] ?? 0) + 1;
-      return chain(results[idx] ?? { data: null, error: null });
-    }),
+    from,
   };
   vi.mocked(createSupabaseServerClient).mockResolvedValue(
     supabase as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
   );
-  return supabase;
+  return { supabase, buildersByTable };
 }
 
 beforeEach(() => {
@@ -136,7 +151,7 @@ describe("address actions", () => {
   });
 
   it("createAddress inserts and returns the mapped row", async () => {
-    mockSupabaseFor({
+    const { buildersByTable } = mockSupabaseFor({
       tableResults: {
         buyer_addresses: [
           // 1. existing-address count check -> 0, so makeDefault is forced true.
@@ -170,6 +185,25 @@ describe("address actions", () => {
       expect(result.data.isDefault).toBe(true);
       expect(result.data.postcode).toBe("80000");
     }
+
+    // Assert against the actual insert payload, not just the mocked
+    // echo: with the count check reporting 0 existing addresses, the
+    // action must itself compute `is_default: true` (the "first-ever
+    // address is forced default" rule) rather than the test merely
+    // reflecting a value it seeded. Count check (index 0) then insert
+    // (index 1) are two separate `from("buyer_addresses")` calls.
+    const insertBuilder = buildersByTable.buyer_addresses?.[1];
+    expect(insertBuilder).toBeDefined();
+    expect(insertBuilder?.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        buyer_id: "buyer-1",
+        address_line: "1 Jalan Test",
+        postcode: "80000",
+        state: "Johor",
+        area: "Johor Bahru",
+        is_default: true,
+      }),
+    );
   });
 
   it("setDefaultAddress rejects an id that is not a uuid", async () => {
@@ -177,6 +211,27 @@ describe("address actions", () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.code).toBe("validation");
+  });
+
+  it("setDefaultAddress returns not_found for a stale/nonexistent id without touching the current default", async () => {
+    const { buildersByTable } = mockSupabaseFor({
+      tableResults: {
+        // select("id").eq("id", addressId).maybeSingle() -> the target
+        // row does not exist (or was filtered out by RLS).
+        buyer_addresses: { data: null, error: null },
+      },
+    });
+
+    const result = await setDefaultAddress("d0000000-0000-0000-0000-00000000000d");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("not_found");
+
+    // Only the target-existence check should have run; the action must
+    // return before clearing the buyer's current default, otherwise a
+    // stale id would leave the buyer with no default address at all.
+    expect(buildersByTable.buyer_addresses).toHaveLength(1);
+    expect(buildersByTable.buyer_addresses?.[0]?.update).not.toHaveBeenCalled();
   });
 
   it("deleteAddress returns not_found when the row does not belong to the buyer", async () => {
