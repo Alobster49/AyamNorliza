@@ -83,9 +83,13 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
           <Label htmlFor="address-state">State</Label>
           <Select
             value={value.state}
-            onValueChange={(state) =>
-              onChange({ ...value, state, area: "" })
-            }
+            onValueChange={(state) => {
+              // Radix Select can emit a spurious "" when it flips from
+              // disabled to enabled with its items not yet mounted; a
+              // genuine user pick is never "" since every SelectItem has a
+              // non-empty value. Guard so that emission can't clobber state.
+              if (state) onChange({ ...value, state, area: "" });
+            }}
             disabled={disabled}
           >
             <SelectTrigger id="address-state" className="w-full">
@@ -106,7 +110,16 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
         <Label htmlFor="address-area">Area</Label>
         <Select
           value={value.area}
-          onValueChange={(area) => onChange({ ...value, area })}
+          onValueChange={(area) => {
+            // Same Radix quirk as the State select above: this Select flips
+            // from disabled to enabled in the same update that auto-fills
+            // area (postcode lookup), and its SelectContent items aren't
+            // mounted yet — it immediately self-fires onValueChange("").
+            // Ignore that spurious "" so it can't wipe the auto-filled area;
+            // a genuine pick is never "" since every SelectItem has a
+            // non-empty value.
+            if (area) onChange({ ...value, area });
+          }}
           disabled={disabled || !value.state}
         >
           <SelectTrigger id="address-area" className="w-full">
