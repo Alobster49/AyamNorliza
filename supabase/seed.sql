@@ -243,6 +243,13 @@ on conflict (id) do update
       updated_at = now();
 
 -- The buyers_sync_customer trigger links this buyer to the pre-seeded
--- customer row above automatically (phone match); no manual update needed.
+-- customer row above automatically (phone match) on first insert. But
+-- ON CONFLICT DO UPDATE does NOT fire the AFTER INSERT trigger, so a
+-- cleared-then-reseeded buyer (customer_id wiped by admin_clear_org_data,
+-- then this file re-run) would stay unlinked without this belt-and-braces
+-- re-link.
+update public.buyers
+set customer_id = '30000000-0000-0000-0000-0000000000aa'
+where phone = '0123456789' and customer_id is null;
 
 commit;

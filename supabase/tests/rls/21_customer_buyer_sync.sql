@@ -3,7 +3,7 @@
 -- email fill rules, no-steal, idempotency, function grants.
 
 begin;
-select plan(18);
+select plan(21);
 
 -- ---------------------------------------------------------------------------
 -- normalize_phone
@@ -148,6 +148,51 @@ select results_eq(
   $$ select customer_id from public.buyers where id = 'b0000000-0000-0000-0000-0000000000b1' $$,
   array['d0000000-0000-0000-0000-0000000000d1'::uuid],
   're-run keeps the original link'
+);
+
+-- ---------------------------------------------------------------------------
+-- Oldest-unclaimed-wins + no-stealing invariant, isolated scenario on a
+-- fresh phone: two unclaimed customers share normalized phone
+-- '0145551234' with explicit created_at so one is unambiguously older; a
+-- new buyer signs up with that phone and must link to the OLDER row.
+-- ---------------------------------------------------------------------------
+insert into auth.users (id, email) values
+  ('b0000000-0000-0000-0000-0000000000b5', 'buyer5@example.com')
+on conflict (id) do nothing;
+
+insert into public.customers (id, organization_id, name, phone, created_by, created_at)
+values
+  ('d0000000-0000-0000-0000-0000000000d3',
+   'c0000000-0000-0000-0000-0000000000cc',
+   'Older Newphone Co', '014-555 1234',
+   'a0000000-0000-0000-0000-0000000000aa', now() - interval '2 days'),
+  ('d0000000-0000-0000-0000-0000000000d4',
+   'c0000000-0000-0000-0000-0000000000cc',
+   'Newer Newphone Co', '0145551234',
+   'a0000000-0000-0000-0000-0000000000aa', now() - interval '1 day');
+
+insert into public.buyers (id, organization_id, display_name, phone)
+values ('b0000000-0000-0000-0000-0000000000b5',
+        'c0000000-0000-0000-0000-0000000000cc', 'Buyer Five', '+60145551234');
+
+select results_eq(
+  $$ select customer_id from public.buyers where id = 'b0000000-0000-0000-0000-0000000000b5' $$,
+  array['d0000000-0000-0000-0000-0000000000d3'::uuid],
+  'oldest unclaimed customer wins the phone match, not the newer one'
+);
+select results_eq(
+  $$ select count(*)::int from public.customers
+     where organization_id = 'c0000000-0000-0000-0000-0000000000cc'
+       and phone_normalized = '0145551234' $$,
+  array[2],
+  'no new customer row created; the two pre-existing rows are untouched'
+);
+select throws_ok(
+  $$ update public.buyers set customer_id = 'd0000000-0000-0000-0000-0000000000d3'
+     where id = 'b0000000-0000-0000-0000-0000000000b4' $$,
+  '23505',
+  'duplicate key value violates unique constraint "buyers_customer_unique"',
+  'a manual double-claim of an already-claimed customer violates the unique index'
 );
 
 -- ---------------------------------------------------------------------------

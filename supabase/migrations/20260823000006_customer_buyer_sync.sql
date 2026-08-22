@@ -90,10 +90,14 @@ begin
             coalesce(v_buyer.phone, '-----'), v_email, p_buyer_id)
     returning id into v_customer_id;
   else
-    -- Seller-entered fields win; only a null email is filled.
+    -- Seller-entered fields win; only a null email is filled. No-op (skip
+    -- the write entirely) when there's nothing to fill, to avoid pointless
+    -- heap writes + updated_at bumps on rows that already have an email.
     update public.customers
-      set email = coalesce(email, v_email)
-    where id = v_customer_id;
+      set email = v_email
+    where id = v_customer_id
+      and email is null
+      and v_email is not null;
   end if;
 
   update public.buyers set customer_id = v_customer_id where id = p_buyer_id;
@@ -125,6 +129,12 @@ drop trigger if exists buyers_sync_customer on public.buyers;
 create trigger buyers_sync_customer
   after insert on public.buyers
   for each row execute function public.buyers_sync_customer_trigger();
+
+-- A customer row can be claimed by at most one buyer — makes "no stealing"
+-- a database invariant, not just a code convention.
+create unique index if not exists buyers_customer_unique
+  on public.buyers (customer_id)
+  where customer_id is not null;
 
 -- ---------------------------------------------------------------------------
 -- Backfill: link every pre-existing buyer, then fill missing emails on
