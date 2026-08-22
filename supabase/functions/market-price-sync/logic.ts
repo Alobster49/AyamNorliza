@@ -26,8 +26,12 @@ export type PriceAggregate = {
   premise_count: number;
 };
 
-/** PriceCatcher items we track: 1=standard, 2=super, 3=live (all per 1kg). */
-export const TRACKED_ITEM_CODES: Set<number> = new Set([1, 2, 3]);
+/**
+ * PriceCatcher items we track: 1=standard, 2=super (both per 1kg).
+ * Item 3 (live chicken) is catalogued by KPDN but never priced -- see the
+ * MARKET_ITEMS comment in src/features/market/types.ts.
+ */
+export const TRACKED_ITEM_CODES: Set<number> = new Set([1, 2]);
 
 /**
  * Month files to fetch. KPDN appends to the current month's file daily;
