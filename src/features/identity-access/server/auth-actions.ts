@@ -15,7 +15,7 @@ import { ReauthInput, LoginInput, MfaChallengeInput } from "../schema";
 import type { ActionResult } from "./actions";
 import { admin, type AdminContext } from "@/lib/supabase/admin";
 import { randomUUID } from "node:crypto";
-import { listOrganizationsForCurrentUser } from "./queries";
+import { resolveLandingPath } from "./landing";
 
 type AuthErrorCode = "validation" | "unauthenticated" | "internal" | "conflict";
 
@@ -48,11 +48,10 @@ export async function loginAction(
   const requiresMfa = (aal?.currentLevel ?? "aal1") !== "aal2";
 
   // Resolve the destination so the client can navigate straight to a real
-  // dashboard. We never want login to bounce the user through "/", because
-  // "/" has a fallback that redirects to /signup when no memberships are
+  // page. We never want login to bounce the user through "/", because "/"
+  // has a fallback that redirects to /signup when no memberships are
   // visible (which made existing users land on "Create account" instead).
-  const orgs = await listOrganizationsForCurrentUser();
-  const redirectTo = orgs.length > 0 ? `/${orgs[0]!.slug}/settings/organization` : "/signup";
+  const redirectTo = await resolveLandingPath();
 
   return ok({ requiresMfa, redirectTo });
 }

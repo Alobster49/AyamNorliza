@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { sanitizeNextPath } from "@/lib/auth/next-path";
 
 /**
  * Email-link verification route (passwordless / magic link).
@@ -9,7 +10,9 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const tokenHash = searchParams.get("token_hash");
   const type = searchParams.get("type") ?? "magiclink";
-  const next = searchParams.get("next") ?? "/";
+  // Same as the PKCE callback: never put an unvalidated query param into a
+  // Location header.
+  const next = sanitizeNextPath(searchParams.get("next")) ?? "/";
 
   if (!tokenHash) {
     return NextResponse.redirect(`${origin}/login?error=missing_token`);

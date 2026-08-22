@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/features/identity-access/server/auth-actions";
+import { sanitizeNextPath } from "@/lib/auth/next-path";
 import { cn } from "@/lib/utils";
 
 /**
@@ -61,9 +62,13 @@ export function LoginForm({
     }
     // Always proceed to the destination; MFA enrollment is optional.
     // Users can enable 2FA later from their security settings.
-    // Prefer the explicit redirect returned by the server so signed-in users
-    // never get bounced through "/" (which has a /signup fallback).
-    router.push(next || result.data.redirectTo);
+    //
+    // `next` is whatever page the guard bounced them off, but it arrives via
+    // the query string, so anyone can craft a /login?next=... link - it is
+    // re-validated here rather than trusted. When it fails validation, fall
+    // back to the server's redirect so signed-in users never get bounced
+    // through "/" (which has a /signup fallback).
+    router.push(sanitizeNextPath(next) ?? result.data.redirectTo);
   }
 
   return (

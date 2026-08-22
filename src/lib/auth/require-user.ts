@@ -8,8 +8,10 @@
 
 import "server-only";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PATHNAME_HEADER, sanitizeNextPath } from "./next-path";
 
 export class PermissionError extends Error {
   readonly code = "permission_denied";
@@ -40,15 +42,31 @@ export async function requireUser() {
 }
 
 /**
+ * The page the caller is actually on, published by `src/middleware.ts`. Falls back
+ * to the caller-supplied path when the middleware did not run for this request
+ * (its matcher skips static assets and the auth routes) or when the header
+ * fails validation.
+ */
+async function returnPathFor(fallback?: string): Promise<string | null> {
+  const requested = (await headers()).get(PATHNAME_HEADER);
+  return sanitizeNextPath(requested) ?? sanitizeNextPath(fallback);
+}
+
+/**
  * For Server Components that cannot redirect from inside try/catch: use
  * `requireUserOrRedirect()` which calls `next/navigation`'s `redirect()`.
+ *
+ * `nextPath` is only a fallback now - the real page comes from the middleware
+ * header, so a session that expires on `/acme/orders/123` returns there
+ * after signing in rather than to the org landing page.
  */
 export async function requireUserOrRedirect(nextPath?: string) {
   try {
     return await requireUser();
   } catch (err) {
     if (err instanceof UnauthenticatedError) {
-      const qs = nextPath ? `?next=${encodeURIComponent(nextPath)}` : "";
+      const returnPath = await returnPathFor(nextPath);
+      const qs = returnPath ? `?next=${encodeURIComponent(returnPath)}` : "";
       redirect(`/login${qs}`);
     }
     throw err;

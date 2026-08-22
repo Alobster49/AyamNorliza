@@ -56,7 +56,7 @@ export function BuyerHeader({
 
   async function handleSignOut() {
     await buyerSignOutAction();
-    router.push(`${organizationSlug}/login`);
+    router.push(`/buyer_portal/${organizationSlug}/login`);
     router.refresh();
   }
 

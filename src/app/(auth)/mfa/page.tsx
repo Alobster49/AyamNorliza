@@ -1,5 +1,6 @@
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { MfaEnrollCard } from "@/components/forms/mfa-enroll-card";
+import { sanitizeNextPath } from "@/lib/auth/next-path";
 
 export const metadata = { title: "Two-factor authentication - AyamNorliza" };
 
@@ -12,7 +13,7 @@ export default async function MfaPage({
   const { next } = await searchParams;
   return (
     <main className="auth-page">
-      <MfaEnrollCard isOptional nextPath={next ?? "/"} />
+      <MfaEnrollCard isOptional nextPath={sanitizeNextPath(next) ?? "/"} />
     </main>
   );
 }

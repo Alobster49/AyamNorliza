@@ -4,8 +4,10 @@
 
 import "server-only";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { PATHNAME_HEADER, sanitizeNextPath } from "./next-path";
 
 export class NotABuyerError extends Error {
   readonly code = "not_a_buyer";
@@ -49,15 +51,53 @@ export async function requireBuyer() {
   return buyer as Buyer;
 }
 
+/** Root of one organization's buyer portal, trailing slash included. */
+export function buyerPortalPrefix(organizationSlug: string): string {
+  return `/buyer_portal/${organizationSlug}/`;
+}
+
+export function buyerLoginPath(organizationSlug: string): string {
+  return `${buyerPortalPrefix(organizationSlug)}login`;
+}
+
+/**
+ * Where to send a buyer back after they sign in: the page they were on, read
+ * from the header `src/middleware.ts` sets. Null when there is nothing safe
+ * to return to, in which case the login page falls back to the shop.
+ *
+ * The portal + org prefix is enforced here as well as on the login page: a
+ * buyer must never be bounced into another organization's portal, and the
+ * value has been through the query string by the time the page sees it.
+ */
+async function buyerReturnPath(organizationSlug: string): Promise<string | null> {
+  const requested = sanitizeNextPath((await headers()).get(PATHNAME_HEADER));
+  if (!requested) return null;
+
+  if (!requested.startsWith(buyerPortalPrefix(organizationSlug))) return null;
+
+  // Returning to the login page itself would just re-open the form.
+  const path = requested.split(/[?#]/)[0] ?? requested;
+  if (path === buyerLoginPath(organizationSlug)) return null;
+
+  return requested;
+}
+
 /**
  * For Server Components that need to redirect if not authenticated.
+ *
+ * The buyer login page lives under `/buyer_portal/...` like the rest of the
+ * portal. This used to redirect to `/{organizationSlug}/login`, which is not
+ * a route - buyers whose session had expired hit a 404 instead of the login
+ * form.
  */
 export async function requireBuyerOrRedirect(organizationSlug: string) {
   try {
     return await requireBuyer();
   } catch (err) {
     if (err instanceof NotABuyerError) {
-      redirect(`/${organizationSlug}/login`);
+      const returnPath = await buyerReturnPath(organizationSlug);
+      const qs = returnPath ? `?next=${encodeURIComponent(returnPath)}` : "";
+      redirect(`${buyerLoginPath(organizationSlug)}${qs}`);
     }
     throw err;
   }

@@ -1,5 +1,4 @@
-import { redirect } from "next/navigation";
-import { requireBuyer, NotABuyerError } from "@/lib/auth/buyer-auth";
+import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import CheckoutClient from "./checkout-client";
 
 type CheckoutPageProps = {
@@ -8,14 +7,8 @@ type CheckoutPageProps = {
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
   const { organizationSlug } = await params;
-  try {
-    await requireBuyer();
-  } catch (e) {
-    if (e instanceof NotABuyerError) {
-      const next = encodeURIComponent(`/buyer_portal/${organizationSlug}/checkout`);
-      redirect(`/buyer_portal/${organizationSlug}/login?next=${next}`);
-    }
-    throw e;
-  }
+  // The guard builds the same `?next=` this page used to hand-roll, from the
+  // path the middleware publishes.
+  await requireBuyerOrRedirect(organizationSlug);
   return <CheckoutClient organizationSlug={organizationSlug} />;
 }
