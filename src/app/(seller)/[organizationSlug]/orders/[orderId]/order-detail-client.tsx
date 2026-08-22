@@ -1,15 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   getOrderDetail,
+  getPriceHints,
   confirmOrder,
   cancelOrder,
   closeOrder,
   reopenOrder,
 } from "@/features/orders/server/order-actions";
 import type { OrderWithItems } from "@/features/orders/types";
+import type { MarketSuggestion } from "@/features/market/types";
+import { JourneyBar, NextActionBanner } from "@/features/orders/components/journey-bar";
+import { pickPriceHint, settlementReady } from "@/features/orders/lib/settlement-hints";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, FALLBACK_LABELS } from "@/features/orders/types";
 import {
   formatPrice,
@@ -40,7 +44,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ArrowLeft } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ArrowLeft, ChevronDown, Phone, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type OrderDetailClientProps = {
@@ -93,30 +102,43 @@ export function OrderDetailClient({ organizationSlug, callerRole, initialOrder }
         <div className="flex-1">
           <h1 className="text-2xl font-bold">Order {order.id.slice(0, 8).toUpperCase()}</h1>
           <p className="text-muted-foreground">{order.customer?.name ?? "Unknown customer"}</p>
+          {order.customer?.phone && (
+            <a
+              href={`tel:${order.customer.phone}`}
+              className="mt-0.5 inline-flex items-center gap-1 text-sm text-muted-foreground underline-offset-2 hover:underline"
+            >
+              <Phone className="h-3 w-3" aria-hidden />
+              {order.customer.phone}
+            </a>
+          )}
         </div>
         <Badge className={ORDER_STATUS_COLORS[order.status]}>{ORDER_STATUS_LABELS[order.status]}</Badge>
       </div>
 
-      <div className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div>
-          <div className="text-xs text-muted-foreground">Zone</div>
-          <div className="font-medium">{order.zone?.name ?? "-"}</div>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Delivery date</div>
-          <div className="font-medium">{formatDate(order.delivery_date)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Truck</div>
-          <div className="font-medium">
-            {order.truck?.name ?? "-"} {order.truck?.code ? `(${order.truck.code})` : ""}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Address</div>
-          <div className="font-medium">{order.delivery_address}</div>
-        </div>
-      </div>
+      <JourneyBar status={order.status} />
+      <NextActionBanner status={order.status} itemCount={order.items.length} />
+
+      {order.status === "delivered" ? (
+        <Collapsible>
+          <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-lg border p-4 text-left text-sm">
+            <span className="text-muted-foreground">
+              Delivery details — {order.zone?.name ?? "-"}
+              {order.truck?.code ? ` · ${order.truck.code}` : ""} · {formatDate(order.delivery_date)}
+            </span>
+            <ChevronDown
+              className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180"
+              aria-hidden
+            />
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="mt-2">
+              <OrderMetaGrid order={order} formatDate={formatDate} />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : (
+        <OrderMetaGrid order={order} formatDate={formatDate} />
+      )}
 
       {order.notes && (
         <div className="rounded-lg border p-4">
@@ -145,6 +167,37 @@ export function OrderDetailClient({ organizationSlug, callerRole, initialOrder }
       {order.status === "cancelled" && (
         <div className="rounded-lg border p-4 text-sm text-muted-foreground">This order was cancelled.</div>
       )}
+    </div>
+  );
+}
+
+function OrderMetaGrid({
+  order,
+  formatDate,
+}: {
+  order: OrderWithItems;
+  formatDate: (date: string) => string;
+}) {
+  return (
+    <div className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div>
+        <div className="text-xs text-muted-foreground">Zone</div>
+        <div className="font-medium">{order.zone?.name ?? "-"}</div>
+      </div>
+      <div>
+        <div className="text-xs text-muted-foreground">Delivery date</div>
+        <div className="font-medium">{formatDate(order.delivery_date)}</div>
+      </div>
+      <div>
+        <div className="text-xs text-muted-foreground">Truck</div>
+        <div className="font-medium">
+          {order.truck?.name ?? "-"} {order.truck?.code ? `(${order.truck.code})` : ""}
+        </div>
+      </div>
+      <div>
+        <div className="text-xs text-muted-foreground">Address</div>
+        <div className="font-medium">{order.delivery_address}</div>
+      </div>
     </div>
   );
 }
@@ -246,7 +299,7 @@ function PendingPanel({
           const available = availability[item.id] ?? true;
           return (
             <div key={item.id} className="rounded-lg border p-4">
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                 <div>
                   <div className="font-medium">{item.product?.name ?? "Unknown product"}</div>
                   <div className="text-sm text-muted-foreground">
@@ -284,8 +337,8 @@ function PendingPanel({
         })}
       </div>
 
-      <div className="flex gap-3">
-        <Button disabled={confirming} onClick={handleConfirm}>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Button className="w-full sm:w-auto" size="lg" disabled={confirming} onClick={handleConfirm}>
           {confirming ? "Confirming…" : "Confirm order"}
         </Button>
         <CancelOrderDialog organizationSlug={organizationSlug} orderId={order.id} onReload={onReload} />
@@ -362,6 +415,7 @@ function DeliveredPanel({
 }) {
   const { toast } = useToast();
   const nonCancelled = order.items.filter((item) => !item.is_cancelled);
+  const [hints, setHints] = useState<MarketSuggestion[]>([]);
   const [drafts, setDrafts] = useState<Record<string, SettlementDraft>>(() =>
     Object.fromEntries(
       nonCancelled.map((item) => [
@@ -375,6 +429,17 @@ function DeliveredPanel({
     ),
   );
   const [closing, setClosing] = useState(false);
+
+  useEffect(() => {
+    // Hints are a nice-to-have: a failed load just means no chips.
+    let alive = true;
+    getPriceHints(organizationSlug).then((result) => {
+      if (alive && result.ok) setHints(result.data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [organizationSlug]);
 
   function updateDraft(itemId: string, field: keyof SettlementDraft, value: string) {
     setDrafts((prev) => {
@@ -410,6 +475,7 @@ function DeliveredPanel({
   });
 
   const runningTotal = lines.reduce((sum, line) => sum + (line.lineTotal ?? 0), 0);
+  const allReady = settlementReady(lines);
 
   async function handleClose() {
     const invalid = lines.find(
@@ -462,7 +528,7 @@ function DeliveredPanel({
             <div className="text-right font-medium">{lineTotal != null ? formatPrice(lineTotal) : "—"}</div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="space-y-1">
               <Label className="text-xs">Final weight (kg)</Label>
               <Input
@@ -472,6 +538,10 @@ function DeliveredPanel({
                 value={draft.finalWeightKg}
                 onChange={(e) => updateDraft(item.id, "finalWeightKg", e.target.value)}
               />
+              {item.warehouse_weight_kg != null &&
+                draft.finalWeightKg === String(item.warehouse_weight_kg) && (
+                  <p className="text-xs text-muted-foreground">from warehouse</p>
+                )}
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Final pieces</Label>
@@ -479,12 +549,13 @@ function DeliveredPanel({
                 type="number"
                 step="1"
                 min="0"
+                placeholder="optional"
                 value={draft.finalPieces}
                 onChange={(e) => updateDraft(item.id, "finalPieces", e.target.value)}
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Price / kg</Label>
+            <div className="col-span-2 space-y-1 sm:col-span-1">
+              <Label className="text-xs">Price / kg (RM)</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -492,6 +563,20 @@ function DeliveredPanel({
                 value={draft.pricePerKg}
                 onChange={(e) => updateDraft(item.id, "pricePerKg", e.target.value)}
               />
+              {(() => {
+                const hint = pickPriceHint(hints, item.product?.name);
+                if (hint == null) return null;
+                return (
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
+                    onClick={() => updateDraft(item.id, "pricePerKg", String(hint))}
+                  >
+                    <Zap className="h-3 w-3" aria-hidden />
+                    Market today: {formatPrice(hint)}
+                  </button>
+                );
+              })()}
             </div>
           </div>
 
@@ -507,14 +592,22 @@ function DeliveredPanel({
         </div>
       ))}
 
-      <div className="flex items-center justify-between rounded-lg border p-4">
-        <span className="font-semibold">Running total</span>
-        <span className="text-lg font-bold">{formatPrice(runningTotal)}</span>
+      <div className="sticky bottom-2 z-10 flex items-center gap-4 rounded-lg border bg-background/95 p-4 shadow-lg backdrop-blur">
+        <div className="shrink-0">
+          <div className="text-xs text-muted-foreground">Running total</div>
+          <div className="text-xl font-bold tabular-nums">
+            {allReady ? formatPrice(runningTotal) : "—"}
+          </div>
+        </div>
+        <Button className="flex-1" size="lg" disabled={closing || !allReady} onClick={handleClose}>
+          {closing ? "Closing…" : "Close order"}
+        </Button>
       </div>
-
-      <Button className="w-full" size="lg" disabled={closing} onClick={handleClose}>
-        {closing ? "Closing…" : "Close order"}
-      </Button>
+      {!allReady && (
+        <p className="text-center text-xs text-muted-foreground">
+          Enter a weight and price on every line to close.
+        </p>
+      )}
     </div>
   );
 }

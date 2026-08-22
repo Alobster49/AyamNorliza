@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
+import type { MarketSuggestion } from "@/features/market/types";
 import { requireOrgRole, OrderPermissionError } from "./guards";
 import { tomorrowInTimeZone } from "@/lib/time/org-date";
 import { MANAGER_ROLES, STAFF_ROLES } from "../lib/roles";
@@ -592,6 +593,28 @@ export async function getSettlementQueue(
   }
 
   return ok((data ?? []) as OrderWithItems[]);
+}
+
+/**
+ * Market price hints for the settlement form, per mapped product variant.
+ * Read-only wrapper over get_market_suggestions so the order detail screen
+ * can offer "fill with market price" chips. An empty list is a valid result
+ * (org without variant mappings), never an error the UI must surface.
+ */
+export async function getPriceHints(
+  organizationSlug: string,
+): Promise<ActionResult<MarketSuggestion[]>> {
+  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  if (!guard.ok) return guard;
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("get_market_suggestions", {
+    p_organization_id: guard.orgId,
+  });
+  if (error) {
+    return err("internal", "Failed to load market price hints");
+  }
+  return ok(data ?? []);
 }
 
 export async function closeOrder(
