@@ -134,6 +134,7 @@ describe("dashboard shell model", () => {
       "Products",
       "Orders",
       "Customers",
+      "Market Prices",
       "Delivery setup",
       "Dispatch",
       "Loading",

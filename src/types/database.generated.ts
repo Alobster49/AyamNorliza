@@ -874,6 +874,89 @@ export type Database = {
           },
         ]
       }
+      market_premises: {
+        Row: {
+          district: string | null
+          premise_code: number
+          state: string
+          synced_at: string
+        }
+        Insert: {
+          district?: string | null
+          premise_code: number
+          state: string
+          synced_at?: string
+        }
+        Update: {
+          district?: string | null
+          premise_code?: number
+          state?: string
+          synced_at?: string
+        }
+        Relationships: []
+      }
+      market_prices: {
+        Row: {
+          avg_price: number
+          created_at: string
+          item_code: number
+          max_price: number
+          median_price: number
+          min_price: number
+          premise_count: number
+          price_date: string
+          state: string
+        }
+        Insert: {
+          avg_price: number
+          created_at?: string
+          item_code: number
+          max_price: number
+          median_price: number
+          min_price: number
+          premise_count: number
+          price_date: string
+          state: string
+        }
+        Update: {
+          avg_price?: number
+          created_at?: string
+          item_code?: number
+          max_price?: number
+          median_price?: number
+          min_price?: number
+          premise_count?: number
+          price_date?: string
+          state?: string
+        }
+        Relationships: []
+      }
+      market_settings: {
+        Row: {
+          org_id: string
+          states: string[]
+          updated_at: string
+        }
+        Insert: {
+          org_id: string
+          states?: string[]
+          updated_at?: string
+        }
+        Update: {
+          org_id?: string
+          states?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "market_settings_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: true
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       member_scopes: {
         Row: {
           created_at: string
@@ -1349,6 +1432,9 @@ export type Database = {
           created_by: string | null
           id: string
           is_available: boolean
+          market_item_code: number | null
+          market_margin_type: string | null
+          market_margin_value: number | null
           name: string
           organization_id: string
           price_per_unit: number
@@ -1362,6 +1448,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_available?: boolean
+          market_item_code?: number | null
+          market_margin_type?: string | null
+          market_margin_value?: number | null
           name: string
           organization_id: string
           price_per_unit: number
@@ -1375,6 +1464,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           is_available?: boolean
+          market_item_code?: number | null
+          market_margin_type?: string | null
+          market_margin_value?: number | null
           name?: string
           organization_id?: string
           price_per_unit?: number
@@ -1924,6 +2016,20 @@ export type Database = {
           start_time: string
           truck_id: string
           truck_name: string
+        }[]
+      }
+      get_market_suggestions: {
+        Args: { p_organization_id: string }
+        Returns: {
+          current_price: number
+          latest_price_date: string
+          market_base: number
+          market_item_code: number
+          product_name: string
+          stale: boolean
+          suggested_price: number
+          variant_id: string
+          variant_name: string
         }[]
       }
       has_org_role: {

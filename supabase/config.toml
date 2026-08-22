@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.temporary-access-expiry]
 verify_jwt = false
+
+[functions.market-price-sync]
+verify_jwt = false

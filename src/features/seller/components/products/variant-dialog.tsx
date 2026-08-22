@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { MARKET_ITEMS, type MarketMarginType } from "@/features/market/types";
 
 type VariantDialogProps = {
   open: boolean;
@@ -46,6 +47,12 @@ export function VariantDialog({
     (variant?.unit_type as UnitType) ?? "per_piece",
   );
   const [available, setAvailable] = useState(variant?.is_available ?? true);
+  const [benchmark, setBenchmark] = useState<string>(
+    variant?.market_item_code != null ? String(variant.market_item_code) : "none",
+  );
+  const [marginType, setMarginType] = useState<MarketMarginType>(
+    (variant?.market_margin_type as MarketMarginType) ?? "rm",
+  );
 
   const priceLabel = unitType === "per_kg" ? "Price (RM per kg)" : "Price (RM per piece)";
 
@@ -54,11 +61,15 @@ export function VariantDialog({
     const data = new FormData(e.currentTarget);
     setSaving(true);
     try {
+      const tracked = benchmark !== "none";
       const input = {
         name: data.get("name") as string,
         price_per_unit: Number(data.get("price_per_unit")),
         unit_type: unitType,
         is_available: available,
+        market_item_code: tracked ? Number(benchmark) : null,
+        market_margin_type: tracked ? marginType : null,
+        market_margin_value: tracked ? Number(data.get("market_margin_value")) : null,
       };
       const saved = variant
         ? await updateVariant(variant.id, input, organizationSlug)
@@ -115,6 +126,51 @@ export function VariantDialog({
               required
             />
           </div>
+          <div className="space-y-2">
+            <Label>Market benchmark (KPDN)</Label>
+            <Select value={benchmark} onValueChange={setBenchmark}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Not tracked</SelectItem>
+                {MARKET_ITEMS.map((item) => (
+                  <SelectItem key={item.code} value={String(item.code)}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          {benchmark !== "none" && (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
+                <Label>Margin type</Label>
+                <Select value={marginType} onValueChange={(v) => setMarginType(v as MarketMarginType)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="rm">RM per kg</SelectItem>
+                    <SelectItem value="pct">% of market</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="variant-margin">
+                  {marginType === "pct" ? "Margin (%)" : "Margin (RM)"}
+                </Label>
+                <Input
+                  id="variant-margin"
+                  name="market_margin_value"
+                  type="number"
+                  step="0.01"
+                  defaultValue={variant?.market_margin_value ?? ""}
+                  required
+                />
+              </div>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <input
               id="variant-available"

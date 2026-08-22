@@ -23,6 +23,7 @@ const routeGroups = [
       { title: "Products", segment: "products" },
       { title: "Orders", segment: "orders" },
       { title: "Customers", segment: "customers" },
+      { title: "Market Prices", segment: "market-prices" },
       { title: "Delivery setup", segment: "delivery" },
       { title: "Dispatch", segment: "dispatch" },
       { title: "Loading", segment: "loading" },
