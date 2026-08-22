@@ -1,0 +1,128 @@
+// supabase/functions/market-price-sync/index.ts
+// Scheduled Edge Function: downloads the KPDN PriceCatcher monthly CSV,
+// filters to tracked chicken items in the states any org has configured,
+// and upserts per-(date,item,state) aggregates into market_prices.
+//
+// Schedule (pg_cron, 20260823000002): daily 05:15 UTC = 13:15 MYT,
+// after KPDN's ~12:00 MYT daily upload.
+// Data: https://data.gov.my/data-catalogue/pricecatcher (CC BY 4.0).
+
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  aggregate,
+  monthKeys,
+  parsePremiseRow,
+  parsePriceRow,
+  TRACKED_ITEM_CODES,
+  type PriceRow,
+} from "./logic.ts";
+
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const DATA_BASE = "https://storage.data.gov.my/pricecatcher";
+const PREMISE_TTL_DAYS = 30;
+const DEFAULT_STATES = ["Selangor"];
+
+const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+async function* lines(res: Response): AsyncGenerator<string> {
+  const reader = res.body!.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buf += value;
+    const parts = buf.split("\n");
+    buf = parts.pop() ?? "";
+    for (const line of parts) yield line;
+  }
+  if (buf) yield buf;
+}
+
+async function refreshPremisesIfStale(): Promise<void> {
+  const { data, error } = await admin
+    .from("market_premises")
+    .select("synced_at")
+    .order("synced_at", { ascending: false })
+    .limit(1);
+  if (error) throw new Error(`market_premises check: ${error.message}`);
+
+  const newest = data?.[0]?.synced_at ? new Date(data[0].synced_at) : null;
+  const staleBefore = Date.now() - PREMISE_TTL_DAYS * 24 * 60 * 60 * 1000;
+  if (newest && newest.getTime() > staleBefore) return;
+
+  const res = await fetch(`${DATA_BASE}/lookup_premise.csv`);
+  if (!res.ok) throw new Error(`lookup_premise.csv HTTP ${res.status}`);
+
+  const rows: { premise_code: number; state: string; district: string | null }[] = [];
+  for await (const line of lines(res)) {
+    const parsed = parsePremiseRow(line);
+    if (parsed) rows.push(parsed);
+  }
+  if (rows.length === 0) throw new Error("lookup_premise.csv parsed to 0 rows");
+
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error: upsertError } = await admin
+      .from("market_premises")
+      .upsert(rows.slice(i, i + 500), { onConflict: "premise_code" });
+    if (upsertError) throw new Error(`market_premises upsert: ${upsertError.message}`);
+  }
+}
+
+async function configuredStates(): Promise<Set<string>> {
+  const { data, error } = await admin.from("market_settings").select("states");
+  if (error) throw new Error(`market_settings: ${error.message}`);
+  const states = new Set<string>((data ?? []).flatMap((r) => r.states ?? []));
+  for (const s of DEFAULT_STATES) states.add(s);
+  return states;
+}
+
+async function premiseStateMap(): Promise<Map<number, string>> {
+  const map = new Map<number, string>();
+  // ~3k premises; page through to stay under PostgREST's row cap.
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await admin
+      .from("market_premises")
+      .select("premise_code, state")
+      .range(from, from + 999);
+    if (error) throw new Error(`market_premises read: ${error.message}`);
+    for (const r of data ?? []) map.set(r.premise_code, r.state);
+    if (!data || data.length < 1000) break;
+  }
+  return map;
+}
+
+Deno.serve(async () => {
+  try {
+    await refreshPremisesIfStale();
+    const [states, premises] = await Promise.all([configuredStates(), premiseStateMap()]);
+
+    const months = monthKeys(new Date());
+    const rows: PriceRow[] = [];
+    for (const month of months) {
+      const res = await fetch(`${DATA_BASE}/pricecatcher_${month}.csv`);
+      if (!res.ok) throw new Error(`pricecatcher_${month}.csv HTTP ${res.status}`);
+      for await (const line of lines(res)) {
+        const parsed = parsePriceRow(line);
+        // Filter as we stream so memory stays proportional to tracked rows.
+        if (parsed && TRACKED_ITEM_CODES.has(parsed.item_code)) rows.push(parsed);
+      }
+    }
+
+    const aggregates = aggregate(rows, premises, states, TRACKED_ITEM_CODES);
+    for (let i = 0; i < aggregates.length; i += 500) {
+      const { error } = await admin
+        .from("market_prices")
+        .upsert(aggregates.slice(i, i + 500), { onConflict: "price_date,item_code,state" });
+      if (error) throw new Error(`market_prices upsert: ${error.message}`);
+    }
+
+    return new Response(JSON.stringify({ upserted: aggregates.length, months }), { status: 200 });
+  } catch (e) {
+    console.error("market-price-sync failed", e);
+    const message = e instanceof Error ? e.message : String(e);
+    return new Response(JSON.stringify({ error: message }), { status: 500 });
+  }
+});
