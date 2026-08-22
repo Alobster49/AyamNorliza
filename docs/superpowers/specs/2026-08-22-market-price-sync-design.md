@@ -78,9 +78,11 @@ RLS: `market_prices` and `market_premises` are public reference data — readabl
 ### 3. Suggestion RPC `get_market_suggestions(org_id)`
 
 For each variant in the org with `market_item_code` set:
-- **base** = median of the last 7 available `median_price` rows for that item across the org's configured states (weighted by premise_count when merging states).
+- **base** = unweighted `percentile_cont(0.5)` (median) of `median_price` over the item's rows across the org's configured states in the 7-calendar-day window ending at the latest available `price_date` for that item (i.e. `price_date > max_date - 7 and price_date <= max_date`), not a fixed count of the last 7 rows.
 - **suggested** = `base + margin_value` (type `rm`) or `base * (1 + margin_value/100)` (type `pct`), rounded to 2 dp.
 - Returns: variant id/name, current `price_per_unit`, base, suggested, latest `price_date`, `stale` flag (true when latest data > 3 days old).
+
+> Note: v1 tracks a single state per org, so per-state weighting is a no-op; premise_count-weighted merging across multiple states was deferred and is not implemented by the shipped RPC.
 
 ### 4. UI (seller dashboard)
 
