@@ -257,11 +257,12 @@ export async function deleteVariant(id: string, orgSlug?: string) {
 // ---------------------------------------------------------------------------
 export async function getCustomers(orgId: string): Promise<CustomerWithPortal[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("customers")
     .select("*, buyers(id)")
     .eq("organization_id", orgId)
     .order("name");
+  if (error) throw new Error(error.message);
   return (data ?? []).map(({ buyers, ...customer }) => ({
     ...customer,
     has_portal_account: (buyers?.length ?? 0) > 0,
