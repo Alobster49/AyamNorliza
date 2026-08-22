@@ -18,11 +18,11 @@ import {
   moveStop,
   runStopRows,
   runVitals,
-  shiftIsoDate,
   truckLabel,
   type BoardAlert,
   type StopRow,
 } from "@/features/orders/lib/run-board-model";
+import { shiftIsoDate, todayInTimeZone } from "@/lib/time/org-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -49,11 +49,6 @@ const RUN_TONE: Record<RunStatus, string> = {
 
 function money(amount: number): string {
   return `RM ${amount.toFixed(2)}`;
-}
-
-function todayIso(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 function nowMinutes(): number {
@@ -540,10 +535,12 @@ function RunDetail({
 type RunsClientProps = {
   organizationSlug: string;
   initialDate: string;
+  /** The org's calendar, so "Today" here means the same day the page rendered. */
+  timeZone: string;
   initialRuns: RunWithOrders[];
 };
 
-export function RunsClient({ organizationSlug, initialDate, initialRuns }: RunsClientProps) {
+export function RunsClient({ organizationSlug, initialDate, timeZone, initialRuns }: RunsClientProps) {
   const { toast } = useToast();
   const [date, setDate] = useState(initialDate);
   const [runs, setRuns] = useState(initialRuns);
@@ -623,7 +620,7 @@ export function RunsClient({ organizationSlug, initialDate, initialRuns }: RunsC
     });
   }
 
-  const isToday = date === todayIso();
+  const isToday = date === todayInTimeZone(timeZone);
 
   return (
     <div className="flex flex-col gap-4">
@@ -644,7 +641,7 @@ export function RunsClient({ organizationSlug, initialDate, initialRuns }: RunsC
           <Button
             variant={isToday ? "default" : "outline"}
             size="sm"
-            onClick={() => handleDateChange(todayIso())}
+            onClick={() => handleDateChange(todayInTimeZone(timeZone))}
           >
             Today
           </Button>

@@ -8,7 +8,6 @@ import {
   completionImpact,
   runStopRows,
   runVitals,
-  shiftIsoDate,
   stopState,
   truckLabel,
 } from "../../lib/run-board-model";
@@ -506,13 +505,5 @@ describe("truckLabel", () => {
   it("joins name and code, and falls back when the truck join is missing", () => {
     expect(truckLabel(makeRun())).toBe("Lori 1 (TRK-01)");
     expect(truckLabel(makeRun({ truck: undefined }))).toBe("Unassigned truck");
-  });
-});
-
-describe("shiftIsoDate", () => {
-  it("moves forward and backward across a month boundary", () => {
-    expect(shiftIsoDate("2026-08-31", 1)).toBe("2026-09-01");
-    expect(shiftIsoDate("2026-09-01", -1)).toBe("2026-08-31");
-    expect(shiftIsoDate("2026-08-21", 0)).toBe("2026-08-21");
   });
 });

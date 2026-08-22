@@ -21,7 +21,13 @@ export class OrderPermissionError extends Error {
   }
 }
 
-export type OrgRoleContext = { orgId: string; userId: string; role: string };
+export type OrgRoleContext = {
+  orgId: string;
+  userId: string;
+  role: string;
+  /** The org's own calendar, from organizations.default_time_zone. */
+  timeZone: string;
+};
 
 export async function requireOrgRole(
   organizationSlug: string,
@@ -38,7 +44,7 @@ export async function requireOrgRole(
 
   const { data: org } = await supabase
     .from("organizations")
-    .select("id")
+    .select("id, default_time_zone")
     .eq("slug", organizationSlug)
     .single();
   if (!org) {
@@ -57,7 +63,26 @@ export async function requireOrgRole(
     throw new OrderPermissionError();
   }
 
-  return { orgId: org.id, userId: user.id, role: member.role };
+  return {
+    orgId: org.id,
+    userId: user.id,
+    role: member.role,
+    timeZone: org.default_time_zone,
+  };
+}
+
+/**
+ * The org's time zone on its own, for Server Components that need to resolve
+ * a date before they have a role context.
+ */
+export async function getOrgTimeZone(organizationSlug: string): Promise<string> {
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("organizations")
+    .select("default_time_zone")
+    .eq("slug", organizationSlug)
+    .single();
+  return data?.default_time_zone ?? "UTC";
 }
 
 /**

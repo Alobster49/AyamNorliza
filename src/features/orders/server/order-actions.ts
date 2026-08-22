@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
 import { requireOrgRole, OrderPermissionError } from "./guards";
+import { tomorrowInTimeZone } from "@/lib/time/org-date";
 import { MANAGER_ROLES, STAFF_ROLES } from "../lib/roles";
 import { mapRpcError } from "../lib/rpc-errors";
 import {
@@ -42,7 +43,7 @@ async function guardRoles(
   organizationSlug: string,
   roles: readonly string[],
 ): Promise<
-  | { ok: true; orgId: string; userId: string; role: string }
+  | { ok: true; orgId: string; userId: string; role: string; timeZone: string }
   | { ok: false; code: "forbidden"; message: string }
 > {
   try {
@@ -275,7 +276,11 @@ export async function getTodayTasks(
   // Window includes tomorrow: orders are always booked for tomorrow at the
   // earliest (place_order window starts at current_date + 1), so staff load
   // and weigh a delivery the day before it goes out.
-  const horizon = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  //
+  // Resolved in the org's time zone, not the server's. toISOString() is UTC,
+  // so between 00:00 and 08:00 MYT the horizon used to land a day early and
+  // the early shift opened an empty queue while tomorrow's orders were due.
+  const horizon = tomorrowInTimeZone(guard.timeZone);
 
   const { data, error } = await supabase
     .from("order_tasks")

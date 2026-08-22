@@ -1,16 +1,9 @@
 import { redirect } from "next/navigation";
+import { todayInTimeZone } from "@/lib/time/org-date";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
 import { DISPATCH_ROLES } from "@/features/logistics/lib/roles";
 import { getDispatchBoard } from "@/features/logistics/server/dispatch-actions";
 import { LoadingClient } from "@/features/logistics/components/loading-client";
-
-function todayIsoDate(): string {
-  const now = new Date();
-  const y = now.getFullYear();
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
 
 export default async function LoadingPage({
   params,
@@ -19,8 +12,9 @@ export default async function LoadingPage({
 }) {
   const { organizationSlug } = await params;
 
+  let timeZone: string;
   try {
-    await requireOrgRole(organizationSlug, DISPATCH_ROLES);
+    ({ timeZone } = await requireOrgRole(organizationSlug, DISPATCH_ROLES));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect(`/${organizationSlug}/tasks`);
@@ -28,7 +22,9 @@ export default async function LoadingPage({
     throw error;
   }
 
-  const date = todayIsoDate();
+  // The depot's date, not the server's: on a UTC host `new Date()` serves the
+  // early-morning shift yesterday's board.
+  const date = todayInTimeZone(timeZone);
   const result = await getDispatchBoard(organizationSlug, date);
   if (!result.ok) {
     throw new Error(result.message);

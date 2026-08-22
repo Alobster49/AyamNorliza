@@ -92,13 +92,6 @@ function minutesOfDay(time: string): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
-/** Date arithmetic on an ISO yyyy-mm-dd, kept in UTC so it never shifts a day. */
-export function shiftIsoDate(iso: string, days: number): string {
-  const date = new Date(`${iso}T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() + days);
-  return date.toISOString().slice(0, 10);
-}
-
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // ---------------------------------------------------------------------------
