@@ -242,6 +242,58 @@
       "accountModeExisting": "Already have an account",
       "phonePlaceholder": "012-345 6789",
       "passwordMinHint": "(min 8 characters)"
+    },
+    "orders": {
+      "errorLoad": "Failed to load orders.",
+      "subtitle": "Your order history",
+      "emptyTitle": "No orders yet",
+      "emptyBody": "Let's start shopping!",
+      "orderNumber": "Order #{id}",
+      "deliveryPrefix": "Delivery:",
+      "viewDetails": "View details"
+    },
+    "orderDetail": {
+      "title": "Order Details",
+      "statusCardTitle": "Order Status",
+      "bookedAt": "Booked {date}",
+      "cancelledNotice": "This order has been cancelled.",
+      "itemsCardTitle": "Items",
+      "unknownProduct": "Unknown product",
+      "itemCancelledBadge": "Cancelled",
+      "quantityPieces": "{count, plural, one {# bird} other {# birds}}",
+      "sizeRange": "{min}-{max} kg/bird",
+      "fallbackUsed": "Used: {note}",
+      "weighedConfirmed": "Weighed and price confirmed ✓",
+      "total": "Total",
+      "addressCardTitle": "Delivery Address",
+      "notesCardTitle": "Order Notes",
+      "error": "Error",
+      "cancelOrder": "Cancel order",
+      "cancelling": "Cancelling...",
+      "cancelDialogTitle": "Cancel this order?",
+      "cancelDialogDescription": "This cannot be undone. Let us know why (optional).",
+      "cancelReasonPlaceholder": "Reason (optional)",
+      "keepOrder": "Keep order",
+      "orderCancelledToast": "Order cancelled"
+    },
+    "profile": {
+      "title": "My Profile",
+      "cardTitle": "Personal Information",
+      "cardDescription": "Update your profile information and delivery address.",
+      "displayNameLabel": "Display Name",
+      "displayNamePlaceholder": "Your name",
+      "phoneLabel": "Phone Number",
+      "phonePlaceholder": "Your phone number",
+      "addressLabel": "Default Delivery Address",
+      "addressPlaceholder": "Your default delivery address",
+      "addressHint": "This address will be used as the default for your orders.",
+      "signOut": "Sign Out",
+      "saveChanges": "Save Changes",
+      "errorTitle": "Error",
+      "loadFailedDesc": "Failed to load profile. Please sign in.",
+      "profileSavedTitle": "Profile saved",
+      "profileSavedDesc": "Your profile has been updated.",
+      "saveFailedDefaultDesc": "Failed to save profile."
     }
   }
 }

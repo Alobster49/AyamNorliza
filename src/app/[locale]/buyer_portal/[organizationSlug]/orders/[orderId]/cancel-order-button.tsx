@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ type CancelOrderButtonProps = {
 export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("buyer.orderDetail");
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -36,7 +38,7 @@ export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
 
     if (!result.ok) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: result.message,
         variant: "destructive",
       });
@@ -44,7 +46,7 @@ export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
     }
 
     setOpen(false);
-    toast({ title: "Order cancelled" });
+    toast({ title: t("orderCancelledToast") });
     router.refresh();
   };
 
@@ -53,34 +55,32 @@ export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
       <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <X className="mr-2 h-4 w-4" />
-          Cancel order
+          {t("cancelOrder")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Cancel this order?</DialogTitle>
-          <DialogDescription>
-            This cannot be undone. Let us know why (optional).
-          </DialogDescription>
+          <DialogTitle>{t("cancelDialogTitle")}</DialogTitle>
+          <DialogDescription>{t("cancelDialogDescription")}</DialogDescription>
         </DialogHeader>
         <Textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Reason (optional)"
+          placeholder={t("cancelReasonPlaceholder")}
           rows={3}
         />
         <DialogFooter>
           <Button variant="outline" onClick={() => setOpen(false)} disabled={submitting}>
-            Keep order
+            {t("keepOrder")}
           </Button>
           <Button variant="destructive" onClick={handleCancel} disabled={submitting}>
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Cancelling...
+                {t("cancelling")}
               </>
             ) : (
-              "Cancel order"
+              t("cancelOrder")
             )}
           </Button>
         </DialogFooter>

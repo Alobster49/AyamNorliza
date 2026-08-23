@@ -242,6 +242,58 @@
       "accountModeExisting": "Sudah ada akaun",
       "phonePlaceholder": "012-345 6789",
       "passwordMinHint": "(min 8 aksara)"
+    },
+    "orders": {
+      "errorLoad": "Gagal memuatkan pesanan.",
+      "subtitle": "Sejarah pesanan anda",
+      "emptyTitle": "Belum ada pesanan",
+      "emptyBody": "Jom mula membeli!",
+      "orderNumber": "Pesanan #{id}",
+      "deliveryPrefix": "Hantar:",
+      "viewDetails": "Lihat butiran"
+    },
+    "orderDetail": {
+      "title": "Butiran Pesanan",
+      "statusCardTitle": "Status Pesanan",
+      "bookedAt": "Ditempah {date}",
+      "cancelledNotice": "Pesanan ini telah dibatalkan.",
+      "itemsCardTitle": "Item",
+      "unknownProduct": "Produk tidak diketahui",
+      "itemCancelledBadge": "Dibatalkan",
+      "quantityPieces": "{count, plural, other {# ekor}}",
+      "sizeRange": "{min}-{max} kg/ekor",
+      "fallbackUsed": "Diguna: {note}",
+      "weighedConfirmed": "Ditimbang dan harga disahkan ✓",
+      "total": "Jumlah",
+      "addressCardTitle": "Alamat Penghantaran",
+      "notesCardTitle": "Nota Pesanan",
+      "error": "Ralat",
+      "cancelOrder": "Batalkan pesanan",
+      "cancelling": "Membatalkan...",
+      "cancelDialogTitle": "Batalkan pesanan ini?",
+      "cancelDialogDescription": "Ini tidak boleh dibuat asal. Beritahu kami sebabnya (pilihan).",
+      "cancelReasonPlaceholder": "Sebab (pilihan)",
+      "keepOrder": "Kekalkan pesanan",
+      "orderCancelledToast": "Pesanan dibatalkan"
+    },
+    "profile": {
+      "title": "Profil Saya",
+      "cardTitle": "Maklumat Peribadi",
+      "cardDescription": "Kemas kini maklumat profil dan alamat penghantaran anda.",
+      "displayNameLabel": "Nama Paparan",
+      "displayNamePlaceholder": "Nama anda",
+      "phoneLabel": "Nombor Telefon",
+      "phonePlaceholder": "Nombor telefon anda",
+      "addressLabel": "Alamat Penghantaran Lalai",
+      "addressPlaceholder": "Alamat penghantaran lalai anda",
+      "addressHint": "Alamat ini akan digunakan sebagai lalai untuk pesanan anda.",
+      "signOut": "Log Keluar",
+      "saveChanges": "Simpan Perubahan",
+      "errorTitle": "Ralat",
+      "loadFailedDesc": "Gagal memuatkan profil. Sila log masuk.",
+      "profileSavedTitle": "Profil disimpan",
+      "profileSavedDesc": "Profil anda telah dikemas kini.",
+      "saveFailedDefaultDesc": "Gagal menyimpan profil."
     }
   }
 }

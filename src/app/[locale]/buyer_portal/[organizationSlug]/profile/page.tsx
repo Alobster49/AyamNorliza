@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useCart } from "@/features/buyer/components/cart-context";
 import { getBuyerProfile, updateBuyerProfile } from "@/features/buyer/server/actions";
 import { buyerSignOutAction } from "@/features/buyer-auth/server/auth-actions";
@@ -27,6 +28,7 @@ type ProfilePageProps = {
 export default function ProfilePage({ params }: ProfilePageProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("buyer.profile");
   const [organizationSlug, setOrganizationSlug] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,8 +51,8 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
       if (!result.ok) {
         toast({
-          title: "Error",
-          description: "Failed to load profile. Please sign in.",
+          title: t("errorTitle"),
+          description: t("loadFailedDesc"),
           variant: "destructive",
         });
         router.push(`/buyer_portal/${organizationSlug}/login`);
@@ -69,7 +71,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     if (organizationSlug) {
       fetchProfile();
     }
-  }, [organizationSlug, router, toast]);
+  }, [organizationSlug, router, toast, t]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,16 +87,16 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
     if (!result.ok) {
       toast({
-        title: "Error",
-        description: result.message || "Failed to save profile.",
+        title: t("errorTitle"),
+        description: result.message || t("saveFailedDefaultDesc"),
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Profile saved",
-      description: "Your profile has been updated.",
+      title: t("profileSavedTitle"),
+      description: t("profileSavedDesc"),
     });
   };
 
@@ -115,31 +117,29 @@ export default function ProfilePage({ params }: ProfilePageProps) {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="mb-8 text-3xl font-bold tracking-tight">My Profile</h1>
+      <h1 className="mb-8 text-3xl font-bold tracking-tight">{t("title")}</h1>
 
       <Card>
         <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>
-            Update your profile information and delivery address.
-          </CardDescription>
+          <CardTitle>{t("cardTitle")}</CardTitle>
+          <CardDescription>{t("cardDescription")}</CardDescription>
         </CardHeader>
         <form onSubmit={handleSave}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label htmlFor="displayName">{t("displayNameLabel")}</Label>
               <Input
                 id="displayName"
                 value={formData.displayName}
                 onChange={(e) =>
                   setFormData({ ...formData, displayName: e.target.value })
                 }
-                placeholder="Your name"
+                placeholder={t("displayNamePlaceholder")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
+              <Label htmlFor="phone">{t("phoneLabel")}</Label>
               <Input
                 id="phone"
                 type="tel"
@@ -147,24 +147,22 @@ export default function ProfilePage({ params }: ProfilePageProps) {
                 onChange={(e) =>
                   setFormData({ ...formData, phone: e.target.value })
                 }
-                placeholder="Your phone number"
+                placeholder={t("phonePlaceholder")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address">Default Delivery Address</Label>
+              <Label htmlFor="address">{t("addressLabel")}</Label>
               <Textarea
                 id="address"
                 value={formData.address}
                 onChange={(e) =>
                   setFormData({ ...formData, address: e.target.value })
                 }
-                placeholder="Your default delivery address"
+                placeholder={t("addressPlaceholder")}
                 rows={3}
               />
-              <p className="text-xs text-muted-foreground">
-                This address will be used as the default for your orders.
-              </p>
+              <p className="text-xs text-muted-foreground">{t("addressHint")}</p>
             </div>
           </CardContent>
           <CardFooter className="flex justify-between">
@@ -179,7 +177,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               ) : (
                 <LogOut className="mr-2 h-4 w-4" />
               )}
-              Sign Out
+              {t("signOut")}
             </Button>
             <Button type="submit" disabled={saving}>
               {saving ? (
@@ -187,7 +185,7 @@ export default function ProfilePage({ params }: ProfilePageProps) {
               ) : (
                 <Save className="mr-2 h-4 w-4" />
               )}
-              Save Changes
+              {t("saveChanges")}
             </Button>
           </CardFooter>
         </form>

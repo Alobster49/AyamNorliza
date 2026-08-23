@@ -1,10 +1,10 @@
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { getTranslations, getFormatter } from "next-intl/server";
 import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import { getMyOrders } from "@/features/orders/server/portal-actions";
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/features/orders/types";
+import { ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
 import { OrderTracker } from "@/features/buyer/components/order-tracker";
-import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,11 +23,17 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   const { organizationSlug } = await params;
   await requireBuyerOrRedirect(organizationSlug);
   const result = await getMyOrders();
+  const t = await getTranslations("buyer.orders");
+  const tHeader = await getTranslations("buyer.header");
+  const tCart = await getTranslations("buyer.cart");
+  const tPricing = await getTranslations("buyer.pricing");
+  const tStatus = await getTranslations("status");
+  const format = await getFormatter();
 
   if (!result.ok) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">Gagal memuatkan pesanan.</p>
+        <p className="text-muted-foreground">{t("errorLoad")}</p>
       </div>
     );
   }
@@ -43,8 +49,8 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
           </Link>
         </Button>
         <div>
-          <h1 className="font-buyer-display text-3xl font-bold">Pesanan Saya</h1>
-          <p className="text-muted-foreground">Sejarah pesanan anda</p>
+          <h1 className="font-buyer-display text-3xl font-bold">{tHeader("myOrders")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
       </div>
 
@@ -52,10 +58,12 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
         <Card>
           <CardContent className="flex min-h-[300px] flex-col items-center justify-center py-12">
             <Package className="mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="text-xl font-semibold">Belum ada pesanan</h2>
-            <p className="mt-2 text-muted-foreground">Jom mula membeli!</p>
+            <h2 className="text-xl font-semibold">{t("emptyTitle")}</h2>
+            <p className="mt-2 text-muted-foreground">{t("emptyBody")}</p>
             <Button asChild className="mt-6">
-              <Link href={`/buyer_portal/${organizationSlug}/shop`}>Lihat produk</Link>
+              <Link href={`/buyer_portal/${organizationSlug}/shop`}>
+                {tCart("viewProducts")}
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -67,10 +75,17 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">
-                      Pesanan #{order.id.slice(0, 8)}
+                      {t("orderNumber", { id: order.id.slice(0, 8) })}
                     </CardTitle>
                     <CardDescription>
-                      {format(new Date(order.created_at), "d MMM yyyy, HH:mm")}
+                      {format.dateTime(new Date(order.created_at), {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      })}
                       {order.zone?.name ? ` · ${order.zone.name}` : ""}
                     </CardDescription>
                   </div>
@@ -80,7 +95,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                         ORDER_STATUS_COLORS[order.status]
                       }`}
                     >
-                      {ORDER_STATUS_LABELS[order.status]}
+                      {tStatus(`order.${order.status}`)}
                     </span>
                   )}
                 </div>
@@ -90,8 +105,12 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Hantar:{" "}
-                      {format(new Date(`${order.delivery_date}T00:00:00`), "d MMM yyyy")}
+                      {t("deliveryPrefix")}{" "}
+                      {format.dateTime(new Date(`${order.delivery_date}T00:00:00`), {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
                     </p>
                     {order.delivery_address && (
                       <p className="mt-1 max-w-md truncate text-sm text-muted-foreground">
@@ -103,11 +122,13 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                     {order.status === "closed" ? (
                       <p className="font-buyer-mono text-lg font-bold">{formatPrice(Number(order.total_amount))}</p>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Harga selepas timbang</p>
+                      <p className="text-sm text-muted-foreground">
+                        {tPricing("afterWeighing")}
+                      </p>
                     )}
                     <Button variant="outline" size="sm" asChild className="mt-2">
                       <Link href={`/buyer_portal/${organizationSlug}/orders/${order.id}`}>
-                        Lihat butiran
+                        {t("viewDetails")}
                       </Link>
                     </Button>
                   </div>
