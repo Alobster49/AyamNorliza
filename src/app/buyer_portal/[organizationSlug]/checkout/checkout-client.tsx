@@ -16,6 +16,7 @@ import { listMyAddresses, createAddress } from "@/features/buyer/server/address-
 import type { BuyerAddress } from "@/features/buyer/types";
 import { AddressFields, type AddressValue } from "@/features/buyer/components/address-fields";
 import { buyerSignInAction, buyerSignUpAction } from "@/features/buyer-auth/server/auth-actions";
+import { getBuyerProfile } from "@/features/buyer/server/actions";
 import { AccountSection, type AccountValue } from "./account-section";
 import { checkoutStage, STAGE_CTA } from "@/features/buyer/lib/checkout-cta";
 import { cartEstimate, formatEstimate } from "@/features/buyer/lib/price-estimate";
@@ -224,7 +225,16 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
         }
         return;
       }
-      setBuyer({ displayName: account.displayName || "Buyer", phone: account.phone || null });
+      if (accountMode === "signup") {
+        setBuyer({ displayName: account.displayName || "Buyer", phone: account.phone || null });
+      } else {
+        const profile = await getBuyerProfile().catch(() => null);
+        if (profile && profile.ok) {
+          setBuyer({ displayName: profile.data.display_name, phone: profile.data.phone });
+        } else {
+          setBuyer({ displayName: "Pelanggan", phone: null });
+        }
+      }
     }
 
     // 2. Place the order (unchanged action).
