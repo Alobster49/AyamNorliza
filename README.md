@@ -82,6 +82,26 @@ npm run dev
 - `audit_log` is append-only: an `audit_log_no_mutate` trigger blocks
   `UPDATE`/`DELETE` for all roles.
 
+## Internationalisation
+
+The app ships English (`en`) and Bahasa Melayu (`ms`). Every URL carries a
+locale prefix: `/en/...` or `/ms/...`. A bare URL redirects to the visitor's
+saved locale, or English if they have none.
+
+- Strings live in `src/messages/en.json` and `src/messages/ms.json`. `en.json`
+  is the source of truth; both files must have the same keys, and
+  `src/lib/i18n/catalog.test.ts` fails the build if they drift.
+- Read them with `useTranslations('namespace')` in client components and
+  `await getTranslations('namespace')` in server components. Keys are
+  typechecked — a typo fails `npm run typecheck`.
+- Import `Link`, `useRouter`, and `usePathname` from `@/i18n/navigation`,
+  never from `next/link` or `next/navigation`. The plain versions drop the
+  locale prefix and cost a redirect.
+- Never concatenate translated strings. Use ICU placeholders:
+  `t('workspaceSuffix', {section})`, not `t('workspace') + section`.
+- New BM copy follows `docs/i18n-glossary.md`.
+- Database values stay English. Only display labels are translated.
+
 ## References
 
 - Plan: `.cursor/plans/mod-01_tenant_identity_access_plan_*.md`
