@@ -23,9 +23,14 @@ vi.mock("@/lib/supabase/admin", () => ({
   },
 }));
 
+vi.mock("@/lib/i18n/actions", () => ({
+  syncLocaleCookieFromAccount: vi.fn(),
+}));
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { admin } from "@/lib/supabase/admin";
-import { buyerSignUpAction } from "../../server/auth-actions";
+import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
+import { buyerSignUpAction, buyerSignInAction } from "../../server/auth-actions";
 
 type QueryResult = {
   data: unknown;
@@ -107,6 +112,7 @@ function mockSupabaseFor({
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(admin.deleteAuthUser).mockResolvedValue(undefined);
+  vi.mocked(syncLocaleCookieFromAccount).mockResolvedValue("en" as never);
 });
 
 afterEach(() => {
@@ -227,5 +233,78 @@ describe("buyerSignUpAction on an email that already has an auth user", () => {
     if (!result.ok) expect(result.code).toBe("conflict");
     expect(buyersInsertSpy).not.toHaveBeenCalled();
     expect(admin.deleteAuthUser).not.toHaveBeenCalled();
+  });
+});
+
+describe("buyerSignInAction", () => {
+  const validSignInInput = {
+    email: "buyer@example.com",
+    password: "password123",
+  };
+
+  function mockSupabaseForSignIn({
+    signInResult = {
+      data: { user: { id: "buyer-1" } as { id: string } | null },
+      error: null as { message: string } | null,
+    },
+    buyerSelect = { data: { id: "buyer-1", organization_id: "org-1" }, error: null } as QueryResult,
+  }: {
+    signInResult?: { data: { user: { id: string } | null }; error: { message: string } | null };
+    buyerSelect?: QueryResult;
+  } = {}) {
+    const signOut = vi.fn(() => Promise.resolve({ error: null }));
+    const signInWithPassword = vi.fn(() => Promise.resolve(signInResult));
+    const client = {
+      auth: { signInWithPassword, signOut },
+      from: vi.fn((table: string) => {
+        if (table === "buyers") return chain(buyerSelect);
+        return chain({ data: null, error: null });
+      }),
+    };
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
+    );
+    return { signOut, signInWithPassword };
+  }
+
+  it("syncs the stored locale after a successful sign-in", async () => {
+    mockSupabaseForSignIn();
+
+    const result = await buyerSignInAction(validSignInInput);
+
+    expect(result).toEqual({ ok: true, data: { buyerId: "buyer-1" } });
+    expect(syncLocaleCookieFromAccount).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not sync the locale when the password does not match", async () => {
+    mockSupabaseForSignIn({
+      signInResult: { data: { user: null }, error: { message: "Invalid login credentials" } },
+    });
+
+    const result = await buyerSignInAction(validSignInInput);
+
+    expect(result.ok).toBe(false);
+    expect(syncLocaleCookieFromAccount).not.toHaveBeenCalled();
+  });
+
+  it("does not sync the locale when the account is not a buyer", async () => {
+    const { signOut } = mockSupabaseForSignIn({
+      buyerSelect: { data: null, error: { message: "not found" } },
+    });
+
+    const result = await buyerSignInAction(validSignInInput);
+
+    expect(result.ok).toBe(false);
+    expect(signOut).toHaveBeenCalled();
+    expect(syncLocaleCookieFromAccount).not.toHaveBeenCalled();
+  });
+
+  it("still returns success when the locale sync throws", async () => {
+    mockSupabaseForSignIn();
+    vi.mocked(syncLocaleCookieFromAccount).mockRejectedValue(new Error("db down"));
+
+    const result = await buyerSignInAction(validSignInInput);
+
+    expect(result).toEqual({ ok: true, data: { buyerId: "buyer-1" } });
   });
 });

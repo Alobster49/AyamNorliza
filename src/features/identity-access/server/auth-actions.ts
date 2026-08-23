@@ -16,6 +16,7 @@ import type { ActionResult } from "./actions";
 import { admin, type AdminContext } from "@/lib/supabase/admin";
 import { randomUUID } from "node:crypto";
 import { resolveLandingPath } from "./landing";
+import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
 
 type AuthErrorCode = "validation" | "unauthenticated" | "internal" | "conflict";
 
@@ -52,6 +53,16 @@ export async function loginAction(
   // has a fallback that redirects to /signup when no memberships are
   // visible (which made existing users land on "Create account" instead).
   const redirectTo = await resolveLandingPath();
+
+  // Cross-device locale sync: carries a language chosen on another device
+  // to this one. Best-effort — a sync problem must never fail a sign-in
+  // that has already succeeded (same swallow-errors posture as
+  // `setLocaleAction`).
+  try {
+    await syncLocaleCookieFromAccount();
+  } catch (syncError) {
+    console.error("loginAction: locale sync failed", syncError);
+  }
 
   return ok({ requiresMfa, redirectTo });
 }
