@@ -64,13 +64,15 @@ async function seedZoneWithCoverage(
   await toField.locator("input").fill("81999");
 
   // resolve_zone_for_postcode picks the alphabetically-first zone covering a
-  // postcode, and this shared dev database accumulates one "E2E Addr Zone
+  // postcode, and this shared dev database accumulates one "E2E Prefill Zone
   // ..." row per prior run of this spec that ever added a matching range.
   // Clear this spec's own stale ranges first so the zone this run just
   // created is the only one covering 80000-81999 and the auto-resolution
-  // assertion below is deterministic across reruns.
+  // assertion below is deterministic across reruns. The prefix is unique to
+  // this spec (not shared with e2e/buyer-address.spec.ts's "E2E Addr Zone"),
+  // so this cleanup only ever touches fixtures this spec created.
   const rangeList = page.getByRole("list", { name: "Zone postcode ranges" });
-  const staleRanges = rangeList.getByRole("listitem").filter({ hasText: /^E2E Addr Zone/ });
+  const staleRanges = rangeList.getByRole("listitem").filter({ hasText: /^E2E Prefill Zone/ });
   for (let left = await staleRanges.count(); left > 0; left = await staleRanges.count()) {
     await staleRanges.first().getByRole("button", { name: "Delete" }).click();
     await expect(staleRanges).toHaveCount(left - 1, { timeout: 10_000 });
@@ -138,7 +140,7 @@ test("structured address on a customer drives the order screen's delivery fields
 }) => {
   test.setTimeout(120_000);
 
-  const zoneName = uniqueFixtureName("E2E Addr Zone");
+  const zoneName = uniqueFixtureName("E2E Prefill Zone");
   const truckName = uniqueFixtureName("E2E Addr Truck");
   const truckCode = uniqueFixtureName("TRK").slice(0, 20);
   const customerName = uniqueFixtureName("E2E Addr Customer");
@@ -191,6 +193,13 @@ test("structured address on a customer drives the order screen's delivery fields
   await page.goto("/ayam-norliza-pilot/orders/new");
   await expect(page.getByRole("heading", { name: /new order/i })).toBeVisible({ timeout: 10_000 });
 
+  // Before any customer is selected, the Zone field shows its empty-state
+  // placeholder - not the seeded zone name. This is the baseline the
+  // post-selection assertion below needs to actually prove causality: without
+  // it, that assertion couldn't distinguish "selecting the customer resolved
+  // the zone" from "the zone field already showed that value on load".
+  await expect(fieldAfterLabel(page, "Zone")).toContainText("Select zone", { timeout: 10_000 });
+
   await page.getByPlaceholder("Search by name or phone...").fill(customerName);
   const customerResult = page.getByRole("button", { name: customerName });
   await expect(customerResult).toBeVisible({ timeout: 20_000 });
@@ -219,7 +228,7 @@ test("structured address on a customer drives the order screen's delivery fields
   ).toBeVisible({ timeout: 20_000 });
   // The zone customer 1 resolved is left alone - applyCustomer's documented
   // behaviour when the newly selected customer has no postcode on file.
-  await expect(fieldAfterLabel(page, "Zone")).toContainText(zoneName);
+  await expect(fieldAfterLabel(page, "Zone")).toContainText(zoneName, { timeout: 20_000 });
 });
 
 test("a customer backfilled by the SQL migration (postcode set, state/area null) completes state and area on edit", async ({
