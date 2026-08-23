@@ -1,0 +1,57 @@
+{
+  "common": {
+    "appName": "AyamNorliza Ops",
+    "language": "Bahasa",
+    "changeLanguage": "Tukar bahasa",
+    "workspaceSuffix": "Ruang kerja {section}",
+    "loading": "Memuatkan…",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "back": "Kembali",
+    "signOut": "Log keluar",
+    "toggleTheme": "Tukar tema warna",
+    "openMenu": "Buka menu",
+    "closeMenu": "Tutup menu",
+    "userMenu": "Menu pengguna"
+  },
+  "auth": {
+    "login": {
+      "title": "Log Masuk",
+      "subtitle": "Guna emel kerja anda untuk teruskan.",
+      "emailLabel": "Emel",
+      "passwordLabel": "Kata laluan",
+      "submit": "Log Masuk",
+      "submitting": "Sedang log masuk…",
+      "forgotPassword": "Lupa kata laluan?",
+      "noAccount": "Belum ada akaun?",
+      "signUpLink": "Daftar"
+    },
+    "signup": {
+      "title": "Daftar akaun",
+      "subtitle": "Anda perlukan jemputan daripada pemilik organisasi.",
+      "submit": "Daftar akaun",
+      "submitting": "Sedang daftar…",
+      "haveAccount": "Sudah ada akaun?",
+      "signInLink": "Log Masuk"
+    },
+    "mfa": {
+      "title": "Pengesahan dua faktor",
+      "subtitle": "Masukkan kod 6 digit dari aplikasi pengesah anda.",
+      "codeLabel": "Kod pengesahan",
+      "submit": "Sahkan",
+      "submitting": "Sedang sahkan…"
+    },
+    "invite": {
+      "title": "Terima jemputan anda",
+      "subtitle": "Tetapkan kata laluan untuk sertai {organizationName}.",
+      "submit": "Terima jemputan",
+      "submitting": "Sedang terima…",
+      "expired": "Pautan jemputan ini sudah tamat tempoh. Minta pemilik organisasi hantar yang baharu."
+    },
+    "errors": {
+      "invalidCredentials": "Emel dan kata laluan itu tidak sepadan.",
+      "rateLimited": "Terlalu banyak cubaan. Cuba lagi dalam beberapa minit.",
+      "unexpected": "Ada masalah berlaku. Cuba lagi."
+    }
+  }
+}

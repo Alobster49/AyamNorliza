@@ -1,0 +1,57 @@
+{
+  "common": {
+    "appName": "AyamNorliza Ops",
+    "language": "Language",
+    "changeLanguage": "Change language",
+    "workspaceSuffix": "{section} workspace",
+    "loading": "Loading…",
+    "save": "Save",
+    "cancel": "Cancel",
+    "back": "Back",
+    "signOut": "Sign out",
+    "toggleTheme": "Toggle color theme",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu",
+    "userMenu": "User menu"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in",
+      "subtitle": "Use your work email to continue.",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "forgotPassword": "Forgot your password?",
+      "noAccount": "Don't have an account?",
+      "signUpLink": "Sign up"
+    },
+    "signup": {
+      "title": "Create your account",
+      "subtitle": "You need an invite from your organization owner.",
+      "submit": "Create account",
+      "submitting": "Creating account…",
+      "haveAccount": "Already have an account?",
+      "signInLink": "Sign in"
+    },
+    "mfa": {
+      "title": "Two-factor authentication",
+      "subtitle": "Enter the 6-digit code from your authenticator app.",
+      "codeLabel": "Authentication code",
+      "submit": "Verify",
+      "submitting": "Verifying…"
+    },
+    "invite": {
+      "title": "Accept your invitation",
+      "subtitle": "Set a password to finish joining {organizationName}.",
+      "submit": "Accept invitation",
+      "submitting": "Accepting…",
+      "expired": "This invitation link has expired. Ask your organization owner to send a new one."
+    },
+    "errors": {
+      "invalidCredentials": "That email and password combination did not match.",
+      "rateLimited": "Too many attempts. Try again in a few minutes.",
+      "unexpected": "Something went wrong. Try again."
+    }
+  }
+}
