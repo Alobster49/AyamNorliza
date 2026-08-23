@@ -30,13 +30,32 @@ type AddToCartSheetProps = {
 export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }: AddToCartSheetProps) {
   const available = variants.filter((v) => v.is_available);
   const [variantId, setVariantId] = useState(available[0]?.id ?? "");
-  const variant = available.find((v) => v.id === variantId) ?? available[0] ?? null;
+  const variant = useMemo(
+    () => available.find((v) => v.id === variantId) ?? available[0] ?? null,
+    [available, variantId],
+  );
 
   const [mode, setMode] = useState<OrderItemMode>(variant?.unit_type === "per_kg" ? "kg" : "piece");
   const [quantity, setQuantity] = useState("1");
   const [sizeMinKg, setSizeMinKg] = useState("1.5");
   const [sizeMaxKg, setSizeMaxKg] = useState("1.7");
   const [fallback, setFallback] = useState<OrderFallback>("cancel");
+  const [prevOpen, setPrevOpen] = useState(false);
+
+  // Adjust state during render (not in an effect) to avoid an extra
+  // cascading commit: https://react.dev/learn/you-might-not-need-an-effect
+  if (open && !prevOpen) {
+    const initial = available[0] ?? null;
+    setVariantId(initial?.id ?? "");
+    setMode(initial?.unit_type === "per_kg" ? "kg" : "piece");
+    setQuantity("1");
+    setSizeMinKg("1.5");
+    setSizeMaxKg("1.7");
+    setFallback("cancel");
+    setPrevOpen(true);
+  } else if (!open && prevOpen) {
+    setPrevOpen(false);
+  }
 
   const parsedQuantity = Number(quantity);
   const parsedMin = Number(sizeMinKg);
@@ -61,8 +80,7 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
       pricePerUnit: Number(variant.price_per_unit),
       unitType: variant.unit_type,
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [variant, mode, parsedQuantity, parsedMin, parsedMax]);
+  }, [variant, isValid, mode, parsedQuantity, parsedMin, parsedMax]);
 
   const step = (setter: (v: string) => void, current: string, delta: number, min: number, decimals: number) => {
     const next = Math.max(min, Math.round((Number(current) + delta) * 10 ** decimals) / 10 ** decimals);

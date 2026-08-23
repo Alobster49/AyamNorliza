@@ -26,7 +26,7 @@ export function ProductCard({ product, variants = [], onAddToCart, showInfo, onI
   // Card-level estimate: the default 1 × 1.5–1.7 kg bird (or 1 piece/kg).
   const estimate = primary
     ? estimateRange({
-        mode: primary.unit_type === "per_kg" ? "piece" : "piece",
+        mode: "piece",
         quantity: 1,
         sizeMinKg: 1.5,
         sizeMaxKg: 1.7,
