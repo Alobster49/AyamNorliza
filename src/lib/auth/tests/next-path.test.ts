@@ -61,19 +61,42 @@ describe("sanitizeNextPath", () => {
   it("does not reject a path that merely starts with an auth path's name", () => {
     expect(sanitizeNextPath("/loginville/orders")).toBe("/loginville/orders");
   });
+
+  it("keeps a locale-prefixed application path intact", () => {
+    expect(sanitizeNextPath("/en/acme/orders/123")).toBe("/en/acme/orders/123");
+  });
+
+  it("keeps the query string on a locale-prefixed path", () => {
+    expect(sanitizeNextPath("/en/acme/orders?status=open")).toBe(
+      "/en/acme/orders?status=open",
+    );
+  });
+
+  it.each(["/en/login", "/ms/signup", "/en/mfa", "/ms/auth/callback"])(
+    "rejects the locale-prefixed auth route %s so sign-in cannot loop",
+    (value) => {
+      expect(sanitizeNextPath(value)).toBeNull();
+    },
+  );
 });
 
 describe("stripLocalePrefix", () => {
   it("drops the locale segment", () => {
     expect(stripLocalePrefix("/en/acme/orders")).toBe("/acme/orders");
+    expect(stripLocalePrefix("/ms/acme/orders")).toBe("/acme/orders");
   });
 
   it("returns '/' for a bare locale root", () => {
     expect(stripLocalePrefix("/en")).toBe("/");
+    expect(stripLocalePrefix("/ms/")).toBe("/");
   });
 
   it("leaves an unprefixed path untouched", () => {
     expect(stripLocalePrefix("/acme/orders")).toBe("/acme/orders");
+  });
+
+  it("leaves a path alone when the first segment merely looks like a locale", () => {
+    expect(stripLocalePrefix("/english/orders")).toBe("/english/orders");
   });
 
   it("splits the query off before checking the first segment, so a query on the locale root does not get treated as part of it", () => {
