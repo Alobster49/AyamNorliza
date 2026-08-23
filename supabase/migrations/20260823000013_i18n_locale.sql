@@ -9,6 +9,13 @@
 alter table public.profiles
   drop constraint if exists profiles_locale_check;
 
+-- The old check only enforced a length (2-10 chars), so a production row can
+-- legally hold something like 'en-US' today. Normalize before the stricter
+-- constraint goes on, or the ALTER TABLE below aborts mid-deploy on that row.
+update public.profiles
+  set locale = 'en'
+  where locale not in ('en', 'ms');
+
 alter table public.profiles
   add constraint profiles_locale_check
   check (locale in ('en', 'ms'));
