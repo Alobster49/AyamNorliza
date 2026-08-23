@@ -22,7 +22,9 @@ export function ShopClient({ categories }: { categories: CatalogWithProducts[] }
 
   const visible =
     activeCategory === "all" ? categories : categories.filter((c) => c.id === activeCategory);
-  const firstProductId = visible[0]?.products[0]?.id;
+  // First product across the visible categories carries the single ⓘ trigger.
+  // Defensive scan: don't rely on upstream filtering out empty categories.
+  const firstProductId = visible.find((c) => c.products.length > 0)?.products[0]?.id;
 
   return (
     <div className="space-y-8">
