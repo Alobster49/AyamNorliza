@@ -76,7 +76,7 @@ export function BuyerSheet({ open, onOpenChange, title, children }: BuyerSheetPr
     const first = focusable[0]!;
     const last = focusable[focusable.length - 1]!;
     if (e.shiftKey) {
-      if (document.activeElement === first || !panel.contains(document.activeElement)) {
+      if (document.activeElement === first || document.activeElement === panel || !panel.contains(document.activeElement)) {
         e.preventDefault();
         last.focus();
       }
