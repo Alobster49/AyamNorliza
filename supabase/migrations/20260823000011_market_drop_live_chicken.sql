@@ -1,4 +1,4 @@
--- 20260823000006_market_drop_live_chicken.sql
+-- 20260823000011_market_drop_live_chicken.sql
 -- Stop tracking PriceCatcher item 3 (AYAM HIDUP).
 --
 -- The item exists in KPDN's lookup_item.csv but has never carried a price

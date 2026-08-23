@@ -1,4 +1,4 @@
--- 20260823000007_market_ingest_all_states.sql
+-- 20260823000012_market_ingest_all_states.sql
 -- market_settings.states is now a display preference, not an ingest gate.
 --
 -- The sync used to store only the states some org had configured, so every
