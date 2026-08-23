@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 import { createCustomer, searchCustomers, getCatalogForOrdering } from "@/features/seller/server/actions";
 import type { Customer } from "@/features/seller/types";
 import { getActiveZones } from "@/features/orders/server/portal-actions";
-import { getDeliveryOptionsForOrg, createManualOrder } from "@/features/orders/server/order-actions";
+import { getDeliveryOptionsForOrg, createManualOrder, resolveDeliveryZone } from "@/features/orders/server/order-actions";
 import type { DeliveryOption, DeliveryZone, OrderFallback, OrderItemMode } from "@/features/orders/types";
 import { FALLBACKS, FALLBACK_LABELS } from "@/features/orders/types";
+import { AddressFields } from "@/components/forms/address-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +71,15 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [newCustomerMode, setNewCustomerMode] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "", notes: "" });
+  const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    postcode: "",
+    state: "",
+    area: "",
+    notes: "",
+  });
 
   const [lines, setLines] = useState<LineDraft[]>([newLine()]);
 
@@ -114,6 +123,32 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     }
   };
 
+  /**
+   * Selecting a customer is an explicit action, so their saved address and
+   * postcode overwrite whatever is in the delivery fields, and the zone is
+   * resolved from the postcode the same way the buyer checkout does it.
+   */
+  const applyCustomer = async (customer: Customer) => {
+    setSelectedCustomer(customer);
+    if (customer.address) setAddress(customer.address);
+    if (!customer.postcode) return;
+
+    setPostcode(customer.postcode);
+    const result = await resolveDeliveryZone(organizationSlug, customer.postcode);
+    if (!result.ok) return;
+
+    // Only adopt a zone the seller can actually see in the picker; the
+    // resolver can return a zone that is not in the active list.
+    if (result.data.zoneId && zones.some((zone) => zone.id === result.data.zoneId)) {
+      await handleZoneChange(result.data.zoneId);
+      return;
+    }
+    toast({
+      title: `No delivery zone covers ${customer.postcode}`,
+      description: "Pick a zone manually.",
+    });
+  };
+
   const handleAddNewCustomer = async () => {
     if (!newCustomer.name || !newCustomer.phone) {
       toast({ title: "Name and phone are required", variant: "destructive" });
@@ -124,9 +159,12 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
         name: newCustomer.name,
         phone: newCustomer.phone,
         address: newCustomer.address || null,
+        postcode: newCustomer.postcode || null,
+        state: newCustomer.state || null,
+        area: newCustomer.area || null,
         notes: newCustomer.notes || null,
       });
-      setSelectedCustomer(customer);
+      await applyCustomer(customer);
       setNewCustomerMode(false);
       toast({ title: "Customer created" });
     } catch (error) {
@@ -426,7 +464,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                           type="button"
                           className="block w-full px-4 py-2 text-left hover:bg-muted"
                           onClick={() => {
-                            setSelectedCustomer(customer);
+                            void applyCustomer(customer);
                             setCustomerSearch("");
                             setCustomerResults([]);
                           }}
@@ -444,6 +482,12 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                     <div className="text-sm text-muted-foreground">{selectedCustomer.phone}</div>
                     {selectedCustomer.address && (
                       <div className="text-sm text-muted-foreground">{selectedCustomer.address}</div>
+                    )}
+                    {selectedCustomer.postcode && (
+                      <div className="text-sm text-muted-foreground">
+                        {selectedCustomer.postcode}
+                        {selectedCustomer.area ? ` · ${selectedCustomer.area}` : ""}
+                      </div>
                     )}
                   </div>
                 )}
@@ -468,13 +512,25 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                     onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Input
-                    value={newCustomer.address}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                  />
-                </div>
+                <AddressFields
+                  idPrefix="customer-address"
+                  value={{
+                    addressLine: newCustomer.address,
+                    postcode: newCustomer.postcode,
+                    state: newCustomer.state,
+                    area: newCustomer.area,
+                  }}
+                  onChange={(next) =>
+                    setNewCustomer({
+                      ...newCustomer,
+                      address: next.addressLine,
+                      postcode: next.postcode,
+                      state: next.state,
+                      area: next.area,
+                    })
+                  }
+                  required={false}
+                />
                 <div className="space-y-2">
                   <Label>Notes</Label>
                   <Textarea
