@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { motion } from "motion/react";
 import { useCart } from "@/features/buyer/components/cart-context";
 import { buyerSignInAction, buyerSignUpAction } from "@/features/buyer-auth/server/auth-actions";
 import { Button } from "@/components/ui/button";
@@ -176,17 +177,40 @@ function LoginPageInner({ params }: LoginPageProps) {
               className="size-full rounded-lg object-contain"
             />
           </div>
-          <CardTitle className="text-2xl">
-            {mode === "login" ? "Welcome Back" : "Create Account"}
+          <CardTitle className="font-buyer-display text-2xl">
+            {mode === "login" ? "Selamat kembali" : "Buat akaun"}
           </CardTitle>
           <CardDescription>
             {mode === "login"
-              ? "Sign in to your buyer account"
-              : "Create an account to start shopping"}
+              ? "Log masuk ke akaun pembeli anda"
+              : "Daftar untuk mula membeli"}
           </CardDescription>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="space-y-4">
+          <div className="relative grid grid-cols-2 rounded-full bg-secondary p-1" role="radiogroup" aria-label="Mod akaun">
+            {([["login", "Log masuk"], ["signup", "Daftar"]] as const).map(([m, label]) => (
+              <button
+                key={m}
+                type="button"
+                role="radio"
+                aria-checked={mode === m}
+                disabled={loading}
+                onClick={() => setMode(m)}
+                className="relative z-10 rounded-full py-2 text-sm font-medium"
+              >
+                {mode === m && (
+                  <motion.span
+                    layoutId="login-mode-pill"
+                    className="absolute inset-0 -z-10 rounded-full bg-card shadow-sm"
+                    transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+                  />
+                )}
+                {label}
+              </button>
+            ))}
+          </div>
+
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
@@ -200,6 +224,7 @@ function LoginPageInner({ params }: LoginPageProps) {
                     setLoginData({ ...loginData, email: e.target.value })
                   }
                   required
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -213,16 +238,21 @@ function LoginPageInner({ params }: LoginPageProps) {
                     setLoginData({ ...loginData, password: e.target.value })
                   }
                   required
+                  className="h-11"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full rounded-full bg-primary py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97]"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Signing in...
+                    Log masuk…
                   </>
                 ) : (
-                  "Sign In"
+                  "Log masuk"
                 )}
               </Button>
             </form>
@@ -239,6 +269,7 @@ function LoginPageInner({ params }: LoginPageProps) {
                     setSignupData({ ...signupData, displayName: e.target.value })
                   }
                   required
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -252,6 +283,7 @@ function LoginPageInner({ params }: LoginPageProps) {
                     setSignupData({ ...signupData, email: e.target.value })
                   }
                   required
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -266,7 +298,11 @@ function LoginPageInner({ params }: LoginPageProps) {
                     setSignupData({ ...signupData, phone: e.target.value })
                   }
                   required
+                  className="h-11"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Kami akan hantar kemas kini pesanan ke nombor ini.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="signup-password">Password</Label>
@@ -280,6 +316,7 @@ function LoginPageInner({ params }: LoginPageProps) {
                   }
                   minLength={8}
                   required
+                  className="h-11"
                 />
               </div>
               <div className="space-y-2">
@@ -296,16 +333,21 @@ function LoginPageInner({ params }: LoginPageProps) {
                     })
                   }
                   required
+                  className="h-11"
                 />
               </div>
-              <Button type="submit" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                className="w-full rounded-full bg-primary py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97]"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating account...
+                    Mendaftar…
                   </>
                 ) : (
-                  "Create Account"
+                  "Daftar"
                 )}
               </Button>
             </form>
@@ -313,36 +355,11 @@ function LoginPageInner({ params }: LoginPageProps) {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-2">
-          {mode === "login" ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
-                <button
-                  type="button"
-                  className="text-primary hover:underline"
-                  onClick={() => setMode("signup")}
-                >
-                  Sign up
-                </button>
-              </p>
-              <p className="text-sm text-muted-foreground">
-                <Link href={`/buyer_portal/${organizationSlug}/shop`} className="text-primary hover:underline">
-                  Continue shopping without account
-                </Link>
-              </p>
-            </>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <button
-                type="button"
-                className="text-primary hover:underline"
-                onClick={() => setMode("login")}
-              >
-                Sign in
-              </button>
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            <Link href={`/buyer_portal/${organizationSlug}/shop`} className="text-primary hover:underline">
+              Teruskan beli tanpa akaun
+            </Link>
+          </p>
         </CardFooter>
       </Card>
     </div>
