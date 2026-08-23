@@ -11,7 +11,7 @@ import {
   areasForState,
   lookupPostcode,
   statesList,
-} from "@/features/buyer/lib/malaysia-postcodes";
+} from "@/lib/malaysia-postcodes";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -34,54 +34,89 @@ type AddressFieldsProps = {
   value: AddressValue;
   onChange: (next: AddressValue) => void;
   disabled?: boolean;
+  /**
+   * Prefix for the field element ids. Needed because the manual order screen
+   * renders two address blocks at once (the order's delivery section and the
+   * inline new-customer form); duplicate ids would break label association.
+   */
+  idPrefix?: string;
+  /**
+   * Whether the address line and postcode are required to submit the
+   * enclosing form. Defaults to true (buyer checkout always needs a
+   * deliverable address); the seller's customer dialog passes false since
+   * the whole address block is optional there.
+   */
+  required?: boolean;
 };
 
-export function AddressFields({ value, onChange, disabled }: AddressFieldsProps) {
+export function AddressFields({
+  value,
+  onChange,
+  disabled,
+  idPrefix = "address",
+  required = true,
+}: AddressFieldsProps) {
+  const ids = {
+    line: `${idPrefix}-line`,
+    postcode: `${idPrefix}-postcode`,
+    state: `${idPrefix}-state`,
+    area: `${idPrefix}-area`,
+  };
   const areas = value.state ? areasForState(value.state) : [];
 
   const handlePostcode = (raw: string) => {
     const postcode = raw.replace(/\D/g, "").slice(0, 5);
-    const hit = postcode.length === 5 ? lookupPostcode(postcode) : null;
+    if (postcode.length < 5) {
+      // Partial entry: leave state/area alone so the fields don't thrash
+      // while the seller/buyer is still typing.
+      onChange({ ...value, postcode });
+      return;
+    }
+    const hit = lookupPostcode(postcode);
     onChange(
       hit
         ? { ...value, postcode, state: hit.state, area: hit.area }
-        : { ...value, postcode },
+        // A full 5-digit postcode that misses the lookup must not leave a
+        // previously auto-filled state/area attached to it — otherwise an
+        // unrelated postcode/state/area combination can be saved even
+        // though the pairing constraint (all three non-null) is satisfied.
+        : { ...value, postcode, state: "", area: "" },
     );
   };
 
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="address-line">Address</Label>
+        <Label htmlFor={ids.line}>Address</Label>
         <Textarea
-          id="address-line"
+          id={ids.line}
           placeholder="House no, street, taman/apartment"
           value={value.addressLine}
           onChange={(e) => onChange({ ...value, addressLine: e.target.value })}
           rows={3}
           maxLength={440}
           disabled={disabled}
-          required
+          required={required}
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="address-postcode">Postcode</Label>
+          <Label htmlFor={ids.postcode}>Postcode</Label>
           <Input
-            id="address-postcode"
+            id={ids.postcode}
             placeholder="e.g. 80000"
             value={value.postcode}
             onChange={(e) => handlePostcode(e.target.value)}
             inputMode="numeric"
             maxLength={5}
             disabled={disabled}
-            required
+            required={required}
           />
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="address-state">State</Label>
+          <Label htmlFor={ids.state}>State</Label>
           <Select
             value={value.state}
             onValueChange={(state) => {
@@ -93,7 +128,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
             }}
             disabled={disabled}
           >
-            <SelectTrigger id="address-state" className="w-full">
+            <SelectTrigger id={ids.state} className="w-full">
               <SelectValue placeholder="Select state" />
             </SelectTrigger>
             <SelectContent>
@@ -108,7 +143,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="address-area">Area</Label>
+        <Label htmlFor={ids.area}>Area</Label>
         <Select
           value={value.area}
           onValueChange={(area) => {
@@ -123,7 +158,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
           }}
           disabled={disabled || !value.state}
         >
-          <SelectTrigger id="address-area" className="w-full">
+          <SelectTrigger id={ids.area} className="w-full">
             <SelectValue
               placeholder={value.state ? "Select area" : "Pick a state first"}
             />

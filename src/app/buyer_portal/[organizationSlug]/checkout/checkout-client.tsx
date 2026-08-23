@@ -12,7 +12,7 @@ import {
 import type { DeliveryOption } from "@/features/orders/types";
 import { listMyAddresses, createAddress } from "@/features/buyer/server/address-actions";
 import type { BuyerAddress } from "@/features/buyer/types";
-import { AddressFields, type AddressValue } from "@/features/buyer/components/address-fields";
+import { AddressFields, type AddressValue } from "@/components/forms/address-fields";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";

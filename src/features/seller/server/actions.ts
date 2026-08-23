@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
-import { parseCustomerEmail } from "../lib/customer-schema";
+import { parseCustomerAddress, parseCustomerEmail } from "../lib/customer-schema";
 import type {
   CategoryInsert,
   CategoryUpdate,
@@ -290,10 +290,11 @@ export async function createCustomer(
   if (!user.user) throw new Error("Not authenticated");
 
   const email = parseCustomerEmail(input.email);
+  const address = parseCustomerAddress(input);
 
   const { data, error } = await supabase
     .from("customers")
-    .insert({ ...input, email, organization_id: orgId, created_by: user.user.id })
+    .insert({ ...input, email, ...address, organization_id: orgId, created_by: user.user.id })
     .select()
     .single();
 
@@ -304,7 +305,13 @@ export async function createCustomer(
 
 export async function updateCustomer(id: string, input: CustomerUpdate, orgSlug?: string) {
   const supabase = await createClient();
-  const patch = "email" in input ? { ...input, email: parseCustomerEmail(input.email) } : input;
+  const touchesAddress =
+    "address" in input || "postcode" in input || "state" in input || "area" in input;
+  const patch = {
+    ...input,
+    ...("email" in input ? { email: parseCustomerEmail(input.email) } : {}),
+    ...(touchesAddress ? parseCustomerAddress(input) : {}),
+  };
 
   const { data, error } = await supabase
     .from("customers")
