@@ -1,10 +1,11 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { motion } from "motion/react";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { useCart } from "@/features/buyer/components/cart-context";
 import { buyerSignInAction, buyerSignUpAction } from "@/features/buyer-auth/server/auth-actions";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ function LoginPageInner({ params }: LoginPageProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
+  const t = useTranslations("buyer.login");
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [organizationSlug, setOrganizationSlug] = useState<string>("");
@@ -84,16 +86,16 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (!result.ok) {
       toast({
-        title: "Log masuk gagal",
-        description: result.message || "Email atau kata laluan salah.",
+        title: t("loginFailedTitle"),
+        description: result.message || t("loginFailedDefault"),
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Selamat kembali!",
-      description: "Anda telah log masuk.",
+      title: t("welcomeBackToastTitle"),
+      description: t("loggedInDesc"),
     });
 
     // `next` may arrive locale-prefixed ("/ms/buyer_portal/{slug}/orders") -
@@ -116,8 +118,8 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (signupData.password !== signupData.confirmPassword) {
       toast({
-        title: "Kata laluan tidak sepadan",
-        description: "Pastikan kedua-dua kata laluan sama.",
+        title: t("passwordMismatchTitle"),
+        description: t("passwordMismatchDesc"),
         variant: "destructive",
       });
       return;
@@ -125,8 +127,8 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (signupData.password.length < 8) {
       toast({
-        title: "Kata laluan terlalu pendek",
-        description: "Kata laluan mesti sekurang-kurangnya 8 aksara.",
+        title: t("passwordTooShortTitle"),
+        description: t("passwordTooShortDesc"),
         variant: "destructive",
       });
       return;
@@ -146,16 +148,16 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (!result.ok) {
       toast({
-        title: "Daftar gagal",
-        description: result.fieldErrors?.phone?.[0] || result.message || "Tidak dapat membuat akaun.",
+        title: t("signupFailedTitle"),
+        description: result.fieldErrors?.phone?.[0] || result.message || t("signupFailedDefault"),
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Akaun dibuat!",
-      description: "Selamat datang! Anda boleh mula membeli.",
+      title: t("accountCreatedTitle"),
+      description: t("accountCreatedDesc"),
     });
 
     // `next` may arrive locale-prefixed ("/ms/buyer_portal/{slug}/orders") -
@@ -187,18 +189,21 @@ function LoginPageInner({ params }: LoginPageProps) {
             />
           </div>
           <CardTitle className="font-buyer-display text-2xl">
-            {mode === "login" ? "Selamat kembali" : "Buat akaun"}
+            {mode === "login" ? t("welcomeBackTitle") : t("createAccountTitle")}
           </CardTitle>
           <CardDescription>
-            {mode === "login"
-              ? "Log masuk ke akaun pembeli anda"
-              : "Daftar untuk mula membeli"}
+            {mode === "login" ? t("loginDescription") : t("signupDescription")}
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="relative grid grid-cols-2 rounded-full bg-secondary p-1" role="radiogroup" aria-label="Mod akaun">
-            {([["login", "Log masuk"], ["signup", "Daftar"]] as const).map(([m, label]) => (
+          <div className="relative grid grid-cols-2 rounded-full bg-secondary p-1" role="radiogroup" aria-label={t("modeAriaLabel")}>
+            {(
+              [
+                ["login", t("loginTab")],
+                ["signup", t("signupTab")],
+              ] as const
+            ).map(([m, label]) => (
               <button
                 key={m}
                 type="button"
@@ -223,7 +228,7 @@ function LoginPageInner({ params }: LoginPageProps) {
           {mode === "login" ? (
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="login-email">Email</Label>
+                <Label htmlFor="login-email">{t("emailLabel")}</Label>
                 <Input
                   id="login-email"
                   type="email"
@@ -237,11 +242,11 @@ function LoginPageInner({ params }: LoginPageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-password">Kata laluan</Label>
+                <Label htmlFor="login-password">{t("passwordLabel")}</Label>
                 <Input
                   id="login-password"
                   type="password"
-                  placeholder="Kata laluan anda"
+                  placeholder={t("loginPasswordPlaceholder")}
                   value={loginData.password}
                   onChange={(e) =>
                     setLoginData({ ...loginData, password: e.target.value })
@@ -258,17 +263,17 @@ function LoginPageInner({ params }: LoginPageProps) {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Log masuk…
+                    {t("loggingIn")}
                   </>
                 ) : (
-                  "Log masuk"
+                  t("loginTab")
                 )}
               </Button>
             </form>
           ) : (
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-name">Nama</Label>
+                <Label htmlFor="signup-name">{t("nameLabel")}</Label>
                 <Input
                   id="signup-name"
                   type="text"
@@ -282,7 +287,7 @@ function LoginPageInner({ params }: LoginPageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-email">Email</Label>
+                <Label htmlFor="signup-email">{t("emailLabel")}</Label>
                 <Input
                   id="signup-email"
                   type="email"
@@ -296,7 +301,7 @@ function LoginPageInner({ params }: LoginPageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-phone">Nombor telefon</Label>
+                <Label htmlFor="signup-phone">{t("phoneLabel")}</Label>
                 <Input
                   id="signup-phone"
                   type="tel"
@@ -309,16 +314,14 @@ function LoginPageInner({ params }: LoginPageProps) {
                   required
                   className="h-11"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Kami akan hantar kemas kini pesanan ke nombor ini.
-                </p>
+                <p className="text-xs text-muted-foreground">{t("phoneHint")}</p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Kata laluan</Label>
+                <Label htmlFor="signup-password">{t("passwordLabel")}</Label>
                 <Input
                   id="signup-password"
                   type="password"
-                  placeholder="Sekurang-kurangnya 8 aksara"
+                  placeholder={t("signupPasswordPlaceholder")}
                   value={signupData.password}
                   onChange={(e) =>
                     setSignupData({ ...signupData, password: e.target.value })
@@ -329,11 +332,11 @@ function LoginPageInner({ params }: LoginPageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-confirm">Sahkan kata laluan</Label>
+                <Label htmlFor="signup-confirm">{t("confirmPasswordLabel")}</Label>
                 <Input
                   id="signup-confirm"
                   type="password"
-                  placeholder="Ulang kata laluan"
+                  placeholder={t("confirmPasswordPlaceholder")}
                   value={signupData.confirmPassword}
                   onChange={(e) =>
                     setSignupData({
@@ -353,10 +356,10 @@ function LoginPageInner({ params }: LoginPageProps) {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Mendaftar…
+                    {t("signingUp")}
                   </>
                 ) : (
-                  "Daftar"
+                  t("signupTab")
                 )}
               </Button>
             </form>
@@ -366,7 +369,7 @@ function LoginPageInner({ params }: LoginPageProps) {
         <CardFooter className="flex flex-col gap-2">
           <p className="text-sm text-muted-foreground">
             <Link href={`/buyer_portal/${organizationSlug}/shop`} className="text-primary hover:underline">
-              Teruskan beli tanpa akaun
+              {t("continueWithoutAccount")}
             </Link>
           </p>
         </CardFooter>

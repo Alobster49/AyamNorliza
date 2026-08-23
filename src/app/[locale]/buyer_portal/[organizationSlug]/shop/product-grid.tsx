@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ProductCard } from "@/features/buyer/components/product-card";
 import { PricingExplainerSheet } from "@/features/buyer/components/pricing-explainer-sheet";
 import { hasSeenExplainer } from "@/features/buyer/lib/explainer-flag";
@@ -9,6 +10,7 @@ import type { CatalogWithProducts } from "@/features/buyer/types";
 
 export function ShopClient({ categories }: { categories: CatalogWithProducts[] }) {
   const { addLine } = useCart();
+  const t = useTranslations("buyer.shop");
   const [activeCategory, setActiveCategory] = useState<string>("all");
   const [explainerOpen, setExplainerOpen] = useState(false);
 
@@ -29,10 +31,10 @@ export function ShopClient({ categories }: { categories: CatalogWithProducts[] }
   return (
     <div className="space-y-8">
       <nav
-        aria-label="Kategori"
+        aria-label={t("categoriesAriaLabel")}
         className="sticky top-16 z-40 -mx-4 flex gap-2 overflow-x-auto bg-background/95 px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [scrollbar-width:none] snap-x"
       >
-        {[{ id: "all", name: "Semua" }, ...categories].map((c) => (
+        {[{ id: "all", name: t("allCategory") }, ...categories].map((c) => (
           <button
             key={c.id}
             type="button"

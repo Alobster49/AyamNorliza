@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { getPublicCatalog, getOrganizationBySlug } from "@/features/buyer/server/actions";
 import { ShopClient } from "./product-grid";
 
@@ -7,6 +8,7 @@ type ShopPageProps = {
 
 export default async function ShopPage({ params }: ShopPageProps) {
   const { organizationSlug } = await params;
+  const t = await getTranslations("buyer.shop");
 
   const [result, org] = await Promise.all([
     getPublicCatalog(organizationSlug),
@@ -17,10 +19,8 @@ export default async function ShopPage({ params }: ShopPageProps) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Katalog tidak tersedia</h1>
-          <p className="mt-2 text-muted-foreground">
-            Kami tidak dapat memuatkan katalog. Cuba lagi nanti.
-          </p>
+          <h1 className="text-2xl font-bold">{t("errorTitle")}</h1>
+          <p className="mt-2 text-muted-foreground">{t("errorBody")}</p>
         </div>
       </div>
     );
@@ -32,10 +32,8 @@ export default async function ShopPage({ params }: ShopPageProps) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Tiada produk</h1>
-          <p className="mt-2 text-muted-foreground">
-            Tiada produk lagi — datang balik nanti!
-          </p>
+          <h1 className="text-2xl font-bold">{t("emptyTitle")}</h1>
+          <p className="mt-2 text-muted-foreground">{t("emptyBody")}</p>
         </div>
       </div>
     );
@@ -53,15 +51,12 @@ export default async function ShopPage({ params }: ShopPageProps) {
           }}
         />
         <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-          Ladang {org?.name ?? "Kami"}
+          {org?.name ? t("farmEyebrow", { name: org.name }) : t("farmEyebrowFallback")}
         </p>
         <h1 className="font-buyer-display mt-3 max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
-          Ayam segar, ditimbang betul.
+          {t("heroTitle")}
         </h1>
-        <p className="mt-4 max-w-xl text-lg text-muted-foreground">
-          Pilih ayam anda hari ini — kami timbang depan mata dan sahkan harga ikut
-          berat sebenar.
-        </p>
+        <p className="mt-4 max-w-xl text-lg text-muted-foreground">{t("heroBody")}</p>
       </section>
 
       <ShopClient categories={categories} />
