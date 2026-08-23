@@ -40,6 +40,13 @@ type AddressFieldsProps = {
    * inline new-customer form); duplicate ids would break label association.
    */
   idPrefix?: string;
+  /**
+   * Whether the address line and postcode are required to submit the
+   * enclosing form. Defaults to true (buyer checkout always needs a
+   * deliverable address); the seller's customer dialog passes false since
+   * the whole address block is optional there.
+   */
+  required?: boolean;
 };
 
 export function AddressFields({
@@ -47,6 +54,7 @@ export function AddressFields({
   onChange,
   disabled,
   idPrefix = "address",
+  required = true,
 }: AddressFieldsProps) {
   const ids = {
     line: `${idPrefix}-line`,
@@ -78,7 +86,7 @@ export function AddressFields({
           rows={3}
           maxLength={440}
           disabled={disabled}
-          required
+          required={required}
         />
       </div>
 
@@ -93,7 +101,7 @@ export function AddressFields({
             inputMode="numeric"
             maxLength={5}
             disabled={disabled}
-            required
+            required={required}
           />
         </div>
 

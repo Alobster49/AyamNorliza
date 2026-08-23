@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { AddressFields } from "@/components/forms/address-fields";
+import { lookupPostcode } from "@/lib/malaysia-postcodes";
 import {
   Table,
   TableBody,
@@ -54,6 +56,9 @@ export function CustomersClient({
     phone: "",
     email: "",
     address: "",
+    postcode: "",
+    state: "",
+    area: "",
     notes: "",
   });
 
@@ -66,17 +71,34 @@ export function CustomersClient({
 
   const openCreateDialog = () => {
     setEditingCustomer(null);
-    setFormData({ name: "", phone: "", email: "", address: "", notes: "" });
+    setFormData({
+      name: "",
+      phone: "",
+      email: "",
+      address: "",
+      postcode: "",
+      state: "",
+      area: "",
+      notes: "",
+    });
     setDialogOpen(true);
   };
 
   const openEditDialog = (customer: CustomerWithPortal) => {
     setEditingCustomer(customer);
+    // The SQL backfill could only recover a postcode — it cannot read the
+    // vendored dataset. Resolve state and area here so a backfilled customer
+    // shows a complete address the first time a seller opens it.
+    const derived =
+      customer.postcode && !customer.state ? lookupPostcode(customer.postcode) : null;
     setFormData({
       name: customer.name,
       phone: customer.phone,
       email: customer.email || "",
       address: customer.address || "",
+      postcode: customer.postcode || "",
+      state: customer.state || derived?.state || "",
+      area: customer.area || derived?.area || "",
       notes: customer.notes || "",
     });
     setDialogOpen(true);
@@ -91,6 +113,9 @@ export function CustomersClient({
           phone: formData.phone,
           email: formData.email || null,
           address: formData.address || null,
+          postcode: formData.postcode || null,
+          state: formData.state || null,
+          area: formData.area || null,
           notes: formData.notes || null,
         });
         setCustomers(
@@ -107,6 +132,9 @@ export function CustomersClient({
           phone: formData.phone,
           email: formData.email || null,
           address: formData.address || null,
+          postcode: formData.postcode || null,
+          state: formData.state || null,
+          area: formData.area || null,
           notes: formData.notes || null,
         });
         setCustomers([...customers, { ...newCustomer, has_portal_account: false }]);
@@ -289,14 +317,24 @@ export function CustomersClient({
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Textarea
-                id="address"
-                value={formData.address}
-                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              />
-            </div>
+            <AddressFields
+              value={{
+                addressLine: formData.address,
+                postcode: formData.postcode,
+                state: formData.state,
+                area: formData.area,
+              }}
+              onChange={(next) =>
+                setFormData({
+                  ...formData,
+                  address: next.addressLine,
+                  postcode: next.postcode,
+                  state: next.state,
+                  area: next.area,
+                })
+              }
+              required={false}
+            />
             <div className="space-y-2">
               <Label htmlFor="notes">Notes (e.g., &ldquo;prefers breast cuts&rdquo;)</Label>
               <Textarea
