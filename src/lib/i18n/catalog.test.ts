@@ -31,6 +31,14 @@ describe("message catalogs", () => {
     ];
     expect(empties).toEqual([]);
   });
+
+  it("has only string values at every leaf (no arrays, numbers, booleans)", () => {
+    const nonStrings = [
+      ...flattenLeafTypes(en).filter(([, type]) => type !== "string").map(([k, type]) => `en:${k} (${type})`),
+      ...flattenLeafTypes(ms).filter(([, type]) => type !== "string").map(([k, type]) => `ms:${k} (${type})`),
+    ];
+    expect(nonStrings).toEqual([]);
+  });
 });
 
 /** Same walk as flattenKeys, but carries the leaf string along. */
@@ -39,5 +47,23 @@ function flattenValues(value: unknown, prefix = ""): Array<[string, string]> {
   if (value === null || typeof value !== "object") return [];
   return Object.entries(value as Record<string, unknown>).flatMap(([key, child]) =>
     flattenValues(child, prefix ? `${prefix}.${key}` : key),
+  );
+}
+
+/** Walks the entire tree and returns [keyPath, typeofValue] for every leaf, including non-strings.
+ * Catches drifts where a key holds a string in one catalog but an array/number/boolean in another. */
+function flattenLeafTypes(value: unknown, prefix = ""): Array<[string, string]> {
+  if (value === null || typeof value !== "object") {
+    return [[prefix, typeof value]];
+  }
+  if (Array.isArray(value)) {
+    return [[prefix, "object"]];
+  }
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (entries.length === 0) {
+    return [[prefix, "object"]];
+  }
+  return entries.flatMap(([key, child]) =>
+    flattenLeafTypes(child, prefix ? `${prefix}.${key}` : key),
   );
 }
