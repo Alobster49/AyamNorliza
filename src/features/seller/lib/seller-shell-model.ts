@@ -64,7 +64,6 @@ export function getSellerPageContext({
   };
 }
 
-
 export function getUserInitials(name: string, email: string): string {
   const source = name.trim() || email.split("@")[0] || "User";
   const words = source

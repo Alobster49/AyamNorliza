@@ -14,6 +14,10 @@ import { stripLocalePrefix } from "@/lib/i18n/strip-locale-prefix";
  * `buyer-shell-model.ts` share one implementation instead of drifting.
  */
 export function isRouteActive(pathname: string, href: string): boolean {
+  // Deliberate trade-off, not an oversight: an organization slug that is
+  // literally "en" or "ms" would be misread as a locale prefix and stripped,
+  // losing sidebar highlighting for that org. No such org exists today and
+  // nobody would pick a two-letter slug, so this is left unguarded.
   const normalized = stripLocalePrefix(pathname);
   return normalized === href || normalized.startsWith(`${href}/`);
 }
