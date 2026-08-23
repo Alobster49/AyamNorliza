@@ -23,25 +23,32 @@ comment on column public.customers.postcode is
   'Delivery postcode; drives zone resolution on the manual order screen.';
 
 -- ---------------------------------------------------------------------------
--- Backfill: pull a standalone 5-digit token out of the free-text address.
--- Malaysian addresses put the postcode near the end, so the LAST match wins
--- ("31 Jalan Sutera Tanjung 8/2, 81300 Skudai" -> 81300, not 8). State and
--- area are not backfilled: the postcode dataset is a vendored JSON file, not
--- a table, so SQL cannot resolve them. The edit dialog completes them on open.
--- Idempotent: only touches rows whose postcode is still null.
+-- extract_postcode: pull a delivery postcode out of a free-text address.
+-- Malaysian addresses put the postcode near the end, so the LAST standalone
+-- 5-digit token wins ("31 Jalan Sutera Tanjung 8/2, 81300 Skudai" -> 81300,
+-- never 8). A 6-or-more digit run is not a postcode and yields null.
 -- ---------------------------------------------------------------------------
-update public.customers c
-set postcode = sub.pc
-from (
-  select c2.id,
-         (select m[1]
-            from regexp_matches(c2.address, '\m([0-9]{5})\M', 'g')
-                 with ordinality as t(m, ord)
-           order by t.ord desc
-           limit 1) as pc
-  from public.customers c2
-  where c2.address is not null
-    and c2.postcode is null
-) sub
-where c.id = sub.id
-  and sub.pc is not null;
+create or replace function public.extract_postcode(p_address text)
+returns text
+language sql
+immutable
+as $$
+  select m[1]
+  from regexp_matches(coalesce(p_address, ''), '\m([0-9]{5})\M', 'g')
+       with ordinality as t(m, ord)
+  order by t.ord desc
+  limit 1
+$$;
+
+revoke execute on function public.extract_postcode(text) from public, anon, authenticated;
+
+-- One-time backfill of existing free-text addresses. State and area are not
+-- backfilled: the postcode dataset is a vendored JSON file, not a table, so
+-- SQL cannot resolve them — the edit dialog completes them on open.
+-- Idempotent: only rows whose postcode is still null are touched, so a
+-- seller-corrected postcode is never overwritten.
+update public.customers
+set postcode = public.extract_postcode(address)
+where address is not null
+  and postcode is null
+  and public.extract_postcode(address) is not null;

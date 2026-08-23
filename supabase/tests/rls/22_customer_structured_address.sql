@@ -1,9 +1,9 @@
 -- supabase/tests/rls/22_customer_structured_address.sql
 -- Structured customer address: column checks, the state/area pairing
--- constraint, and the one-time postcode backfill.
+-- constraint, the extract_postcode() derivation, and the backfill guard.
 
 begin;
-select plan(9);
+select plan(13);
 
 insert into auth.users (id) values
   ('e0000000-0000-0000-0000-0000000000ee')
@@ -65,7 +65,33 @@ select throws_ok(
 );
 
 -- ---------------------------------------------------------------------------
--- Backfill.
+-- extract_postcode(): the pure function the migration's backfill calls.
+-- Testing this directly means a future edit to the real backfill logic is
+-- caught here, instead of a hand-pasted copy silently drifting from it.
+-- ---------------------------------------------------------------------------
+select results_eq(
+  $$ select public.extract_postcode('Unit 12345, 3 Jalan Bakri, 84000 Muar') $$,
+  array['84000'::text],
+  'extract_postcode takes the LAST 5-digit token, not the first ("12345" loses to "84000")'
+);
+select results_eq(
+  $$ select public.extract_postcode('Lot 123456, Jalan Enam Angka') $$,
+  array[null::text],
+  'extract_postcode treats a 6-or-more digit run as not a postcode'
+);
+select results_eq(
+  $$ select public.extract_postcode('Jalan Tanpa Nombor Langsung') $$,
+  array[null::text],
+  'extract_postcode returns null for an address with no digits'
+);
+select results_eq(
+  $$ select public.extract_postcode('Kompleks Sentral, 81300 Skudai') $$,
+  array['81300'::text],
+  'extract_postcode returns the single 5-digit token an address contains'
+);
+
+-- ---------------------------------------------------------------------------
+-- Backfill guard.
 --
 -- The brief for this test assumed a seeded address with an embedded postcode
 -- would already exist in public.customers by the time this file runs, so the
@@ -74,76 +100,45 @@ select throws_ok(
 -- runs (see supabase/config.toml [db.seed], "Runs after migrations"), and
 -- seed.sql's only customer row (the E2E pilot buyer) never sets `address` at
 -- all. Confirmed empirically: after a clean reset public.customers has
--- exactly one row, address is null. The only addresses containing postcodes
--- anywhere in the repo live inside the `admin_seed_demo_data()` function
--- body (20260823000007) -- literal SQL text, not rows the backfill migration
--- ever sees, since that function must be explicitly called to insert them.
+-- exactly one row, address is null.
 --
--- So this file exercises the backfill directly: insert address-only rows in
--- this transaction, then re-run the exact same UPDATE the migration runs
--- (idempotent by construction, so running it here is equivalent to letting
--- the migration process these rows) and assert on the result. Keep this
--- statement byte-for-byte in sync with the backfill in
--- 20260823000008_customer_structured_address.sql.
+-- So this file exercises the backfill directly: insert fixture rows in this
+-- transaction, then run the exact statement shape the migration runs (it
+-- calls public.extract_postcode, so there is no extraction logic to drift
+-- out of sync here) once, and assert on the result -- including that a
+-- seller-corrected postcode is never clobbered.
 -- ---------------------------------------------------------------------------
 insert into public.customers (organization_id, name, phone, address, created_by)
 values
   ('f0000000-0000-0000-0000-0000000000ff', 'Backfill Last Token', '0111111117',
-   'Unit 12345, 3 Jalan Bakri, 84000 Muar', 'e0000000-0000-0000-0000-0000000000ee'),
-  ('f0000000-0000-0000-0000-0000000000ff', 'Backfill No Token', '0111111118',
-   '6 Jalan Tiada Nombor', 'e0000000-0000-0000-0000-0000000000ee');
+   'Unit 12345, 3 Jalan Bakri, 84000 Muar', 'e0000000-0000-0000-0000-0000000000ee');
 
--- Run twice to demonstrate the backfill is idempotent (second pass touches
--- zero rows because postcode is no longer null).
-update public.customers c
-set postcode = sub.pc
-from (
-  select c2.id,
-         (select m[1]
-            from regexp_matches(c2.address, '\m([0-9]{5})\M', 'g')
-                 with ordinality as t(m, ord)
-           order by t.ord desc
-           limit 1) as pc
-  from public.customers c2
-  where c2.address is not null
-    and c2.postcode is null
-) sub
-where c.id = sub.id
-  and sub.pc is not null;
+insert into public.customers (organization_id, name, phone, address, postcode, created_by)
+values
+  ('f0000000-0000-0000-0000-0000000000ff', 'Guard Explicit Postcode', '0111111119',
+   '5 Jalan Tekad, 79100 Iskandar Puteri', '50000', 'e0000000-0000-0000-0000-0000000000ee');
 
-update public.customers c
-set postcode = sub.pc
-from (
-  select c2.id,
-         (select m[1]
-            from regexp_matches(c2.address, '\m([0-9]{5})\M', 'g')
-                 with ordinality as t(m, ord)
-           order by t.ord desc
-           limit 1) as pc
-  from public.customers c2
-  where c2.address is not null
-    and c2.postcode is null
-) sub
-where c.id = sub.id
-  and sub.pc is not null;
+update public.customers
+set postcode = public.extract_postcode(address)
+where address is not null
+  and postcode is null
+  and public.extract_postcode(address) is not null;
 
 select results_eq(
   $$ select postcode from public.customers where address = 'Unit 12345, 3 Jalan Bakri, 84000 Muar' $$,
   array['84000'::text],
-  'backfill takes the LAST 5-digit token, not the first ("12345" loses to "84000")'
-);
-select ok(
-  (select count(*) from public.customers
-    where address is not null
-      and address ~ '\m[0-9]{5}\M'
-      and postcode is null) = 0,
-  'every address containing a 5-digit token was backfilled, none left unparsed'
+  'the backfill statement applies extract_postcode to a null-postcode row'
 );
 select ok(
   (select state is null and area is null
      from public.customers
     where address = 'Unit 12345, 3 Jalan Bakri, 84000 Muar'),
   'backfill does not invent state or area (SQL cannot read the dataset)'
+);
+select results_eq(
+  $$ select postcode from public.customers where name = 'Guard Explicit Postcode' $$,
+  array['50000'::text],
+  'the "postcode is null" guard leaves a seller-corrected postcode unchanged even though the address has its own 5-digit token'
 );
 
 select * from finish();
