@@ -123,7 +123,7 @@ describe("placeOrder", () => {
     );
   });
 
-  it("maps slot_full to a friendly conflict message", async () => {
+  it("maps slot_full to the errors.buyer.order.slotFull key", async () => {
     vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
     mockSupabase({ rpcResult: { data: null, error: { message: "slot_full" } } });
 
@@ -132,11 +132,11 @@ describe("placeOrder", () => {
     expect(result).toEqual({
       ok: false,
       code: "conflict",
-      message: "That delivery slot just filled up — pick another.",
+      messageKey: "errors.buyer.order.slotFull",
     });
   });
 
-  it("returns unauthenticated when the caller is not a buyer", async () => {
+  it("returns the unauthenticated key when the caller is not a buyer", async () => {
     vi.mocked(requireBuyer).mockRejectedValue(new NotABuyerError("Not registered as a buyer"));
 
     const result = await placeOrder(validPlaceOrderInput);
@@ -144,13 +144,51 @@ describe("placeOrder", () => {
     expect(result).toEqual({
       ok: false,
       code: "unauthenticated",
-      message: "Not registered as a buyer",
+      messageKey: "errors.buyer.order.unauthenticated",
+    });
+  });
+
+  it("maps invalid order input to the errors.buyer.order.invalidInput key, with fieldErrors", async () => {
+    vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
+
+    const result = await placeOrder({ ...validPlaceOrderInput, zoneId: "not-a-uuid" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.order.invalidInput");
+      expect(result.fieldErrors).toBeDefined();
+    }
+  });
+
+  it("rejects a customerId on portal orders with the customerIdNotAllowed key", async () => {
+    vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
+
+    const result = await placeOrder({ ...validPlaceOrderInput, customerId: "44444444-4444-4444-4444-444444444444" });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "validation",
+      messageKey: "errors.buyer.order.customerIdNotAllowed",
+    });
+  });
+
+  it("maps a missing organization to the errors.buyer.order.orgNotFound key", async () => {
+    vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
+    mockSupabase({ orgId: null });
+
+    const result = await placeOrder(validPlaceOrderInput);
+
+    expect(result).toEqual({
+      ok: false,
+      code: "not_found",
+      messageKey: "errors.buyer.order.orgNotFound",
     });
   });
 });
 
 describe("cancelMyOrder", () => {
-  it("maps invalid_status to a friendly conflict message", async () => {
+  it("maps invalid_status to the errors.buyer.order.invalidStatus key", async () => {
     vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
     mockSupabase({ rpcResult: { data: null, error: { message: "invalid_status" } } });
 
@@ -159,7 +197,45 @@ describe("cancelMyOrder", () => {
     expect(result).toEqual({
       ok: false,
       code: "conflict",
-      message: "This order can no longer be cancelled.",
+      messageKey: "errors.buyer.order.invalidStatus",
+    });
+  });
+
+  it("returns the unauthenticated key when the caller is not a buyer", async () => {
+    vi.mocked(requireBuyer).mockRejectedValue(new NotABuyerError("Not registered as a buyer"));
+
+    const result = await cancelMyOrder("order-1");
+
+    expect(result).toEqual({
+      ok: false,
+      code: "unauthenticated",
+      messageKey: "errors.buyer.order.unauthenticated",
+    });
+  });
+
+  it("maps forbidden to the errors.buyer.order.forbidden key", async () => {
+    vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
+    mockSupabase({ rpcResult: { data: null, error: { message: "forbidden" } } });
+
+    const result = await cancelMyOrder("order-1");
+
+    expect(result).toEqual({
+      ok: false,
+      code: "forbidden",
+      messageKey: "errors.buyer.order.forbidden",
+    });
+  });
+
+  it("maps an unrecognized RPC error to the errors.buyer.order.internal key", async () => {
+    vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
+    mockSupabase({ rpcResult: { data: null, error: { message: "some_unknown_code" } } });
+
+    const result = await cancelMyOrder("order-1");
+
+    expect(result).toEqual({
+      ok: false,
+      code: "internal",
+      messageKey: "errors.buyer.order.internal",
     });
   });
 });

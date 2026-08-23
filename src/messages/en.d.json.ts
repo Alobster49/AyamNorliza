@@ -82,48 +82,6 @@ declare const messages: {
       "cancelled": "Cancelled"
     }
   },
-  "errors": {
-    "buyer": {
-      "signup": {
-        "invalid": "Invalid signup",
-        "invalidPhone": "Enter a Malaysian mobile number, e.g. 012-345 6789",
-        "orgNotFound": "Shop not found.",
-        "createFailed": "Could not create account. Please try again.",
-        "profileSaveFailed": "Could not save buyer profile. Please try again.",
-        "alreadyRegistered": "This email is already registered. Please log in.",
-        "profileCheckFailed": "Could not check buyer profile. Please try again."
-      },
-      "login": {
-        "invalid": "Invalid login",
-        "invalidCredentials": "Incorrect email or password.",
-        "notABuyer": "This account is not registered as a buyer."
-      },
-      "account": {
-        "wrongOrg": "This account is not a buyer for this shop."
-      },
-      "catalog": {
-        "orgNotFound": "Organization not found",
-        "fetchFailed": "Failed to fetch catalog",
-        "productNotFound": "Product not found"
-      },
-      "profile": {
-        "unauthenticated": "Not authenticated",
-        "notFound": "Buyer profile not found",
-        "invalidInput": "Invalid input",
-        "updateFailed": "Failed to update profile"
-      },
-      "address": {
-        "invalidAddress": "Invalid address",
-        "loadFailed": "Failed to load addresses",
-        "saveFailed": "Failed to save address",
-        "invalidId": "Invalid address id",
-        "notFound": "Address not found",
-        "deleteFailed": "Failed to delete address",
-        "unauthenticated": "Not authenticated",
-        "notABuyer": "Not registered as a buyer"
-      }
-    }
-  },
   "buyer": {
     "nav": {
       "shop": "Shop",
@@ -169,7 +127,13 @@ declare const messages: {
       "sizeMinLabel": "Min size (kg/bird)",
       "sizeMaxLabel": "Max size (kg/bird)",
       "fallbackLabel": "If size isn't available?",
-      "addToCart": "Add to cart"
+      "addToCart": "Add to cart",
+      "fallback": {
+        "cancel": "Cancel my order",
+        "mix": "Mix sizes",
+        "upsize": "Bigger is fine",
+        "downsize": "Smaller is fine"
+      }
     },
     "pricing": {
       "perKg": "/kg",
@@ -339,6 +303,64 @@ declare const messages: {
       "profileSavedTitle": "Profile saved",
       "profileSavedDesc": "Your profile has been updated.",
       "saveFailedDefaultDesc": "Failed to save profile."
+    }
+  },
+  "errors": {
+    "buyer": {
+      "signup": {
+        "invalid": "Invalid signup",
+        "invalidPhone": "Enter a Malaysian mobile number, e.g. 012-345 6789",
+        "orgNotFound": "Shop not found.",
+        "createFailed": "Could not create account. Please try again.",
+        "profileSaveFailed": "Could not save buyer profile. Please try again.",
+        "alreadyRegistered": "This email is already registered. Please log in.",
+        "profileCheckFailed": "Could not check buyer profile. Please try again."
+      },
+      "login": {
+        "invalid": "Invalid login",
+        "invalidCredentials": "Incorrect email or password.",
+        "notABuyer": "This account is not registered as a buyer."
+      },
+      "account": {
+        "wrongOrg": "This account is not a buyer for this shop."
+      },
+      "catalog": {
+        "orgNotFound": "Organization not found",
+        "fetchFailed": "Failed to fetch catalog",
+        "productNotFound": "Product not found"
+      },
+      "profile": {
+        "unauthenticated": "Not authenticated",
+        "notFound": "Buyer profile not found",
+        "invalidInput": "Invalid input",
+        "updateFailed": "Failed to update profile"
+      },
+      "address": {
+        "invalidAddress": "Invalid address",
+        "loadFailed": "Failed to load addresses",
+        "saveFailed": "Failed to save address",
+        "invalidId": "Invalid address id",
+        "notFound": "Address not found",
+        "deleteFailed": "Failed to delete address",
+        "unauthenticated": "Not authenticated",
+        "notABuyer": "Not registered as a buyer"
+      },
+      "order": {
+        "unauthenticated": "Not authenticated",
+        "orgNotFound": "Organization not found",
+        "invalidInput": "Invalid order input",
+        "customerIdNotAllowed": "customerId is not allowed for portal orders",
+        "zoneNotFound": "That delivery zone was not found.",
+        "slotNotFound": "That delivery slot is no longer available.",
+        "dateOutOfWindow": "Pick a delivery date within the next 14 days.",
+        "weekdayMismatch": "That date does not match the slot's day of the week.",
+        "dateBlocked": "Deliveries are blocked on that date. Pick another.",
+        "slotFull": "That delivery slot just filled up — pick another.",
+        "invalidItems": "One or more items in your order are invalid.",
+        "invalidStatus": "This order can no longer be cancelled.",
+        "forbidden": "You cannot cancel this order.",
+        "internal": "Something went wrong. Please try again."
+      }
     }
   }
 };

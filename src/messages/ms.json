@@ -79,48 +79,6 @@
       "cancelled": "Dibatalkan"
     }
   },
-  "errors": {
-    "buyer": {
-      "signup": {
-        "invalid": "Pendaftaran tidak sah",
-        "invalidPhone": "Masukkan nombor telefon bimbit Malaysia, cth. 012-345 6789",
-        "orgNotFound": "Kedai tidak dijumpai.",
-        "createFailed": "Tidak dapat membuat akaun. Sila cuba lagi.",
-        "profileSaveFailed": "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.",
-        "alreadyRegistered": "Emel ini sudah didaftarkan. Sila log masuk.",
-        "profileCheckFailed": "Tidak dapat menyemak profil pembeli. Sila cuba lagi."
-      },
-      "login": {
-        "invalid": "Log masuk tidak sah",
-        "invalidCredentials": "Emel atau kata laluan salah.",
-        "notABuyer": "Akaun ini belum didaftarkan sebagai pembeli."
-      },
-      "account": {
-        "wrongOrg": "Akaun ini bukan pembeli untuk kedai ini."
-      },
-      "catalog": {
-        "orgNotFound": "Organisasi tidak dijumpai",
-        "fetchFailed": "Gagal memuatkan katalog",
-        "productNotFound": "Produk tidak dijumpai"
-      },
-      "profile": {
-        "unauthenticated": "Belum disahkan",
-        "notFound": "Profil pembeli tidak dijumpai",
-        "invalidInput": "Input tidak sah",
-        "updateFailed": "Gagal mengemas kini profil"
-      },
-      "address": {
-        "invalidAddress": "Alamat tidak sah",
-        "loadFailed": "Gagal memuatkan alamat",
-        "saveFailed": "Gagal menyimpan alamat",
-        "invalidId": "ID alamat tidak sah",
-        "notFound": "Alamat tidak dijumpai",
-        "deleteFailed": "Gagal memadam alamat",
-        "unauthenticated": "Belum disahkan",
-        "notABuyer": "Belum didaftar sebagai pembeli"
-      }
-    }
-  },
   "buyer": {
     "nav": {
       "shop": "Kedai",
@@ -166,7 +124,13 @@
       "sizeMinLabel": "Saiz min (kg/ekor)",
       "sizeMaxLabel": "Saiz maks (kg/ekor)",
       "fallbackLabel": "Kalau saiz tak ada?",
-      "addToCart": "Tambah ke troli"
+      "addToCart": "Tambah ke troli",
+      "fallback": {
+        "cancel": "Batal pesanan saya",
+        "mix": "Campur saiz",
+        "upsize": "Besar pun ok",
+        "downsize": "Kecil pun ok"
+      }
     },
     "pricing": {
       "perKg": "/kg",
@@ -269,7 +233,7 @@
       "emailAlreadyRegisteredTitle": "Email sudah didaftar",
       "emailAlreadyRegisteredDesc": "Masukkan kata laluan anda untuk teruskan.",
       "accountFailedTitle": "Akaun gagal",
-      "defaultBuyerNameSignup": "Buyer",
+      "defaultBuyerNameSignup": "Pembeli",
       "defaultBuyerNameSignin": "Pelanggan",
       "sessionExpiredTitle": "Sesi akaun terputus",
       "sessionExpiredDesc": "Sila isi semula maklumat akaun anda dan cuba lagi.",
@@ -336,6 +300,64 @@
       "profileSavedTitle": "Profil disimpan",
       "profileSavedDesc": "Profil anda telah dikemas kini.",
       "saveFailedDefaultDesc": "Gagal menyimpan profil."
+    }
+  },
+  "errors": {
+    "buyer": {
+      "signup": {
+        "invalid": "Pendaftaran tidak sah",
+        "invalidPhone": "Masukkan nombor telefon bimbit Malaysia, cth. 012-345 6789",
+        "orgNotFound": "Kedai tidak dijumpai.",
+        "createFailed": "Tidak dapat membuat akaun. Sila cuba lagi.",
+        "profileSaveFailed": "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.",
+        "alreadyRegistered": "Emel ini sudah didaftarkan. Sila log masuk.",
+        "profileCheckFailed": "Tidak dapat menyemak profil pembeli. Sila cuba lagi."
+      },
+      "login": {
+        "invalid": "Log masuk tidak sah",
+        "invalidCredentials": "Emel atau kata laluan salah.",
+        "notABuyer": "Akaun ini belum didaftarkan sebagai pembeli."
+      },
+      "account": {
+        "wrongOrg": "Akaun ini bukan pembeli untuk kedai ini."
+      },
+      "catalog": {
+        "orgNotFound": "Organisasi tidak dijumpai",
+        "fetchFailed": "Gagal memuatkan katalog",
+        "productNotFound": "Produk tidak dijumpai"
+      },
+      "profile": {
+        "unauthenticated": "Belum disahkan",
+        "notFound": "Profil pembeli tidak dijumpai",
+        "invalidInput": "Input tidak sah",
+        "updateFailed": "Gagal mengemas kini profil"
+      },
+      "address": {
+        "invalidAddress": "Alamat tidak sah",
+        "loadFailed": "Gagal memuatkan alamat",
+        "saveFailed": "Gagal menyimpan alamat",
+        "invalidId": "ID alamat tidak sah",
+        "notFound": "Alamat tidak dijumpai",
+        "deleteFailed": "Gagal memadam alamat",
+        "unauthenticated": "Belum disahkan",
+        "notABuyer": "Belum didaftar sebagai pembeli"
+      },
+      "order": {
+        "unauthenticated": "Belum disahkan",
+        "orgNotFound": "Organisasi tidak dijumpai",
+        "invalidInput": "Input pesanan tidak sah",
+        "customerIdNotAllowed": "customerId tidak dibenarkan untuk pesanan portal",
+        "zoneNotFound": "Zon penghantaran itu tidak dijumpai.",
+        "slotNotFound": "Slot penghantaran itu tidak lagi tersedia.",
+        "dateOutOfWindow": "Pilih tarikh penghantaran dalam tempoh 14 hari akan datang.",
+        "weekdayMismatch": "Tarikh itu tidak sepadan dengan hari dalam minggu untuk slot tersebut.",
+        "dateBlocked": "Penghantaran disekat pada tarikh itu. Sila pilih tarikh lain.",
+        "slotFull": "Slot penghantaran itu baru sahaja penuh — sila pilih slot lain.",
+        "invalidItems": "Satu atau lebih item dalam pesanan anda tidak sah.",
+        "invalidStatus": "Pesanan ini tidak boleh dibatalkan lagi.",
+        "forbidden": "Anda tidak boleh membatalkan pesanan ini.",
+        "internal": "Ada masalah berlaku. Sila cuba lagi."
+      }
     }
   }
 }

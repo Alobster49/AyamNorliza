@@ -11,7 +11,7 @@ import { ScaleChip } from "./scale-chip";
 import type { CartLine } from "./cart-context";
 import type { Product, ProductVariant } from "../types";
 import { FALLBACKS, type OrderFallback, type OrderItemMode } from "@/features/orders/types";
-import { estimateRange, BUYER_FALLBACK_LABELS, formatRM } from "@/features/buyer/lib/price-estimate";
+import { estimateRange, BUYER_FALLBACK_KEYS, formatRM } from "@/features/buyer/lib/price-estimate";
 
 const FALLBACK_ICONS: Record<OrderFallback, typeof X> = {
   cancel: X,
@@ -197,7 +197,7 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
                     selected ? "border-primary bg-primary/15 font-medium" : "border-border"
                   }`}>
                   <Icon className="h-4 w-4 shrink-0" />
-                  {BUYER_FALLBACK_LABELS[value]}
+                  {t(BUYER_FALLBACK_KEYS[value])}
                 </button>
               );
             })}

@@ -154,9 +154,13 @@ function LoginPageInner({ params }: LoginPageProps) {
     if (!result.ok) {
       toast({
         title: t("signupFailedTitle"),
-        description:
-          result.fieldErrors?.phone?.[0] ||
-          (result.messageKey ? tRoot(result.messageKey as never) : t("signupFailedDefault")),
+        // Prefer the translated `messageKey` — the action always sets one on
+        // failure — so BM readers see `errors.buyer.signup.invalidPhone`
+        // instead of the untranslated English prose that used to live in
+        // `fieldErrors.phone`.
+        description: result.messageKey
+          ? tRoot(result.messageKey as never)
+          : result.fieldErrors?.phone?.[0] || t("signupFailedDefault"),
         variant: "destructive",
       });
       return;

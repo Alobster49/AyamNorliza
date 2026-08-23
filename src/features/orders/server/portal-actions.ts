@@ -22,39 +22,59 @@ function err<T = never>(
   return { ok: false, code, message, ...(fieldErrors ? { fieldErrors } : {}) };
 }
 
-function ok<T>(data: T): ActionResult<T> {
+function ok<T>(data: T): { ok: true; data: T } {
   return { ok: true, data };
 }
 
 /**
- * Maps the machine-readable codes raised by the RPCs this file calls
- * (place_order, cancel_order) to friendly messages. order-actions.ts owns
- * the canonical mapRpcError covering every RPC's codes; see the CONTRACT
- * CONCERN note at the end of this plan for why this is a separate, smaller
- * copy rather than an import from order-actions.ts.
+ * Same shape as the shared `ActionResult`, except the failure branch carries
+ * a `messageKey` (a full path under `errors.buyer.order.*`) instead of prose,
+ * so client consumers resolve it with `useTranslations()` + `t(messageKey)`.
+ * Scoped to `placeOrder`/`cancelMyOrder` — see the buyer/server/actions.ts
+ * `BuyerActionResult` for the pattern this mirrors.
  */
-function mapPortalRpcError(message: string): { code: PortalErrorCode; message: string } {
+type BuyerOrderActionResult<T = void> =
+  | { ok: true; data: T }
+  | { ok: false; code: PortalErrorCode; messageKey: string; fieldErrors?: Record<string, string[]> };
+
+function errKey<T = never>(
+  code: PortalErrorCode,
+  messageKey: string,
+  fieldErrors?: Record<string, string[]>,
+): BuyerOrderActionResult<T> {
+  return { ok: false, code, messageKey, ...(fieldErrors ? { fieldErrors } : {}) };
+}
+
+/**
+ * Maps the machine-readable codes raised by the RPCs this file calls
+ * (place_order, cancel_order) to friendly message keys under
+ * `errors.buyer.order.*`. order-actions.ts owns the canonical mapRpcError
+ * covering every RPC's codes; see the CONTRACT CONCERN note at the end of
+ * this plan for why this is a separate, smaller copy rather than an import
+ * from order-actions.ts.
+ */
+function mapPortalRpcError(message: string): { code: PortalErrorCode; messageKey: string } {
   switch (message) {
     case "zone_not_found":
-      return { code: "not_found", message: "That delivery zone was not found." };
+      return { code: "not_found", messageKey: "errors.buyer.order.zoneNotFound" };
     case "slot_not_found":
-      return { code: "not_found", message: "That delivery slot is no longer available." };
+      return { code: "not_found", messageKey: "errors.buyer.order.slotNotFound" };
     case "date_out_of_window":
-      return { code: "validation", message: "Pick a delivery date within the next 14 days." };
+      return { code: "validation", messageKey: "errors.buyer.order.dateOutOfWindow" };
     case "weekday_mismatch":
-      return { code: "validation", message: "That date does not match the slot's day of the week." };
+      return { code: "validation", messageKey: "errors.buyer.order.weekdayMismatch" };
     case "date_blocked":
-      return { code: "conflict", message: "Deliveries are blocked on that date. Pick another." };
+      return { code: "conflict", messageKey: "errors.buyer.order.dateBlocked" };
     case "slot_full":
-      return { code: "conflict", message: "That delivery slot just filled up — pick another." };
+      return { code: "conflict", messageKey: "errors.buyer.order.slotFull" };
     case "invalid_items":
-      return { code: "validation", message: "One or more items in your order are invalid." };
+      return { code: "validation", messageKey: "errors.buyer.order.invalidItems" };
     case "invalid_status":
-      return { code: "conflict", message: "This order can no longer be cancelled." };
+      return { code: "conflict", messageKey: "errors.buyer.order.invalidStatus" };
     case "forbidden":
-      return { code: "forbidden", message: "You cannot cancel this order." };
+      return { code: "forbidden", messageKey: "errors.buyer.order.forbidden" };
     default:
-      return { code: "internal", message: "Something went wrong. Please try again." };
+      return { code: "internal", messageKey: "errors.buyer.order.internal" };
   }
 }
 
@@ -133,24 +153,24 @@ export async function getDeliveryOptions(
 
 export async function placeOrder(
   rawInput: unknown,
-): Promise<ActionResult<{ orderId: string }>> {
+): Promise<BuyerOrderActionResult<{ orderId: string }>> {
   try {
     await requireBuyer();
   } catch (e) {
     if (e instanceof NotABuyerError) {
-      return err("unauthenticated", e.message);
+      return errKey("unauthenticated", "errors.buyer.order.unauthenticated");
     }
     throw e;
   }
 
   const parsed = PlaceOrderSchema.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid order input", parsed.error.flatten().fieldErrors);
+    return errKey("validation", "errors.buyer.order.invalidInput", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
 
   if (input.customerId) {
-    return err("validation", "customerId is not allowed for portal orders");
+    return errKey("validation", "errors.buyer.order.customerIdNotAllowed");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -160,7 +180,7 @@ export async function placeOrder(
     .eq("slug", input.organizationSlug)
     .single();
   if (!org) {
-    return err("not_found", "Organization not found");
+    return errKey("not_found", "errors.buyer.order.orgNotFound");
   }
 
   // NOTE: place_order's p_items jsonb is parsed inside the SQL function
@@ -188,7 +208,7 @@ export async function placeOrder(
 
   if (error) {
     const mapped = mapPortalRpcError(error.message);
-    return err(mapped.code, mapped.message);
+    return errKey(mapped.code, mapped.messageKey);
   }
 
   const orderId = data as string;
@@ -260,12 +280,12 @@ export async function getMyOrder(orderId: string): Promise<ActionResult<OrderWit
   });
 }
 
-export async function cancelMyOrder(orderId: string, reason?: string): Promise<ActionResult> {
+export async function cancelMyOrder(orderId: string, reason?: string): Promise<BuyerOrderActionResult> {
   try {
     await requireBuyer();
   } catch (e) {
     if (e instanceof NotABuyerError) {
-      return err("unauthenticated", e.message);
+      return errKey("unauthenticated", "errors.buyer.order.unauthenticated");
     }
     throw e;
   }
@@ -278,7 +298,7 @@ export async function cancelMyOrder(orderId: string, reason?: string): Promise<A
 
   if (error) {
     const mapped = mapPortalRpcError(error.message);
-    return err(mapped.code, mapped.message);
+    return errKey(mapped.code, mapped.messageKey);
   }
 
   return ok(undefined);

@@ -49,7 +49,9 @@ test("first-time buyer orders end-to-end with inline account creation, never see
   await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/cart");
   await expect(buyerPage.getByText(productName)).toBeVisible({ timeout: 10_000 });
   await buyerPage.getByRole("button", { name: "Teruskan ke checkout" }).click();
-  await expect(buyerPage).toHaveURL(/\/checkout/, { timeout: 10_000 });
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
+    timeout: 10_000,
+  });
   // The wall is gone: we are on checkout, not /login.
   expect(buyerPage.url()).not.toContain("/login");
 
@@ -80,6 +82,8 @@ test("first-time buyer orders end-to-end with inline account creation, never see
   await expect(buyerPage.getByTestId("order-confirmation")).toBeVisible({ timeout: 15_000 });
   await expect(buyerPage.getByText("Pesanan diterima!")).toBeVisible();
   await buyerPage.getByRole("button", { name: /lihat pesanan saya/i }).click();
-  await expect(buyerPage).toHaveURL(/\/orders/, { timeout: 10_000 });
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/orders/, {
+    timeout: 10_000,
+  });
   await expect(buyerPage.getByText("Pesanan Saya")).toBeVisible({ timeout: 10_000 });
 });

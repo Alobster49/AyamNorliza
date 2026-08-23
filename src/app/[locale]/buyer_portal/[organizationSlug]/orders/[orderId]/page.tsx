@@ -5,7 +5,7 @@ import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import { getMyOrder } from "@/features/orders/server/portal-actions";
 import { ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice, describeFallback } from "@/features/orders/lib/order-model";
-import { BUYER_FALLBACK_LABELS } from "@/features/buyer/lib/price-estimate";
+import { BUYER_FALLBACK_KEYS } from "@/features/buyer/lib/price-estimate";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -43,6 +43,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const tOrders = await getTranslations("buyer.orders");
   const tCart = await getTranslations("buyer.cart");
   const tStatus = await getTranslations("status");
+  const tProduct = await getTranslations("buyer.product");
   const format = await getFormatter();
 
   return (
@@ -131,7 +132,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                         })}
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge variant="outline">{BUYER_FALLBACK_LABELS[item.fallback]}</Badge>
+                        <Badge variant="outline">{tProduct(BUYER_FALLBACK_KEYS[item.fallback])}</Badge>
                         {fallbackNote && (
                           <Badge className="bg-amber-100 text-amber-800">
                             {t("fallbackUsed", { note: fallbackNote })}

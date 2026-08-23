@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
-import { format } from "date-fns";
+import { useTranslations, useFormatter } from "next-intl";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Loader2, MapPin, CheckCircle2 } from "lucide-react";
 import { useCart } from "@/features/buyer/components/cart-context";
@@ -50,6 +49,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
   const t = useTranslations("buyer.checkout");
   const tCart = useTranslations("buyer.cart");
   const tTracker = useTranslations("buyer.orderTracker");
+  const format = useFormatter();
   // Root-namespace instance for server-action error keys ("errors.buyer.*"),
   // which are full paths — distinct from the namespaced `t*` instances above.
   const tRoot = useTranslations();
@@ -291,7 +291,13 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
           });
           return;
         }
-        toast({ title: t("orderFailedTitle"), description: result.message, variant: "destructive" });
+        // `messageKey` is a dynamic full path (e.g. "errors.buyer.order.slotFull");
+        // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+        toast({
+          title: t("orderFailedTitle"),
+          description: tRoot(result.messageKey as never),
+          variant: "destructive",
+        });
         return;
       }
 
@@ -520,7 +526,12 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
                 color: "var(--buyer-confirmed)",
               }}
             >
-              {format(new Date(`${selectedOption.date}T00:00:00`), "EEE d MMM")} ·{" "}
+              {format.dateTime(new Date(`${selectedOption.date}T00:00:00`), {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+              })}{" "}
+              ·{" "}
               {selectedOption.startTime.slice(0, 5)}–{selectedOption.endTime.slice(0, 5)} ✓
             </motion.button>
           ) : (
@@ -553,7 +564,11 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
                             : "border-border"
                         }`}
                       >
-                        {format(new Date(`${date}T00:00:00`), "EEE d MMM")}
+                        {format.dateTime(new Date(`${date}T00:00:00`), {
+                          weekday: "short",
+                          day: "numeric",
+                          month: "short",
+                        })}
                       </button>
                     ))}
                   </div>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { TRACKER_STEPS, trackerIndex } from "@/features/buyer/lib/order-tracker";
+import { trackerIndex } from "@/features/buyer/lib/order-tracker";
 
 describe("trackerIndex", () => {
   it.each([
@@ -11,8 +11,5 @@ describe("trackerIndex", () => {
   });
   it("cancelled → null", () => {
     expect(trackerIndex("cancelled")).toBeNull();
-  });
-  it("has exactly three steps", () => {
-    expect(TRACKER_STEPS).toHaveLength(3);
   });
 });

@@ -8,7 +8,7 @@ import { useCart } from "./cart-context";
 import { ScaleChip } from "./scale-chip";
 import { PricingExplainerSheet } from "./pricing-explainer-sheet";
 import {
-  BUYER_FALLBACK_LABELS,
+  BUYER_FALLBACK_KEYS,
   cartEstimate,
   estimateRange,
   formatEstimate,
@@ -27,6 +27,7 @@ export function CartView({
   const total = cartEstimate(items);
   const t = useTranslations("buyer.cart");
   const tPricing = useTranslations("buyer.pricing");
+  const tProduct = useTranslations("buyer.product");
 
   if (items.length === 0) {
     return (
@@ -75,7 +76,7 @@ export function CartView({
                   {t("sizeLine", {
                     min: item.sizeMinKg,
                     max: item.sizeMaxKg,
-                    fallback: BUYER_FALLBACK_LABELS[item.fallback],
+                    fallback: tProduct(BUYER_FALLBACK_KEYS[item.fallback]),
                   })}
                 </p>
                 <ScaleChip estimate={lineEstimate} className="mt-1" />

@@ -27,6 +27,7 @@ export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("buyer.orderDetail");
+  const tRoot = useTranslations();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -37,9 +38,11 @@ export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
     setSubmitting(false);
 
     if (!result.ok) {
+      // `messageKey` is a dynamic full path (e.g. "errors.buyer.order.invalidStatus");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
       toast({
         title: t("error"),
-        description: result.message,
+        description: tRoot(result.messageKey as never),
         variant: "destructive",
       });
       return;

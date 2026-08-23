@@ -74,11 +74,12 @@ export function deltaAgainstEstimate(
   return { kind: "within", amount: 0 };
 }
 
-/** Buyer-facing BM fallback labels. FALLBACK_LABELS in orders/types.ts is
- *  shared with the seller UI and must not change. */
-export const BUYER_FALLBACK_LABELS: Record<OrderFallback, string> = {
-  cancel: "Batal pesanan saya",
-  mix: "Campur saiz",
-  upsize: "Besar pun ok",
-  downsize: "Kecil pun ok",
+/** Message keys (relative to the `buyer.product` namespace) for the buyer-facing
+ *  fallback labels. FALLBACK_LABELS in orders/types.ts is shared with the seller
+ *  UI and must not change. */
+export const BUYER_FALLBACK_KEYS: Record<OrderFallback, string> = {
+  cancel: "fallback.cancel",
+  mix: "fallback.mix",
+  upsize: "fallback.upsize",
+  downsize: "fallback.downsize",
 };
