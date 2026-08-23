@@ -44,7 +44,14 @@ async function* lines(res: Response): AsyncGenerator<string> {
   if (buf) yield buf;
 }
 
-async function refreshPremisesIfStale(): Promise<void> {
+/**
+ * "cached" = the premise map was already fresh, nothing fetched.
+ * "refreshed" = lookup_premise.csv was downloaded and upserted this run.
+ * "stale" = the refresh failed but an older cache is still usable.
+ */
+type PremiseState = "cached" | "refreshed" | "stale";
+
+async function refreshPremisesIfStale(): Promise<PremiseState> {
   const { data, error } = await admin
     .from("market_premises")
     .select("synced_at")
@@ -55,7 +62,7 @@ async function refreshPremisesIfStale(): Promise<void> {
   const hasCache = (data?.length ?? 0) > 0;
   const newest = data?.[0]?.synced_at ? new Date(data[0].synced_at) : null;
   const staleBefore = Date.now() - PREMISE_TTL_DAYS * 24 * 60 * 60 * 1000;
-  if (newest && newest.getTime() > staleBefore) return;
+  if (newest && newest.getTime() > staleBefore) return "cached";
 
   // A cache already exists (merely stale) -- a lookup_premise.csv failure
   // here must not abort the price sync; fall back to the existing cache.
@@ -79,9 +86,11 @@ async function refreshPremisesIfStale(): Promise<void> {
         .upsert(rows.slice(i, i + 500), { onConflict: "premise_code" });
       if (upsertError) throw new Error(`market_premises upsert: ${upsertError.message}`);
     }
+    return "refreshed";
   } catch (e) {
     if (!hasCache) throw e;
     console.error("premise refresh failed, using existing (stale) cache", e);
+    return "stale";
   }
 }
 
@@ -102,7 +111,19 @@ async function premiseStateMap(): Promise<Map<number, string>> {
 
 Deno.serve(async () => {
   try {
-    await refreshPremisesIfStale();
+    // Refreshing the premise lookup and parsing a month of price rows are
+    // each affordable alone but together exceed the edge runtime's budget:
+    // the very first prod run died with WORKER_RESOURCE_LIMIT doing both.
+    // So a run that actually refreshes stops there, and the next daily tick
+    // (premises now fresh) ingests prices. Cost: one skipped price day per
+    // PREMISE_TTL_DAYS, instead of one killed worker.
+    if (await refreshPremisesIfStale() === "refreshed") {
+      return new Response(
+        JSON.stringify({ premisesRefreshed: true, pricesSkipped: "next run" }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      );
+    }
+
     const premises = await premiseStateMap();
     const aggregator = createAggregator(premises, TRACKED_ITEM_CODES);
 
