@@ -6,6 +6,24 @@ import {
 } from "../../components/dashboard-shell-model";
 
 describe("dashboard shell model", () => {
+  it("never matches a locale-prefixed pathname against unprefixed hrefs", () => {
+    // getDashboardSidebarGroups builds hrefs like "/{slug}/settings/organization"
+    // and compares them against whatever `pathname` the caller passes in. The
+    // sidebar component must supply an UNPREFIXED pathname (via next-intl's
+    // `usePathname` from "@/i18n/navigation", not "next/navigation" - see
+    // app-sidebar.tsx). This pins that contract: a locale-prefixed pathname
+    // ("/en/...") never highlights anything, so a regression back to
+    // "next/navigation" would silently break every active state.
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/en/ayam-norliza-pilot/settings/organization",
+    });
+
+    expect(groups.some((group) => group.isActive)).toBe(false);
+    const orgItem = groups[1]?.items.find((item) => item.title === "Organization");
+    expect(orgItem?.isActive).toBe(false);
+  });
+
   it("marks organization settings as the active sidebar item", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
