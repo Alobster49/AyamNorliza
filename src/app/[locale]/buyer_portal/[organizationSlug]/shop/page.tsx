@@ -1,13 +1,19 @@
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getPublicCatalog, getOrganizationBySlug } from "@/features/buyer/server/actions";
 import { ShopClient } from "./product-grid";
 
 type ShopPageProps = {
-  params: Promise<{ organizationSlug: string }>;
+  params: Promise<{ locale: string; organizationSlug: string }>;
 };
 
 export default async function ShopPage({ params }: ShopPageProps) {
-  const { organizationSlug } = await params;
+  const { locale, organizationSlug } = await params;
+  // Required alongside the `[locale]` layout's own call: the layout enables
+  // static generation via `generateStaticParams`, and without a per-page call
+  // too, next-intl's request-scoped locale can leak across concurrent
+  // requests (e.g. a client-side `router.push` landing here right after a
+  // request for the other locale) - see next-intl's static-rendering docs.
+  setRequestLocale(locale);
   const t = await getTranslations("buyer.shop");
 
   const [result, org] = await Promise.all([

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { Link } from "@/i18n/navigation";
-import { getTranslations, getFormatter } from "next-intl/server";
+import { getTranslations, getFormatter, setRequestLocale } from "next-intl/server";
 import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import { getMyOrder } from "@/features/orders/server/portal-actions";
 import { ORDER_STATUS_COLORS } from "@/features/orders/types";
@@ -21,11 +21,14 @@ import { OrderTracker } from "@/features/buyer/components/order-tracker";
 import { ScaleChip } from "@/features/buyer/components/scale-chip";
 
 type OrderDetailPageProps = {
-  params: Promise<{ organizationSlug: string; orderId: string }>;
+  params: Promise<{ locale: string; organizationSlug: string; orderId: string }>;
 };
 
 export default async function OrderDetailPage({ params }: OrderDetailPageProps) {
-  const { organizationSlug, orderId } = await params;
+  const { locale, organizationSlug, orderId } = await params;
+  // Required alongside the `[locale]` layout's own call - see the comment on
+  // ShopPage for why every page needs this, not just the layout.
+  setRequestLocale(locale);
   await requireBuyerOrRedirect(organizationSlug);
 
   const result = await getMyOrder(orderId);

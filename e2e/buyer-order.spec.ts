@@ -76,10 +76,10 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
   await sheet.getByRole("button", { name: "Tambah ke troli" }).click();
   await expect(sheet).toBeHidden({ timeout: 10_000 });
 
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/cart");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/cart");
   await expect(buyerPage.getByText(productName)).toBeVisible({ timeout: 10_000 });
   await buyerPage.getByRole("button", { name: "Teruskan ke checkout" }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
     timeout: 10_000,
   });
 
@@ -95,7 +95,7 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
   await expect(buyerPage.getByTestId("order-confirmation")).toBeVisible({ timeout: 15_000 });
   await expect(buyerPage.getByText("Pesanan diterima!")).toBeVisible();
   await buyerPage.getByRole("button", { name: /lihat pesanan saya/i }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/orders/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/orders/, {
     timeout: 10_000,
   });
   // RECONCILIATION: the buyer orders list no longer shows a "Pending" badge
@@ -137,9 +137,9 @@ test("buyer cancels a pending order", async ({ page, context }) => {
   await sheet.getByRole("button", { name: "Tambah ke troli" }).click();
   await expect(sheet).toBeHidden({ timeout: 10_000 });
 
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/cart");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/cart");
   await buyerPage.getByRole("button", { name: "Teruskan ke checkout" }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
     timeout: 10_000,
   });
 
@@ -148,7 +148,7 @@ test("buyer cancels a pending order", async ({ page, context }) => {
   await expect(buyerPage.getByTestId("order-confirmation")).toBeVisible({ timeout: 15_000 });
   await expect(buyerPage.getByText("Pesanan diterima!")).toBeVisible();
   await buyerPage.getByRole("button", { name: /lihat pesanan saya/i }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/orders/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/orders/, {
     timeout: 10_000,
   });
 
@@ -159,16 +159,17 @@ test("buyer cancels a pending order", async ({ page, context }) => {
   await expect(buyerPage.getByRole("heading", { name: /butiran pesanan/i })).toBeVisible({
     timeout: 10_000,
   });
-  // RECONCILIATION: "Cancel order" only opens a confirmation dialog; the
-  // actual cancellation needs a second click on the destructive "Cancel
-  // order" button inside that dialog. This part of the order-detail page is
-  // unchanged by the buyer redesign.
-  await buyerPage.getByRole("button", { name: /cancel order/i }).click();
+  // RECONCILIATION: "Batalkan pesanan" (was "Cancel order") only opens a
+  // confirmation dialog; the actual cancellation needs a second click on the
+  // destructive "Batalkan pesanan" button inside that dialog. This part of
+  // the order-detail page is now translated too (i18n Phase 2), unlike when
+  // this comment was first written.
+  await buyerPage.getByRole("button", { name: /batalkan pesanan/i }).click();
   const cancelDialog = buyerPage.getByRole("dialog");
   await expect(cancelDialog).toBeVisible({ timeout: 10_000 });
-  await cancelDialog.getByRole("button", { name: /cancel order/i }).click();
+  await cancelDialog.getByRole("button", { name: /batalkan pesanan/i }).click();
 
   // RECONCILIATION: the order detail page also renders status as a plain
   // <span>, not the shadcn Badge component.
-  await expect(buyerPage.getByText("Cancelled").first()).toBeVisible({ timeout: 10_000 });
+  await expect(buyerPage.getByText("Dibatalkan").first()).toBeVisible({ timeout: 10_000 });
 });

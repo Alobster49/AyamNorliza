@@ -37,7 +37,7 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   const buyerName = uniqueFixtureName("E2E Addr Buyer");
   const buyerPassword = "test-only-password-12-chars";
 
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/login");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/login");
   // RECONCILIATION: the login/signup toggle is a radiogroup ("Log
   // masuk"/"Daftar" radios), not a "Sign up" button, and the submit button
   // reads "Daftar" (was "Create Account").
@@ -48,7 +48,7 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   await buyerPage.getByLabel("Kata laluan", { exact: true }).fill(buyerPassword);
   await buyerPage.getByLabel("Sahkan kata laluan").fill(buyerPassword);
   await buyerPage.getByRole("button", { name: "Daftar" }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/shop/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/shop/, {
     timeout: 20_000,
   });
 
@@ -86,9 +86,9 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   }
 
   await addProductToCart();
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/cart");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/cart");
   await buyerPage.getByRole("button", { name: "Teruskan ke checkout" }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
     timeout: 20_000,
   });
 
@@ -132,11 +132,11 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   // placed the order with should now be a saved, preselected radio option,
   // and delivery slots should load without any manual zone/postcode entry.
   await buyerPage.getByRole("button", { name: "Terus beli lagi" }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/shop/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/shop/, {
     timeout: 20_000,
   });
   await addProductToCart();
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/checkout");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/checkout");
 
   const addressGroup = buyerPage.getByRole("radiogroup", { name: "Alamat penghantaran" });
   const savedAddressRadio = addressGroup.getByRole("radio", { name: /12 Jalan E2E/ });
@@ -152,8 +152,8 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   // does; account creation happens inline once there is something to buy).
   const guestContext = await browser.newContext();
   const guestPage = await guestContext.newPage();
-  await guestPage.goto("/buyer_portal/ayam-norliza-pilot/checkout");
-  await expect(guestPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
+  await guestPage.goto("/ms/buyer_portal/ayam-norliza-pilot/checkout");
+  await expect(guestPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
     timeout: 20_000,
   });
   expect(guestPage.url()).not.toContain("/login");

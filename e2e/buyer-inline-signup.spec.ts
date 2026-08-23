@@ -23,7 +23,7 @@ test("first-time buyer orders end-to-end with inline account creation, never see
 
   // Fresh anonymous context page — no buyer session.
   const buyerPage = await context.newPage();
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/shop");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/shop");
 
   // Dismiss the first-visit pricing explainer if it opens (it auto-opens
   // ~600ms after mount — isVisible() does not wait, so use waitFor()).
@@ -46,7 +46,7 @@ test("first-time buyer orders end-to-end with inline account creation, never see
   await sheet.getByRole("button", { name: "Tambah ke troli" }).click();
   await expect(sheet).toBeHidden({ timeout: 10_000 });
 
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/cart");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/cart");
   await expect(buyerPage.getByText(productName)).toBeVisible({ timeout: 10_000 });
   await buyerPage.getByRole("button", { name: "Teruskan ke checkout" }).click();
   await expect(buyerPage).toHaveURL(/\/checkout/, { timeout: 10_000 });

@@ -38,7 +38,7 @@ test("buyer signup auto-links to the admin-created customer with the same phone"
   // with the E.164-normalizable bare form of the same phone.
   const buyerContext = await browser.newContext();
   const buyerPage = await buyerContext.newPage();
-  await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/login");
+  await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/login");
   await buyerPage.getByRole("radio", { name: "Daftar" }).click();
   await buyerPage.getByLabel("Nama").fill(buyerName);
   await buyerPage.getByLabel("Email").fill(buyerEmail);
@@ -46,7 +46,7 @@ test("buyer signup auto-links to the admin-created customer with the same phone"
   await buyerPage.getByLabel("Kata laluan", { exact: true }).fill(buyerPassword);
   await buyerPage.getByLabel("Sahkan kata laluan").fill(buyerPassword);
   await buyerPage.getByRole("button", { name: "Daftar", exact: true }).click();
-  await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/shop/, {
+  await expect(buyerPage).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/shop/, {
     timeout: 20_000,
   });
   await buyerContext.close();

@@ -59,7 +59,6 @@ const eslintConfig = [
     // vacuous for every path, not only the ones its comment described.
     files: [
       "src/app/\\[locale\\]/(seller)/**/*.{ts,tsx}",
-      "src/app/\\[locale\\]/buyer_portal/**/*.{ts,tsx}",
       "src/features/orders/components/**/*.{ts,tsx}",
       "src/features/identity-access/components/**/*.{ts,tsx}",
       "src/features/logistics/components/**/*.{ts,tsx}",
