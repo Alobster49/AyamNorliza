@@ -56,6 +56,8 @@ function flattenLeafTypes(value: unknown, prefix = ""): Array<[string, string]> 
     let typeName: string;
     if (Array.isArray(leaf)) {
       typeName = "array";
+    } else if (leaf === null) {
+      typeName = "null";
     } else if (typeof leaf === "object" && Object.keys(leaf as Record<string, unknown>).length === 0) {
       typeName = "empty-object";
     } else {
