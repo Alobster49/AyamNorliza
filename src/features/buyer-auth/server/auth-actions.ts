@@ -59,7 +59,7 @@ export async function buyerSignUpAction(
     .single();
 
   if (orgError || !org) {
-    return err("validation", "Invalid organization");
+    return err("validation", "Kedai tidak dijumpai.");
   }
 
   // Sign up the user with Supabase Auth
@@ -72,11 +72,27 @@ export async function buyerSignUpAction(
   });
 
   if (error) {
-    return err("conflict", error.message);
+    // The email may already own an auth user that is not a buyer — a
+    // console/staff account, or a buyer whose profile row was wiped when
+    // the pilot data was reset. Signing up looks impossible ("already
+    // registered") while signing in looks wrong ("not a buyer"), so the
+    // person is locked out of the shop. If they can prove ownership with
+    // the password they just typed, attach a buyer profile to that account.
+    if (isAlreadyRegistered(error)) {
+      return attachBuyerToExistingAccount({
+        supabase,
+        email: input.email,
+        password: input.password,
+        displayName: input.displayName,
+        phone,
+        organizationId: org.id,
+      });
+    }
+    return err("conflict", "Tidak dapat membuat akaun. Sila cuba lagi.");
   }
 
   if (!data.user) {
-    return err("internal", "Failed to create user");
+    return err("internal", "Tidak dapat membuat akaun. Sila cuba lagi.");
   }
 
   // Create buyer record
@@ -98,10 +114,82 @@ export async function buyerSignUpAction(
     }
     // signUp set session cookies for the now-deleted user; clear them.
     await supabase.auth.signOut();
-    return err("internal", "Failed to create buyer profile");
+    return err("internal", "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.");
   }
 
   return ok({ buyerId: data.user.id });
+}
+
+/** Supabase reports a duplicate email as an AuthApiError, not a field error. */
+function isAlreadyRegistered(error: { message: string; code?: string }): boolean {
+  if (error.code === "user_already_exists" || error.code === "email_exists") return true;
+  return /already\s+(been\s+)?registered|already\s+exists/i.test(error.message);
+}
+
+/**
+ * Adopt an existing auth user as a buyer of this organization.
+ *
+ * Only ever called after `signUp` refused the email. The password is
+ * re-checked through the normal sign-in path, so this grants nothing that
+ * logging in would not: a wrong password gets the same generic answer as
+ * any failed login, and no auth user is ever created or deleted here.
+ */
+async function attachBuyerToExistingAccount(args: {
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  email: string;
+  password: string;
+  displayName: string;
+  phone: string;
+  organizationId: string;
+}): Promise<ActionResult<{ buyerId: string }>> {
+  const { supabase, email, password, displayName, phone, organizationId } = args;
+
+  const { data: signIn, error: signInError } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (signInError || !signIn.user) {
+    return err("conflict", "Emel ini sudah didaftarkan. Sila log masuk.");
+  }
+
+  const userId = signIn.user.id;
+
+  const { data: existing, error: existingError } = await supabase
+    .from("buyers")
+    .select("id, organization_id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (existingError) {
+    await supabase.auth.signOut();
+    return err("internal", "Tidak dapat menyemak profil pembeli. Sila cuba lagi.");
+  }
+
+  if (existing) {
+    // Already a buyer — the person just used the wrong tab. They are signed
+    // in now, so treat it as a successful entry rather than an error.
+    if (existing.organization_id !== organizationId) {
+      await supabase.auth.signOut();
+      return err("conflict", "Akaun ini bukan pembeli untuk kedai ini.");
+    }
+    return ok({ buyerId: userId });
+  }
+
+  const { error: insertError } = await supabase.from("buyers").insert({
+    id: userId,
+    organization_id: organizationId,
+    display_name: displayName,
+    phone,
+  });
+
+  if (insertError) {
+    // The auth user existed before this call — never delete it on rollback.
+    await supabase.auth.signOut();
+    return err("internal", "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.");
+  }
+
+  return ok({ buyerId: userId });
 }
 
 const BuyerLoginInput = z.object({
@@ -128,7 +216,7 @@ export async function buyerSignInAction(
   });
 
   if (error || !data.user) {
-    return err("unauthenticated", "Invalid email or password");
+    return err("unauthenticated", "Emel atau kata laluan salah.");
   }
 
   // Verify this is a buyer
@@ -140,7 +228,7 @@ export async function buyerSignInAction(
 
   if (buyerError || !buyer) {
     await supabase.auth.signOut();
-    return err("unauthenticated", "Not registered as a buyer");
+    return err("unauthenticated", "Akaun ini belum didaftarkan sebagai pembeli.");
   }
 
   // If organization slug was provided, verify it matches
@@ -153,7 +241,7 @@ export async function buyerSignInAction(
 
     if (!org || org.id !== buyer.organization_id) {
       await supabase.auth.signOut();
-      return err("unauthenticated", "You are not a buyer for this organization");
+      return err("unauthenticated", "Akaun ini bukan pembeli untuk kedai ini.");
     }
   }
 
