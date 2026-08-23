@@ -68,5 +68,85 @@
       "rateLimited": "Terlalu banyak cubaan. Cuba lagi dalam beberapa minit.",
       "unexpected": "Ada masalah berlaku. Cuba lagi."
     }
+  },
+  "status": {
+    "order": {
+      "pending": "Menunggu",
+      "confirmed": "Disahkan",
+      "ready": "Sedia",
+      "delivered": "Dihantar",
+      "closed": "Selesai",
+      "cancelled": "Dibatalkan"
+    }
+  },
+  "buyer": {
+    "nav": {
+      "shop": "Kedai",
+      "orders": "Pesanan",
+      "profile": "Profil"
+    },
+    "header": {
+      "brand": "Kedai",
+      "cart": "Troli",
+      "userMenu": "Menu pengguna",
+      "buyerFallback": "Pembeli",
+      "myOrders": "Pesanan Saya",
+      "login": "Log Masuk",
+      "menuToggle": "Buka menu"
+    },
+    "cart": {
+      "emptyTitle": "Troli kosong — jom pilih ayam segar",
+      "viewProducts": "Lihat produk",
+      "sizeLine": "{min}–{max} kg/ekor · {fallback}",
+      "decrease": "Kurang",
+      "increase": "Tambah kuantiti",
+      "remove": "Buang",
+      "quantityKg": "{quantity} kg",
+      "estimatedTotal": "Anggaran jumlah",
+      "checkout": "Teruskan ke checkout",
+      "title": "Troli Anda",
+      "viewCart": "Lihat troli",
+      "barSummary": "{count, plural, other {# item}} · {total}"
+    },
+    "sheet": {
+      "close": "Tutup",
+      "defaultTitle": "Helaian"
+    },
+    "product": {
+      "add": "Tambah",
+      "buyBy": "Beli ikut",
+      "unitPiece": "Ekor",
+      "unitKg": "Kg",
+      "quantityPieceLabel": "Kuantiti (ekor)",
+      "quantityKgLabel": "Kuantiti (kg)",
+      "decrease": "Kurang",
+      "increase": "Tambah kuantiti",
+      "sizeMinLabel": "Saiz min (kg/ekor)",
+      "sizeMaxLabel": "Saiz maks (kg/ekor)",
+      "fallbackLabel": "Kalau saiz tak ada?",
+      "addToCart": "Tambah ke troli"
+    },
+    "pricing": {
+      "perKg": "/kg",
+      "perPiece": "/ekor",
+      "whyEstimate": "Kenapa harga anggaran?",
+      "weighed": "Ditimbang {weight} × {pricePerKg}/kg",
+      "afterWeighing": "Harga selepas timbang",
+      "gotIt": "Faham!",
+      "explainer": {
+        "chooseTitle": "Anda pilih ayam",
+        "chooseBody": "Pilih saiz dan cara potong yang anda mahu.",
+        "weighTitle": "Kami timbang bila sedia",
+        "weighBody": "Setiap ekor ditimbang betul-betul sebelum dihantar.",
+        "priceTitle": "Harga ikut berat sebenar",
+        "priceBody": "Harga akhir = berat sebenar × harga/kg. Tanda ~ maksudnya anggaran."
+      }
+    },
+    "orderTracker": {
+      "ariaLabel": "Status pesanan",
+      "booked": "Ditempah",
+      "shipped": "Dihantar",
+      "priceConfirmed": "Harga disahkan"
+    }
   }
 }

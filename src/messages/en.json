@@ -68,5 +68,85 @@
       "rateLimited": "Too many attempts. Try again in a few minutes.",
       "unexpected": "Something went wrong. Try again."
     }
+  },
+  "status": {
+    "order": {
+      "pending": "Pending",
+      "confirmed": "Confirmed",
+      "ready": "Ready",
+      "delivered": "Delivered",
+      "closed": "Closed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "buyer": {
+    "nav": {
+      "shop": "Shop",
+      "orders": "Orders",
+      "profile": "Profile"
+    },
+    "header": {
+      "brand": "Shop",
+      "cart": "Cart",
+      "userMenu": "User menu",
+      "buyerFallback": "Buyer",
+      "myOrders": "My Orders",
+      "login": "Log In",
+      "menuToggle": "Open menu"
+    },
+    "cart": {
+      "emptyTitle": "Your cart is empty — let's pick some fresh chicken",
+      "viewProducts": "View products",
+      "sizeLine": "{min}–{max} kg/bird · {fallback}",
+      "decrease": "Decrease",
+      "increase": "Increase quantity",
+      "remove": "Remove",
+      "quantityKg": "{quantity} kg",
+      "estimatedTotal": "Estimated total",
+      "checkout": "Continue to checkout",
+      "title": "Your Cart",
+      "viewCart": "View cart",
+      "barSummary": "{count, plural, one {# item} other {# items}} · {total}"
+    },
+    "sheet": {
+      "close": "Close",
+      "defaultTitle": "Sheet"
+    },
+    "product": {
+      "add": "Add",
+      "buyBy": "Buy by",
+      "unitPiece": "Piece",
+      "unitKg": "Kg",
+      "quantityPieceLabel": "Quantity (pcs)",
+      "quantityKgLabel": "Quantity (kg)",
+      "decrease": "Decrease",
+      "increase": "Increase quantity",
+      "sizeMinLabel": "Min size (kg/bird)",
+      "sizeMaxLabel": "Max size (kg/bird)",
+      "fallbackLabel": "If size isn't available?",
+      "addToCart": "Add to cart"
+    },
+    "pricing": {
+      "perKg": "/kg",
+      "perPiece": "/piece",
+      "whyEstimate": "Why an estimated price?",
+      "weighed": "Weighed {weight} × {pricePerKg}/kg",
+      "afterWeighing": "Price after weighing",
+      "gotIt": "Got it!",
+      "explainer": {
+        "chooseTitle": "You choose the chicken",
+        "chooseBody": "Pick the size and cut you want.",
+        "weighTitle": "We weigh it when it's ready",
+        "weighBody": "Every bird is weighed precisely before delivery.",
+        "priceTitle": "Price follows actual weight",
+        "priceBody": "Final price = actual weight × price/kg. The ~ mark means an estimate."
+      }
+    },
+    "orderTracker": {
+      "ariaLabel": "Order status",
+      "booked": "Booked",
+      "shipped": "Shipped",
+      "priceConfirmed": "Price confirmed"
+    }
   }
 }

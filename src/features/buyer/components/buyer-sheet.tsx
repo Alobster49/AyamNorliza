@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { useTranslations } from "next-intl";
 
 type BuyerSheetProps = {
   open: boolean;
@@ -35,6 +36,7 @@ function unlockBody() {
  * value on re-target). Reduced motion: plain fade.
  */
 export function BuyerSheet({ open, onOpenChange, title, children }: BuyerSheetProps) {
+  const t = useTranslations("buyer.sheet");
   const reduced = useReducedMotion();
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
@@ -106,7 +108,7 @@ export function BuyerSheet({ open, onOpenChange, title, children }: BuyerSheetPr
         <div className="fixed inset-0 z-[60]">
           <motion.button
             type="button"
-            aria-label="Tutup"
+            aria-label={t("close")}
             className="absolute inset-0 h-full w-full bg-foreground/30"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -119,7 +121,7 @@ export function BuyerSheet({ open, onOpenChange, title, children }: BuyerSheetPr
             tabIndex={-1}
             role="dialog"
             aria-modal="true"
-            aria-label={title ?? "Helaian"}
+            aria-label={title ?? t("defaultTitle")}
             className="absolute inset-x-0 bottom-0 mx-auto max-h-[88dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-b-0 bg-card/[0.98] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(58,49,41,0.15)] focus:outline-none"
             initial={reduced ? { opacity: 0 } : { y: "100%" }}
             animate={reduced ? { opacity: 1 } : { y: 0 }}

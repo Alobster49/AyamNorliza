@@ -1,9 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { usePathname } from "@/i18n/navigation";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ShoppingCart,
   User,
@@ -24,7 +24,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { buyerSignOutAction } from "@/features/buyer-auth/server/auth-actions";
-import { useRouter } from "next/navigation";
 import { useCart } from "./cart-context";
 import { useCartUi } from "./cart-ui-context";
 
@@ -44,15 +43,18 @@ export function BuyerHeader({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { items } = useCart();
   const { openCart } = useCartUi();
+  const t = useTranslations("buyer.header");
+  const tNav = useTranslations("buyer.nav");
+  const tCommon = useTranslations("common");
 
   const navItems = [
-    { href: `/buyer_portal/${organizationSlug}/shop`, label: "Kedai", icon: ShoppingBag },
+    { href: `/buyer_portal/${organizationSlug}/shop`, label: tNav("shop"), icon: ShoppingBag },
     ...(isLoggedIn
       ? [
-          { href: `/buyer_portal/${organizationSlug}/orders`, label: "Pesanan", icon: Package },
+          { href: `/buyer_portal/${organizationSlug}/orders`, label: tNav("orders"), icon: Package },
           {
             href: `/buyer_portal/${organizationSlug}/profile`,
-            label: "Profil",
+            label: tNav("profile"),
             icon: User,
           },
         ]
@@ -78,7 +80,7 @@ export function BuyerHeader({
             className="h-9 w-9 rounded-lg object-contain"
           />
           <span className="hidden font-semibold sm:inline-block">
-            Kedai
+            {t("brand")}
           </span>
         </Link>
 
@@ -112,7 +114,7 @@ export function BuyerHeader({
                 {items.length}
               </span>
             )}
-            <span className="sr-only">Troli</span>
+            <span className="sr-only">{t("cart")}</span>
           </Button>
 
           {isLoggedIn ? (
@@ -120,38 +122,38 @@ export function BuyerHeader({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <User className="h-5 w-5" />
-                  <span className="sr-only">Menu pengguna</span>
+                  <span className="sr-only">{t("userMenu")}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{buyerName || "Pembeli"}</p>
+                    <p className="text-sm font-medium">{buyerName || t("buyerFallback")}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href={`/buyer_portal/${organizationSlug}/orders`}>
                     <Package className="mr-2 h-4 w-4" />
-                    Pesanan Saya
+                    {t("myOrders")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href={`/buyer_portal/${organizationSlug}/profile`}>
                     <User className="mr-2 h-4 w-4" />
-                    Profil
+                    {tNav("profile")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Log keluar
+                  {tCommon("signOut")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Button asChild variant="default" size="sm">
-              <Link href={`/buyer_portal/${organizationSlug}/login`}>Log Masuk</Link>
+              <Link href={`/buyer_portal/${organizationSlug}/login`}>{t("login")}</Link>
             </Button>
           )}
 
@@ -167,7 +169,7 @@ export function BuyerHeader({
             ) : (
               <Menu className="h-5 w-5" />
             )}
-            <span className="sr-only">Buka menu</span>
+            <span className="sr-only">{t("menuToggle")}</span>
           </Button>
         </div>
       </div>

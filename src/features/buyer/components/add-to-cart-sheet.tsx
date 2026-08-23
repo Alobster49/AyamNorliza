@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { motion } from "motion/react";
 import { Minus, Plus, X, Shuffle, ArrowUp, ArrowDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,8 @@ type AddToCartSheetProps = {
 };
 
 export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }: AddToCartSheetProps) {
+  const t = useTranslations("buyer.product");
+  const tPricing = useTranslations("buyer.pricing");
   const available = variants.filter((v) => v.is_available);
   const [variantId, setVariantId] = useState(available[0]?.id ?? "");
   const variant = useMemo(
@@ -117,15 +120,15 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
                   v.id === variant?.id ? "border-primary bg-primary/15 font-medium" : "border-border"
                 }`}
               >
-                {v.name} · {formatRM(Number(v.price_per_unit))}{v.unit_type === "per_kg" ? "/kg" : ""}
+                {v.name} · {formatRM(Number(v.price_per_unit))}{v.unit_type === "per_kg" ? tPricing("perKg") : ""}
               </button>
             ))}
           </div>
         )}
 
         <div>
-          <Label className="mb-2 block">Beli ikut</Label>
-          <div className="relative grid grid-cols-2 rounded-full bg-secondary p-1" role="radiogroup" aria-label="Beli ikut">
+          <Label className="mb-2 block">{t("buyBy")}</Label>
+          <div className="relative grid grid-cols-2 rounded-full bg-secondary p-1" role="radiogroup" aria-label={t("buyBy")}>
             {(["piece", "kg"] as const).map((m) => (
               <button
                 key={m}
@@ -142,7 +145,7 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
                     transition={{ type: "spring", bounce: 0, duration: 0.3 }}
                   />
                 )}
-                {m === "piece" ? "Ekor" : "Kg"}
+                {m === "piece" ? t("unitPiece") : t("unitKg")}
               </button>
             ))}
           </div>
@@ -150,10 +153,10 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
 
         <div>
           <Label htmlFor="qty" className="mb-2 block">
-            {mode === "piece" ? "Kuantiti (ekor)" : "Kuantiti (kg)"}
+            {mode === "piece" ? t("quantityPieceLabel") : t("quantityKgLabel")}
           </Label>
           <div className="flex items-center gap-2">
-            <button type="button" aria-label="Kurang" className="flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
+            <button type="button" aria-label={t("decrease")} className="flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
               onClick={() => step(setQuantity, quantity, mode === "piece" ? -1 : -0.1, mode === "piece" ? 1 : 0.1, mode === "piece" ? 0 : 1)}>
               <Minus className="h-4 w-4" />
             </button>
@@ -161,7 +164,7 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
               min={mode === "piece" ? 1 : 0.1} step={mode === "piece" ? 1 : 0.1}
               value={quantity} onChange={(e) => setQuantity(e.target.value)}
               className="h-11 text-center font-buyer-mono" />
-            <button type="button" aria-label="Tambah kuantiti" className="flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
+            <button type="button" aria-label={t("increase")} className="flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
               onClick={() => step(setQuantity, quantity, mode === "piece" ? 1 : 0.1, mode === "piece" ? 1 : 0.1, mode === "piece" ? 0 : 1)}>
               <Plus className="h-4 w-4" />
             </button>
@@ -170,20 +173,20 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="size-min" className="mb-2 block">Saiz min (kg/ekor)</Label>
+            <Label htmlFor="size-min" className="mb-2 block">{t("sizeMinLabel")}</Label>
             <Input id="size-min" type="number" inputMode="decimal" min={0.1} max={50} step={0.1}
               value={sizeMinKg} onChange={(e) => setSizeMinKg(e.target.value)} className="h-11 font-buyer-mono" />
           </div>
           <div>
-            <Label htmlFor="size-max" className="mb-2 block">Saiz maks (kg/ekor)</Label>
+            <Label htmlFor="size-max" className="mb-2 block">{t("sizeMaxLabel")}</Label>
             <Input id="size-max" type="number" inputMode="decimal" min={0.1} max={50} step={0.1}
               value={sizeMaxKg} onChange={(e) => setSizeMaxKg(e.target.value)} className="h-11 font-buyer-mono" />
           </div>
         </div>
 
         <div>
-          <Label className="mb-2 block">Kalau saiz tak ada?</Label>
-          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Kalau saiz tak ada?">
+          <Label className="mb-2 block">{t("fallbackLabel")}</Label>
+          <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("fallbackLabel")}>
             {FALLBACKS.map((value) => {
               const Icon = FALLBACK_ICONS[value];
               const selected = fallback === value;
@@ -205,7 +208,7 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
           <ScaleChip estimate={estimate} />
           <button type="button" onClick={handleAdd} disabled={!isValid}
             className="rounded-full bg-primary px-6 py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50">
-            Tambah ke troli
+            {t("addToCart")}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Bird } from "lucide-react";
 import { ScaleChip } from "./scale-chip";
 import { AddToCartSheet } from "./add-to-cart-sheet";
@@ -19,6 +20,8 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product, variants = [], onAddToCart, showInfo, onInfo }: ProductCardProps) {
+  const t = useTranslations("buyer.product");
+  const tPricing = useTranslations("buyer.pricing");
   const [open, setOpen] = useState(false);
   const available = variants.filter((v) => v.is_available);
   const primary = available[0] ?? null;
@@ -50,7 +53,7 @@ export function ProductCard({ product, variants = [], onAddToCart, showInfo, onI
         <h3 className="font-buyer-display text-lg font-semibold leading-tight">{product.name}</h3>
         <ScaleChip
           estimate={estimate}
-          perUnitLabel={primary ? `${formatRM(Number(primary.price_per_unit))}${primary.unit_type === "per_kg" ? "/kg" : "/ekor"}` : undefined}
+          perUnitLabel={primary ? `${formatRM(Number(primary.price_per_unit))}${primary.unit_type === "per_kg" ? tPricing("perKg") : tPricing("perPiece")}` : undefined}
           onInfo={showInfo ? onInfo : undefined}
         />
         {onAddToCart && (
@@ -60,7 +63,7 @@ export function ProductCard({ product, variants = [], onAddToCart, showInfo, onI
             disabled={!primary}
             className="w-full rounded-full bg-primary py-2.5 font-medium text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50"
           >
-            + Tambah
+            + {t("add")}
           </button>
         )}
       </div>

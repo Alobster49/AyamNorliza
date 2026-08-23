@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { AnimatePresence, motion } from "motion/react";
 import { useCart } from "./cart-context";
 import { useCartUi } from "./cart-ui-context";
@@ -13,6 +14,7 @@ export function CartOverlay({ organizationSlug }: { organizationSlug: string }) 
   const { items } = useCart();
   const { cartOpen, openCart, closeCart } = useCartUi();
   const total = cartEstimate(items);
+  const t = useTranslations("buyer.cart");
 
   const onQuietRoute =
     pathname.endsWith("/cart") || pathname.endsWith("/checkout") || pathname.endsWith("/login");
@@ -35,15 +37,15 @@ export function CartOverlay({ organizationSlug }: { organizationSlug: string }) 
               className="mx-auto flex w-full max-w-lg items-center justify-between rounded-full border bg-foreground px-5 py-3 text-background shadow-lg transition-transform active:scale-[0.98]"
             >
               <span className="font-buyer-mono text-sm">
-                {items.length} item · {total ? formatEstimate(total) : "—"}
+                {t("barSummary", { count: items.length, total: total ? formatEstimate(total) : "—" })}
               </span>
-              <span className="font-medium text-primary">Lihat troli</span>
+              <span className="font-medium text-primary">{t("viewCart")}</span>
             </button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <BuyerSheet open={cartOpen} onOpenChange={(o) => (o ? openCart() : closeCart())} title="Troli Anda">
+      <BuyerSheet open={cartOpen} onOpenChange={(o) => (o ? openCart() : closeCart())} title={t("title")}>
         <CartView organizationSlug={organizationSlug} onNavigate={closeCart} />
       </BuyerSheet>
     </>

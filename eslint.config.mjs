@@ -71,8 +71,6 @@ const eslintConfig = [
       "src/components/forms/invite-user-dialog.tsx",
       "src/components/forms/break-glass-dialog.tsx",
       "src/components/forms/reauth-dialog.tsx",
-      "src/features/buyer/components/cart-overlay.tsx",
-      "src/features/buyer/components/cart-view.tsx",
     ],
     rules: {
       "no-restricted-imports": "off",
@@ -88,7 +86,6 @@ const eslintConfig = [
     files: [
       "src/features/dashboard/components/app-sidebar.tsx",
       "src/features/seller/components/seller-sidebar.tsx",
-      "src/features/buyer/components/buyer-header.tsx",
     ],
     rules: {
       "no-restricted-imports": [

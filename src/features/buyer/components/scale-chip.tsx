@@ -1,6 +1,7 @@
 "use client";
 
 import { Info } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   formatEstimate,
@@ -24,13 +25,17 @@ type ScaleChipProps = {
  * pricing explainer sheet).
  */
 export function ScaleChip({ estimate, perUnitLabel, final, onInfo, className }: ScaleChipProps) {
+  const t = useTranslations("buyer.pricing");
   if (final) {
     return (
       <div className={cn("space-y-0.5", className)}>
         <p className="font-buyer-mono text-base font-medium">{formatRM(final.total)}</p>
         {final.weightKg != null && final.pricePerKg != null && (
           <p className="font-buyer-mono text-xs" style={{ color: "var(--buyer-delta)" }}>
-            Ditimbang {formatWeight(Number(final.weightKg))} × {formatRM(Number(final.pricePerKg))}/kg
+            {t("weighed", {
+              weight: formatWeight(Number(final.weightKg)),
+              pricePerKg: formatRM(Number(final.pricePerKg)),
+            })}
           </p>
         )}
       </div>
@@ -39,7 +44,7 @@ export function ScaleChip({ estimate, perUnitLabel, final, onInfo, className }: 
 
   if (!estimate) {
     return (
-      <p className={cn("text-sm text-muted-foreground", className)}>Harga selepas timbang</p>
+      <p className={cn("text-sm text-muted-foreground", className)}>{t("afterWeighing")}</p>
     );
   }
 
@@ -62,7 +67,7 @@ export function ScaleChip({ estimate, perUnitLabel, final, onInfo, className }: 
           <button
             type="button"
             onClick={onInfo}
-            aria-label="Kenapa harga anggaran?"
+            aria-label={t("whyEstimate")}
             className="text-muted-foreground transition-transform active:scale-95"
           >
             <Info className="h-3.5 w-3.5" />
