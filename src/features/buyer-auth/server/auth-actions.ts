@@ -8,21 +8,29 @@
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { admin } from "@/lib/supabase/admin";
-import type { ActionResult } from "@/features/identity-access/server/actions";
 import { normalizeMalaysianMobile } from "../lib/phone";
 import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
 
 type AuthErrorCode = "validation" | "unauthenticated" | "internal" | "conflict";
 
+/**
+ * Same shape as the shared `ActionResult`, except the failure branch carries
+ * a `messageKey` (a full path under `errors.buyer.*`) instead of prose, so
+ * client consumers resolve it with `useTranslations()` + `t(messageKey)`.
+ */
+type BuyerActionResult<T = never> =
+  | { ok: true; data: T }
+  | { ok: false; code: AuthErrorCode; messageKey: string; fieldErrors?: Record<string, string[]> };
+
 function err<T = never>(
   code: AuthErrorCode,
-  message: string,
+  messageKey: string,
   fieldErrors?: Record<string, string[]>,
-): ActionResult<T> {
-  return { ok: false, code, message, ...(fieldErrors ? { fieldErrors } : {}) };
+): BuyerActionResult<T> {
+  return { ok: false, code, messageKey, ...(fieldErrors ? { fieldErrors } : {}) };
 }
 
-function ok<T>(data: T): ActionResult<T> {
+function ok<T>(data: T): BuyerActionResult<T> {
   return { ok: true, data };
 }
 
@@ -36,16 +44,16 @@ const BuyerSignupInput = z.object({
 
 export async function buyerSignUpAction(
   rawInput: unknown,
-): Promise<ActionResult<{ buyerId: string }>> {
+): Promise<BuyerActionResult<{ buyerId: string }>> {
   const parsed = BuyerSignupInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid signup", parsed.error.flatten().fieldErrors);
+    return err("validation", "errors.buyer.signup.invalid", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
 
   const phone = normalizeMalaysianMobile(input.phone);
   if (!phone) {
-    return err("validation", "Enter a Malaysian mobile number, e.g. 012-345 6789", {
+    return err("validation", "errors.buyer.signup.invalidPhone", {
       phone: ["Enter a Malaysian mobile number, e.g. 012-345 6789"],
     });
   }
@@ -60,7 +68,7 @@ export async function buyerSignUpAction(
     .single();
 
   if (orgError || !org) {
-    return err("validation", "Kedai tidak dijumpai.");
+    return err("validation", "errors.buyer.signup.orgNotFound");
   }
 
   // Sign up the user with Supabase Auth
@@ -89,11 +97,11 @@ export async function buyerSignUpAction(
         organizationId: org.id,
       });
     }
-    return err("conflict", "Tidak dapat membuat akaun. Sila cuba lagi.");
+    return err("conflict", "errors.buyer.signup.createFailed");
   }
 
   if (!data.user) {
-    return err("internal", "Tidak dapat membuat akaun. Sila cuba lagi.");
+    return err("internal", "errors.buyer.signup.createFailed");
   }
 
   // Create buyer record
@@ -115,7 +123,7 @@ export async function buyerSignUpAction(
     }
     // signUp set session cookies for the now-deleted user; clear them.
     await supabase.auth.signOut();
-    return err("internal", "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.");
+    return err("internal", "errors.buyer.signup.profileSaveFailed");
   }
 
   return ok({ buyerId: data.user.id });
@@ -142,7 +150,7 @@ async function attachBuyerToExistingAccount(args: {
   displayName: string;
   phone: string;
   organizationId: string;
-}): Promise<ActionResult<{ buyerId: string }>> {
+}): Promise<BuyerActionResult<{ buyerId: string }>> {
   const { supabase, email, password, displayName, phone, organizationId } = args;
 
   const { data: signIn, error: signInError } = await supabase.auth.signInWithPassword({
@@ -151,7 +159,7 @@ async function attachBuyerToExistingAccount(args: {
   });
 
   if (signInError || !signIn.user) {
-    return err("conflict", "Emel ini sudah didaftarkan. Sila log masuk.");
+    return err("conflict", "errors.buyer.signup.alreadyRegistered");
   }
 
   const userId = signIn.user.id;
@@ -164,7 +172,7 @@ async function attachBuyerToExistingAccount(args: {
 
   if (existingError) {
     await supabase.auth.signOut();
-    return err("internal", "Tidak dapat menyemak profil pembeli. Sila cuba lagi.");
+    return err("internal", "errors.buyer.signup.profileCheckFailed");
   }
 
   if (existing) {
@@ -172,7 +180,7 @@ async function attachBuyerToExistingAccount(args: {
     // in now, so treat it as a successful entry rather than an error.
     if (existing.organization_id !== organizationId) {
       await supabase.auth.signOut();
-      return err("conflict", "Akaun ini bukan pembeli untuk kedai ini.");
+      return err("conflict", "errors.buyer.account.wrongOrg");
     }
     return ok({ buyerId: userId });
   }
@@ -187,7 +195,7 @@ async function attachBuyerToExistingAccount(args: {
   if (insertError) {
     // The auth user existed before this call — never delete it on rollback.
     await supabase.auth.signOut();
-    return err("internal", "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.");
+    return err("internal", "errors.buyer.signup.profileSaveFailed");
   }
 
   return ok({ buyerId: userId });
@@ -201,10 +209,10 @@ const BuyerLoginInput = z.object({
 
 export async function buyerSignInAction(
   rawInput: unknown,
-): Promise<ActionResult<{ buyerId: string }>> {
+): Promise<BuyerActionResult<{ buyerId: string }>> {
   const parsed = BuyerLoginInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid login", parsed.error.flatten().fieldErrors);
+    return err("validation", "errors.buyer.login.invalid", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
 
@@ -217,7 +225,7 @@ export async function buyerSignInAction(
   });
 
   if (error || !data.user) {
-    return err("unauthenticated", "Emel atau kata laluan salah.");
+    return err("unauthenticated", "errors.buyer.login.invalidCredentials");
   }
 
   // Verify this is a buyer
@@ -229,7 +237,7 @@ export async function buyerSignInAction(
 
   if (buyerError || !buyer) {
     await supabase.auth.signOut();
-    return err("unauthenticated", "Akaun ini belum didaftarkan sebagai pembeli.");
+    return err("unauthenticated", "errors.buyer.login.notABuyer");
   }
 
   // If organization slug was provided, verify it matches
@@ -242,7 +250,7 @@ export async function buyerSignInAction(
 
     if (!org || org.id !== buyer.organization_id) {
       await supabase.auth.signOut();
-      return err("unauthenticated", "Akaun ini bukan pembeli untuk kedai ini.");
+      return err("unauthenticated", "errors.buyer.account.wrongOrg");
     }
   }
 
@@ -265,7 +273,7 @@ export async function buyerSignInAction(
   return ok({ buyerId: buyer.id });
 }
 
-export async function buyerSignOutAction(): Promise<ActionResult<{ ok: true }>> {
+export async function buyerSignOutAction(): Promise<BuyerActionResult<{ ok: true }>> {
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   return ok({ ok: true });

@@ -50,6 +50,9 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
   const t = useTranslations("buyer.checkout");
   const tCart = useTranslations("buyer.cart");
   const tTracker = useTranslations("buyer.orderTracker");
+  // Root-namespace instance for server-action error keys ("errors.buyer.*"),
+  // which are full paths — distinct from the namespaced `t*` instances above.
+  const tRoot = useTranslations();
 
   // --- account (anonymous only) ---
   const [buyer, setBuyer] = useState(initialBuyer);
@@ -236,7 +239,13 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
             setAccountMode("signin");
             toast({ title: t("emailAlreadyRegisteredTitle"), description: t("emailAlreadyRegisteredDesc") });
           } else {
-            toast({ title: t("accountFailedTitle"), description: auth.message, variant: "destructive" });
+            // `messageKey` is a dynamic full path (e.g. "errors.buyer.login.invalidCredentials");
+            // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+            toast({
+              title: t("accountFailedTitle"),
+              description: tRoot(auth.messageKey as never),
+              variant: "destructive",
+            });
           }
           return;
         }

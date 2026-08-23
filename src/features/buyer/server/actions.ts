@@ -7,7 +7,6 @@
 
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import type { ActionResult } from "@/features/identity-access/server/actions";
 import type {
   Buyer,
   Category,
@@ -18,14 +17,23 @@ import type {
 
 type CatalogErrorCode = "validation" | "not_found" | "internal" | "unauthenticated";
 
+/**
+ * Same shape as the shared `ActionResult`, except the failure branch carries
+ * a `messageKey` (a full path under `errors.buyer.*`) instead of prose, so
+ * client consumers resolve it with `useTranslations()` + `t(messageKey)`.
+ */
+type BuyerActionResult<T = never> =
+  | { ok: true; data: T }
+  | { ok: false; code: CatalogErrorCode; messageKey: string };
+
 function err<T = never>(
   code: CatalogErrorCode,
-  message: string,
-): ActionResult<T> {
-  return { ok: false, code, message };
+  messageKey: string,
+): BuyerActionResult<T> {
+  return { ok: false, code, messageKey };
 }
 
-function ok<T>(data: T): ActionResult<T> {
+function ok<T>(data: T): BuyerActionResult<T> {
   return { ok: true, data };
 }
 
@@ -49,7 +57,7 @@ export async function getOrganizationBySlug(slug: string) {
 
 export async function getPublicCatalog(
   orgSlug: string,
-): Promise<ActionResult<CatalogWithProducts[]>> {
+): Promise<BuyerActionResult<CatalogWithProducts[]>> {
   const supabase = await createSupabaseServerClient();
 
   // Get organization ID
@@ -60,7 +68,7 @@ export async function getPublicCatalog(
     .single();
 
   if (!org) {
-    return err("not_found", "Organization not found");
+    return err("not_found", "errors.buyer.catalog.orgNotFound");
   }
 
   // Get categories with active products
@@ -80,7 +88,7 @@ export async function getPublicCatalog(
     .order("display_order");
 
   if (error) {
-    return err("internal", "Failed to fetch catalog");
+    return err("internal", "errors.buyer.catalog.fetchFailed");
   }
 
   // Filter to only active products with available variants
@@ -99,7 +107,7 @@ export async function getPublicCatalog(
 
 export async function getProductForBuyer(
   productId: string,
-): Promise<ActionResult<(Product & { variants: ProductVariant[]; category: Category })>> {
+): Promise<BuyerActionResult<(Product & { variants: ProductVariant[]; category: Category })>> {
   const supabase = await createSupabaseServerClient();
 
   const { data: product, error } = await supabase
@@ -116,7 +124,7 @@ export async function getProductForBuyer(
     .single();
 
   if (error || !product) {
-    return err("not_found", "Product not found");
+    return err("not_found", "errors.buyer.catalog.productNotFound");
   }
 
   // Filter to available variants
@@ -132,14 +140,14 @@ export async function getProductForBuyer(
 // Buyer profile actions
 // ---------------------------------------------------------------------------
 
-export async function getBuyerProfile(): Promise<ActionResult<Buyer>> {
+export async function getBuyerProfile(): Promise<BuyerActionResult<Buyer>> {
   const supabase = await createSupabaseServerClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return err("unauthenticated", "Not authenticated");
+    return err("unauthenticated", "errors.buyer.profile.unauthenticated");
   }
 
   const { data: buyer, error } = await supabase
@@ -149,7 +157,7 @@ export async function getBuyerProfile(): Promise<ActionResult<Buyer>> {
     .single();
 
   if (error || !buyer) {
-    return err("validation", "Buyer profile not found");
+    return err("validation", "errors.buyer.profile.notFound");
   }
 
   return ok(buyer as Buyer);
@@ -163,10 +171,10 @@ const UpdateProfileInput = z.object({
 
 export async function updateBuyerProfile(
   rawInput: unknown,
-): Promise<ActionResult<Buyer>> {
+): Promise<BuyerActionResult<Buyer>> {
   const parsed = UpdateProfileInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid input");
+    return err("validation", "errors.buyer.profile.invalidInput");
   }
   const input = parsed.data;
 
@@ -176,7 +184,7 @@ export async function updateBuyerProfile(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return err("unauthenticated", "Not authenticated");
+    return err("unauthenticated", "errors.buyer.profile.unauthenticated");
   }
 
   const updates: Partial<Buyer> = {};
@@ -192,7 +200,7 @@ export async function updateBuyerProfile(
     .single();
 
   if (error || !buyer) {
-    return err("internal", "Failed to update profile");
+    return err("internal", "errors.buyer.profile.updateFailed");
   }
 
   return ok(buyer as Buyer);

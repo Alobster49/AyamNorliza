@@ -132,7 +132,38 @@ describe("address actions", () => {
     const result = await listMyAddresses();
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("unauthenticated");
+    if (!result.ok) {
+      expect(result.code).toBe("unauthenticated");
+      expect(result.messageKey).toBe("errors.buyer.address.unauthenticated");
+    }
+  });
+
+  it("listMyAddresses returns the notABuyer key when signed in but not a buyer", async () => {
+    mockSupabaseFor({ buyerRow: null });
+
+    const result = await listMyAddresses();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("unauthenticated");
+      expect(result.messageKey).toBe("errors.buyer.address.notABuyer");
+    }
+  });
+
+  it("listMyAddresses returns address.loadFailed when the query errors", async () => {
+    mockSupabaseFor({
+      tableResults: {
+        buyer_addresses: { data: null, error: { message: "db down" } },
+      },
+    });
+
+    const result = await listMyAddresses();
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("internal");
+      expect(result.messageKey).toBe("errors.buyer.address.loadFailed");
+    }
   });
 
   it("createAddress rejects a malformed postcode with a field error", async () => {
@@ -146,6 +177,7 @@ describe("address actions", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.address.invalidAddress");
       expect(result.fieldErrors?.postcode).toBeTruthy();
     }
   });
@@ -206,11 +238,40 @@ describe("address actions", () => {
     );
   });
 
+  it("createAddress returns address.saveFailed when the insert errors", async () => {
+    mockSupabaseFor({
+      tableResults: {
+        buyer_addresses: [
+          // 1. existing-address count check -> 0.
+          { data: null, error: null, count: 0 },
+          // 2. insert().select("*").single() -> fails.
+          { data: null, error: { message: "db down" } },
+        ],
+      },
+    });
+
+    const result = await createAddress({
+      addressLine: "1 Jalan Test",
+      postcode: "80000",
+      state: "Johor",
+      area: "Johor Bahru",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("internal");
+      expect(result.messageKey).toBe("errors.buyer.address.saveFailed");
+    }
+  });
+
   it("setDefaultAddress rejects an id that is not a uuid", async () => {
     const result = await setDefaultAddress("not-a-uuid");
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("validation");
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.address.invalidId");
+    }
   });
 
   it("setDefaultAddress returns not_found for a stale/nonexistent id without touching the current default", async () => {
@@ -225,13 +286,42 @@ describe("address actions", () => {
     const result = await setDefaultAddress("d0000000-0000-0000-0000-00000000000d");
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("not_found");
+    if (!result.ok) {
+      expect(result.code).toBe("not_found");
+      expect(result.messageKey).toBe("errors.buyer.address.notFound");
+    }
 
     // Only the target-existence check should have run; the action must
     // return before clearing the buyer's current default, otherwise a
     // stale id would leave the buyer with no default address at all.
     expect(buildersByTable.buyer_addresses).toHaveLength(1);
     expect(buildersByTable.buyer_addresses?.[0]?.update).not.toHaveBeenCalled();
+  });
+
+  it("deleteAddress rejects an id that is not a uuid", async () => {
+    const result = await deleteAddress("not-a-uuid");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.address.invalidId");
+    }
+  });
+
+  it("deleteAddress returns address.deleteFailed when the query errors", async () => {
+    mockSupabaseFor({
+      tableResults: {
+        buyer_addresses: { data: null, error: { message: "db down" } },
+      },
+    });
+
+    const result = await deleteAddress("d0000000-0000-0000-0000-00000000000d");
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("internal");
+      expect(result.messageKey).toBe("errors.buyer.address.deleteFailed");
+    }
   });
 
   it("deleteAddress returns not_found when the row does not belong to the buyer", async () => {
@@ -246,6 +336,9 @@ describe("address actions", () => {
     const result = await deleteAddress("d0000000-0000-0000-0000-00000000000d");
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("not_found");
+    if (!result.ok) {
+      expect(result.code).toBe("not_found");
+      expect(result.messageKey).toBe("errors.buyer.address.notFound");
+    }
   });
 });

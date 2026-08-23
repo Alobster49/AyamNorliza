@@ -42,6 +42,9 @@ function LoginPageInner({ params }: LoginPageProps) {
   const searchParams = useSearchParams();
   const { toast } = useToast();
   const t = useTranslations("buyer.login");
+  // Root-namespace instance for server-action error keys ("errors.buyer.*"),
+  // which are full paths — distinct from `t`, which is scoped to "buyer.login".
+  const tRoot = useTranslations();
   const [mode, setMode] = useState<Mode>("login");
   const [loading, setLoading] = useState(false);
   const [organizationSlug, setOrganizationSlug] = useState<string>("");
@@ -87,7 +90,9 @@ function LoginPageInner({ params }: LoginPageProps) {
     if (!result.ok) {
       toast({
         title: t("loginFailedTitle"),
-        description: result.message || t("loginFailedDefault"),
+        // `messageKey` is a dynamic full path (e.g. "errors.buyer.login.invalidCredentials");
+        // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+        description: result.messageKey ? tRoot(result.messageKey as never) : t("loginFailedDefault"),
         variant: "destructive",
       });
       return;
@@ -149,7 +154,9 @@ function LoginPageInner({ params }: LoginPageProps) {
     if (!result.ok) {
       toast({
         title: t("signupFailedTitle"),
-        description: result.fieldErrors?.phone?.[0] || result.message || t("signupFailedDefault"),
+        description:
+          result.fieldErrors?.phone?.[0] ||
+          (result.messageKey ? tRoot(result.messageKey as never) : t("signupFailedDefault")),
         variant: "destructive",
       });
       return;

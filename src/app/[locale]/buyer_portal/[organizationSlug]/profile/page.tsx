@@ -29,6 +29,9 @@ export default function ProfilePage({ params }: ProfilePageProps) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("buyer.profile");
+  // Root-namespace instance for server-action error keys ("errors.buyer.*"),
+  // which are full paths — distinct from `t`, which is scoped to "buyer.profile".
+  const tRoot = useTranslations();
   const [organizationSlug, setOrganizationSlug] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -88,7 +91,9 @@ export default function ProfilePage({ params }: ProfilePageProps) {
     if (!result.ok) {
       toast({
         title: t("errorTitle"),
-        description: result.message || t("saveFailedDefaultDesc"),
+        // `messageKey` is a dynamic full path (e.g. "errors.buyer.profile.updateFailed");
+        // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+        description: result.messageKey ? tRoot(result.messageKey as never) : t("saveFailedDefaultDesc"),
         variant: "destructive",
       });
       return;

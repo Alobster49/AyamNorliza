@@ -79,6 +79,48 @@
       "cancelled": "Dibatalkan"
     }
   },
+  "errors": {
+    "buyer": {
+      "signup": {
+        "invalid": "Pendaftaran tidak sah",
+        "invalidPhone": "Masukkan nombor telefon bimbit Malaysia, cth. 012-345 6789",
+        "orgNotFound": "Kedai tidak dijumpai.",
+        "createFailed": "Tidak dapat membuat akaun. Sila cuba lagi.",
+        "profileSaveFailed": "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.",
+        "alreadyRegistered": "Emel ini sudah didaftarkan. Sila log masuk.",
+        "profileCheckFailed": "Tidak dapat menyemak profil pembeli. Sila cuba lagi."
+      },
+      "login": {
+        "invalid": "Log masuk tidak sah",
+        "invalidCredentials": "Emel atau kata laluan salah.",
+        "notABuyer": "Akaun ini belum didaftarkan sebagai pembeli."
+      },
+      "account": {
+        "wrongOrg": "Akaun ini bukan pembeli untuk kedai ini."
+      },
+      "catalog": {
+        "orgNotFound": "Organisasi tidak dijumpai",
+        "fetchFailed": "Gagal memuatkan katalog",
+        "productNotFound": "Produk tidak dijumpai"
+      },
+      "profile": {
+        "unauthenticated": "Belum disahkan",
+        "notFound": "Profil pembeli tidak dijumpai",
+        "invalidInput": "Input tidak sah",
+        "updateFailed": "Gagal mengemas kini profil"
+      },
+      "address": {
+        "invalidAddress": "Alamat tidak sah",
+        "loadFailed": "Gagal memuatkan alamat",
+        "saveFailed": "Gagal menyimpan alamat",
+        "invalidId": "ID alamat tidak sah",
+        "notFound": "Alamat tidak dijumpai",
+        "deleteFailed": "Gagal memadam alamat",
+        "unauthenticated": "Belum disahkan",
+        "notABuyer": "Belum didaftar sebagai pembeli"
+      }
+    }
+  },
   "buyer": {
     "nav": {
       "shop": "Kedai",

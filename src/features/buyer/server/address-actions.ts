@@ -10,20 +10,28 @@
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireBuyer, NotABuyerError } from "@/lib/auth/buyer-auth";
-import type { ActionResult } from "@/features/identity-access/server/actions";
 import type { BuyerAddress } from "../types";
 
 type AddressErrorCode = "validation" | "unauthenticated" | "not_found" | "internal";
 
+/**
+ * Same shape as the shared `ActionResult`, except the failure branch carries
+ * a `messageKey` (a full path under `errors.buyer.*`) instead of prose, so
+ * client consumers resolve it with `useTranslations()` + `t(messageKey)`.
+ */
+type BuyerActionResult<T = never> =
+  | { ok: true; data: T }
+  | { ok: false; code: AddressErrorCode; messageKey: string; fieldErrors?: Record<string, string[]> };
+
 function err<T = never>(
   code: AddressErrorCode,
-  message: string,
+  messageKey: string,
   fieldErrors?: Record<string, string[]>,
-): ActionResult<T> {
-  return { ok: false, code, message, ...(fieldErrors ? { fieldErrors } : {}) };
+): BuyerActionResult<T> {
+  return { ok: false, code, messageKey, ...(fieldErrors ? { fieldErrors } : {}) };
 }
 
-function ok<T>(data: T): ActionResult<T> {
+function ok<T>(data: T): BuyerActionResult<T> {
   return { ok: true, data };
 }
 
@@ -59,17 +67,25 @@ const CreateAddressInput = z.object({
 
 const AddressId = z.string().uuid();
 
-async function guard(): Promise<{ buyerId: string } | ActionResult<never>> {
+async function guard(): Promise<{ buyerId: string } | BuyerActionResult<never>> {
   try {
     const buyer = await requireBuyer();
     return { buyerId: buyer.id };
   } catch (e) {
-    if (e instanceof NotABuyerError) return err("unauthenticated", e.message);
+    if (e instanceof NotABuyerError) {
+      // `NotABuyerError.message` is one of two fixed strings set by
+      // `requireBuyer` in @/lib/auth/buyer-auth — map each to its key.
+      const messageKey =
+        e.message === "Not authenticated"
+          ? "errors.buyer.address.unauthenticated"
+          : "errors.buyer.address.notABuyer";
+      return err("unauthenticated", messageKey);
+    }
     throw e;
   }
 }
 
-export async function listMyAddresses(): Promise<ActionResult<BuyerAddress[]>> {
+export async function listMyAddresses(): Promise<BuyerActionResult<BuyerAddress[]>> {
   const g = await guard();
   if ("ok" in g) return g;
 
@@ -80,16 +96,16 @@ export async function listMyAddresses(): Promise<ActionResult<BuyerAddress[]>> {
     .order("is_default", { ascending: false })
     .order("created_at", { ascending: false });
 
-  if (error) return err("internal", "Failed to load addresses");
+  if (error) return err("internal", "errors.buyer.address.loadFailed");
   return ok(((data ?? []) as AddressRow[]).map(mapRow));
 }
 
 export async function createAddress(
   rawInput: unknown,
-): Promise<ActionResult<BuyerAddress>> {
+): Promise<BuyerActionResult<BuyerAddress>> {
   const parsed = CreateAddressInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid address", parsed.error.flatten().fieldErrors);
+    return err("validation", "errors.buyer.address.invalidAddress", parsed.error.flatten().fieldErrors);
   }
   const g = await guard();
   if ("ok" in g) return g;
@@ -100,7 +116,7 @@ export async function createAddress(
   const { count, error: countError } = await supabase
     .from("buyer_addresses")
     .select("id", { count: "exact", head: true });
-  if (countError) return err("internal", "Failed to load addresses");
+  if (countError) return err("internal", "errors.buyer.address.loadFailed");
   const makeDefault = input.makeDefault || !count;
 
   // If we're about to clear the current default, remember which row it was
@@ -140,16 +156,16 @@ export async function createAddress(
         .update({ is_default: true })
         .eq("id", previousDefaultId);
     }
-    return err("internal", "Failed to save address");
+    return err("internal", "errors.buyer.address.saveFailed");
   }
   return ok(mapRow(data as AddressRow));
 }
 
 export async function setDefaultAddress(
   addressId: string,
-): Promise<ActionResult<BuyerAddress>> {
+): Promise<BuyerActionResult<BuyerAddress>> {
   if (!AddressId.safeParse(addressId).success) {
-    return err("validation", "Invalid address id");
+    return err("validation", "errors.buyer.address.invalidId");
   }
   const g = await guard();
   if ("ok" in g) return g;
@@ -165,7 +181,7 @@ export async function setDefaultAddress(
     .select("id")
     .eq("id", addressId)
     .maybeSingle();
-  if (targetError || !target) return err("not_found", "Address not found");
+  if (targetError || !target) return err("not_found", "errors.buyer.address.notFound");
 
   // The clear must still precede the set: the partial unique index only
   // allows one `is_default = true` row per buyer at a time.
@@ -177,15 +193,15 @@ export async function setDefaultAddress(
     .select("*")
     .single();
 
-  if (error || !data) return err("not_found", "Address not found");
+  if (error || !data) return err("not_found", "errors.buyer.address.notFound");
   return ok(mapRow(data as AddressRow));
 }
 
 export async function deleteAddress(
   addressId: string,
-): Promise<ActionResult<{ deletedId: string }>> {
+): Promise<BuyerActionResult<{ deletedId: string }>> {
   if (!AddressId.safeParse(addressId).success) {
-    return err("validation", "Invalid address id");
+    return err("validation", "errors.buyer.address.invalidId");
   }
   const g = await guard();
   if ("ok" in g) return g;
@@ -197,9 +213,9 @@ export async function deleteAddress(
     .eq("id", addressId)
     .select("id, is_default");
 
-  if (error) return err("internal", "Failed to delete address");
+  if (error) return err("internal", "errors.buyer.address.deleteFailed");
   const deleted = (data ?? [])[0] as { id: string; is_default: boolean } | undefined;
-  if (!deleted) return err("not_found", "Address not found");
+  if (!deleted) return err("not_found", "errors.buyer.address.notFound");
 
   if (deleted.is_default) {
     // Promote the oldest remaining address, if any.

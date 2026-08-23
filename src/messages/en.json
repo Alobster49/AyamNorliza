@@ -79,6 +79,48 @@
       "cancelled": "Cancelled"
     }
   },
+  "errors": {
+    "buyer": {
+      "signup": {
+        "invalid": "Invalid signup",
+        "invalidPhone": "Enter a Malaysian mobile number, e.g. 012-345 6789",
+        "orgNotFound": "Shop not found.",
+        "createFailed": "Could not create account. Please try again.",
+        "profileSaveFailed": "Could not save buyer profile. Please try again.",
+        "alreadyRegistered": "This email is already registered. Please log in.",
+        "profileCheckFailed": "Could not check buyer profile. Please try again."
+      },
+      "login": {
+        "invalid": "Invalid login",
+        "invalidCredentials": "Incorrect email or password.",
+        "notABuyer": "This account is not registered as a buyer."
+      },
+      "account": {
+        "wrongOrg": "This account is not a buyer for this shop."
+      },
+      "catalog": {
+        "orgNotFound": "Organization not found",
+        "fetchFailed": "Failed to fetch catalog",
+        "productNotFound": "Product not found"
+      },
+      "profile": {
+        "unauthenticated": "Not authenticated",
+        "notFound": "Buyer profile not found",
+        "invalidInput": "Invalid input",
+        "updateFailed": "Failed to update profile"
+      },
+      "address": {
+        "invalidAddress": "Invalid address",
+        "loadFailed": "Failed to load addresses",
+        "saveFailed": "Failed to save address",
+        "invalidId": "Invalid address id",
+        "notFound": "Address not found",
+        "deleteFailed": "Failed to delete address",
+        "unauthenticated": "Not authenticated",
+        "notABuyer": "Not registered as a buyer"
+      }
+    }
+  },
   "buyer": {
     "nav": {
       "shop": "Shop",

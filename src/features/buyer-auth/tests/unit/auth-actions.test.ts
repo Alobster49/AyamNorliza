@@ -137,7 +137,10 @@ describe("buyerSignUpAction", () => {
     const result = await buyerSignUpAction(validInput);
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("internal");
+    if (!result.ok) {
+      expect(result.code).toBe("internal");
+      expect(result.messageKey).toBe("errors.buyer.signup.profileSaveFailed");
+    }
     expect(admin.deleteAuthUser).toHaveBeenCalledWith("user-1");
     expect(signOut).toHaveBeenCalled();
   });
@@ -151,7 +154,10 @@ describe("buyerSignUpAction", () => {
     const result = await buyerSignUpAction(validInput);
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("internal");
+    if (!result.ok) {
+      expect(result.code).toBe("internal");
+      expect(result.messageKey).toBe("errors.buyer.signup.profileSaveFailed");
+    }
   });
 
   it("returns conflict without touching the admin client when signUp itself fails", async () => {
@@ -165,8 +171,53 @@ describe("buyerSignUpAction", () => {
     const result = await buyerSignUpAction(validInput);
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("conflict");
+    if (!result.ok) {
+      expect(result.code).toBe("conflict");
+      expect(result.messageKey).toBe("errors.buyer.signup.createFailed");
+    }
     expect(admin.deleteAuthUser).not.toHaveBeenCalled();
+  });
+
+  it("returns a validation messageKey for malformed input", async () => {
+    const result = await buyerSignUpAction({ ...validInput, email: "not-an-email" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.signup.invalid");
+    }
+  });
+
+  it("returns a validation messageKey for a non-Malaysian phone number", async () => {
+    const result = await buyerSignUpAction({ ...validInput, phone: "not-a-phone" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.signup.invalidPhone");
+    }
+  });
+
+  it("returns a validation messageKey when the organization slug does not resolve", async () => {
+    const { client } = mockSupabaseFor();
+    (client.from as ReturnType<typeof vi.fn>).mockImplementationOnce((table: string) => {
+      if (table === "organizations") {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          single: vi.fn().mockResolvedValue({ data: null, error: { message: "not found" } }),
+        };
+      }
+      throw new Error(`unexpected table: ${table}`);
+    });
+
+    const result = await buyerSignUpAction(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.signup.orgNotFound");
+    }
   });
 });
 
@@ -217,7 +268,10 @@ describe("buyerSignUpAction on an email that already has an auth user", () => {
     const result = await buyerSignUpAction(validInput);
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("conflict");
+    if (!result.ok) {
+      expect(result.code).toBe("conflict");
+      expect(result.messageKey).toBe("errors.buyer.account.wrongOrg");
+    }
     expect(signOut).toHaveBeenCalled();
   });
 
@@ -230,9 +284,28 @@ describe("buyerSignUpAction on an email that already has an auth user", () => {
     const result = await buyerSignUpAction(validInput);
 
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.code).toBe("conflict");
+    if (!result.ok) {
+      expect(result.code).toBe("conflict");
+      expect(result.messageKey).toBe("errors.buyer.signup.alreadyRegistered");
+    }
     expect(buyersInsertSpy).not.toHaveBeenCalled();
     expect(admin.deleteAuthUser).not.toHaveBeenCalled();
+  });
+
+  it("returns signup.profileCheckFailed when checking for an existing buyer row errors", async () => {
+    mockSupabaseFor({
+      signUpResult: alreadyRegistered,
+      signInResult: { data: { user: { id: "existing-1" } }, error: null },
+      buyersSelect: { data: null, error: { message: "db down" } },
+    });
+
+    const result = await buyerSignUpAction(validInput);
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("internal");
+      expect(result.messageKey).toBe("errors.buyer.signup.profileCheckFailed");
+    }
   });
 });
 
@@ -287,6 +360,7 @@ describe("buyerSignInAction", () => {
     const result = await buyerSignInAction(validSignInInput);
 
     expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.buyer.login.invalidCredentials");
     expect(syncLocaleCookieFromAccount).not.toHaveBeenCalled();
   });
 
@@ -298,8 +372,34 @@ describe("buyerSignInAction", () => {
     const result = await buyerSignInAction(validSignInInput);
 
     expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.buyer.login.notABuyer");
     expect(signOut).toHaveBeenCalled();
     expect(syncLocaleCookieFromAccount).not.toHaveBeenCalled();
+  });
+
+  it("returns a validation messageKey for malformed login input", async () => {
+    const result = await buyerSignInAction({ email: "not-an-email", password: "" });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("errors.buyer.login.invalid");
+    }
+  });
+
+  it("returns account.wrongOrg when the organization slug does not resolve to the buyer's org", async () => {
+    // The default mock stubs only the "buyers" table, so the "organizations"
+    // lookup below resolves to null - the same outcome as a slug for another
+    // org, since both fail the `org.id === buyer.organization_id` check.
+    mockSupabaseForSignIn();
+
+    const result = await buyerSignInAction({
+      ...validSignInInput,
+      organizationSlug: "other-org",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.buyer.account.wrongOrg");
   });
 
   it("still returns success when the locale sync throws", async () => {
