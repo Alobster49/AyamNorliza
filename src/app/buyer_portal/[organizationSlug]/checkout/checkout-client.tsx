@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Loader2, MapPin, CheckCircle2 } from "lucide-react";
 import { useCart } from "@/features/buyer/components/cart-context";
 import {
@@ -36,6 +37,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
   const router = useRouter();
   const { items, clearCart } = useCart();
   const { toast } = useToast();
+  const reduced = useReducedMotion();
 
   // --- account (anonymous only) ---
   const [buyer, setBuyer] = useState(initialBuyer);
@@ -56,6 +58,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
   const [options, setOptions] = useState<DeliveryOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [selectedKey, setSelectedKey] = useState<string>("");
+  const [activeDate, setActiveDate] = useState<string>("");
   const [notesOpen, setNotesOpen] = useState(false);
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -165,6 +168,8 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
     }
     return Array.from(groups.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [options]);
+
+  const effectiveDate = groupedOptions.some(([d]) => d === activeDate) ? activeDate : (groupedOptions[0]?.[0] ?? "");
 
   const selectedOption = options.find((o) => optionKey(o) === selectedKey) ?? null;
   const estimate = cartEstimate(items);
@@ -279,17 +284,52 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
 
   if (orderComplete) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <div className="mx-auto max-w-md rounded-2xl border bg-card p-8 text-center">
-          <CheckCircle2 className="mx-auto mb-4 h-12 w-12" style={{ color: "var(--buyer-confirmed)" }} />
-          <p className="font-buyer-display text-2xl font-semibold">Pesanan diterima!</p>
-          <p className="mt-2 text-sm text-muted-foreground">#{orderId.slice(0, 8)}</p>
+      <div
+        data-testid="order-confirmation"
+        className="mx-auto flex min-h-[70vh] max-w-md flex-col items-center justify-center text-center"
+      >
+        <motion.div
+          initial={reduced ? { opacity: 0 } : { scale: 0.5, opacity: 0 }}
+          animate={reduced ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+          transition={reduced ? { duration: 0.2 } : { type: "spring", bounce: 0, duration: 0.5 }}
+          className="mb-6 flex h-20 w-20 items-center justify-center rounded-full"
+          style={{ backgroundColor: "color-mix(in oklab, var(--buyer-confirmed) 15%, transparent)" }}
+        >
+          <CheckCircle2 className="h-10 w-10" style={{ color: "var(--buyer-confirmed)" }} />
+        </motion.div>
+        <h1 className="font-buyer-display text-3xl font-bold">Pesanan diterima!</h1>
+        <p className="mt-2 font-buyer-mono text-muted-foreground">No. pesanan #{orderId.slice(0, 8)}</p>
+        <p className="mt-4 max-w-sm text-sm text-muted-foreground">
+          Kami akan timbang ayam anda dan sahkan harga sebelum penghantaran. Alamat anda
+          telah disimpan untuk pesanan akan datang.
+        </p>
+        <ol className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
+          {["Ditempah", "Dihantar", "Harga disahkan"].map((step, i) => (
+            <li key={step} className="flex items-center gap-1.5">
+              <span
+                className={`flex h-5 w-5 items-center justify-center rounded-full font-buyer-mono ${i === 0 ? "text-background" : "bg-secondary"}`}
+                style={i === 0 ? { backgroundColor: "var(--buyer-confirmed)" } : undefined}
+              >
+                {i + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ol>
+        <div className="mt-8 flex w-full flex-col gap-2">
           <button
             type="button"
-            className="mt-6 w-full rounded-full bg-primary py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97]"
             onClick={() => router.push(`/buyer_portal/${organizationSlug}/orders`)}
+            className="w-full rounded-full bg-primary py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97]"
           >
             Lihat pesanan saya
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push(`/buyer_portal/${organizationSlug}/shop`)}
+            className="w-full rounded-full border py-3 font-medium transition-transform active:scale-[0.97]"
+          >
+            Terus beli lagi
           </button>
         </div>
       </div>
@@ -416,60 +456,92 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
       </div>
 
       {/* Slot penghantaran */}
-      <div className="rounded-2xl border bg-card p-5">
-        <h2 className="font-buyer-display text-xl font-semibold">Slot penghantaran</h2>
-        <div className="mt-4">
-          {zoneId !== null && optionsLoading && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Memuatkan slot penghantaran...
-            </div>
-          )}
-          {zoneId !== null && !optionsLoading && groupedOptions.length === 0 && (
-            <p className="text-sm text-muted-foreground">Tiada slot penghantaran untuk kawasan ini lagi.</p>
-          )}
-          {zoneId === null && (
-            <p className="text-sm text-muted-foreground">Isi alamat yang disampaikan untuk lihat slot penghantaran.</p>
-          )}
-          {!optionsLoading && groupedOptions.length > 0 && (
-            <div className="space-y-4" role="radiogroup" aria-label="Slot penghantaran">
-              {groupedOptions.map(([date, dateOptions]) => (
-                <div key={date}>
-                  <p className="mb-2 text-sm font-medium">
-                    {format(new Date(`${date}T00:00:00`), "EEEE, d MMM")}
-                  </p>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {dateOptions.map((option) => {
-                      const key = optionKey(option);
-                      const isSelected = key === selectedKey;
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          role="radio"
-                          aria-checked={isSelected}
-                          onClick={() => setSelectedKey(key)}
-                          className={`rounded-2xl border p-3 text-left text-sm transition-colors ${
-                            isSelected ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
-                          }`}
-                        >
-                          <p className="font-medium">{option.truckName}</p>
-                          <p className="text-muted-foreground">
-                            {option.startTime.slice(0, 5)}–{option.endTime.slice(0, 5)}
-                          </p>
-                          {option.remaining !== null && (
-                            <p className="mt-1 text-xs text-muted-foreground">{option.remaining} slot tersisa</p>
-                          )}
-                        </button>
-                      );
-                    })}
+      <section className="rounded-2xl border bg-card p-5">
+        <h2 className="font-buyer-display mb-1 text-xl font-semibold">Slot penghantaran</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          {zoneId === null ? "Isi alamat dulu untuk lihat slot." : "Pilih tarikh dan masa."}
+        </p>
+
+        <AnimatePresence mode="popLayout" initial={false}>
+          {selectedOption ? (
+            <motion.button
+              key="picked"
+              type="button"
+              layout
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ type: "spring", bounce: 0, duration: 0.35 }}
+              onClick={() => setSelectedKey("")}
+              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium"
+              style={{
+                backgroundColor: "color-mix(in oklab, var(--buyer-confirmed) 15%, transparent)",
+                color: "var(--buyer-confirmed)",
+              }}
+            >
+              {format(new Date(`${selectedOption.date}T00:00:00`), "EEE d MMM")} ·{" "}
+              {selectedOption.startTime.slice(0, 5)}–{selectedOption.endTime.slice(0, 5)} ✓
+            </motion.button>
+          ) : (
+            <motion.div key="picker" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              {optionsLoading && zoneId !== null && (
+                <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Memuatkan slot…
+                </p>
+              )}
+              {!optionsLoading && zoneId !== null && groupedOptions.length === 0 && (
+                <p className="text-sm text-muted-foreground">Tiada slot untuk kawasan ini lagi.</p>
+              )}
+              {!optionsLoading && groupedOptions.length > 0 && (
+                <div className="space-y-3">
+                  <div
+                    className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] snap-x"
+                    role="radiogroup"
+                    aria-label="Tarikh"
+                  >
+                    {groupedOptions.map(([date]) => (
+                      <button
+                        key={date}
+                        type="button"
+                        role="radio"
+                        aria-checked={date === effectiveDate}
+                        onClick={() => setActiveDate(date)}
+                        className={`shrink-0 snap-start rounded-full border px-4 py-1.5 text-sm transition-transform active:scale-95 ${
+                          date === effectiveDate
+                            ? "border-foreground bg-foreground font-medium text-background"
+                            : "border-border"
+                        }`}
+                      >
+                        {format(new Date(`${date}T00:00:00`), "EEE d MMM")}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Masa">
+                    {(groupedOptions.find(([d]) => d === effectiveDate)?.[1] ?? []).map((option) => (
+                      <button
+                        key={optionKey(option)}
+                        type="button"
+                        role="radio"
+                        aria-checked={false}
+                        onClick={() => setSelectedKey(optionKey(option))}
+                        className="rounded-2xl border p-3 text-left text-sm transition-transform active:scale-[0.97]"
+                      >
+                        <p className="font-medium">
+                          {option.startTime.slice(0, 5)}–{option.endTime.slice(0, 5)}
+                        </p>
+                        <p className="text-muted-foreground">{option.truckName}</p>
+                        {option.remaining !== null && (
+                          <p className="mt-1 text-xs text-muted-foreground">{option.remaining} slot tersisa</p>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
+              )}
+            </motion.div>
           )}
-        </div>
-      </div>
+        </AnimatePresence>
+      </section>
 
       {/* Nota */}
       <div>
@@ -491,18 +563,30 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
         )}
       </div>
 
-      {/* Submit row */}
-      <div className="space-y-2">
-        <p className="font-buyer-mono text-sm text-muted-foreground">
-          Anggaran: {estimate ? formatEstimate(estimate) : "—"}
-        </p>
-        <button
-          type="submit"
-          disabled={!canSubmit}
-          className="w-full rounded-full bg-primary py-4 text-lg font-medium text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50"
-        >
-          {submitting ? "Menghantar…" : STAGE_CTA[stage]}
-        </button>
+      {/* Sticky submit bar */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-card/[0.97] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Anggaran</p>
+            <p className="truncate font-buyer-mono text-lg font-medium">
+              {estimate ? formatEstimate(estimate) : "—"}
+            </p>
+          </div>
+          <button
+            type="submit"
+            disabled={!canSubmit}
+            className="shrink-0 rounded-full bg-primary px-8 py-3.5 font-medium text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50"
+          >
+            {submitting ? (
+              <span className="flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Menghantar…
+              </span>
+            ) : (
+              STAGE_CTA[stage]
+            )}
+          </button>
+        </div>
       </div>
     </form>
   );
