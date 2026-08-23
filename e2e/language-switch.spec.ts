@@ -24,9 +24,7 @@ test.describe("language switching", () => {
     },
   );
 
-  // Task 8 translates the login page's copy; the reload assertion here
-  // otherwise depends on the same untranslated heading as the test above.
-  test.fixme("the choice survives a reload", async ({ page }) => {
+  test("the choice survives a reload", async ({ page }) => {
     await page.goto("/en/login");
     await page.getByRole("button", { name: "Bahasa Melayu" }).click();
     await expect(page).toHaveURL(/\/ms\/login/);
