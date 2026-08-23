@@ -26,8 +26,12 @@ export type PriceAggregate = {
   premise_count: number;
 };
 
-/** PriceCatcher items we track: 1=standard, 2=super, 3=live (all per 1kg). */
-export const TRACKED_ITEM_CODES: Set<number> = new Set([1, 2, 3]);
+/**
+ * PriceCatcher items we track: 1=standard, 2=super (both per 1kg).
+ * Item 3 (live chicken) is catalogued by KPDN but never priced -- see the
+ * MARKET_ITEMS comment in src/features/market/types.ts.
+ */
+export const TRACKED_ITEM_CODES: Set<number> = new Set([1, 2]);
 
 /**
  * Month files to fetch. KPDN appends to the current month's file daily;
@@ -106,45 +110,71 @@ function median(sorted: number[]): number {
   return sorted.length % 2 === 1 ? sorted[mid]! : (sorted[mid - 1]! + sorted[mid]!) / 2;
 }
 
-/** Group tracked-item rows from allowed states into per-(date,item,state) aggregates. */
+/**
+ * Streaming accumulator for per-(date,item,state) aggregates.
+ *
+ * The sync ingests every state, so the caller streams the whole month file
+ * through `add` rather than buffering the ~180k tracked rows a month holds.
+ * Memory stays at one number per surveyed price, not one object.
+ */
+export type Aggregator = {
+  add(row: PriceRow): void;
+  finish(): PriceAggregate[];
+};
+
+export function createAggregator(
+  premiseState: Map<number, string>,
+  itemCodes: Set<number>,
+): Aggregator {
+  const groups = new Map<string, { state: string; item: number; date: string; prices: number[] }>();
+
+  return {
+    add(r: PriceRow) {
+      if (!itemCodes.has(r.item_code)) return;
+      // A premise missing from the lookup has no state to attribute it to.
+      const state = premiseState.get(r.premise_code);
+      if (!state) return;
+      const key = `${r.date}|${r.item_code}|${state}`;
+      const existing = groups.get(key);
+      const g = existing ?? { state, item: r.item_code, date: r.date, prices: [] };
+      g.prices.push(r.price);
+      if (!existing) {
+        groups.set(key, g);
+      }
+    },
+
+    finish() {
+      const out: PriceAggregate[] = [];
+      for (const g of groups.values()) {
+        const sorted = [...g.prices].sort((a, b) => a - b);
+        const sum = sorted.reduce((acc, p) => acc + p, 0);
+        const minPrice = sorted[0] ?? 0;
+        const maxPrice = sorted[sorted.length - 1] ?? 0;
+        out.push({
+          price_date: g.date,
+          item_code: g.item,
+          state: g.state,
+          median_price: round2(median(sorted)),
+          avg_price: round2(sum / sorted.length),
+          min_price: round2(minPrice),
+          max_price: round2(maxPrice),
+          premise_count: sorted.length,
+        });
+      }
+      return out.sort((a, b) =>
+        a.price_date.localeCompare(b.price_date) || a.item_code - b.item_code || a.state.localeCompare(b.state),
+      );
+    },
+  };
+}
+
+/** Convenience wrapper over `createAggregator` for callers holding rows in memory. */
 export function aggregate(
   rows: Iterable<PriceRow>,
   premiseState: Map<number, string>,
-  allowedStates: Set<string>,
   itemCodes: Set<number>,
 ): PriceAggregate[] {
-  const groups = new Map<string, { state: string; item: number; date: string; prices: number[] }>();
-  for (const r of rows) {
-    if (!itemCodes.has(r.item_code)) continue;
-    const state = premiseState.get(r.premise_code);
-    if (!state || !allowedStates.has(state)) continue;
-    const key = `${r.date}|${r.item_code}|${state}`;
-    const existing = groups.get(key);
-    const g = existing ?? { state, item: r.item_code, date: r.date, prices: [] };
-    g.prices.push(r.price);
-    if (!existing) {
-      groups.set(key, g);
-    }
-  }
-
-  const out: PriceAggregate[] = [];
-  for (const g of groups.values()) {
-    const sorted = [...g.prices].sort((a, b) => a - b);
-    const sum = sorted.reduce((acc, p) => acc + p, 0);
-    const minPrice = sorted[0] ?? 0;
-    const maxPrice = sorted[sorted.length - 1] ?? 0;
-    out.push({
-      price_date: g.date,
-      item_code: g.item,
-      state: g.state,
-      median_price: round2(median(sorted)),
-      avg_price: round2(sum / sorted.length),
-      min_price: round2(minPrice),
-      max_price: round2(maxPrice),
-      premise_count: sorted.length,
-    });
-  }
-  return out.sort((a, b) =>
-    a.price_date.localeCompare(b.price_date) || a.item_code - b.item_code || a.state.localeCompare(b.state),
-  );
+  const agg = createAggregator(premiseState, itemCodes);
+  for (const r of rows) agg.add(r);
+  return agg.finish();
 }

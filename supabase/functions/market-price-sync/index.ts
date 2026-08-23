@@ -1,7 +1,12 @@
 // supabase/functions/market-price-sync/index.ts
 // Scheduled Edge Function: downloads the KPDN PriceCatcher monthly CSV,
-// filters to tracked chicken items in the states any org has configured,
-// and upserts per-(date,item,state) aggregates into market_prices.
+// filters to tracked chicken items, and upserts per-(date,item,state)
+// aggregates into market_prices for every Malaysian state.
+//
+// All states are ingested regardless of what any org has configured: the
+// month file is downloaded whole anyway, and storing the lot costs ~32 rows
+// a day. market_settings.states is a display preference only -- gating
+// ingest on it left every unconfigured state permanently empty in the UI.
 //
 // Schedule (pg_cron, 20260823000002): daily 05:15 UTC = 13:15 MYT,
 // after KPDN's ~12:00 MYT daily upload.
@@ -9,19 +14,17 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  aggregate,
+  createAggregator,
   monthKeys,
   parsePremiseRow,
   parsePriceRow,
   TRACKED_ITEM_CODES,
-  type PriceRow,
 } from "./logic.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const DATA_BASE = "https://storage.data.gov.my/pricecatcher";
 const PREMISE_TTL_DAYS = 30;
-const DEFAULT_STATES = ["Selangor"];
 
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
@@ -82,16 +85,6 @@ async function refreshPremisesIfStale(): Promise<void> {
   }
 }
 
-async function configuredStates(): Promise<Set<string>> {
-  const { data, error } = await admin.from("market_settings").select("states");
-  if (error) throw new Error(`market_settings: ${error.message}`);
-  const states = new Set<string>((data ?? []).flatMap((r) => r.states ?? []));
-  if (states.size === 0) {
-    for (const s of DEFAULT_STATES) states.add(s);
-  }
-  return states;
-}
-
 async function premiseStateMap(): Promise<Map<number, string>> {
   const map = new Map<number, string>();
   // ~3k premises; page through to stay under PostgREST's row cap.
@@ -110,10 +103,10 @@ async function premiseStateMap(): Promise<Map<number, string>> {
 Deno.serve(async () => {
   try {
     await refreshPremisesIfStale();
-    const [states, premises] = await Promise.all([configuredStates(), premiseStateMap()]);
+    const premises = await premiseStateMap();
+    const aggregator = createAggregator(premises, TRACKED_ITEM_CODES);
 
     const candidateMonths = monthKeys(new Date());
-    const rows: PriceRow[] = [];
     const months: string[] = [];
     for (const month of candidateMonths) {
       // Each month file is fetched independently: on days 1-3 the current
@@ -134,21 +127,16 @@ Deno.serve(async () => {
       months.push(month);
       for await (const line of lines(res)) {
         const parsed = parsePriceRow(line);
-        // Filter as we stream so memory stays proportional to tracked rows.
-        if (
-          parsed &&
-          TRACKED_ITEM_CODES.has(parsed.item_code) &&
-          states.has(premises.get(parsed.premise_code) ?? "")
-        ) {
-          rows.push(parsed);
-        }
+        // Accumulate as we stream: a month of nationwide rows never all sits
+        // in memory at once, only one number per surveyed price.
+        if (parsed) aggregator.add(parsed);
       }
     }
     if (months.length === 0) {
       throw new Error(`No month files fetched successfully (tried: ${candidateMonths.join(", ")})`);
     }
 
-    const aggregates = aggregate(rows, premises, states, TRACKED_ITEM_CODES);
+    const aggregates = aggregator.finish();
     for (let i = 0; i < aggregates.length; i += 500) {
       const { error } = await admin
         .from("market_prices")

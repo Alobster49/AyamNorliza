@@ -127,7 +127,7 @@ export function MarketPricesClient({
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {MARKET_ITEMS.map((item) => {
           const rows = byItem.get(item.code) ?? [];
           const latest = rows.at(-1);
