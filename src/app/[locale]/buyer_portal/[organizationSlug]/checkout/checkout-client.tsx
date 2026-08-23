@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 import { format } from "date-fns";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Loader2, MapPin, CheckCircle2 } from "lucide-react";
@@ -19,9 +20,8 @@ import { AddressFields, type AddressValue } from "@/components/forms/address-fie
 import { buyerSignInAction, buyerSignUpAction } from "@/features/buyer-auth/server/auth-actions";
 import { getBuyerProfile } from "@/features/buyer/server/actions";
 import { AccountSection, type AccountValue } from "./account-section";
-import { checkoutStage, STAGE_CTA } from "@/features/buyer/lib/checkout-cta";
+import { checkoutStage, type CheckoutStage } from "@/features/buyer/lib/checkout-cta";
 import { cartEstimate, formatEstimate } from "@/features/buyer/lib/price-estimate";
-import { TRACKER_STEPS } from "@/features/buyer/lib/order-tracker";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,11 +34,22 @@ function optionKey(option: DeliveryOption) {
   return `${option.date}-${option.slotId}`;
 }
 
+const TRACKER_STEP_KEYS = ["booked", "shipped", "priceConfirmed"] as const;
+const STAGE_CTA_KEYS: Record<CheckoutStage, string> = {
+  account: "stageAccount",
+  address: "stageAddress",
+  slot: "stageSlot",
+  ready: "stageReady",
+};
+
 export default function CheckoutClient({ organizationSlug, initialBuyer }: CheckoutClientProps) {
   const router = useRouter();
   const { items, clearCart } = useCart();
   const { toast } = useToast();
   const reduced = useReducedMotion();
+  const t = useTranslations("buyer.checkout");
+  const tCart = useTranslations("buyer.cart");
+  const tTracker = useTranslations("buyer.orderTracker");
 
   // --- account (anonymous only) ---
   const [buyer, setBuyer] = useState(initialBuyer);
@@ -223,20 +234,20 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
           setAccountErrors(auth.fieldErrors ?? {});
           if (auth.code === "conflict") {
             setAccountMode("signin");
-            toast({ title: "Email sudah didaftar", description: "Masukkan kata laluan anda untuk teruskan." });
+            toast({ title: t("emailAlreadyRegisteredTitle"), description: t("emailAlreadyRegisteredDesc") });
           } else {
-            toast({ title: "Akaun gagal", description: auth.message, variant: "destructive" });
+            toast({ title: t("accountFailedTitle"), description: auth.message, variant: "destructive" });
           }
           return;
         }
         if (accountMode === "signup") {
-          setBuyer({ displayName: account.displayName || "Buyer", phone: account.phone || null });
+          setBuyer({ displayName: account.displayName || t("defaultBuyerNameSignup"), phone: account.phone || null });
         } else {
           const profile = await getBuyerProfile().catch(() => null);
           if (profile && profile.ok) {
             setBuyer({ displayName: profile.data.display_name, phone: profile.data.phone });
           } else {
-            setBuyer({ displayName: "Pelanggan", phone: null });
+            setBuyer({ displayName: t("defaultBuyerNameSignin"), phone: null });
           }
         }
       }
@@ -265,13 +276,13 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
         if (result.code === "unauthenticated") {
           setBuyer(null);
           toast({
-            title: "Sesi akaun terputus",
-            description: "Sila isi semula maklumat akaun anda dan cuba lagi.",
+            title: t("sessionExpiredTitle"),
+            description: t("sessionExpiredDesc"),
             variant: "destructive",
           });
           return;
         }
-        toast({ title: "Pesanan gagal", description: result.message, variant: "destructive" });
+        toast({ title: t("orderFailedTitle"), description: result.message, variant: "destructive" });
         return;
       }
 
@@ -307,22 +318,21 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
         >
           <CheckCircle2 className="h-10 w-10" style={{ color: "var(--buyer-confirmed)" }} />
         </motion.div>
-        <h1 className="font-buyer-display text-3xl font-bold">Pesanan diterima!</h1>
-        <p className="mt-2 font-buyer-mono text-muted-foreground">No. pesanan #{orderId.slice(0, 8)}</p>
+        <h1 className="font-buyer-display text-3xl font-bold">{t("orderReceivedTitle")}</h1>
+        <p className="mt-2 font-buyer-mono text-muted-foreground">{t("orderNumber", { id: orderId.slice(0, 8) })}</p>
         <p className="mt-4 max-w-sm text-sm text-muted-foreground">
-          Kami akan timbang ayam anda dan sahkan harga sebelum penghantaran. Alamat anda
-          telah disimpan untuk pesanan akan datang.
+          {t("orderReceivedBody")}
         </p>
         <ol className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
-          {TRACKER_STEPS.map((step, i) => (
-            <li key={step} className="flex items-center gap-1.5">
+          {TRACKER_STEP_KEYS.map((key, i) => (
+            <li key={key} className="flex items-center gap-1.5">
               <span
                 className={`flex h-5 w-5 items-center justify-center rounded-full font-buyer-mono ${i === 0 ? "text-background" : "bg-secondary"}`}
                 style={i === 0 ? { backgroundColor: "var(--buyer-confirmed)" } : undefined}
               >
                 {i + 1}
               </span>
-              {step}
+              {tTracker(key)}
             </li>
           ))}
         </ol>
@@ -332,14 +342,14 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
             onClick={() => router.push(`/buyer_portal/${organizationSlug}/orders`)}
             className="w-full rounded-full bg-primary py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97]"
           >
-            Lihat pesanan saya
+            {t("viewMyOrders")}
           </button>
           <button
             type="button"
             onClick={() => router.push(`/buyer_portal/${organizationSlug}/shop`)}
             className="w-full rounded-full border py-3 font-medium transition-transform active:scale-[0.97]"
           >
-            Terus beli lagi
+            {t("continueShopping")}
           </button>
         </div>
       </div>
@@ -349,13 +359,13 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
   if (items.length === 0) {
     return (
       <div className="flex min-h-[50vh] flex-col items-center justify-center text-center">
-        <p className="font-buyer-display text-xl font-semibold">Troli kosong — jom pilih ayam segar</p>
+        <p className="font-buyer-display text-xl font-semibold">{tCart("emptyTitle")}</p>
         <button
           type="button"
           className="mt-6 rounded-full bg-primary px-6 py-2.5 font-medium text-primary-foreground transition-transform active:scale-[0.97]"
           onClick={() => router.push(`/buyer_portal/${organizationSlug}/shop`)}
         >
-          Lihat produk
+          {tCart("viewProducts")}
         </button>
       </div>
     );
@@ -363,12 +373,12 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6 pb-32">
-      <h1 className="font-buyer-display text-3xl font-bold">Checkout</h1>
+      <h1 className="font-buyer-display text-3xl font-bold">{t("title")}</h1>
 
       {/* Akaun anda */}
       {buyer === null ? (
         <div className="rounded-2xl border bg-card p-5">
-          <h2 className="font-buyer-display text-xl font-semibold">Akaun anda</h2>
+          <h2 className="font-buyer-display text-xl font-semibold">{t("accountHeading")}</h2>
           <div className="mt-4">
             <AccountSection
               mode={accountMode}
@@ -381,22 +391,22 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
           </div>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Log masuk sebagai {buyer.displayName}</p>
+        <p className="text-sm text-muted-foreground">{t("signedInAs", { name: buyer.displayName })}</p>
       )}
 
       {/* Alamat penghantaran */}
       <div className="rounded-2xl border bg-card p-5">
-        <h2 className="font-buyer-display text-xl font-semibold">Alamat penghantaran</h2>
+        <h2 className="font-buyer-display text-xl font-semibold">{t("addressHeading")}</h2>
         <div className="mt-4 space-y-4">
           {addressesLoading && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Memuatkan alamat anda...
+              {t("loadingAddresses")}
             </div>
           )}
 
           {!addressesLoading && savedAddresses.length > 0 && (
-            <div className="space-y-2" role="radiogroup" aria-label="Alamat penghantaran">
+            <div className="space-y-2" role="radiogroup" aria-label={t("addressHeading")}>
               {savedAddresses.map((addr) => {
                 const isSelected = selectedAddressId === addr.id;
                 return (
@@ -414,7 +424,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
                       <p className="font-medium">{addr.addressLine}</p>
                       {addr.isDefault && (
                         <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                          Default
+                          {t("defaultBadge")}
                         </span>
                       )}
                     </div>
@@ -433,7 +443,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
                   selectedAddressId === "new" ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
                 }`}
               >
-                <p className="font-medium">+ Alamat baru</p>
+                <p className="font-medium">{t("newAddressButton")}</p>
               </button>
             </div>
           )}
@@ -445,7 +455,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
           {zoneState === "resolving" && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Menyemak kawasan…
+              {t("checkingZone")}
             </div>
           )}
           {zoneState === "resolved" && (
@@ -454,23 +464,23 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
               style={{ backgroundColor: "color-mix(in oklab, var(--buyer-confirmed) 15%, transparent)", color: "var(--buyer-confirmed)" }}
             >
               <MapPin className="h-3.5 w-3.5" />
-              Zon: {zoneNames[zoneId ?? ""] ?? "Disahkan"} ✓
+              {t("zoneConfirmed", { zone: zoneNames[zoneId ?? ""] ?? t("zoneConfirmedFallback") })}
             </span>
           )}
           {zoneState === "uncovered" && (
             <div className="rounded-2xl bg-secondary p-4 text-sm">
-              Belum sampai kawasan ini lagi — cuba poskod lain atau hubungi kami.
+              {t("zoneUncovered")}
             </div>
           )}
           {zoneState === "error" && (
             <div className="flex items-center justify-between gap-3 rounded-2xl bg-secondary p-4 text-sm">
-              <span>Tak dapat semak kawasan sekarang — cuba lagi.</span>
+              <span>{t("zoneError")}</span>
               <button
                 type="button"
                 onClick={() => setZoneRetryNonce((n) => n + 1)}
                 className="shrink-0 rounded-full border px-3 py-1.5 font-medium transition-transform active:scale-95"
               >
-                Cuba lagi
+                {t("retry")}
               </button>
             </div>
           )}
@@ -479,9 +489,9 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
 
       {/* Slot penghantaran */}
       <section className="rounded-2xl border bg-card p-5">
-        <h2 className="font-buyer-display mb-1 text-xl font-semibold">Slot penghantaran</h2>
+        <h2 className="font-buyer-display mb-1 text-xl font-semibold">{t("slotHeading")}</h2>
         <p className="mb-4 text-sm text-muted-foreground">
-          {zoneId === null ? "Isi alamat dulu untuk lihat slot." : "Pilih tarikh dan masa."}
+          {zoneId === null ? t("slotHintNeedAddress") : t("slotHintChooseTime")}
         </p>
 
         <AnimatePresence mode="popLayout" initial={false}>
@@ -508,18 +518,18 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
             <motion.div key="picker" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               {optionsLoading && zoneId !== null && (
                 <p className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Memuatkan slot…
+                  <Loader2 className="h-4 w-4 animate-spin" /> {t("loadingSlots")}
                 </p>
               )}
               {!optionsLoading && zoneId !== null && groupedOptions.length === 0 && (
-                <p className="text-sm text-muted-foreground">Tiada slot untuk kawasan ini lagi.</p>
+                <p className="text-sm text-muted-foreground">{t("noSlots")}</p>
               )}
               {!optionsLoading && groupedOptions.length > 0 && (
                 <div className="space-y-3">
                   <div
                     className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] snap-x"
                     role="radiogroup"
-                    aria-label="Tarikh"
+                    aria-label={t("dateAriaLabel")}
                   >
                     {groupedOptions.map(([date]) => (
                       <button
@@ -538,7 +548,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
                       </button>
                     ))}
                   </div>
-                  <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="Masa">
+                  <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label={t("timeAriaLabel")}>
                     {(groupedOptions.find(([d]) => d === effectiveDate)?.[1] ?? []).map((option) => (
                       <button
                         key={optionKey(option)}
@@ -553,7 +563,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
                         </p>
                         <p className="text-muted-foreground">{option.truckName}</p>
                         {option.remaining !== null && (
-                          <p className="mt-1 text-xs text-muted-foreground">{option.remaining} slot tersisa</p>
+                          <p className="mt-1 text-xs text-muted-foreground">{t("slotsRemaining", { count: option.remaining })}</p>
                         )}
                       </button>
                     ))}
@@ -572,12 +582,12 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
           onClick={() => setNotesOpen(!notesOpen)}
           className="text-sm text-muted-foreground underline decoration-dotted"
         >
-          + Tambah nota
+          {t("addNotes")}
         </button>
         {notesOpen && (
           <Textarea
             className="mt-2"
-            placeholder="Sebarang arahan khas untuk pesanan anda?"
+            placeholder={t("notesPlaceholder")}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
@@ -589,9 +599,9 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
       <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-card/[0.97] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Anggaran</p>
+            <p className="text-xs text-muted-foreground">{t("estimateLabel")}</p>
             <p className="truncate font-buyer-mono text-lg font-medium">
-              {estimate ? formatEstimate(estimate) : "—"}
+              {estimate ? formatEstimate(estimate) : t("estimatePlaceholder")}
             </p>
           </div>
           <button
@@ -602,10 +612,10 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
             {submitting ? (
               <span className="flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Menghantar…
+                {t("submitting")}
               </span>
             ) : (
-              STAGE_CTA[stage]
+              t(STAGE_CTA_KEYS[stage])
             )}
           </button>
         </div>
