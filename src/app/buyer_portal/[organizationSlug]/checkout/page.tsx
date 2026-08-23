@@ -1,4 +1,4 @@
-import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
+import { getBuyerFromSession } from "@/lib/auth/buyer-auth";
 import CheckoutClient from "./checkout-client";
 
 type CheckoutPageProps = {
@@ -7,8 +7,12 @@ type CheckoutPageProps = {
 
 export default async function CheckoutPage({ params }: CheckoutPageProps) {
   const { organizationSlug } = await params;
-  // The guard builds the same `?next=` this page used to hand-roll, from the
-  // path the middleware publishes.
-  await requireBuyerOrRedirect(organizationSlug);
-  return <CheckoutClient organizationSlug={organizationSlug} />;
+  // No redirect wall: anonymous buyers create their account inside checkout.
+  const buyer = await getBuyerFromSession();
+  return (
+    <CheckoutClient
+      organizationSlug={organizationSlug}
+      initialBuyer={buyer ? { displayName: buyer.display_name, phone: buyer.phone } : null}
+    />
+  );
 }
