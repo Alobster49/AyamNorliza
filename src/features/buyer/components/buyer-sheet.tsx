@@ -15,6 +15,20 @@ const SPRING = { type: "spring", bounce: 0, duration: 0.4 } as const;
 const FOCUSABLE_SELECTOR =
   'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
+// Body scroll lock, reference-counted so nested sheets (e.g. an explainer
+// sheet opened on top of the cart sheet) don't restore scroll on the page
+// while an outer sheet is still open.
+let lockCount = 0;
+function lockBody() {
+  if (++lockCount === 1) document.body.style.overflow = "hidden";
+}
+function unlockBody() {
+  if (--lockCount <= 0) {
+    lockCount = 0;
+    document.body.style.overflow = "";
+  }
+}
+
 /**
  * Terus Segar bottom sheet: flat warm fill (NO backdrop-filter), 1:1 drag,
  * velocity dismiss, interruptible spring (motion animates from the current
@@ -45,9 +59,9 @@ export function BuyerSheet({ open, onOpenChange, title, children }: BuyerSheetPr
 
   useEffect(() => {
     if (!(open || present)) return;
-    document.body.style.overflow = "hidden";
+    lockBody();
     return () => {
-      document.body.style.overflow = "";
+      unlockBody();
     };
   }, [open, present]);
 
@@ -89,7 +103,7 @@ export function BuyerSheet({ open, onOpenChange, title, children }: BuyerSheetPr
   return (
     <AnimatePresence onExitComplete={() => setPresent(false)}>
       {open && (
-        <div className="buyer-theme fixed inset-0 z-[60]">
+        <div className="fixed inset-0 z-[60]">
           <motion.button
             type="button"
             aria-label="Tutup"

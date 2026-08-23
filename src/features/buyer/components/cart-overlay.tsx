@@ -32,10 +32,10 @@ export function CartOverlay({ organizationSlug }: { organizationSlug: string }) 
             <button
               type="button"
               onClick={openCart}
-              className="buyer-theme mx-auto flex w-full max-w-lg items-center justify-between rounded-full border bg-foreground px-5 py-3 text-background shadow-lg transition-transform active:scale-[0.98]"
+              className="mx-auto flex w-full max-w-lg items-center justify-between rounded-full border bg-foreground px-5 py-3 text-background shadow-lg transition-transform active:scale-[0.98]"
             >
               <span className="font-buyer-mono text-sm">
-                {items.length} item{total ? ` · ${formatEstimate(total)}` : ""}
+                {items.length} item · {total ? formatEstimate(total) : "—"}
               </span>
               <span className="font-medium text-primary">Lihat troli</span>
             </button>
