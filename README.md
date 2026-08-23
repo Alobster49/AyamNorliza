@@ -99,7 +99,7 @@ saved locale, or English if they have none.
   locale prefix and cost a redirect.
 - Never concatenate translated strings. Use ICU placeholders:
   `t('workspaceSuffix', {section})`, not `t('workspace') + section`.
-- New BM copy follows `docs/i18n-glossary.md`.
+- New BM copy follows `docs/i18n-glossary.md` (glossary is provisional pending staff confirmation).
 - Database values stay English. Only display labels are translated.
 
 ## References

@@ -1,5 +1,10 @@
 # i18n glossary — English ↔ Bahasa Melayu
 
+**Status:** These terms are proposed and pending confirmation with staff before
+Phase 3 production Malay copy. The rows most likely to need revision are Dispatch,
+Run, Batch, and the order statuses—these reflect floor vocabulary that requires
+direct verification.
+
 Fixed renderings for operational vocabulary. Every message catalog must follow
 this table. If a term is missing, add it here first, then use it.
 
