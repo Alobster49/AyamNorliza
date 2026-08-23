@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { LocaleSwitcher } from "@/components/shared/locale-switcher";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -34,6 +35,7 @@ export function DashboardShellHeader({
           {context.section} workspace
         </p>
       </div>
+      <LocaleSwitcher />
       <ThemeToggle />
     </header>
   );

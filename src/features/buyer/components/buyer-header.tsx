@@ -13,6 +13,7 @@ import {
   Menu,
   X,
 } from "lucide-react";
+import { LocaleSwitcher } from "@/components/shared/locale-switcher";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -101,6 +102,8 @@ export function BuyerHeader({
 
         {/* Right side actions */}
         <div className="flex items-center gap-2">
+          <LocaleSwitcher />
+
           {/* Cart button - always visible */}
           <Button variant="ghost" size="icon" onClick={openCart} className="relative">
             <ShoppingCart className="h-5 w-5" />

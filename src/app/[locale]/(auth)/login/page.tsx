@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { LoginForm } from "@/components/forms/login-form";
+import { LocaleSwitcher } from "@/components/shared/locale-switcher";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 
 export const metadata = { title: "Sign in - AyamNorliza" };
@@ -26,7 +27,10 @@ export default async function LoginPage({
             </span>
             AyamNorliza Ops
           </a>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <LocaleSwitcher />
+            <ThemeToggle />
+          </div>
         </div>
         <div className="flex flex-1 items-center justify-center">
           <div className="w-full max-w-xs">

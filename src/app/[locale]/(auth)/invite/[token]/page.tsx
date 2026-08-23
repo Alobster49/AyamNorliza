@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { acceptInvitationAction } from "@/features/identity-access/server/actions";
+import { LocaleSwitcher } from "@/components/shared/locale-switcher";
 import { hashToken } from "@/lib/auth/invite-token";
 
 /**
@@ -33,6 +34,9 @@ export default async function InviteAcceptPage({
   if (!result.ok) {
     return (
       <main className="auth-page">
+        <div className="flex justify-end">
+          <LocaleSwitcher />
+        </div>
         <section>
           <h1>Could not accept invitation</h1>
           <p role="alert">{result.message}</p>
