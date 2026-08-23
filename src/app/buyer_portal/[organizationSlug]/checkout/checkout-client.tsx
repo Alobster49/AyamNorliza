@@ -21,6 +21,7 @@ import { getBuyerProfile } from "@/features/buyer/server/actions";
 import { AccountSection, type AccountValue } from "./account-section";
 import { checkoutStage, STAGE_CTA } from "@/features/buyer/lib/checkout-cta";
 import { cartEstimate, formatEstimate } from "@/features/buyer/lib/price-estimate";
+import { TRACKER_STEPS } from "@/features/buyer/lib/order-tracker";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
@@ -51,8 +52,9 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
   const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
   const [newAddress, setNewAddress] = useState<AddressValue>({ addressLine: "", postcode: "", state: "", area: "" });
   const [zoneId, setZoneId] = useState<string | null>(null);
-  const [zoneState, setZoneState] = useState<"idle" | "resolving" | "resolved" | "uncovered">("idle");
+  const [zoneState, setZoneState] = useState<"idle" | "resolving" | "resolved" | "uncovered" | "error">("idle");
   const [zoneNames, setZoneNames] = useState<Record<string, string>>({});
+  const [zoneRetryNonce, setZoneRetryNonce] = useState(0);
 
   // --- slots / notes / submit ---
   const [options, setOptions] = useState<DeliveryOption[]>([]);
@@ -128,16 +130,13 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
       })
       .catch(() => {
         if (cancelled) return;
-        // A rejected lookup collapses to "uncovered" rather than a distinct
-        // error state — surfacing lookup failures separately is a filed
-        // follow-up; for now this just keeps checkout from hanging forever.
         setZoneId(null);
-        setZoneState("uncovered");
+        setZoneState("error");
       });
     return () => {
       cancelled = true;
     };
-  }, [organizationSlug, activeAddress?.postcode]);
+  }, [organizationSlug, activeAddress?.postcode, zoneRetryNonce]);
 
   useEffect(() => {
     if (!organizationSlug || !zoneId) {
@@ -202,84 +201,95 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
     setSubmitting(true);
     setAccountErrors({});
 
-    // 1. Inline account, only when anonymous. The session cookie from the
-    //    auth action carries into placeOrder's requireBuyer.
-    if (!buyer) {
-      const auth =
-        accountMode === "signup"
-          ? await buyerSignUpAction({
-              email: account.email,
-              password: account.password,
-              displayName: account.displayName,
-              phone: account.phone,
-              organizationSlug,
-            })
-          : await buyerSignInAction({
-              email: account.email,
-              password: account.password,
-              organizationSlug,
-            });
-      if (!auth.ok) {
-        setSubmitting(false);
-        setAccountErrors(auth.fieldErrors ?? {});
-        if (auth.code === "conflict") {
-          setAccountMode("signin");
-          toast({ title: "Email sudah didaftar", description: "Masukkan kata laluan anda untuk teruskan." });
-        } else {
-          toast({ title: "Akaun gagal", description: auth.message, variant: "destructive" });
+    try {
+      // 1. Inline account, only when anonymous. The session cookie from the
+      //    auth action carries into placeOrder's requireBuyer.
+      if (!buyer) {
+        const auth =
+          accountMode === "signup"
+            ? await buyerSignUpAction({
+                email: account.email,
+                password: account.password,
+                displayName: account.displayName,
+                phone: account.phone,
+                organizationSlug,
+              })
+            : await buyerSignInAction({
+                email: account.email,
+                password: account.password,
+                organizationSlug,
+              });
+        if (!auth.ok) {
+          setAccountErrors(auth.fieldErrors ?? {});
+          if (auth.code === "conflict") {
+            setAccountMode("signin");
+            toast({ title: "Email sudah didaftar", description: "Masukkan kata laluan anda untuk teruskan." });
+          } else {
+            toast({ title: "Akaun gagal", description: auth.message, variant: "destructive" });
+          }
+          return;
         }
+        if (accountMode === "signup") {
+          setBuyer({ displayName: account.displayName || "Buyer", phone: account.phone || null });
+        } else {
+          const profile = await getBuyerProfile().catch(() => null);
+          if (profile && profile.ok) {
+            setBuyer({ displayName: profile.data.display_name, phone: profile.data.phone });
+          } else {
+            setBuyer({ displayName: "Pelanggan", phone: null });
+          }
+        }
+      }
+
+      // 2. Place the order (unchanged action).
+      const composedAddress = `${activeAddress.addressLine.trim()}, ${activeAddress.postcode} ${activeAddress.area}, ${activeAddress.state}`;
+      const result = await placeOrder({
+        organizationSlug,
+        zoneId,
+        slotId: selectedOption.slotId,
+        deliveryDate: selectedOption.date,
+        address: composedAddress,
+        postcode: activeAddress.postcode,
+        notes: notes.trim() || undefined,
+        items: items.map((item) => ({
+          productId: item.productId,
+          mode: item.mode,
+          quantity: item.quantity,
+          sizeMinKg: item.sizeMinKg,
+          sizeMaxKg: item.sizeMaxKg,
+          fallback: item.fallback,
+        })),
+      });
+
+      if (!result.ok) {
+        if (result.code === "unauthenticated") {
+          setBuyer(null);
+          toast({
+            title: "Sesi akaun terputus",
+            description: "Sila isi semula maklumat akaun anda dan cuba lagi.",
+            variant: "destructive",
+          });
+          return;
+        }
+        toast({ title: "Pesanan gagal", description: result.message, variant: "destructive" });
         return;
       }
-      if (accountMode === "signup") {
-        setBuyer({ displayName: account.displayName || "Buyer", phone: account.phone || null });
-      } else {
-        const profile = await getBuyerProfile().catch(() => null);
-        if (profile && profile.ok) {
-          setBuyer({ displayName: profile.data.display_name, phone: profile.data.phone });
-        } else {
-          setBuyer({ displayName: "Pelanggan", phone: null });
-        }
+
+      if (selectedAddressId === "new") {
+        createAddress({
+          addressLine: newAddress.addressLine.trim(),
+          postcode: newAddress.postcode,
+          state: newAddress.state,
+          area: newAddress.area,
+        }).catch(() => {});
       }
+
+      setOrderId(result.data.orderId);
+      setOrderComplete(true);
+      clearCart();
+    } finally {
+      setSubmitting(false);
     }
-
-    // 2. Place the order (unchanged action).
-    const composedAddress = `${activeAddress.addressLine.trim()}, ${activeAddress.postcode} ${activeAddress.area}, ${activeAddress.state}`;
-    const result = await placeOrder({
-      organizationSlug,
-      zoneId,
-      slotId: selectedOption.slotId,
-      deliveryDate: selectedOption.date,
-      address: composedAddress,
-      postcode: activeAddress.postcode,
-      notes: notes.trim() || undefined,
-      items: items.map((item) => ({
-        productId: item.productId,
-        mode: item.mode,
-        quantity: item.quantity,
-        sizeMinKg: item.sizeMinKg,
-        sizeMaxKg: item.sizeMaxKg,
-        fallback: item.fallback,
-      })),
-    });
-    setSubmitting(false);
-
-    if (!result.ok) {
-      toast({ title: "Pesanan gagal", description: result.message, variant: "destructive" });
-      return;
-    }
-
-    if (selectedAddressId === "new") {
-      createAddress({
-        addressLine: newAddress.addressLine.trim(),
-        postcode: newAddress.postcode,
-        state: newAddress.state,
-        area: newAddress.area,
-      }).catch(() => {});
-    }
-
-    setOrderId(result.data.orderId);
-    setOrderComplete(true);
-    clearCart();
   };
 
   if (orderComplete) {
@@ -304,7 +314,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
           telah disimpan untuk pesanan akan datang.
         </p>
         <ol className="mt-6 flex items-center gap-3 text-xs text-muted-foreground">
-          {["Ditempah", "Dihantar", "Harga disahkan"].map((step, i) => (
+          {TRACKER_STEPS.map((step, i) => (
             <li key={step} className="flex items-center gap-1.5">
               <span
                 className={`flex h-5 w-5 items-center justify-center rounded-full font-buyer-mono ${i === 0 ? "text-background" : "bg-secondary"}`}
@@ -450,6 +460,18 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
           {zoneState === "uncovered" && (
             <div className="rounded-2xl bg-secondary p-4 text-sm">
               Belum sampai kawasan ini lagi — cuba poskod lain atau hubungi kami.
+            </div>
+          )}
+          {zoneState === "error" && (
+            <div className="flex items-center justify-between gap-3 rounded-2xl bg-secondary p-4 text-sm">
+              <span>Tak dapat semak kawasan sekarang — cuba lagi.</span>
+              <button
+                type="button"
+                onClick={() => setZoneRetryNonce((n) => n + 1)}
+                className="shrink-0 rounded-full border px-3 py-1.5 font-medium transition-transform active:scale-95"
+              >
+                Cuba lagi
+              </button>
             </div>
           )}
         </div>
