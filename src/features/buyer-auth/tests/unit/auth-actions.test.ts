@@ -272,7 +272,10 @@ describe("buyerSignInAction", () => {
 
     const result = await buyerSignInAction(validSignInInput);
 
-    expect(result).toEqual({ ok: true, data: { buyerId: "buyer-1" } });
+    expect(result).toEqual({
+      ok: true,
+      data: { buyerId: "buyer-1", locale: "en" },
+    });
     expect(syncLocaleCookieFromAccount).toHaveBeenCalledTimes(1);
   });
 

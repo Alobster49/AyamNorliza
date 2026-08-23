@@ -17,6 +17,7 @@ import { admin, type AdminContext } from "@/lib/supabase/admin";
 import { randomUUID } from "node:crypto";
 import { resolveLandingPath } from "./landing";
 import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
+import type { AppLocale } from "@/lib/i18n/locales";
 
 type AuthErrorCode = "validation" | "unauthenticated" | "internal" | "conflict";
 
@@ -33,7 +34,14 @@ function ok<T>(data: T): ActionResult<T> {
 
 export async function loginAction(
   rawInput: unknown,
-): Promise<ActionResult<{ requiresMfa: boolean; redirectTo: string }>> {
+): Promise<
+  ActionResult<{
+    requiresMfa: boolean;
+    redirectTo: string;
+    /** Absent only if the sync itself failed - caller should keep the URL locale. */
+    locale?: AppLocale;
+  }>
+> {
   const parsed = LoginInput.safeParse(rawInput);
   if (!parsed.success) return err("validation", "Invalid login", parsed.error.flatten().fieldErrors);
   const input = parsed.data;
@@ -58,13 +66,18 @@ export async function loginAction(
   // to this one. Best-effort — a sync problem must never fail a sign-in
   // that has already succeeded (same swallow-errors posture as
   // `setLocaleAction`).
+  // The URL locale (whatever the login page happened to be prefixed with)
+  // and the just-synced account locale can disagree on a new device - the
+  // caller needs the synced value to navigate with the right one, the same
+  // way /auth/callback already does.
+  let locale: AppLocale | undefined;
   try {
-    await syncLocaleCookieFromAccount();
+    locale = await syncLocaleCookieFromAccount();
   } catch (syncError) {
     console.error("loginAction: locale sync failed", syncError);
   }
 
-  return ok({ requiresMfa, redirectTo });
+  return ok({ requiresMfa, redirectTo, locale });
 }
 
 export async function signOutAction(): Promise<ActionResult<{ ok: true }>> {

@@ -70,6 +70,18 @@ describe("loginAction", () => {
     expect(syncLocaleCookieFromAccount).toHaveBeenCalledTimes(1);
   });
 
+  it("returns the synced locale so the client can navigate with it", async () => {
+    mockSupabase();
+    vi.mocked(syncLocaleCookieFromAccount).mockResolvedValue("ms" as never);
+
+    const result = await loginAction(validInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.locale).toBe("ms");
+    }
+  });
+
   it("does not sync the locale when sign-in fails", async () => {
     mockSupabase({
       signInResult: { data: { user: null }, error: { message: "Invalid login credentials" } },
