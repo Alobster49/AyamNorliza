@@ -393,6 +393,7 @@ export type Database = {
           customer_id: string | null
           display_name: string
           id: string
+          locale: string
           organization_id: string
           phone: string | null
           updated_at: string
@@ -404,6 +405,7 @@ export type Database = {
           customer_id?: string | null
           display_name: string
           id: string
+          locale?: string
           organization_id: string
           phone?: string | null
           updated_at?: string
@@ -415,6 +417,7 @@ export type Database = {
           customer_id?: string | null
           display_name?: string
           id?: string
+          locale?: string
           organization_id?: string
           phone?: string | null
           updated_at?: string

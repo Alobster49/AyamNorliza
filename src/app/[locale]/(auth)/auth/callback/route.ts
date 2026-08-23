@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { sanitizeNextPath } from "@/lib/auth/next-path";
+import { sanitizeNextPath, stripLocalePrefix } from "@/lib/auth/next-path";
+import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
 
 /**
  * PKCE callback. The Supabase auth-js client handles `code` exchange
@@ -18,7 +19,14 @@ export async function GET(request: NextRequest) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // Resolve (and persist to the cookie) the account's stored locale now
+      // that a session exists, then send the user to their own language
+      // rather than whatever prefix `next` happened to carry.
+      const locale = await syncLocaleCookieFromAccount();
+      const unprefixed = stripLocalePrefix(next);
+      const destination =
+        unprefixed === "/" ? `/${locale}` : `/${locale}${unprefixed}`;
+      return NextResponse.redirect(`${origin}${destination}`);
     }
   }
   return NextResponse.redirect(`${origin}/login?error=callback_failed`);
