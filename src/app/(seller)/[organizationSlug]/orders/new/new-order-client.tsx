@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCustomer, searchCustomers, getCatalogForOrdering } from "@/features/seller/server/actions";
 import type { Customer } from "@/features/seller/types";
@@ -66,6 +66,14 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
 
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [zones, setZones] = useState<DeliveryZone[]>([]);
+  // Mirrors `zones` for applyCustomer to read: `zones` is filled by a
+  // fire-and-forget effect, and applyCustomer is re-created every render, so
+  // an in-flight call would otherwise see whatever `zones` was at the render
+  // it started in (often still []) instead of the latest loaded value.
+  const zonesRef = useRef<DeliveryZone[]>([]);
+  // Bumped at the start of every applyCustomer call; see the comment inside
+  // applyCustomer for what it protects against.
+  const customerSeqRef = useRef(0);
 
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
@@ -105,7 +113,10 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     })();
     (async () => {
       const result = await getActiveZones(organizationSlug);
-      if (result.ok) setZones(result.data);
+      if (result.ok) {
+        setZones(result.data);
+        zonesRef.current = result.data;
+      }
     })();
   }, [organizationId, organizationSlug]);
 
@@ -125,21 +136,44 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
 
   /**
    * Selecting a customer is an explicit action, so their saved address and
-   * postcode overwrite whatever is in the delivery fields, and the zone is
-   * resolved from the postcode the same way the buyer checkout does it.
+   * postcode authoritatively overwrite whatever is in the delivery fields
+   * (including clearing them for a customer with none on file), and the
+   * zone is resolved from the postcode the same way the buyer checkout
+   * does it.
    */
   const applyCustomer = async (customer: Customer) => {
-    setSelectedCustomer(customer);
-    if (customer.address) setAddress(customer.address);
-    if (!customer.postcode) return;
+    // Guards against a cross-customer race: applyCustomer is fired without
+    // awaiting from a synchronous onClick, so clicking a second customer
+    // before the first one's resolveDeliveryZone round-trip returns must
+    // not let the first (now-superseded) response apply its zone or pop a
+    // toast on top of the second customer's selection. Do not remove.
+    const seq = ++customerSeqRef.current;
 
-    setPostcode(customer.postcode);
+    setSelectedCustomer(customer);
+    // Always assign, even when empty, so a customer with no address/postcode
+    // on file clears out whatever the previously selected customer left behind.
+    setAddress(customer.address ?? "");
+    setPostcode(customer.postcode ?? "");
+
+    if (!customer.postcode) {
+      toast({
+        title: "No postcode on file for this customer",
+        description: "Pick a delivery zone manually.",
+      });
+      return;
+    }
+
     const result = await resolveDeliveryZone(organizationSlug, customer.postcode);
-    if (!result.ok) return;
+    if (customerSeqRef.current !== seq) return;
+
+    if (!result.ok) {
+      toast({ title: "Could not check delivery coverage", description: result.message, variant: "destructive" });
+      return;
+    }
 
     // Only adopt a zone the seller can actually see in the picker; the
     // resolver can return a zone that is not in the active list.
-    if (result.data.zoneId && zones.some((zone) => zone.id === result.data.zoneId)) {
+    if (result.data.zoneId && zonesRef.current.some((zone) => zone.id === result.data.zoneId)) {
       await handleZoneChange(result.data.zoneId);
       return;
     }
