@@ -64,22 +64,45 @@ const eslintConfig = [
       "src/features/identity-access/components/**/*.{ts,tsx}",
       "src/features/logistics/components/**/*.{ts,tsx}",
       "src/features/overview/components/**/*.{ts,tsx}",
-      "src/components/forms/**/*.{ts,tsx}",
-      // These four were reported as fully converted by an earlier wave, but
-      // re-running lint against `src/**` (rather than trusting that claim)
-      // shows only `login-form.tsx` (covered by the `src/components/forms/**`
-      // entry above) actually is - the other three still import `Link`
-      // and/or `useRouter` from `next/link` / `next/navigation` directly.
-      // Listed individually, not as a directory glob, so the exemption
-      // stays exactly as wide as what's actually unconverted.
-      "src/features/dashboard/components/app-sidebar.tsx",
-      "src/features/seller/components/seller-sidebar.tsx",
-      "src/features/buyer/components/buyer-header.tsx",
+      // Individually listed, not the `src/components/forms/**` directory -
+      // `login-form.tsx` and `mfa-enroll-card.tsx` are fully converted, so a
+      // directory glob would exempt them wholesale and hide a regression.
+      "src/components/forms/update-organization-form.tsx",
+      "src/components/forms/invite-user-dialog.tsx",
+      "src/components/forms/break-glass-dialog.tsx",
+      "src/components/forms/reauth-dialog.tsx",
       "src/features/buyer/components/cart-overlay.tsx",
       "src/features/buyer/components/cart-view.tsx",
     ],
     rules: {
       "no-restricted-imports": "off",
+    },
+  },
+  {
+    // These three shells have already converted `usePathname` to the
+    // locale-aware import - only `Link` and `useRouter` still come from
+    // `next/link` / `next/navigation` directly. A wholesale exemption (as
+    // above) would leave the converted `usePathname` unguarded against
+    // regressing back to `next/navigation`, so this override keeps that one
+    // import name restricted while permitting the rest.
+    files: [
+      "src/features/dashboard/components/app-sidebar.tsx",
+      "src/features/seller/components/seller-sidebar.tsx",
+      "src/features/buyer/components/buyer-header.tsx",
+    ],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "next/navigation",
+              importNames: ["usePathname"],
+              message: "Import `usePathname` from `@/i18n/navigation` instead - the `next/navigation` version drops the locale prefix.",
+            },
+          ],
+        },
+      ],
     },
   },
 ];
