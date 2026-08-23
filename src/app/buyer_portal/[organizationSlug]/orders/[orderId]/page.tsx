@@ -121,15 +121,21 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       </div>
                     </div>
                     {isClosed && item.final_weight_kg !== null && item.price_per_kg !== null && (
-                      <ScaleChip
-                        estimate={null}
-                        final={{
-                          total: Number(item.line_total),
-                          weightKg: Number(item.final_weight_kg),
-                          pricePerKg: Number(item.price_per_kg),
-                        }}
-                        className="text-right"
-                      />
+                      <div className="text-right">
+                        <ScaleChip
+                          estimate={null}
+                          final={{
+                            total: Number(item.line_total),
+                            weightKg: Number(item.final_weight_kg),
+                            pricePerKg: Number(item.price_per_kg),
+                          }}
+                        />
+                        {item.final_pieces !== null && (
+                          <p className="text-xs text-muted-foreground">
+                            {Number(item.final_pieces)} ekor
+                          </p>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
