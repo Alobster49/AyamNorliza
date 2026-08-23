@@ -9,6 +9,7 @@ import { getDeliveryOptionsForOrg, createManualOrder, resolveDeliveryZone } from
 import type { DeliveryOption, DeliveryZone, OrderFallback, OrderItemMode } from "@/features/orders/types";
 import { FALLBACKS, FALLBACK_LABELS } from "@/features/orders/types";
 import { AddressFields } from "@/components/forms/address-fields";
+import { parseCustomerAddress } from "@/features/seller/lib/customer-schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -186,6 +187,18 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
   const handleAddNewCustomer = async () => {
     if (!newCustomer.name || !newCustomer.phone) {
       toast({ title: "Name and phone are required", variant: "destructive" });
+      return;
+    }
+    // Validate client-side before hitting the server action: Next.js
+    // redacts uncaught Server Action error messages in production builds,
+    // so the "Enter a 5-digit postcode..." message from parseCustomerAddress
+    // would otherwise never reach the seller in prod. createCustomer still
+    // calls parseCustomerAddress itself as defence in depth.
+    try {
+      parseCustomerAddress(newCustomer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: "Error", description: message, variant: "destructive" });
       return;
     }
     try {
@@ -418,7 +431,22 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
             <h2 className="font-semibold">Delivery</h2>
             <div className="space-y-1">
               <Label className="text-xs">Zone</Label>
-              <Select value={zoneId} onValueChange={handleZoneChange}>
+              <Select
+                value={zoneId}
+                onValueChange={(value) => {
+                  // A manual zone pick must supersede any customer-driven
+                  // resolveDeliveryZone still in flight -- bump the seq
+                  // BEFORE calling handleZoneChange, the same way selecting
+                  // another customer does, so a late response from
+                  // applyCustomer can't clobber this choice. Bumping inside
+                  // handleZoneChange itself would be wrong: applyCustomer
+                  // calls that function too, and would end up invalidating
+                  // its own in-flight work. Do not move this into
+                  // handleZoneChange.
+                  customerSeqRef.current += 1;
+                  handleZoneChange(value);
+                }}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select zone" />
                 </SelectTrigger>

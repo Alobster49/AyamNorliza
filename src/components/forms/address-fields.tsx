@@ -66,11 +66,21 @@ export function AddressFields({
 
   const handlePostcode = (raw: string) => {
     const postcode = raw.replace(/\D/g, "").slice(0, 5);
-    const hit = postcode.length === 5 ? lookupPostcode(postcode) : null;
+    if (postcode.length < 5) {
+      // Partial entry: leave state/area alone so the fields don't thrash
+      // while the seller/buyer is still typing.
+      onChange({ ...value, postcode });
+      return;
+    }
+    const hit = lookupPostcode(postcode);
     onChange(
       hit
         ? { ...value, postcode, state: hit.state, area: hit.area }
-        : { ...value, postcode },
+        // A full 5-digit postcode that misses the lookup must not leave a
+        // previously auto-filled state/area attached to it — otherwise an
+        // unrelated postcode/state/area combination can be saved even
+        // though the pairing constraint (all three non-null) is satisfied.
+        : { ...value, postcode, state: "", area: "" },
     );
   };
 
