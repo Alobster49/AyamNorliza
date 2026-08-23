@@ -1,3 +1,5 @@
+import { isRouteActive } from "@/lib/i18n/route-active";
+
 export type BuyerRoute = {
   title: string;
   href: string;
@@ -53,6 +55,3 @@ export function getBuyerSidebarGroups({
   });
 }
 
-function isRouteActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}

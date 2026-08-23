@@ -6,22 +6,25 @@ import {
 } from "../../components/dashboard-shell-model";
 
 describe("dashboard shell model", () => {
-  it("never matches a locale-prefixed pathname against unprefixed hrefs", () => {
+  it("still highlights the right item when pathname is locale-prefixed", () => {
     // getDashboardSidebarGroups builds hrefs like "/{slug}/settings/organization"
-    // and compares them against whatever `pathname` the caller passes in. The
-    // sidebar component must supply an UNPREFIXED pathname (via next-intl's
-    // `usePathname` from "@/i18n/navigation", not "next/navigation" - see
-    // app-sidebar.tsx). This pins that contract: a locale-prefixed pathname
-    // ("/en/...") never highlights anything, so a regression back to
-    // "next/navigation" would silently break every active state.
+    // and compares them against whatever `pathname` the caller passes in.
+    // The sidebar component is expected to supply an UNPREFIXED pathname
+    // (via next-intl's `usePathname` from "@/i18n/navigation", not
+    // "next/navigation" - see app-sidebar.tsx), but the shared
+    // `isRouteActive` helper (`src/lib/i18n/route-active.ts`) strips a
+    // locale prefix defensively, so a caller that regresses back to the
+    // wrong `usePathname` still highlights correctly instead of silently
+    // breaking every active state. This pins that hardening at the model
+    // level, once, rather than three near-identical local copies.
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/en/ayam-norliza-pilot/settings/organization",
     });
 
-    expect(groups.some((group) => group.isActive)).toBe(false);
+    expect(groups[1]).toMatchObject({ title: "Access control", isActive: true });
     const orgItem = groups[1]?.items.find((item) => item.title === "Organization");
-    expect(orgItem?.isActive).toBe(false);
+    expect(orgItem?.isActive).toBe(true);
   });
 
   it("marks organization settings as the active sidebar item", () => {

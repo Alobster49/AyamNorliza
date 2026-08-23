@@ -1,3 +1,5 @@
+import { isRouteActive } from "@/lib/i18n/route-active";
+
 export type SellerRoute = {
   title: string;
   href: string;
@@ -62,9 +64,6 @@ export function getSellerPageContext({
   };
 }
 
-function isRouteActive(pathname: string, href: string): boolean {
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export function getUserInitials(name: string, email: string): string {
   const source = name.trim() || email.split("@")[0] || "User";
