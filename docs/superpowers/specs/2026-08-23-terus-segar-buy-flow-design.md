@@ -3,9 +3,9 @@
 Date: 2026-08-23. Chosen from five panel concepts ("Lima Konsep AyamNorliza"
 artifact); Terus Segar = merge of the "Terus" funnel skeleton and the
 "Pasar Segar" pricing/auth organs. Winner because it is the only direction
-grounded entirely in code that exists today: guest checkout on the current
-Supabase email/password actions, light theme via a scoped token class, no SMS
-vendor, no schema change.
+grounded entirely in code that exists today: inline checkout signup on the
+current Supabase email/password actions, light theme via a scoped token
+class, no SMS vendor, no schema change.
 
 ## Problem
 
@@ -96,32 +96,38 @@ ScaleChip, range total + "?" explainer trigger. Empty state: line-art
 rooster, "Troli kosong — jom pilih ayam segar". Sticky "Teruskan" in the
 thumb zone.
 
-### Auth — kill the wall
+### Auth — inline account at checkout (no wall, no guests)
 
-- Checkout no longer calls `requireBuyerOrRedirect`; it renders for
-  anonymous buyers with an identity section (name + auto-formatted +60 phone
-  via existing `normalizeMalaysianMobile`). Copy: "Kami akan hantar kemas
-  kini pesanan ke nombor ini."
-- New server action `buyerGuestCheckoutAction({ displayName, phone,
-  organizationSlug })` in `src/features/buyer-auth/server/auth-actions.ts`:
-  synthetic email `guest-<uuid>@guest.ayamnorliza.app`, crypto-random
-  password, `supabase.auth.signUp` + `buyers` insert (same rollback path as
-  `buyerSignUpAction:35`). Session cookie carries the guest from then on.
-  Guest-ness is inferred from the email domain — no schema change.
-- Post-confirmation upgrade card ("Simpan tempahan ini untuk lain kali"):
-  new `upgradeGuestAccountAction({ email, password })` →
-  `supabase.auth.updateUser` on the live guest session. Declined = order
-  still tracked on this device via the session.
+Decision (Hafiz, 2026-08-23): every order belongs to a real, reusable
+account so buyers can sign in from any device, reuse saved addresses, and
+the shipped customer–buyer sync (phone match trigger, ed3da10) auto-links
+every buyer to a `customers` row — the CRM database builds itself. What
+dies is the *redirect*, not the account.
+
+- Checkout no longer calls `requireBuyerOrRedirect`; the page fetches
+  `getBuyerFromSession()` and renders for anonymous buyers with an
+  **Akaun anda** section as checkout step 1 — no navigation, cart never
+  leaves the screen.
+- Akaun anda has a segmented toggle: **Akaun baru** (name, +60 phone via
+  existing `normalizeMalaysianMobile`, email, password ≥8) / **Sudah ada
+  akaun** (email, password). Copy under phone: "Kami akan hantar kemas kini
+  pesanan ke nombor ini."
+- Submit runs the existing actions in sequence: `buyerSignUpAction` (or
+  `buyerSignInAction`) → on success straight into `placeOrder` in the same
+  handler. A `conflict` from signup ("already registered") flips the toggle
+  to Sudah ada akaun with the email prefilled. Field errors render inline
+  from `fieldErrors`. **No new auth actions.**
+- Signed-in buyers never see the section; their saved addresses load as
+  before.
 - `/login` survives for returning buyers and old bookmarks, restyled to the
   Terus skin (segmented sign-in / create-account), actions unchanged.
 - Deploy pre-checks (documented, not code): hosted Supabase must have
-  signups enabled and email confirmation off for the synthetic-email path;
-  guest-order abuse control (rate limit per IP/phone or confirm-before-
-  fulfilment call) is an explicit product decision, out of scope here.
+  signups enabled and email confirmation OFF so `signUp` returns a live
+  session and `placeOrder` can run immediately after it.
 
 ### Checkout (`checkout-client.tsx` rebuilt on same actions)
 
-One screen, sectioned (not paginated): identity (guests only) → address
+One screen, sectioned (not paginated): Akaun anda (anonymous only) → address
 (saved addresses as tappable stamps via `listMyAddresses`, or postcode-first
 `AddressFields`) → zone (existing `idle/resolving/resolved/uncovered`
 machine + `resolveZoneForPostcode`; resolved = green "Zon: X ✓" chip;
@@ -130,9 +136,9 @@ uncovered = warm waitlist card + WhatsApp link, no dead end) → slots
 cards; picking triggers **Slot Snap**: the slot section contracts via spring
 into a confirmed pill docked beside the total, tappable to reopen) →
 collapsed "+ Tambah nota". Sticky bottom bar: running estimate + narrating
-CTA ("Pilih alamat" → "Pilih slot" → "Hantar pesanan"), squish on
-pointer-down. Submit path: (guest? `buyerGuestCheckoutAction` →)
-`placeOrder` — `placeOrder` itself unchanged.
+CTA ("Buat akaun" → "Pilih alamat" → "Pilih slot" → "Hantar pesanan"),
+squish on pointer-down. Submit path: (anonymous? `buyerSignUpAction` /
+`buyerSignInAction` →) `placeOrder` — `placeOrder` itself unchanged.
 
 ### Confirmation + orders
 
@@ -143,14 +149,12 @@ mapped from order status (pending/confirmed/ready → 1, delivered → 2,
 closed → 3). Orders list (`getMyOrders`): each card carries its ScaleChip —
 estimate state while open, final state once closed (`final_weight_kg`,
 `price_per_kg`, `line_total`, `total_amount` already buyer-visible). Order
-detail runs the delta reveal; weighing framed as good news. Guest sessions
-see their orders like any buyer (same session).
+detail runs the delta reveal; weighing framed as good news.
 
 ## Data
 
-No schema changes. New/changed server actions only:
-`buyerGuestCheckoutAction`, `upgradeGuestAccountAction` (both
-buyer-auth/server/auth-actions.ts). Everything else reuses
+No schema changes and no new server actions. Everything reuses
+`buyerSignUpAction`, `buyerSignInAction`,
 `getPublicCatalog`, `listMyAddresses`, `createAddress`,
 `resolveZoneForPostcode`, `getDeliveryOptions`, `placeOrder`, `getMyOrders`,
 `getMyOrder`, `cancelMyOrder`.
@@ -158,13 +162,14 @@ buyer-auth/server/auth-actions.ts). Everything else reuses
 ## Testing
 
 - Vitest: ScaleChip formatting (estimate range, final + delta sign/copy),
-  tracker step mapping per status, explainer flag logic, guest action
-  validation (phone normalize, synthetic email shape, rollback on buyers
-  insert failure), cart storage schema untouched by new sheets.
+  tracker step mapping per status, explainer flag logic, checkout CTA
+  narration state machine, cart line schema still accepts stored v2 lines
+  after the optional price fields land.
 - pgTAP: unchanged (no schema change) — `npm run db:test` must stay green.
-- Playwright e2e: guest happy path (shop → add via sheet → checkout →
-  order placed with no login screen), returning signed-in path, uncovered
-  postcode path. Existing e2e must stay green.
+- Playwright e2e: first-order path (shop → add via sheet → checkout →
+  inline account creation → order placed, never seeing /login), returning
+  signed-in path, uncovered postcode path. Existing buyer e2e updated for
+  the new copy/controls; the rest stays green.
 
 ## Verification
 
@@ -175,5 +180,5 @@ pages must stay cream under both), and `prefers-reduced-motion` spot check.
 ## Out of scope
 
 Phone OTP / SMS vendor, product detail page, seller dashboard styling,
-schema changes, spam-control mechanism (product decision), WhatsApp deep-link
-number sourcing (config), Selasar/Pantas grafts (tick tracking, Smart Bar).
+schema changes, WhatsApp deep-link number sourcing (config), Selasar/Pantas
+grafts (tick tracking, Smart Bar).
