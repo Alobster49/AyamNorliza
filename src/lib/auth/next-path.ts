@@ -25,14 +25,25 @@ const AUTH_PATHS = ["/login", "/signup", "/mfa", "/auth"];
 /**
  * Drops a leading `/en` or `/ms` so path comparisons can be written once
  * against unprefixed paths. Returns "/" for a bare locale root.
+ *
+ * The query/hash is split off before checking the first segment and
+ * reattached after - without this, `stripLocalePrefix("/en?foo=1")` would
+ * see the first segment as the string `"en?foo=1"`, match nothing, and
+ * return the value unchanged (producing a doubled-up "/en/en?foo=1" once a
+ * caller re-prefixes it).
  */
 export function stripLocalePrefix(path: string): string {
-  const [, first, ...rest] = path.split("/");
+  const match = /^([^?#]*)([?#].*)?$/.exec(path);
+  const pathname = match?.[1] ?? path;
+  const suffix = match?.[2] ?? "";
+
+  const [, first, ...rest] = pathname.split("/");
   if (!(SUPPORTED_LOCALES as readonly string[]).includes(first ?? "")) {
     return path;
   }
   const remainder = rest.join("/");
-  return remainder ? `/${remainder}` : "/";
+  const strippedPathname = remainder ? `/${remainder}` : "/";
+  return `${strippedPathname}${suffix}`;
 }
 
 export function sanitizeNextPath(
@@ -60,4 +71,26 @@ export function sanitizeNextPath(
   }
 
   return value;
+}
+
+/**
+ * Single boundary for a `next`-style path as it *enters* the app - either
+ * from the `x-pathname` request header or from a `?next=` query string.
+ * Runs `sanitizeNextPath`'s security checks against the RAW value first
+ * (a locale-stripped value must never skip those checks), then strips any
+ * locale prefix so everything downstream carries one locale-agnostic
+ * representation end to end: the stored `next=` value, the header read in
+ * `returnPathFor`/`buyerReturnPath`, and the destination handed to
+ * `router.push()` (whose `@/i18n/navigation` router adds its own prefix
+ * unconditionally, so a prefixed value here would double up into
+ * "/ms/ms/...").
+ *
+ * This replaces the open-coded `sanitizeNextPath(...)` +
+ * `stripLocalePrefix(...)` pair that used to appear at each entry point -
+ * getting the order or presence of either call wrong is exactly the bug
+ * this function exists to make impossible.
+ */
+export function toLocaleAgnostic(value: string | null | undefined): string | null {
+  const sanitized = sanitizeNextPath(value);
+  return sanitized ? stripLocalePrefix(sanitized) : null;
 }
