@@ -105,4 +105,12 @@ describe("toLocaleAgnostic", () => {
   it("rejects an auth path regardless of locale prefix", () => {
     expect(toLocaleAgnostic("/ms/login")).toBeNull();
   });
+
+  it("rejects a value that becomes protocol-relative once the locale prefix is stripped", () => {
+    // "/en//evil.com" passes sanitizeNextPath (it starts "/e", not "//"), but
+    // stripping "/en" leaves "//evil.com" - the exact protocol-relative form
+    // sanitizeNextPath exists to reject.
+    expect(toLocaleAgnostic("/en//evil.com")).toBeNull();
+    expect(toLocaleAgnostic("/en/\\evil.com")).toBeNull();
+  });
 });

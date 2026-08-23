@@ -92,5 +92,12 @@ export function sanitizeNextPath(
  */
 export function toLocaleAgnostic(value: string | null | undefined): string | null {
   const sanitized = sanitizeNextPath(value);
-  return sanitized ? stripLocalePrefix(sanitized) : null;
+  if (!sanitized) return null;
+  const stripped = stripLocalePrefix(sanitized);
+  // Stripping the locale prefix can expose a protocol-relative form that the
+  // raw value did not have, e.g. "/en//evil.com" -> "//evil.com" - the exact
+  // shape sanitizeNextPath's own check exists to reject. Re-assert the
+  // invariant on the output, not just the input.
+  if (stripped.startsWith("//") || stripped.startsWith("/\\")) return null;
+  return stripped;
 }
