@@ -58,12 +58,16 @@ test.describe("language switching", () => {
       await page.getByLabel(/kata laluan/i).fill(OWNER.password);
       await page.getByRole("button", { name: "Log Masuk" }).click();
 
-      await expect(page).toHaveURL(/\/ms\/ayam-norliza-pilot\/orders(?:[/?#]|$)/, {
-        timeout: 10_000,
-      });
-      // Belt and braces: the regex above already anchors on a single "/ms/"
-      // prefix, but assert the doubled-up form is absent explicitly so a
-      // future loosening of that regex cannot hide the regression.
+      await expect(page).toHaveURL(
+        /^http:\/\/[^/]+\/ms\/ayam-norliza-pilot\/orders(?:[/?#]|$)/,
+        {
+          timeout: 10_000,
+        },
+      );
+      // Belt and braces: the regex above is anchored from the origin, so a
+      // doubled "/ms/ms/..." URL already fails it - but assert the doubled
+      // form is absent explicitly so a future loosening of that anchor
+      // cannot hide the regression.
       expect(new URL(page.url()).pathname).not.toMatch(/^\/ms\/ms\//);
     },
   );
