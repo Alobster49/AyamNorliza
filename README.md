@@ -95,8 +95,15 @@ saved locale, or English if they have none.
   `await getTranslations('namespace')` in server components. Keys are
   typechecked — a typo fails `npm run typecheck`.
 - Import `Link`, `useRouter`, and `usePathname` from `@/i18n/navigation`,
-  never from `next/link` or `next/navigation`. The plain versions drop the
-  locale prefix and cost a redirect.
+  never from `next/link` or `next/navigation`, for any new code. The plain
+  versions still work (the middleware 307s a bare path to its locale-prefixed
+  form using the cookie), but cost a redirect hop and resolve the locale from
+  the cookie rather than the URL. Phase 1 converted the auth pages and shared
+  chrome to the locale-aware versions; other surfaces still use bare paths.
+  Phases 2–4 convert the rest, per surface, without a blanket sweep. An ESLint
+  rule (`eslint.config.mjs`, scoped to `src/app/[locale]/**`) blocks new
+  violations under that path so this doesn't regress further while the
+  conversion is incomplete.
 - Never concatenate translated strings. Use ICU placeholders:
   `t('workspaceSuffix', {section})`, not `t('workspace') + section`.
 - New BM copy follows `docs/i18n-glossary.md` (glossary is provisional pending staff confirmation).
