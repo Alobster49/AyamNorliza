@@ -142,4 +142,15 @@ describe("resolveDeliveryZone", () => {
     expect(result).toMatchObject({ ok: false, code: "forbidden" });
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
+
+  it("returns an internal error when the rpc fails", async () => {
+    mockSupabaseFor({
+      role: "owner",
+      rpcResult: { data: null, error: { message: "boom" } },
+    });
+
+    const result = await resolveDeliveryZone("acme", "80000");
+
+    expect(result).toMatchObject({ ok: false, code: "internal" });
+  });
 });
