@@ -10,10 +10,14 @@ alter table public.profiles
   drop constraint if exists profiles_locale_check;
 
 -- The old check only enforced a length (2-10 chars), so a production row can
--- legally hold something like 'en-US' today. Normalize before the stricter
--- constraint goes on, or the ALTER TABLE below aborts mid-deploy on that row.
+-- legally hold something like 'en-US' or 'ms-MY' today. Normalize before the
+-- stricter constraint goes on, or the ALTER TABLE below aborts mid-deploy on
+-- that row. Match on a 'ms' prefix rather than collapsing everything to
+-- 'en' - the column's only writer to date has been its own 'en' default, so
+-- no row is expected to actually hit this, but a hypothetical 'ms-MY' should
+-- normalize to 'ms', not silently flip a Malay-speaking user to English.
 update public.profiles
-  set locale = 'en'
+  set locale = case when locale like 'ms%' then 'ms' else 'en' end
   where locale not in ('en', 'ms');
 
 alter table public.profiles
