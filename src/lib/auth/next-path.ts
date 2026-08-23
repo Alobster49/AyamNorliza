@@ -62,9 +62,13 @@ export function sanitizeNextPath(
  * "/ms/ms/...").
  *
  * This replaces the open-coded `sanitizeNextPath(...)` +
- * `stripLocalePrefix(...)` pair that used to appear at each entry point -
- * getting the order or presence of either call wrong is exactly the bug
- * this function exists to make impossible.
+ * `stripLocalePrefix(...)` pair everywhere a locale-agnostic value is
+ * actually wanted - getting the order or presence of either call wrong is
+ * exactly the bug this function exists to make impossible. The exception is
+ * `auth/verify/route.ts`, which redirects with a plain `NextResponse.redirect`
+ * rather than the i18n router: it never strips the prefix (there is nothing
+ * downstream to double it up), so it deliberately keeps calling
+ * `sanitizeNextPath` alone.
  */
 export function toLocaleAgnostic(value: string | null | undefined): string | null {
   const sanitized = sanitizeNextPath(value);

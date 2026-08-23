@@ -1,7 +1,7 @@
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { MfaEnrollCard } from "@/components/forms/mfa-enroll-card";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
-import { sanitizeNextPath } from "@/lib/auth/next-path";
+import { toLocaleAgnostic } from "@/lib/auth/next-path";
 
 export const metadata = { title: "Two-factor authentication - AyamNorliza" };
 
@@ -17,7 +17,7 @@ export default async function MfaPage({
       <div className="flex justify-end">
         <LocaleSwitcher />
       </div>
-      <MfaEnrollCard isOptional nextPath={sanitizeNextPath(next) ?? "/"} />
+      <MfaEnrollCard isOptional nextPath={toLocaleAgnostic(next) ?? "/"} />
     </main>
   );
 }
