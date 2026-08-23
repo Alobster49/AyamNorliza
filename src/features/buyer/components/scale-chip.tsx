@@ -42,7 +42,8 @@ export function ScaleChip({ estimate, perUnitLabel, final, onInfo, className }: 
     );
   }
 
-  // Gauge: pad the domain 15% either side so a flat range still shows a mark.
+  // Gauge domain padding: half the range width, floored at 15% of max (and
+  // an absolute 1) so a flat range still shows a visible mark.
   const pad = Math.max((estimate.max - estimate.min) * 0.5, estimate.max * 0.15, 1);
   const lo = estimate.min - pad;
   const hi = estimate.max + pad;
