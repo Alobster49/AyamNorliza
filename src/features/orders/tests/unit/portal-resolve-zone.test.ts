@@ -1,8 +1,10 @@
 /**
  * Unit tests for `resolveZoneForPostcode` (portal-actions). The Supabase
- * server client is mocked so no database is required; `requireBuyer` is
- * exercised for real through the mocked client's `auth.getUser` +
- * `from("buyers")` chain, matching the mock idiom in schedule-actions.test.ts.
+ * server client is mocked so no database is required. `resolveZoneForPostcode`
+ * no longer requires a buyer session -- zone coverage is a storefront read,
+ * same as `getDeliveryOptions` -- so the mock's `auth.getUser` +
+ * `from("buyers")` chain is unused here but left in place, matching the mock
+ * idiom in schedule-actions.test.ts.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -132,15 +134,21 @@ describe("resolveZoneForPostcode", () => {
     });
   });
 
-  it("returns unauthenticated when signed out", async () => {
-    mockSupabaseFor({ userId: null });
+  it("resolves a zone for a signed-out (anonymous) caller", async () => {
+    const supabase = mockSupabaseFor({
+      userId: null,
+      rpcResult: { data: "44444444-4444-4444-4444-444444444444", error: null },
+    });
 
     const result = await resolveZoneForPostcode("ayam-norliza-pilot", "82000");
 
     expect(result).toEqual({
-      ok: false,
-      code: "unauthenticated",
-      message: "Not authenticated",
+      ok: true,
+      data: { zoneId: "44444444-4444-4444-4444-444444444444" },
+    });
+    expect(supabase.rpc).toHaveBeenCalledWith("resolve_zone_for_postcode", {
+      p_org: "org-1",
+      p_postcode: "82000",
     });
   });
 });

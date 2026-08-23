@@ -89,15 +89,6 @@ export async function getDeliveryOptions(
   organizationSlug: string,
   zoneId: string,
 ): Promise<ActionResult<DeliveryOption[]>> {
-  try {
-    await requireBuyer();
-  } catch (e) {
-    if (e instanceof NotABuyerError) {
-      return err("unauthenticated", e.message);
-    }
-    throw e;
-  }
-
   const supabase = await createSupabaseServerClient();
   const { data: org } = await supabase
     .from("organizations")
@@ -297,15 +288,6 @@ export async function resolveZoneForPostcode(
   organizationSlug: string,
   postcode: string,
 ): Promise<ActionResult<{ zoneId: string | null }>> {
-  try {
-    await requireBuyer();
-  } catch (e) {
-    if (e instanceof NotABuyerError) {
-      return err("unauthenticated", e.message);
-    }
-    throw e;
-  }
-
   if (!/^[0-9]{5}$/.test(postcode)) {
     return err("validation", "Enter a 5-digit postcode");
   }

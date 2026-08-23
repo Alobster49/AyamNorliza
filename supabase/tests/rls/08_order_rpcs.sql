@@ -586,9 +586,11 @@ select results_eq(
 );
 
 -- ---------------------------------------------------------------------------
--- 10b. get_delivery_options: caller authorization (finding #3 -- cross-org
--- enumeration). Forbidden for a caller who is neither a buyer nor a member
--- of p_org; still works for an active buyer and for an active org member.
+-- 10b. get_delivery_options: storefront read (2026-08-23 -- Terus Segar
+-- wall-free checkout). Slot availability is data any freely-created buyer
+-- account could already see, so the old buyer/member guard is dropped;
+-- delivery options now succeed for a caller who is neither a buyer nor a
+-- member of p_org, for an active buyer, and for an active org member.
 -- ---------------------------------------------------------------------------
 insert into auth.users (id) values
   ('b0000000-0000-0000-0000-000000000017') -- stranger: no organization_members row, no buyers row
@@ -597,10 +599,9 @@ on conflict (id) do nothing;
 set local role authenticated;
 set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000017';
 
-select throws_ok(
+select lives_ok(
   $$ select * from public.get_delivery_options('b0000000-0000-0000-0000-00000000000a'::uuid, 'b0000000-0000-0000-0000-000000000007'::uuid) $$,
-  'P0001', 'forbidden',
-  'get_delivery_options rejects a caller who is neither a buyer nor a member of the org'
+  'get_delivery_options succeeds for a caller who is neither a buyer nor a member of the org (storefront read)'
 );
 
 reset role;
