@@ -1,4 +1,4 @@
-import { stripLocalePrefix } from "@/lib/auth/next-path";
+import { stripLocalePrefix } from "@/lib/i18n/strip-locale-prefix";
 
 /**
  * Whether `href` is the active sidebar entry for `pathname`.
