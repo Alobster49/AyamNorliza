@@ -15,7 +15,7 @@ export function CartOverlay({ organizationSlug }: { organizationSlug: string }) 
   const total = cartEstimate(items);
 
   const onQuietRoute =
-    pathname.endsWith("/cart") || pathname.includes("/checkout") || pathname.includes("/login");
+    pathname.endsWith("/cart") || pathname.endsWith("/checkout") || pathname.endsWith("/login");
   const showBar = items.length > 0 && !onQuietRoute && !cartOpen;
 
   return (
