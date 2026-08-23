@@ -3,7 +3,7 @@ import Link from "next/link";
 import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import { getMyOrder } from "@/features/orders/server/portal-actions";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, FALLBACK_LABELS } from "@/features/orders/types";
-import { formatPrice, formatWeight, describeFallback } from "@/features/orders/lib/order-model";
+import { formatPrice, describeFallback } from "@/features/orders/lib/order-model";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/card";
 import { MapPin, FileText, ArrowLeft } from "lucide-react";
 import { CancelOrderButton } from "./cancel-order-button";
+import { OrderTracker } from "@/features/buyer/components/order-tracker";
+import { ScaleChip } from "@/features/buyer/components/scale-chip";
 
 type OrderDetailPageProps = {
   params: Promise<{ organizationSlug: string; orderId: string }>;
@@ -43,7 +45,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Order Details</h1>
+          <h1 className="font-buyer-display text-3xl font-bold tracking-tight">Order Details</h1>
           <p className="text-muted-foreground">Order #{order.id.slice(0, 8)}</p>
         </div>
       </div>
@@ -57,13 +59,17 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
-            <span
-              className={`rounded-full px-4 py-2 text-sm font-medium ${
-                ORDER_STATUS_COLORS[order.status]
-              }`}
-            >
-              {ORDER_STATUS_LABELS[order.status]}
-            </span>
+            {order.status === "cancelled" ? (
+              <span
+                className={`rounded-full px-4 py-2 text-sm font-medium ${
+                  ORDER_STATUS_COLORS[order.status]
+                }`}
+              >
+                {ORDER_STATUS_LABELS[order.status]}
+              </span>
+            ) : (
+              <OrderTracker status={order.status} />
+            )}
             {order.status === "pending" && (
               <CancelOrderButton organizationSlug={organizationSlug} orderId={order.id} />
             )}
@@ -115,18 +121,15 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       </div>
                     </div>
                     {isClosed && item.final_weight_kg !== null && item.price_per_kg !== null && (
-                      <div className="text-right">
-                        <p className="font-medium">{formatPrice(Number(item.line_total))}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {formatWeight(Number(item.final_weight_kg))} ×{" "}
-                          {formatPrice(Number(item.price_per_kg))}/kg
-                        </p>
-                        {item.final_pieces !== null && (
-                          <p className="text-xs text-muted-foreground">
-                            {Number(item.final_pieces)} pieces
-                          </p>
-                        )}
-                      </div>
+                      <ScaleChip
+                        estimate={null}
+                        final={{
+                          total: Number(item.line_total),
+                          weightKg: Number(item.final_weight_kg),
+                          pricePerKg: Number(item.price_per_kg),
+                        }}
+                        className="text-right"
+                      />
                     )}
                   </div>
                 </div>
@@ -136,9 +139,12 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
           {isClosed && (
             <div className="mt-4 border-t pt-4">
+              <p className="text-sm" style={{ color: "var(--buyer-confirmed)" }}>
+                Ditimbang dan harga disahkan ✓
+              </p>
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span>{formatPrice(Number(order.total_amount))}</span>
+                <span className="font-buyer-mono">{formatPrice(Number(order.total_amount))}</span>
               </div>
             </div>
           )}

@@ -3,6 +3,7 @@ import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import { getMyOrders } from "@/features/orders/server/portal-actions";
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
+import { OrderTracker } from "@/features/buyer/components/order-tracker";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import {
@@ -42,8 +43,8 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Orders</h1>
-          <p className="text-muted-foreground">View your order history</p>
+          <h1 className="font-buyer-display text-3xl font-bold">Pesanan Saya</h1>
+          <p className="text-muted-foreground">Sejarah pesanan anda</p>
         </div>
       </div>
 
@@ -51,12 +52,10 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
         <Card>
           <CardContent className="flex min-h-[300px] flex-col items-center justify-center py-12">
             <Package className="mb-4 h-16 w-16 text-muted-foreground" />
-            <h2 className="text-xl font-semibold">No orders yet</h2>
-            <p className="mt-2 text-muted-foreground">
-              Start shopping to see your orders here.
-            </p>
+            <h2 className="text-xl font-semibold">Belum ada pesanan</h2>
+            <p className="mt-2 text-muted-foreground">Jom mula membeli!</p>
             <Button asChild className="mt-6">
-              <Link href={`/buyer_portal/${organizationSlug}/shop`}>Browse Products</Link>
+              <Link href={`/buyer_portal/${organizationSlug}/shop`}>Lihat produk</Link>
             </Button>
           </CardContent>
         </Card>
@@ -75,14 +74,17 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                       {order.zone?.name ? ` · ${order.zone.name}` : ""}
                     </CardDescription>
                   </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-medium ${
-                      ORDER_STATUS_COLORS[order.status]
-                    }`}
-                  >
-                    {ORDER_STATUS_LABELS[order.status]}
-                  </span>
+                  {order.status === "cancelled" && (
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-medium ${
+                        ORDER_STATUS_COLORS[order.status]
+                      }`}
+                    >
+                      {ORDER_STATUS_LABELS[order.status]}
+                    </span>
+                  )}
                 </div>
+                <OrderTracker status={order.status} />
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -98,11 +100,11 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                     )}
                   </div>
                   <div className="text-right">
-                    <p className="text-lg font-bold">
-                      {order.status === "closed"
-                        ? formatPrice(Number(order.total_amount))
-                        : "Priced at close"}
-                    </p>
+                    {order.status === "closed" ? (
+                      <p className="font-buyer-mono text-lg font-bold">{formatPrice(Number(order.total_amount))}</p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Harga selepas timbang</p>
+                    )}
                     <Button variant="outline" size="sm" asChild className="mt-2">
                       <Link href={`/buyer_portal/${organizationSlug}/orders/${order.id}`}>
                         View Details
