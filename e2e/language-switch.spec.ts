@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { OWNER } from "./_fixtures";
 
 test.describe("language switching", () => {
   test("a bare URL redirects to the English prefix", async ({ page }) => {
@@ -39,4 +40,31 @@ test.describe("language switching", () => {
       /\/ms\/buyer_portal\/ayam-norliza-pilot\/login/,
     );
   });
+
+  test(
+    "a locale-prefixed ?next= survives sign-in without doubling the locale",
+    async ({ page }) => {
+      // `next` is URL-encoded and already carries a locale prefix, the way
+      // an expired-session redirect (`requireUserOrRedirect`) or a crafted
+      // link would produce it. `login-form.tsx`'s router is the i18n-aware
+      // one, which adds its own prefix unconditionally under
+      // `localePrefix: 'always'` - if `toLocaleAgnostic` (or the
+      // `sanitizeNextPath` + `stripLocalePrefix` pair it replaced) is ever
+      // skipped or misordered on this seam, the result is "/ms/ms/...".
+      const destination = "/ms/ayam-norliza-pilot/orders";
+      await page.goto(`/ms/login?next=${encodeURIComponent(destination)}`);
+
+      await page.getByLabel(/emel/i).fill(OWNER.email);
+      await page.getByLabel(/kata laluan/i).fill(OWNER.password);
+      await page.getByRole("button", { name: "Log Masuk" }).click();
+
+      await expect(page).toHaveURL(/\/ms\/ayam-norliza-pilot\/orders(?:[/?#]|$)/, {
+        timeout: 10_000,
+      });
+      // Belt and braces: the regex above already anchors on a single "/ms/"
+      // prefix, but assert the doubled-up form is absent explicitly so a
+      // future loosening of that regex cannot hide the regression.
+      expect(new URL(page.url()).pathname).not.toMatch(/^\/ms\/ms\//);
+    },
+  );
 });
