@@ -153,8 +153,16 @@ detail runs the delta reveal; weighing framed as good news.
 
 ## Data
 
-No schema changes and no new server actions. Everything reuses
-`buyerSignUpAction`, `buyerSignInAction`,
+No table changes and no new server actions. One migration was required
+during implementation (20260823000008): the wall-free checkout means an
+anonymous buyer must check zone coverage and slot availability BEFORE the
+inline account exists, so `resolve_zone_for_postcode` and
+`get_delivery_options` are granted EXECUTE to `anon`, and
+`get_delivery_options` drops its in-function buyer/member guard (slot
+availability is storefront data any free buyer signup could already read).
+`requireBuyer()` was removed from those two read actions only; every write
+path stays authenticated. Covered by pgTAP `22_anon_zone_slot_lookup.sql`.
+Everything else reuses `buyerSignUpAction`, `buyerSignInAction`,
 `getPublicCatalog`, `listMyAddresses`, `createAddress`,
 `resolveZoneForPostcode`, `getDeliveryOptions`, `placeOrder`, `getMyOrders`,
 `getMyOrder`, `cancelMyOrder`.
