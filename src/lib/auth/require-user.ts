@@ -10,6 +10,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PATHNAME_HEADER, sanitizeNextPath } from "./next-path";
 
@@ -67,7 +68,8 @@ export async function requireUserOrRedirect(nextPath?: string) {
     if (err instanceof UnauthenticatedError) {
       const returnPath = await returnPathFor(nextPath);
       const qs = returnPath ? `?next=${encodeURIComponent(returnPath)}` : "";
-      redirect(`/login${qs}`);
+      const locale = await getLocale();
+      redirect(`/${locale}/login${qs}`);
     }
     throw err;
   }

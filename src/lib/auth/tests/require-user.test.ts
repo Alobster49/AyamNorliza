@@ -18,6 +18,9 @@ vi.mock("next/navigation", () => ({
     throw new Error(`REDIRECT:${url}`);
   }),
 }));
+vi.mock("next-intl/server", () => ({
+  getLocale: vi.fn().mockResolvedValue("en"),
+}));
 
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -70,29 +73,29 @@ describe("requireUserOrRedirect", () => {
   it("sends an expired session back to the page it was on, not the fallback", async () => {
     mockRequest({ pathname: "/acme/orders/123" });
     await expect(redirectTarget("/acme")).resolves.toBe(
-      "/login?next=%2Facme%2Forders%2F123",
+      "/en/login?next=%2Facme%2Forders%2F123",
     );
   });
 
   it("preserves the query string on the requested page", async () => {
     mockRequest({ pathname: "/acme/orders?status=open" });
     await expect(redirectTarget("/acme")).resolves.toBe(
-      "/login?next=%2Facme%2Forders%3Fstatus%3Dopen",
+      "/en/login?next=%2Facme%2Forders%3Fstatus%3Dopen",
     );
   });
 
   it("falls back to the caller's path when the proxy did not run", async () => {
     mockRequest({ pathname: null });
-    await expect(redirectTarget("/acme")).resolves.toBe("/login?next=%2Facme");
+    await expect(redirectTarget("/acme")).resolves.toBe("/en/login?next=%2Facme");
   });
 
   it("ignores a forged header and falls back", async () => {
     mockRequest({ pathname: "//evil.com" });
-    await expect(redirectTarget("/acme")).resolves.toBe("/login?next=%2Facme");
+    await expect(redirectTarget("/acme")).resolves.toBe("/en/login?next=%2Facme");
   });
 
-  it("redirects to bare /login when there is no usable destination", async () => {
+  it("redirects to bare /en/login when there is no usable destination", async () => {
     mockRequest({ pathname: null });
-    await expect(redirectTarget()).resolves.toBe("/login");
+    await expect(redirectTarget()).resolves.toBe("/en/login");
   });
 });

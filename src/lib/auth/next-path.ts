@@ -1,3 +1,5 @@
+import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
+
 /**
  * Validation for the `?next=` post-login destination.
  *
@@ -20,6 +22,19 @@ export const PATHNAME_HEADER = "x-pathname";
 /** Paths that would bounce a freshly signed-in user straight back out. */
 const AUTH_PATHS = ["/login", "/signup", "/mfa", "/auth"];
 
+/**
+ * Drops a leading `/en` or `/ms` so path comparisons can be written once
+ * against unprefixed paths. Returns "/" for a bare locale root.
+ */
+export function stripLocalePrefix(path: string): string {
+  const [, first, ...rest] = path.split("/");
+  if (!(SUPPORTED_LOCALES as readonly string[]).includes(first ?? "")) {
+    return path;
+  }
+  const remainder = rest.join("/");
+  return remainder ? `/${remainder}` : "/";
+}
+
 export function sanitizeNextPath(
   value: string | null | undefined,
 ): string | null {
@@ -35,7 +50,11 @@ export function sanitizeNextPath(
   // parses a URL) can smuggle a "//" past the checks above.
   if (/[\u0000-\u001f\u007f]/.test(value)) return null;
 
-  const path = value.split(/[?#]/)[0] ?? value;
+  const rawPath = value.split(/[?#]/)[0] ?? value;
+  // Compare unprefixed: after the i18n migration the value arrives as
+  // "/en/login", and a literal "/login" comparison would let it through and
+  // bounce the user straight back to sign-in after signing in.
+  const path = stripLocalePrefix(rawPath);
   if (AUTH_PATHS.some((auth) => path === auth || path.startsWith(`${auth}/`))) {
     return null;
   }
