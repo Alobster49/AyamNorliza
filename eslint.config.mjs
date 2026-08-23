@@ -19,21 +19,13 @@ const eslintConfig = [
     // directly, or the locale prefix gets dropped and every navigation
     // costs an extra redirect (see README "Internationalisation").
     //
-    // Scoped to `src/app/[locale]/**` only, and further limited to the
-    // subtrees Phase 1 already converted - (auth), (dashboard), drive, the
-    // root locale layout/page, and the bare-slug redirect page. `(seller)`
-    // and `buyer_portal` still have real, pre-existing bare-path usage
-    // (~40 call sites, tracked for Phases 2-4) and are deliberately left
-    // out here so this rule guards new work without turning the current
-    // tree red. Widen the `files` list as each subtree is converted.
-    files: [
-      "src/app/[locale]/layout.tsx",
-      "src/app/[locale]/page.tsx",
-      "src/app/[locale]/(auth)/**/*.{ts,tsx}",
-      "src/app/[locale]/(dashboard)/**/*.{ts,tsx}",
-      "src/app/[locale]/drive/**/*.{ts,tsx}",
-      "src/app/[locale]/[organizationSlug]/**/*.{ts,tsx}",
-    ],
+    // Applied to the whole tree (`src/**`) rather than an allowlist of
+    // converted subtrees: an allowlist only ever flags files already known
+    // to be clean, so it can never catch a regression in a file it doesn't
+    // list, and every Phase 2+ surface (src/features/**, src/components/**)
+    // sat outside it entirely. The block below turns the rule back `off`
+    // for the areas still carrying real, pre-existing bare-path usage.
+    files: ["src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -51,6 +43,43 @@ const eslintConfig = [
           ],
         },
       ],
+    },
+  },
+  {
+    // Legacy surfaces not yet converted to the locale-aware imports above.
+    // Each entry here is deleted as Phase 2+ converts that surface - do not
+    // add new files to this list; convert them instead.
+    //
+    // `[locale]` must be escaped (`\\[locale\\]`) - minimatch treats an
+    // unescaped `[...]` as a character class, so an un-escaped pattern here
+    // never matches any file at all. That bug is also why the original
+    // (pre-this-change) version of this rule's `files` list - which used
+    // the same unescaped `[locale]`/`[organizationSlug]` glob syntax -
+    // matched nothing, not just the files it happened to list: the rule was
+    // vacuous for every path, not only the ones its comment described.
+    files: [
+      "src/app/\\[locale\\]/(seller)/**/*.{ts,tsx}",
+      "src/app/\\[locale\\]/buyer_portal/**/*.{ts,tsx}",
+      "src/features/orders/components/**/*.{ts,tsx}",
+      "src/features/identity-access/components/**/*.{ts,tsx}",
+      "src/features/logistics/components/**/*.{ts,tsx}",
+      "src/features/overview/components/**/*.{ts,tsx}",
+      "src/components/forms/**/*.{ts,tsx}",
+      // These four were reported as fully converted by an earlier wave, but
+      // re-running lint against `src/**` (rather than trusting that claim)
+      // shows only `login-form.tsx` (covered by the `src/components/forms/**`
+      // entry above) actually is - the other three still import `Link`
+      // and/or `useRouter` from `next/link` / `next/navigation` directly.
+      // Listed individually, not as a directory glob, so the exemption
+      // stays exactly as wide as what's actually unconverted.
+      "src/features/dashboard/components/app-sidebar.tsx",
+      "src/features/seller/components/seller-sidebar.tsx",
+      "src/features/buyer/components/buyer-header.tsx",
+      "src/features/buyer/components/cart-overlay.tsx",
+      "src/features/buyer/components/cart-view.tsx",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 ];
