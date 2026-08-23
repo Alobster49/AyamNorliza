@@ -3,7 +3,7 @@
 -- constraint, the extract_postcode() derivation, and the backfill guard.
 
 begin;
-select plan(13);
+select plan(15);
 
 insert into auth.users (id) values
   ('e0000000-0000-0000-0000-0000000000ee')
@@ -139,6 +139,42 @@ select results_eq(
   $$ select postcode from public.customers where name = 'Guard Explicit Postcode' $$,
   array['50000'::text],
   'the "postcode is null" guard leaves a seller-corrected postcode unchanged even though the address has its own 5-digit token'
+);
+
+-- ---------------------------------------------------------------------------
+-- admin_seed_demo_data (20260823000009) derives a postcode for its demo
+-- customers instead of leaving the column null: it now calls the same
+-- extract_postcode() this file already tests directly, against the same
+-- embedded-postcode address it has always written. Prove that end-to-end by
+-- actually calling the RPC in this transaction, the way
+-- supabase/tests/rls/16_data_console.sql does.
+-- ---------------------------------------------------------------------------
+insert into public.organization_members (organization_id, user_id, role, status)
+values ('f0000000-0000-0000-0000-0000000000ff', 'e0000000-0000-0000-0000-0000000000ee', 'owner', 'active')
+on conflict (organization_id, user_id) do nothing;
+
+create or replace function pg_temp.impersonate(p_user uuid) returns void
+language plpgsql as $$
+begin
+  perform set_config('role', 'authenticated', true);
+  perform set_config('request.jwt.claims',
+    json_build_object('sub', p_user::text, 'role', 'authenticated')::text, true);
+end;
+$$;
+
+select pg_temp.impersonate('e0000000-0000-0000-0000-0000000000ee');
+select lives_ok(
+  $$ select public.admin_seed_demo_data('f0000000-0000-0000-0000-0000000000ff') $$,
+  'owner can seed demo data (also wipes this org''s earlier fixture rows -- run last)'
+);
+
+select set_config('role', 'postgres', true);
+select results_eq(
+  $$ select postcode from public.customers
+     where organization_id = 'f0000000-0000-0000-0000-0000000000ff'
+       and phone = '019-7551122' $$,
+  array['84000'::text],
+  'a demo-seeded customer (Kak Ros Catering, "...3 Jalan Bakri, 84000 Muar") carries a derived postcode'
 );
 
 select * from finish();

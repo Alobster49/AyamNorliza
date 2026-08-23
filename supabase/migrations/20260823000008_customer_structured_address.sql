@@ -32,6 +32,7 @@ create or replace function public.extract_postcode(p_address text)
 returns text
 language sql
 immutable
+set search_path = public, pg_temp
 as $$
   select m[1]
   from regexp_matches(coalesce(p_address, ''), '\m([0-9]{5})\M', 'g')
