@@ -11,7 +11,7 @@ import {
   areasForState,
   lookupPostcode,
   statesList,
-} from "@/features/buyer/lib/malaysia-postcodes";
+} from "@/lib/malaysia-postcodes";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -34,9 +34,26 @@ type AddressFieldsProps = {
   value: AddressValue;
   onChange: (next: AddressValue) => void;
   disabled?: boolean;
+  /**
+   * Prefix for the field element ids. Needed because the manual order screen
+   * renders two address blocks at once (the order's delivery section and the
+   * inline new-customer form); duplicate ids would break label association.
+   */
+  idPrefix?: string;
 };
 
-export function AddressFields({ value, onChange, disabled }: AddressFieldsProps) {
+export function AddressFields({
+  value,
+  onChange,
+  disabled,
+  idPrefix = "address",
+}: AddressFieldsProps) {
+  const ids = {
+    line: `${idPrefix}-line`,
+    postcode: `${idPrefix}-postcode`,
+    state: `${idPrefix}-state`,
+    area: `${idPrefix}-area`,
+  };
   const areas = value.state ? areasForState(value.state) : [];
 
   const handlePostcode = (raw: string) => {
@@ -52,9 +69,9 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="address-line">Address</Label>
+        <Label htmlFor={ids.line}>Address</Label>
         <Textarea
-          id="address-line"
+          id={ids.line}
           placeholder="House no, street, taman/apartment"
           value={value.addressLine}
           onChange={(e) => onChange({ ...value, addressLine: e.target.value })}
@@ -67,9 +84,9 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="address-postcode">Postcode</Label>
+          <Label htmlFor={ids.postcode}>Postcode</Label>
           <Input
-            id="address-postcode"
+            id={ids.postcode}
             placeholder="e.g. 80000"
             value={value.postcode}
             onChange={(e) => handlePostcode(e.target.value)}
@@ -81,7 +98,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="address-state">State</Label>
+          <Label htmlFor={ids.state}>State</Label>
           <Select
             value={value.state}
             onValueChange={(state) => {
@@ -93,7 +110,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
             }}
             disabled={disabled}
           >
-            <SelectTrigger id="address-state" className="w-full">
+            <SelectTrigger id={ids.state} className="w-full">
               <SelectValue placeholder="Select state" />
             </SelectTrigger>
             <SelectContent>
@@ -108,7 +125,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="address-area">Area</Label>
+        <Label htmlFor={ids.area}>Area</Label>
         <Select
           value={value.area}
           onValueChange={(area) => {
@@ -123,7 +140,7 @@ export function AddressFields({ value, onChange, disabled }: AddressFieldsProps)
           }}
           disabled={disabled || !value.state}
         >
-          <SelectTrigger id="address-area" className="w-full">
+          <SelectTrigger id={ids.area} className="w-full">
             <SelectValue
               placeholder={value.state ? "Select area" : "Pick a state first"}
             />

@@ -8,7 +8,7 @@ import {
   areasForState,
   lookupPostcode,
   statesList,
-} from "../../lib/malaysia-postcodes";
+} from "./malaysia-postcodes";
 
 describe("lookupPostcode", () => {
   it("resolves a known postcode to state and area", () => {

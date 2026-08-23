@@ -1,5 +1,5 @@
 /**
- * Generates src/features/buyer/lib/malaysia-postcodes.json from the
+ * Generates src/lib/malaysia-postcodes.json from the
  * `malaysia-postcodes` npm dataset. Output is a compact lookup:
  *   { states: string[], postcodes: { "80000": ["Johor Bahru", 0], ... } }
  * A postcode listed under several cities keeps the first occurrence.
@@ -37,7 +37,7 @@ if (count < 2000) {
   throw new Error(`Suspiciously few postcodes generated: ${count}`);
 }
 writeFileSync(
-  new URL("../src/features/buyer/lib/malaysia-postcodes.json", import.meta.url),
+  new URL("../src/lib/malaysia-postcodes.json", import.meta.url),
   JSON.stringify(out),
 );
 console.log(`Wrote ${count} postcodes across ${states.length} states.`);
