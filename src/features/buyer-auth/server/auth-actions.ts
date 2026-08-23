@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { admin } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/features/identity-access/server/actions";
 import { normalizeMalaysianMobile } from "../lib/phone";
 
@@ -87,8 +88,16 @@ export async function buyerSignUpAction(
   });
 
   if (buyerError) {
-    // Rollback: delete the auth user
-    await supabase.auth.admin.deleteUser(data.user.id);
+    // Rollback via the service-role client — the anon-key server client
+    // cannot call auth.admin.*. Without this the email is stranded:
+    // signUp says "already registered", signIn says "not a buyer".
+    try {
+      await admin.deleteAuthUser(data.user.id);
+    } catch (rollbackError) {
+      console.error("buyerSignUpAction: rollback failed", rollbackError);
+    }
+    // signUp set session cookies for the now-deleted user; clear them.
+    await supabase.auth.signOut();
     return err("internal", "Failed to create buyer profile");
   }
 

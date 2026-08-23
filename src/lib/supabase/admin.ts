@@ -53,6 +53,17 @@ export const admin = {
   },
 
   /**
+   * Permanently delete an auth user. Only for rolling back a signup
+   * whose profile insert failed — an auth user without its profile row
+   * can neither sign in nor re-register, so the orphan must go.
+   */
+  async deleteAuthUser(userId: string) {
+    const c = client();
+    const { error } = await c.auth.admin.deleteUser(userId);
+    if (error) throw error;
+  },
+
+  /**
    * Ban a user for a short window so all existing access and refresh
    * tokens are rejected. The Supabase GoTrue admin API uses JWTs to
    * sign out specific sessions; we don't have a single "revoke all"
