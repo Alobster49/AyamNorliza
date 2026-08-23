@@ -48,3 +48,42 @@ describe("sanitizeNextPath with locale prefixes", () => {
     );
   });
 });
+
+describe("sanitizeNextPath + stripLocalePrefix feeding the i18n router", () => {
+  /**
+   * `next` arrives already prefixed (it is built from the request path), and
+   * `sanitizeNextPath` deliberately keeps that prefix. But the login form and
+   * the MFA card hand the result to next-intl's router, whose `push`/
+   * `replace` add their own prefix unconditionally under
+   * `localePrefix: 'always'`. Feeding the sanitized value straight through
+   * doubles the prefix ("/ms/ms/...") and 404s. This pins the fix: strip the
+   * prefix before simulating what the i18n router does to it.
+   */
+  function pushThroughI18nRouter(path: string, locale: "en" | "ms"): string {
+    // Mirrors next-intl's `localePrefix: 'always'` behaviour: it always
+    // prepends the active locale, regardless of what the path starts with.
+    return path === "/" ? `/${locale}` : `/${locale}${path}`;
+  }
+
+  it("carries exactly one locale prefix after sanitize -> strip -> i18n router push", () => {
+    const next = "/ms/ayam-norliza-pilot/orders/123";
+    const sanitized = sanitizeNextPath(next);
+    expect(sanitized).toBe(next);
+
+    const stripped = stripLocalePrefix(sanitized as string);
+    expect(stripped).toBe("/ayam-norliza-pilot/orders/123");
+
+    const pushed = pushThroughI18nRouter(stripped, "ms");
+    expect(pushed).toBe("/ms/ayam-norliza-pilot/orders/123");
+    expect(pushed.match(/^\/ms(\/ms)+/)).toBeNull();
+  });
+
+  it("would double the prefix if the sanitized value were pushed unstripped", () => {
+    const next = "/ms/ayam-norliza-pilot/orders/123";
+    const sanitized = sanitizeNextPath(next) as string;
+    const pushedWithoutStripping = pushThroughI18nRouter(sanitized, "ms");
+    expect(pushedWithoutStripping).toBe(
+      "/ms/ms/ayam-norliza-pilot/orders/123",
+    );
+  });
+});

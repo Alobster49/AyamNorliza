@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/features/identity-access/server/auth-actions";
-import { sanitizeNextPath } from "@/lib/auth/next-path";
+import { sanitizeNextPath, stripLocalePrefix } from "@/lib/auth/next-path";
 import { cn } from "@/lib/utils";
 
 /**
@@ -69,7 +69,28 @@ export function LoginForm({
     // re-validated here rather than trusted. When it fails validation, fall
     // back to the server's redirect so signed-in users never get bounced
     // through "/" (which has a /signup fallback).
-    router.push(sanitizeNextPath(next) ?? result.data.redirectTo);
+    //
+    // `sanitizeNextPath` deliberately keeps the locale prefix intact (it is
+    // built from the already-prefixed request path), but this router comes
+    // from `@/i18n/navigation` and adds its own prefix unconditionally under
+    // `localePrefix: 'always'` - passing the prefixed value straight through
+    // would double it up into "/ms/ms/...". Strip it here so the router adds
+    // exactly one.
+    const sanitized = sanitizeNextPath(next);
+    const destination = sanitized
+      ? stripLocalePrefix(sanitized)
+      : result.data.redirectTo;
+    // `result.data.locale` is the account's just-synced locale, which may
+    // differ from the locale this login page happened to be prefixed with
+    // (e.g. signing in on a new device). Passing it explicitly keeps the
+    // post-login URL and the cookie in agreement, the same way
+    // /auth/callback already does; when the sync itself failed, fall back
+    // to the router's default of the current URL locale.
+    if (result.data.locale) {
+      router.push(destination, { locale: result.data.locale });
+    } else {
+      router.push(destination);
+    }
   }
 
   return (

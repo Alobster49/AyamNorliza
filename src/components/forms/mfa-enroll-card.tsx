@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { startMfaEnrollAction, verifyMfaChallengeAction, unenrollMfaAction } from "@/features/identity-access/server/auth-actions";
+import { stripLocalePrefix } from "@/lib/auth/next-path";
 
 export interface EnrolledFactor {
   factorId: string;
@@ -49,11 +50,17 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
       setError(result.message);
       return;
     }
-    router.push(nextPath);
+    // `nextPath` comes in already sanitized (locale prefix intact) from the
+    // server page. This router is the i18n one, which adds its own prefix
+    // unconditionally - strip the existing one first so it isn't doubled.
+    router.push(stripLocalePrefix(nextPath));
   }
 
   async function skip() {
-    router.push(nextPath);
+    // `nextPath` comes in already sanitized (locale prefix intact) from the
+    // server page. This router is the i18n one, which adds its own prefix
+    // unconditionally - strip the existing one first so it isn't doubled.
+    router.push(stripLocalePrefix(nextPath));
   }
 
   async function remove(factorId: string) {
@@ -210,7 +217,9 @@ export function MfaStatusCard({
           </p>
           <button
             type="button"
-            onClick={() => router.push(nextPath ?? "/mfa")}
+            onClick={() =>
+              router.push(nextPath ? stripLocalePrefix(nextPath) : "/mfa")
+            }
           >
             Enable two-factor authentication
           </button>

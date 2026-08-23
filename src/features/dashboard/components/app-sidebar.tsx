@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
+import { usePathname } from "@/i18n/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
   BadgeCheck,
