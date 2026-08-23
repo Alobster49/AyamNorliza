@@ -155,8 +155,8 @@ test("buyer cancels a pending order", async ({ page, context }) => {
   // getMyOrders sorts newest first, so the order just placed is the first
   // card — there may be an older order from the previous test for the same
   // seeded buyer account still sitting in the list.
-  await buyerPage.getByRole("link", { name: /view details/i }).first().click();
-  await expect(buyerPage.getByRole("heading", { name: /order details/i })).toBeVisible({
+  await buyerPage.getByRole("link", { name: /lihat butiran/i }).first().click();
+  await expect(buyerPage.getByRole("heading", { name: /butiran pesanan/i })).toBeVisible({
     timeout: 10_000,
   });
   // RECONCILIATION: "Cancel order" only opens a confirmation dialog; the

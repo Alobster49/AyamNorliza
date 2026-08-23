@@ -27,7 +27,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   if (!result.ok) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-muted-foreground">Failed to load orders.</p>
+        <p className="text-muted-foreground">Gagal memuatkan pesanan.</p>
       </div>
     );
   }
@@ -67,7 +67,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-base">
-                      Order #{order.id.slice(0, 8)}
+                      Pesanan #{order.id.slice(0, 8)}
                     </CardTitle>
                     <CardDescription>
                       {format(new Date(order.created_at), "d MMM yyyy, HH:mm")}
@@ -90,7 +90,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      Delivery:{" "}
+                      Hantar:{" "}
                       {format(new Date(`${order.delivery_date}T00:00:00`), "d MMM yyyy")}
                     </p>
                     {order.delivery_address && (
@@ -107,7 +107,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
                     )}
                     <Button variant="outline" size="sm" asChild className="mt-2">
                       <Link href={`/buyer_portal/${organizationSlug}/orders/${order.id}`}>
-                        View Details
+                        Lihat butiran
                       </Link>
                     </Button>
                   </div>

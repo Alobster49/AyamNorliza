@@ -45,13 +45,13 @@ export function BuyerHeader({
   const { openCart } = useCartUi();
 
   const navItems = [
-    { href: `/buyer_portal/${organizationSlug}/shop`, label: "Shop", icon: ShoppingBag },
+    { href: `/buyer_portal/${organizationSlug}/shop`, label: "Kedai", icon: ShoppingBag },
     ...(isLoggedIn
       ? [
-          { href: `/buyer_portal/${organizationSlug}/orders`, label: "Orders", icon: Package },
+          { href: `/buyer_portal/${organizationSlug}/orders`, label: "Pesanan", icon: Package },
           {
             href: `/buyer_portal/${organizationSlug}/profile`,
-            label: "Profile",
+            label: "Profil",
             icon: User,
           },
         ]
@@ -65,7 +65,7 @@ export function BuyerHeader({
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo */}
         <Link href={`/buyer_portal/${organizationSlug}/shop`} className="flex items-center gap-2">
@@ -77,7 +77,7 @@ export function BuyerHeader({
             className="h-9 w-9 rounded-lg object-contain"
           />
           <span className="hidden font-semibold sm:inline-block">
-            Shop
+            Kedai
           </span>
         </Link>
 
@@ -117,38 +117,38 @@ export function BuyerHeader({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
                   <User className="h-5 w-5" />
-                  <span className="sr-only">User menu</span>
+                  <span className="sr-only">Menu pengguna</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium">{buyerName || "Buyer"}</p>
+                    <p className="text-sm font-medium">{buyerName || "Pembeli"}</p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                   <Link href={`/buyer_portal/${organizationSlug}/orders`}>
                     <Package className="mr-2 h-4 w-4" />
-                    My Orders
+                    Pesanan Saya
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href={`/buyer_portal/${organizationSlug}/profile`}>
                     <User className="mr-2 h-4 w-4" />
-                    Profile
+                    Profil
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign out
+                  Log keluar
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Button asChild variant="default" size="sm">
-              <Link href={`/buyer_portal/${organizationSlug}/login`}>Sign In</Link>
+              <Link href={`/buyer_portal/${organizationSlug}/login`}>Log Masuk</Link>
             </Button>
           )}
 
@@ -164,7 +164,7 @@ export function BuyerHeader({
             ) : (
               <Menu className="h-5 w-5" />
             )}
-            <span className="sr-only">Toggle menu</span>
+            <span className="sr-only">Buka menu</span>
           </Button>
         </div>
       </div>

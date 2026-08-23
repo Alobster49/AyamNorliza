@@ -408,7 +408,7 @@ export async function signInBuyer(page: Page, email: string, password: string) {
   // RECONCILIATION: the buyer login page's submit button now reads "Log
   // masuk" (BM) — "login" is the default mode, so no mode-toggle click needed.
   await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
+  await page.getByLabel(/kata laluan/i).fill(password);
   await page.getByRole("button", { name: "Log masuk" }).click();
   await expect(page).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/shop/, { timeout: 10_000 });
 }

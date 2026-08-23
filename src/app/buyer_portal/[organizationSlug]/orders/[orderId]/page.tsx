@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import { getMyOrder } from "@/features/orders/server/portal-actions";
-import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, FALLBACK_LABELS } from "@/features/orders/types";
+import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice, describeFallback } from "@/features/orders/lib/order-model";
+import { BUYER_FALLBACK_LABELS } from "@/features/buyer/lib/price-estimate";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -45,16 +46,16 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </Link>
         </Button>
         <div>
-          <h1 className="font-buyer-display text-3xl font-bold tracking-tight">Order Details</h1>
-          <p className="text-muted-foreground">Order #{order.id.slice(0, 8)}</p>
+          <h1 className="font-buyer-display text-3xl font-bold tracking-tight">Butiran Pesanan</h1>
+          <p className="text-muted-foreground">Pesanan #{order.id.slice(0, 8)}</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>Order Status</CardTitle>
+          <CardTitle>Status Pesanan</CardTitle>
           <CardDescription>
-            Placed {format(new Date(order.created_at), "PPpp")}
+            Ditempah {format(new Date(order.created_at), "PPpp")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -77,7 +78,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
           {order.status === "cancelled" && order.notes && (
             <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800">
-              <p className="font-medium">This order was cancelled.</p>
+              <p className="font-medium">Pesanan ini telah dibatalkan.</p>
               <p className="mt-1 whitespace-pre-line">{order.notes}</p>
             </div>
           )}
@@ -86,7 +87,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
 
       <Card>
         <CardHeader>
-          <CardTitle>Items</CardTitle>
+          <CardTitle>Item</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -97,25 +98,25 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                   <div className="flex items-start justify-between gap-4">
                     <div>
                       <p className="font-medium">
-                        {item.product?.name ?? "Unknown product"}
+                        {item.product?.name ?? "Produk tidak diketahui"}
                         {item.is_cancelled && (
                           <Badge variant="destructive" className="ml-2">
-                            Cancelled
+                            Dibatalkan
                           </Badge>
                         )}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {item.mode === "kg"
                           ? `${Number(item.quantity)} kg`
-                          : `${Number(item.quantity)} birds`}
+                          : `${Number(item.quantity)} ekor`}
                         {" · "}
-                        {Number(item.size_min_kg)}-{Number(item.size_max_kg)} kg / bird
+                        {Number(item.size_min_kg)}-{Number(item.size_max_kg)} kg/ekor
                       </p>
                       <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge variant="outline">{FALLBACK_LABELS[item.fallback]}</Badge>
+                        <Badge variant="outline">{BUYER_FALLBACK_LABELS[item.fallback]}</Badge>
                         {fallbackNote && (
                           <Badge className="bg-amber-100 text-amber-800">
-                            Applied: {fallbackNote}
+                            Diguna: {fallbackNote}
                           </Badge>
                         )}
                       </div>
@@ -149,7 +150,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                 Ditimbang dan harga disahkan ✓
               </p>
               <div className="flex justify-between text-lg font-bold">
-                <span>Total</span>
+                <span>Jumlah</span>
                 <span className="font-buyer-mono">{formatPrice(Number(order.total_amount))}</span>
               </div>
             </div>
@@ -162,7 +163,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <MapPin className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base">Delivery Address</CardTitle>
+              <CardTitle className="text-base">Alamat Penghantaran</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">{order.delivery_address}</p>
@@ -177,7 +178,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           <Card>
             <CardHeader className="flex flex-row items-center gap-2">
               <FileText className="h-5 w-5 text-muted-foreground" />
-              <CardTitle className="text-base">Order Notes</CardTitle>
+              <CardTitle className="text-base">Nota Pesanan</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">{order.notes}</p>

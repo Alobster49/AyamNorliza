@@ -83,16 +83,16 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (!result.ok) {
       toast({
-        title: "Login failed",
-        description: result.message || "Invalid email or password.",
+        title: "Log masuk gagal",
+        description: result.message || "Email atau kata laluan salah.",
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Welcome back!",
-      description: "You have been signed in.",
+      title: "Selamat kembali!",
+      description: "Anda telah log masuk.",
     });
 
     const rawNext = searchParams.get("next");
@@ -111,8 +111,8 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (signupData.password !== signupData.confirmPassword) {
       toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match.",
+        title: "Kata laluan tidak sepadan",
+        description: "Pastikan kedua-dua kata laluan sama.",
         variant: "destructive",
       });
       return;
@@ -120,8 +120,8 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (signupData.password.length < 8) {
       toast({
-        title: "Password too short",
-        description: "Password must be at least 8 characters.",
+        title: "Kata laluan terlalu pendek",
+        description: "Kata laluan mesti sekurang-kurangnya 8 aksara.",
         variant: "destructive",
       });
       return;
@@ -141,16 +141,16 @@ function LoginPageInner({ params }: LoginPageProps) {
 
     if (!result.ok) {
       toast({
-        title: "Sign up failed",
-        description: result.fieldErrors?.phone?.[0] || result.message || "Could not create account.",
+        title: "Daftar gagal",
+        description: result.fieldErrors?.phone?.[0] || result.message || "Tidak dapat membuat akaun.",
         variant: "destructive",
       });
       return;
     }
 
     toast({
-      title: "Account created!",
-      description: "Welcome! You can now start shopping.",
+      title: "Akaun dibuat!",
+      description: "Selamat datang! Anda boleh mula membeli.",
     });
 
     const rawNext = searchParams.get("next");
@@ -228,11 +228,11 @@ function LoginPageInner({ params }: LoginPageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="login-password">Password</Label>
+                <Label htmlFor="login-password">Kata laluan</Label>
                 <Input
                   id="login-password"
                   type="password"
-                  placeholder="Your password"
+                  placeholder="Kata laluan anda"
                   value={loginData.password}
                   onChange={(e) =>
                     setLoginData({ ...loginData, password: e.target.value })
@@ -259,11 +259,11 @@ function LoginPageInner({ params }: LoginPageProps) {
           ) : (
             <form onSubmit={handleSignup} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="signup-name">Your Name</Label>
+                <Label htmlFor="signup-name">Nama</Label>
                 <Input
                   id="signup-name"
                   type="text"
-                  placeholder="John Doe"
+                  placeholder="Aminah binti Ali"
                   value={signupData.displayName}
                   onChange={(e) =>
                     setSignupData({ ...signupData, displayName: e.target.value })
@@ -287,7 +287,7 @@ function LoginPageInner({ params }: LoginPageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-phone">Phone (for WhatsApp)</Label>
+                <Label htmlFor="signup-phone">Nombor telefon</Label>
                 <Input
                   id="signup-phone"
                   type="tel"
@@ -305,11 +305,11 @@ function LoginPageInner({ params }: LoginPageProps) {
                 </p>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-password">Password</Label>
+                <Label htmlFor="signup-password">Kata laluan</Label>
                 <Input
                   id="signup-password"
                   type="password"
-                  placeholder="At least 8 characters"
+                  placeholder="Sekurang-kurangnya 8 aksara"
                   value={signupData.password}
                   onChange={(e) =>
                     setSignupData({ ...signupData, password: e.target.value })
@@ -320,11 +320,11 @@ function LoginPageInner({ params }: LoginPageProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="signup-confirm">Confirm Password</Label>
+                <Label htmlFor="signup-confirm">Sahkan kata laluan</Label>
                 <Input
                   id="signup-confirm"
                   type="password"
-                  placeholder="Repeat password"
+                  placeholder="Ulang kata laluan"
                   value={signupData.confirmPassword}
                   onChange={(e) =>
                     setSignupData({

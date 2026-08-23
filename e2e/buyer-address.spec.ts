@@ -42,11 +42,11 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   // masuk"/"Daftar" radios), not a "Sign up" button, and the submit button
   // reads "Daftar" (was "Create Account").
   await buyerPage.getByRole("radio", { name: "Daftar" }).click();
-  await buyerPage.getByLabel("Your Name").fill(buyerName);
+  await buyerPage.getByLabel("Nama").fill(buyerName);
   await buyerPage.getByLabel("Email").fill(buyerEmail);
-  await buyerPage.getByLabel("Phone (for WhatsApp)").fill("012-345 6789");
-  await buyerPage.getByLabel("Password", { exact: true }).fill(buyerPassword);
-  await buyerPage.getByLabel("Confirm Password").fill(buyerPassword);
+  await buyerPage.getByLabel("Nombor telefon").fill("012-345 6789");
+  await buyerPage.getByLabel("Kata laluan", { exact: true }).fill(buyerPassword);
+  await buyerPage.getByLabel("Sahkan kata laluan").fill(buyerPassword);
   await buyerPage.getByRole("button", { name: "Daftar" }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/shop/, {
     timeout: 20_000,

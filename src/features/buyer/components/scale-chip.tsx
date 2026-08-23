@@ -6,6 +6,7 @@ import {
   formatEstimate,
   formatRM,
 } from "@/features/buyer/lib/price-estimate";
+import { formatWeight } from "@/features/orders/lib/order-model";
 
 type ScaleChipProps = {
   estimate: { min: number; max: number } | null;
@@ -29,7 +30,7 @@ export function ScaleChip({ estimate, perUnitLabel, final, onInfo, className }: 
         <p className="font-buyer-mono text-base font-medium">{formatRM(final.total)}</p>
         {final.weightKg != null && final.pricePerKg != null && (
           <p className="font-buyer-mono text-xs" style={{ color: "var(--buyer-delta)" }}>
-            Ditimbang {Number(final.weightKg)} kg × {formatRM(Number(final.pricePerKg))}/kg
+            Ditimbang {formatWeight(Number(final.weightKg))} × {formatRM(Number(final.pricePerKg))}/kg
           </p>
         )}
       </div>

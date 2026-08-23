@@ -40,11 +40,11 @@ test("buyer signup auto-links to the admin-created customer with the same phone"
   const buyerPage = await buyerContext.newPage();
   await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/login");
   await buyerPage.getByRole("radio", { name: "Daftar" }).click();
-  await buyerPage.getByLabel("Your Name").fill(buyerName);
+  await buyerPage.getByLabel("Nama").fill(buyerName);
   await buyerPage.getByLabel("Email").fill(buyerEmail);
-  await buyerPage.getByLabel("Phone (for WhatsApp)").fill(phone);
-  await buyerPage.getByLabel("Password", { exact: true }).fill(buyerPassword);
-  await buyerPage.getByLabel("Confirm Password").fill(buyerPassword);
+  await buyerPage.getByLabel("Nombor telefon").fill(phone);
+  await buyerPage.getByLabel("Kata laluan", { exact: true }).fill(buyerPassword);
+  await buyerPage.getByLabel("Sahkan kata laluan").fill(buyerPassword);
   await buyerPage.getByRole("button", { name: "Daftar", exact: true }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/shop/, {
     timeout: 20_000,

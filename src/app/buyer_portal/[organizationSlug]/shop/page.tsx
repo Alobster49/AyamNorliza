@@ -1,4 +1,4 @@
-import { getPublicCatalog } from "@/features/buyer/server/actions";
+import { getPublicCatalog, getOrganizationBySlug } from "@/features/buyer/server/actions";
 import { ShopClient } from "./product-grid";
 
 type ShopPageProps = {
@@ -8,15 +8,18 @@ type ShopPageProps = {
 export default async function ShopPage({ params }: ShopPageProps) {
   const { organizationSlug } = await params;
 
-  const result = await getPublicCatalog(organizationSlug);
+  const [result, org] = await Promise.all([
+    getPublicCatalog(organizationSlug),
+    getOrganizationBySlug(organizationSlug),
+  ]);
 
   if (!result.ok) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Catalog Unavailable</h1>
+          <h1 className="text-2xl font-bold">Katalog tidak tersedia</h1>
           <p className="mt-2 text-muted-foreground">
-            We could not load the product catalog. Please try again later.
+            Kami tidak dapat memuatkan katalog. Cuba lagi nanti.
           </p>
         </div>
       </div>
@@ -29,7 +32,7 @@ export default async function ShopPage({ params }: ShopPageProps) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">No Products Available</h1>
+          <h1 className="text-2xl font-bold">Tiada produk</h1>
           <p className="mt-2 text-muted-foreground">
             Tiada produk lagi — datang balik nanti!
           </p>
@@ -50,7 +53,7 @@ export default async function ShopPage({ params }: ShopPageProps) {
           }}
         />
         <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-          Ladang AyamNorliza
+          Ladang {org?.name ?? "Kami"}
         </p>
         <h1 className="font-buyer-display mt-3 max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
           Ayam segar, ditimbang betul.
