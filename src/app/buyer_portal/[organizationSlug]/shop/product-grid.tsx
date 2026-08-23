@@ -38,7 +38,6 @@ export function ProductGrid({ categories }: ProductGridProps) {
                 product={product}
                 variants={product.variants ?? []}
                 onAddToCart={handleAddToCart}
-                showAddToCart={true}
               />
             ))}
           </div>
