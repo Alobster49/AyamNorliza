@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { sanitizeNextPath, stripLocalePrefix } from "@/lib/auth/next-path";
+import { toLocaleAgnostic } from "@/lib/auth/next-path";
 import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
 
 /**
@@ -12,8 +12,11 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   // `next` rides in on the query string, so validate it before it becomes
-  // part of a Location header.
-  const next = sanitizeNextPath(searchParams.get("next")) ?? "/";
+  // part of a Location header. `toLocaleAgnostic` also strips any locale
+  // prefix it carries, since the destination below is rebuilt against the
+  // account's just-synced locale rather than whatever prefix `next`
+  // happened to arrive with.
+  const next = toLocaleAgnostic(searchParams.get("next")) ?? "/";
 
   if (code) {
     const supabase = await createSupabaseServerClient();
@@ -23,9 +26,7 @@ export async function GET(request: NextRequest) {
       // that a session exists, then send the user to their own language
       // rather than whatever prefix `next` happened to carry.
       const locale = await syncLocaleCookieFromAccount();
-      const unprefixed = stripLocalePrefix(next);
-      const destination =
-        unprefixed === "/" ? `/${locale}` : `/${locale}${unprefixed}`;
+      const destination = next === "/" ? `/${locale}` : `/${locale}${next}`;
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }

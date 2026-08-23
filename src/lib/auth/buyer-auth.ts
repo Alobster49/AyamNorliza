@@ -7,7 +7,7 @@ import "server-only";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { PATHNAME_HEADER, sanitizeNextPath } from "./next-path";
+import { PATHNAME_HEADER, toLocaleAgnostic } from "./next-path";
 
 export class NotABuyerError extends Error {
   readonly code = "not_a_buyer";
@@ -70,7 +70,12 @@ export function buyerLoginPath(organizationSlug: string): string {
  * value has been through the query string by the time the page sees it.
  */
 async function buyerReturnPath(organizationSlug: string): Promise<string | null> {
-  const requested = sanitizeNextPath((await headers()).get(PATHNAME_HEADER));
+  // The header is prefixed ("/ms/buyer_portal/{slug}/orders/abc") since
+  // `src/middleware.ts` publishes the raw request path - normalize it to
+  // locale-agnostic before comparing against `buyerPortalPrefix`, which has
+  // no locale segment. See `toLocaleAgnostic`'s doc for why this must not
+  // be an open-coded strip.
+  const requested = toLocaleAgnostic((await headers()).get(PATHNAME_HEADER));
   if (!requested) return null;
 
   if (!requested.startsWith(buyerPortalPrefix(organizationSlug))) return null;

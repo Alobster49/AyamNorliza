@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { loginAction } from "@/features/identity-access/server/auth-actions";
-import { sanitizeNextPath, stripLocalePrefix } from "@/lib/auth/next-path";
+import { toLocaleAgnostic } from "@/lib/auth/next-path";
 import { cn } from "@/lib/utils";
 
 /**
@@ -70,16 +70,11 @@ export function LoginForm({
     // back to the server's redirect so signed-in users never get bounced
     // through "/" (which has a /signup fallback).
     //
-    // `sanitizeNextPath` deliberately keeps the locale prefix intact (it is
-    // built from the already-prefixed request path), but this router comes
-    // from `@/i18n/navigation` and adds its own prefix unconditionally under
-    // `localePrefix: 'always'` - passing the prefixed value straight through
-    // would double it up into "/ms/ms/...". Strip it here so the router adds
-    // exactly one.
-    const sanitized = sanitizeNextPath(next);
-    const destination = sanitized
-      ? stripLocalePrefix(sanitized)
-      : result.data.redirectTo;
+    // `toLocaleAgnostic` validates and strips any locale prefix in one step:
+    // this router comes from `@/i18n/navigation` and adds its own prefix
+    // unconditionally under `localePrefix: 'always'`, so a prefixed value
+    // passed straight through would double up into "/ms/ms/...".
+    const destination = toLocaleAgnostic(next) ?? result.data.redirectTo;
     // `result.data.locale` is the account's just-synced locale, which may
     // differ from the locale this login page happened to be prefixed with
     // (e.g. signing in on a new device). Passing it explicitly keeps the

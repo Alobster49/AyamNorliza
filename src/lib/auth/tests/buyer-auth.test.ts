@@ -97,6 +97,18 @@ describe("requireBuyerOrRedirect", () => {
     );
   });
 
+  it("carries the page the buyer was on even when the header is locale-prefixed", async () => {
+    // The real `x-pathname` header always carries the locale prefix
+    // `src/middleware.ts` sees on the request (e.g. "/ms/buyer_portal/..."),
+    // while `buyerPortalPrefix` never does - `buyerReturnPath` must strip it
+    // before comparing, or every request is rejected and `next` is always
+    // dropped.
+    mockRequest({ pathname: `/ms/buyer_portal/${SLUG}/orders/order-9` });
+    await expect(redirectTarget()).resolves.toBe(
+      `/buyer_portal/${SLUG}/login?next=%2Fbuyer_portal%2F${SLUG}%2Forders%2Forder-9`,
+    );
+  });
+
   it("redirects a signed-in non-buyer to the portal login too", async () => {
     mockRequest({ userId: "user-1", buyerId: null, pathname: null });
     await expect(redirectTarget()).resolves.toBe(

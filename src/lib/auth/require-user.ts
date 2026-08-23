@@ -12,7 +12,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { PATHNAME_HEADER, sanitizeNextPath } from "./next-path";
+import { PATHNAME_HEADER, toLocaleAgnostic } from "./next-path";
 
 export class PermissionError extends Error {
   readonly code = "permission_denied";
@@ -50,7 +50,7 @@ export async function requireUser() {
  */
 async function returnPathFor(fallback?: string): Promise<string | null> {
   const requested = (await headers()).get(PATHNAME_HEADER);
-  return sanitizeNextPath(requested) ?? sanitizeNextPath(fallback);
+  return toLocaleAgnostic(requested) ?? toLocaleAgnostic(fallback);
 }
 
 /**

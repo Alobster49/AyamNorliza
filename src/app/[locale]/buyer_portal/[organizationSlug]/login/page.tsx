@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { toLocaleAgnostic } from "@/lib/auth/next-path";
 
 type LoginPageProps = {
   params: Promise<{ organizationSlug: string }>;
@@ -95,8 +96,12 @@ function LoginPageInner({ params }: LoginPageProps) {
       description: "Anda telah log masuk.",
     });
 
-    const rawNext = searchParams.get("next");
-    // Same-portal relative paths only — never redirect off-portal or cross-org.
+    // `next` may arrive locale-prefixed ("/ms/buyer_portal/{slug}/orders") -
+    // `toLocaleAgnostic` validates it and strips the prefix so the
+    // same-portal check below compares against `buyerPortalPrefix`-shaped
+    // paths, which never carry one. Same-portal paths only — never redirect
+    // off-portal or cross-org.
+    const rawNext = toLocaleAgnostic(searchParams.get("next"));
     const nextPath =
       rawNext && rawNext.startsWith(`/buyer_portal/${organizationSlug}/`)
         ? rawNext
@@ -153,8 +158,12 @@ function LoginPageInner({ params }: LoginPageProps) {
       description: "Selamat datang! Anda boleh mula membeli.",
     });
 
-    const rawNext = searchParams.get("next");
-    // Same-portal relative paths only — never redirect off-portal or cross-org.
+    // `next` may arrive locale-prefixed ("/ms/buyer_portal/{slug}/orders") -
+    // `toLocaleAgnostic` validates it and strips the prefix so the
+    // same-portal check below compares against `buyerPortalPrefix`-shaped
+    // paths, which never carry one. Same-portal paths only — never redirect
+    // off-portal or cross-org.
+    const rawNext = toLocaleAgnostic(searchParams.get("next"));
     const nextPath =
       rawNext && rawNext.startsWith(`/buyer_portal/${organizationSlug}/`)
         ? rawNext

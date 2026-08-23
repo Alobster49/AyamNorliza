@@ -77,6 +77,17 @@ describe("requireUserOrRedirect", () => {
     );
   });
 
+  it("strips the locale prefix the real header always carries", async () => {
+    // `src/middleware.ts` publishes the raw request path, which under
+    // `localePrefix: 'always'` always carries a locale segment - the stored
+    // `next=` value must be locale-agnostic so `router.push()` (which adds
+    // its own prefix) doesn't double it up into "/ms/ms/...".
+    mockRequest({ pathname: "/ms/acme/orders/123" });
+    await expect(redirectTarget("/acme")).resolves.toBe(
+      "/en/login?next=%2Facme%2Forders%2F123",
+    );
+  });
+
   it("preserves the query string on the requested page", async () => {
     mockRequest({ pathname: "/acme/orders?status=open" });
     await expect(redirectTarget("/acme")).resolves.toBe(
