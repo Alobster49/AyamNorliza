@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { startMfaEnrollAction, verifyMfaChallengeAction, unenrollMfaAction } from "@/features/identity-access/server/auth-actions";
 
 export interface EnrolledFactor {
@@ -19,6 +20,7 @@ interface MfaEnrollCardProps {
 }
 
 export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollCardProps) {
+  const t = useTranslations("auth.mfa");
   const router = useRouter();
   const [enrolled, setEnrolled] = useState<EnrolledFactor | null>(null);
   const [code, setCode] = useState("");
@@ -71,13 +73,13 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
 
   return (
     <section className="mfa-enroll">
-      <h2>Two-factor authentication</h2>
+      <h2>{t("title")}</h2>
       {enrolled ? (
         <div>
-          <p>Scan this QR code with your authenticator app, then enter the 6-digit code.</p>
+          <p>{t("qrInstructions")}</p>
           {enrolled.qrCode ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img alt="TOTP QR code" src={enrolled.qrCode} width={180} height={180} />
+            <img alt={t("qrAlt")} src={enrolled.qrCode} width={180} height={180} />
           ) : null}
           {enrolled.secret ? <code>{enrolled.secret}</code> : null}
           <form
@@ -87,7 +89,7 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
             }}
           >
             <label>
-              Code
+              {t("codeLabel")}
               <input
                 inputMode="numeric"
                 pattern="\d{6}"
@@ -99,7 +101,7 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
             </label>
             {error ? <p role="alert">{error}</p> : null}
             <button type="submit" disabled={pending || code.length !== 6}>
-              {pending ? "Verifying..." : "Verify and enable"}
+              {pending ? t("submitting") : t("submit")}
             </button>
             {isOptional && (
               <button
@@ -108,7 +110,7 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
                 onClick={skip}
                 disabled={pending}
               >
-                Cancel
+                {t("cancel")}
               </button>
             )}
           </form>
@@ -117,13 +119,13 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
         <div>
           <p>
             {isOptional
-              ? "Add an authenticator app to protect your account with an extra layer of security. You can skip for now and enable it later from your security settings."
-              : "Add an authenticator app to protect your account."}
+              ? t("notEnrolledOptional")
+              : t("notEnrolledRequired")}
           </p>
           {error ? <p role="alert">{error}</p> : null}
           <div className="mfa-enroll__actions">
             <button type="button" onClick={enroll} disabled={pending}>
-              {pending ? "Starting..." : "Set up authenticator app"}
+              {pending ? t("setupPending") : t("setup")}
             </button>
             {isOptional && (
               <button
@@ -132,7 +134,7 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
                 onClick={skip}
                 disabled={pending}
               >
-                Skip for now
+                {t("skip")}
               </button>
             )}
           </div>

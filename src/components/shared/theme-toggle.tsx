@@ -1,10 +1,12 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
+  const t = useTranslations("common");
   const { theme, setTheme } = useTheme();
   const isDark = theme === "dark";
 
@@ -12,7 +14,7 @@ export function ThemeToggle() {
     <Button
       variant="outline"
       size="icon"
-      aria-label="Toggle color theme"
+      aria-label={t("toggleTheme")}
       onClick={() => setTheme(isDark ? "light" : "dark")}
     >
       <Sun className="size-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />

@@ -7,9 +7,7 @@ test.describe("language switching", () => {
     await expect(page).toHaveURL(/\/en\/login/);
   });
 
-  // Task 8 translates the login page's copy (heading "Sign in" / "Log Masuk");
-  // until then the heading is untranslated English regardless of locale.
-  test.fixme(
+  test(
     "switching to BM changes the URL and the copy",
     async ({ page }) => {
       await page.goto("/en/login");

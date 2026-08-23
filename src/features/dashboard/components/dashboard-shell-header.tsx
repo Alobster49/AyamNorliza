@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { usePathname } from "@/i18n/navigation";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Separator } from "@/components/ui/separator";
@@ -16,6 +17,7 @@ export function DashboardShellHeader({
   organizationName,
   organizationSlug,
 }: DashboardShellHeaderProps) {
+  const t = useTranslations("common");
   const pathname = usePathname();
   const context = getDashboardPageContext({ organizationSlug, pathname });
 
@@ -32,7 +34,7 @@ export function DashboardShellHeader({
           <span className="truncate font-medium">{context.title}</span>
         </div>
         <p className="hidden truncate text-xs text-muted-foreground sm:block">
-          {context.section} workspace
+          {t("workspaceSuffix", { section: context.section })}
         </p>
       </div>
       <LocaleSwitcher />

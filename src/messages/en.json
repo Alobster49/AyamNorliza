@@ -16,37 +16,52 @@
   },
   "auth": {
     "login": {
-      "title": "Sign in",
-      "subtitle": "Use your work email to continue.",
+      "title": "Sign in to your account",
+      "subtitle": "Enter your credentials to access AyamNorliza operations.",
       "emailLabel": "Email",
       "passwordLabel": "Password",
       "submit": "Sign in",
       "submitting": "Signing in…",
       "forgotPassword": "Forgot your password?",
-      "noAccount": "Don't have an account?",
-      "signUpLink": "Sign up"
+      "noAccount": "Need an account?",
+      "signUpLink": "Request access",
+      "mfaHint": "Two-factor authentication can be enabled from security settings after sign in."
     },
     "signup": {
-      "title": "Create your account",
-      "subtitle": "You need an invite from your organization owner.",
+      "title": "Create account",
+      "subtitle": "New accounts are invite-only. Contact your organization owner if you need access.",
+      "emailLabel": "Email",
+      "displayNameLabel": "Display name",
+      "passwordLabel": "Password (min 12)",
       "submit": "Create account",
-      "submitting": "Creating account…",
+      "submitting": "Creating…",
       "haveAccount": "Already have an account?",
-      "signInLink": "Sign in"
+      "signInLink": "Sign in",
+      "checkEmailTitle": "Check your email",
+      "checkEmailBody": "We sent a confirmation link to {email}. Click it to finish setting up your account."
     },
     "mfa": {
       "title": "Two-factor authentication",
       "subtitle": "Enter the 6-digit code from your authenticator app.",
-      "codeLabel": "Authentication code",
-      "submit": "Verify",
-      "submitting": "Verifying…"
+      "codeLabel": "Code",
+      "submit": "Verify and enable",
+      "submitting": "Verifying…",
+      "qrInstructions": "Scan this QR code with your authenticator app, then enter the 6-digit code.",
+      "qrAlt": "TOTP QR code",
+      "cancel": "Cancel",
+      "notEnrolledOptional": "Add an authenticator app to protect your account with an extra layer of security. You can skip for now and enable it later from your security settings.",
+      "notEnrolledRequired": "Add an authenticator app to protect your account.",
+      "setup": "Set up authenticator app",
+      "setupPending": "Starting…",
+      "skip": "Skip for now"
     },
     "invite": {
       "title": "Accept your invitation",
       "subtitle": "Set a password to finish joining {organizationName}.",
       "submit": "Accept invitation",
       "submitting": "Accepting…",
-      "expired": "This invitation link has expired. Ask your organization owner to send a new one."
+      "expired": "This invitation link has expired. Ask your organization owner to send a new one.",
+      "failureTitle": "Could not accept invitation"
     },
     "errors": {
       "invalidCredentials": "That email and password combination did not match.",

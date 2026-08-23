@@ -2,8 +2,8 @@
 
 import type { FormEvent } from "react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link, useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -44,6 +44,7 @@ export function LoginForm({
   next?: string;
   className?: string;
 }) {
+  const t = useTranslations("auth.login");
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -80,13 +81,13 @@ export function LoginForm({
     >
       <FieldGroup>
         <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">Sign in to your account</h1>
+          <h1 className="text-2xl font-bold">{t("title")}</h1>
           <p className="text-balance text-sm text-muted-foreground">
-            Enter your credentials to access AyamNorliza operations.
+            {t("subtitle")}
           </p>
         </div>
         <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
+          <FieldLabel htmlFor="email">{t("emailLabel")}</FieldLabel>
           <Input
             id="email"
             type="email"
@@ -100,7 +101,7 @@ export function LoginForm({
           />
         </Field>
         <Field>
-          <FieldLabel htmlFor="password">Password</FieldLabel>
+          <FieldLabel htmlFor="password">{t("passwordLabel")}</FieldLabel>
           <Input
             id="password"
             type="password"
@@ -136,17 +137,17 @@ export function LoginForm({
         ) : null}
         <Field>
           <Button type="submit" disabled={pending}>
-            {pending ? "Signing in..." : "Sign in"}
+            {pending ? t("submitting") : t("submit")}
           </Button>
           <FieldDescription className="text-center">
-            Need an account?{" "}
+            {t("noAccount")}{" "}
             <Link href="/signup" className="underline underline-offset-4">
-              Request access
+              {t("signUpLink")}
             </Link>
           </FieldDescription>
         </Field>
         <FieldDescription className="text-center">
-          Two-factor authentication can be enabled from security settings after sign in.
+          {t("mfaHint")}
         </FieldDescription>
       </FieldGroup>
     </form>

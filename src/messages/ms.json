@@ -16,37 +16,52 @@
   },
   "auth": {
     "login": {
-      "title": "Log Masuk",
-      "subtitle": "Guna emel kerja anda untuk teruskan.",
+      "title": "Log masuk ke akaun anda",
+      "subtitle": "Masukkan kelayakan anda untuk mengakses operasi AyamNorliza.",
       "emailLabel": "Emel",
       "passwordLabel": "Kata laluan",
       "submit": "Log Masuk",
       "submitting": "Sedang log masuk…",
       "forgotPassword": "Lupa kata laluan?",
       "noAccount": "Belum ada akaun?",
-      "signUpLink": "Daftar"
+      "signUpLink": "Minta akses",
+      "mfaHint": "Pengesahan dua faktor boleh diaktifkan daripada tetapan keselamatan selepas log masuk."
     },
     "signup": {
       "title": "Daftar akaun",
-      "subtitle": "Anda perlukan jemputan daripada pemilik organisasi.",
+      "subtitle": "Akaun baharu adalah atas jemputan sahaja. Hubungi pemilik organisasi anda jika anda memerlukan akses.",
+      "emailLabel": "Emel",
+      "displayNameLabel": "Nama paparan",
+      "passwordLabel": "Kata laluan (min 12)",
       "submit": "Daftar akaun",
       "submitting": "Sedang daftar…",
       "haveAccount": "Sudah ada akaun?",
-      "signInLink": "Log Masuk"
+      "signInLink": "Log Masuk",
+      "checkEmailTitle": "Semak emel anda",
+      "checkEmailBody": "Kami telah menghantar pautan pengesahan ke {email}. Klik pautan itu untuk selesaikan persediaan akaun anda."
     },
     "mfa": {
       "title": "Pengesahan dua faktor",
       "subtitle": "Masukkan kod 6 digit dari aplikasi pengesah anda.",
-      "codeLabel": "Kod pengesahan",
-      "submit": "Sahkan",
-      "submitting": "Sedang sahkan…"
+      "codeLabel": "Kod",
+      "submit": "Sahkan dan aktifkan",
+      "submitting": "Sedang sahkan…",
+      "qrInstructions": "Imbas kod QR ini dengan aplikasi pengesah anda, kemudian masukkan kod 6 digit.",
+      "qrAlt": "Kod QR TOTP",
+      "cancel": "Batal",
+      "notEnrolledOptional": "Tambah aplikasi pengesah untuk melindungi akaun anda dengan lapisan keselamatan tambahan. Anda boleh langkau buat masa ini dan aktifkan kemudian daripada tetapan keselamatan anda.",
+      "notEnrolledRequired": "Tambah aplikasi pengesah untuk melindungi akaun anda.",
+      "setup": "Sediakan aplikasi pengesah",
+      "setupPending": "Memulakan…",
+      "skip": "Langkau buat masa ini"
     },
     "invite": {
       "title": "Terima jemputan anda",
       "subtitle": "Tetapkan kata laluan untuk sertai {organizationName}.",
       "submit": "Terima jemputan",
       "submitting": "Sedang terima…",
-      "expired": "Pautan jemputan ini sudah tamat tempoh. Minta pemilik organisasi hantar yang baharu."
+      "expired": "Pautan jemputan ini sudah tamat tempoh. Minta pemilik organisasi hantar yang baharu.",
+      "failureTitle": "Tidak dapat menerima jemputan"
     },
     "errors": {
       "invalidCredentials": "Emel dan kata laluan itu tidak sepadan.",

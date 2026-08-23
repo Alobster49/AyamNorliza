@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { getTranslations } from "next-intl/server";
 import { LoginForm } from "@/components/forms/login-form";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
 import { ThemeToggle } from "@/components/shared/theme-toggle";
@@ -11,6 +12,7 @@ export default async function LoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
+  const t = await getTranslations("common");
   return (
     <main className="grid min-h-svh bg-background lg:grid-cols-2">
       <section className="flex min-h-svh flex-col gap-6 px-6 py-8 md:px-10">
@@ -25,7 +27,7 @@ export default async function LoginPage({
                 className="size-full rounded-md object-contain"
               />
             </span>
-            AyamNorliza Ops
+            {t("appName")}
           </a>
           <div className="flex items-center gap-2">
             <LocaleSwitcher />

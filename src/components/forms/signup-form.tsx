@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { signUpAction } from "@/features/identity-access/server/auth-actions";
 
 export function SignupForm() {
+  const t = useTranslations("auth.signup");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -29,18 +31,18 @@ export function SignupForm() {
   if (needsConfirm) {
     return (
       <section>
-        <h1>Check your email</h1>
-        <p>We sent a confirmation link to {email}. Click it to finish setting up your account.</p>
+        <h1>{t("checkEmailTitle")}</h1>
+        <p>{t("checkEmailBody", { email })}</p>
       </section>
     );
   }
 
   return (
     <form onSubmit={onSubmit} className="auth-form">
-      <h1>Create account</h1>
-      <p>New accounts are invite-only. Contact your organization owner if you need access.</p>
+      <h1>{t("title")}</h1>
+      <p>{t("subtitle")}</p>
       <label>
-        Email
+        {t("emailLabel")}
         <input
           type="email"
           required
@@ -49,7 +51,7 @@ export function SignupForm() {
         />
       </label>
       <label>
-        Display name
+        {t("displayNameLabel")}
         <input
           type="text"
           required
@@ -60,7 +62,7 @@ export function SignupForm() {
         />
       </label>
       <label>
-        Password (min 12)
+        {t("passwordLabel")}
         <input
           type="password"
           required
@@ -71,7 +73,7 @@ export function SignupForm() {
       </label>
       {error ? <p role="alert">{error}</p> : null}
       <button type="submit" disabled={pending}>
-        {pending ? "Creating..." : "Create account"}
+        {pending ? t("submitting") : t("submit")}
       </button>
     </form>
   );

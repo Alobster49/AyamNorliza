@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getLocale, getTranslations } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { acceptInvitationAction } from "@/features/identity-access/server/actions";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
@@ -18,7 +19,8 @@ export default async function InviteAcceptPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  if (!token) redirect("/login");
+  const locale = await getLocale();
+  if (!token) redirect(`/${locale}/login`);
 
   // The server action invokes the Edge Function. Show a small
   // "processing..." UI while it runs and then redirect to the org.
@@ -27,24 +29,25 @@ export default async function InviteAcceptPage({
   if (!user) {
     // Force the user to sign in / sign up first; the action will
     // create the auth.users row on first accept.
-    redirect(`/login?next=/invite/${encodeURIComponent(token)}`);
+    redirect(`/${locale}/login?next=/invite/${encodeURIComponent(token)}`);
   }
 
   const result = await acceptInvitationAction({ token, displayName: user.user_metadata?.display_name });
   if (!result.ok) {
+    const t = await getTranslations("auth.invite");
     return (
       <main className="auth-page">
         <div className="flex justify-end">
           <LocaleSwitcher />
         </div>
         <section>
-          <h1>Could not accept invitation</h1>
+          <h1>{t("failureTitle")}</h1>
           <p role="alert">{result.message}</p>
         </section>
       </main>
     );
   }
-  redirect(`/`);
+  redirect(`/${locale}`);
   // hashToken import retained to keep the function-side hash in the bundle.
   void hashToken;
 }
