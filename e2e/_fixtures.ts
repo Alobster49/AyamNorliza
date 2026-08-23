@@ -301,7 +301,7 @@ export async function seedZoneWithCoverage(
  * coverage - see `seedZoneWithCoverage`, which covers 50000-59999.
  *
  * A buyer who has ordered before sees a saved-address radiogroup instead of
- * the bare form, so select "+ New address" first when it is there.
+ * the bare form, so select "+ Alamat baru" first when it is there.
  */
 export async function checkoutWithNewAddress(
   page: Page,
@@ -310,18 +310,21 @@ export async function checkoutWithNewAddress(
 ) {
   // Wait out the saved-address fetch: checking too early sees neither the
   // radiogroup nor the bare form and silently takes the wrong branch.
-  await expect(page.getByText(/loading your addresses/i)).toHaveCount(0, { timeout: 20_000 });
-  const addressGroup = page.getByRole("radiogroup", { name: "Delivery address" });
+  await expect(page.getByText(/memuatkan alamat anda/i)).toHaveCount(0, { timeout: 20_000 });
+  const addressGroup = page.getByRole("radiogroup", { name: "Alamat penghantaran" });
   if ((await addressGroup.count()) > 0) {
-    await addressGroup.getByRole("radio", { name: /new address/i }).click();
+    await addressGroup.getByRole("radio", { name: /alamat baru/i }).click();
   }
   // getByLabel("Address") also matches the saved-address radiogroup, whose
-  // aria-label is "Delivery address" - go at the textbox by role.
+  // aria-label is "Alamat penghantaran" - go at the textbox by role.
   await page.getByRole("textbox", { name: "Address" }).fill(addressLine);
   await page.getByLabel("Postcode").fill(postcode);
 
-  const slotGroup = page.getByRole("radiogroup", { name: "Delivery slot" });
-  const firstSlot = slotGroup.getByRole("radio").first();
+  // RECONCILIATION: the single "Delivery slot" radiogroup was split into a
+  // "Tarikh" (date) pill row and a "Masa" (time) radiogroup; the first date
+  // is preselected, so only the time radio needs a click.
+  const timeGroup = page.getByRole("radiogroup", { name: "Masa" });
+  const firstSlot = timeGroup.getByRole("radio").first();
   await expect(firstSlot).toBeVisible({ timeout: 25_000 });
   await firstSlot.click();
 }
@@ -402,9 +405,11 @@ export const BUYER = {
 
 export async function signInBuyer(page: Page, email: string, password: string) {
   await page.goto("/buyer_portal/ayam-norliza-pilot/login");
+  // RECONCILIATION: the buyer login page's submit button now reads "Log
+  // masuk" (BM) — "login" is the default mode, so no mode-toggle click needed.
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
+  await page.getByRole("button", { name: "Log masuk" }).click();
   await expect(page).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/shop/, { timeout: 10_000 });
 }
 

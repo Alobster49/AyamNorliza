@@ -10,7 +10,24 @@ import {
   uniqueFixtureName,
 } from "./_fixtures";
 
-test("buyer adds a product with a size range and fallback, checks out, and sees the order as Pending", async ({
+/**
+ * Dismiss the first-visit pricing explainer sheet if it auto-opens. Each
+ * test gets a fresh browser `context`, so the buyer tab's first visit to
+ * /shop can trigger it even for a buyer signing in with an existing account.
+ */
+async function dismissExplainerIfOpen(page: Page) {
+  // It auto-opens ~600ms after mount - isVisible() does not wait, so use
+  // waitFor() to give it a real chance to appear before giving up.
+  const explainer = page.getByRole("button", { name: "Faham!" });
+  try {
+    await explainer.waitFor({ state: "visible", timeout: 3000 });
+    await explainer.click();
+  } catch {
+    // Never opened (already seen in this context) - nothing to dismiss.
+  }
+}
+
+test("buyer adds a product with a size range and fallback, checks out, and sees the order tracked as Ditempah", async ({
   page,
   context,
 }) => {
@@ -30,38 +47,38 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
   // Shop as the buyer in a second tab (same pattern as e2e/deactivation.spec.ts).
   const buyerPage = await context.newPage();
   await signInBuyer(buyerPage, BUYER.email, BUYER.password);
+  await dismissExplainerIfOpen(buyerPage);
 
   const productCard = buyerPage
     .locator('[data-slot="card"]')
     .filter({ hasText: productName });
   await expect(productCard).toBeVisible({ timeout: 10_000 });
-  // RECONCILIATION: the dialog trigger reads "Add to Cart" (title case);
-  // brief's /add to cart/i already matches this case-insensitively.
-  await productCard.getByRole("button", { name: /add to cart/i }).click();
+  // RECONCILIATION: the card trigger reads "+ Tambah" (was "Add to Cart"),
+  // and opens a BuyerSheet, which sets role="dialog".
+  await productCard.getByRole("button", { name: "+ Tambah" }).click();
 
-  const addToCartDialog = buyerPage.getByRole("dialog");
-  await expect(addToCartDialog).toBeVisible({ timeout: 10_000 });
-  // RECONCILIATION: "Order by" is a pair of plain toggle Buttons ("Piece" /
-  // "Kg"), not radio inputs.
-  await addToCartDialog.getByRole("button", { name: "Kg", exact: true }).click();
-  // RECONCILIATION: the quantity/size labels include the unit and vary by
-  // mode — "Quantity (kg)"/"Quantity (birds)", "Min size (kg/bird)", "Max
-  // size (kg/bird)" — not the bare "Quantity"/"Min size (kg)"/"Max size
-  // (kg)" the brief assumed. These *do* have htmlFor, so getByLabel works
-  // once the regex matches the real copy.
-  await addToCartDialog.getByLabel(/quantity/i).fill("2.5");
-  await addToCartDialog.getByLabel(/min size/i).fill("1.3");
-  await addToCartDialog.getByLabel(/max size/i).fill("1.6");
-  // RECONCILIATION: "Can't get this size?" is a shadcn Select, not a radio
-  // group; it's properly labeled via htmlFor so getByLabel works.
-  await addToCartDialog.getByLabel(/can.t get this size/i).click();
-  await buyerPage.getByRole("option", { name: "Bigger is ok" }).click();
-  await addToCartDialog.getByRole("button", { name: "Add to cart" }).click();
-  await expect(addToCartDialog).toBeHidden({ timeout: 10_000 });
+  const sheet = buyerPage.getByRole("dialog");
+  await expect(sheet).toBeVisible({ timeout: 10_000 });
+  // RECONCILIATION: "Beli ikut" is a radiogroup of "Ekor"/"Kg" radios now
+  // (was a pair of plain toggle Buttons labelled "Piece"/"Kg").
+  await sheet.getByRole("radio", { name: "Kg", exact: true }).click();
+  // RECONCILIATION: the quantity/size labels are BM now — "Kuantiti
+  // (ekor)"/"Kuantiti (kg)", "Saiz min (kg/ekor)", "Saiz maks (kg/ekor)".
+  // RECONCILIATION: getByLabel(/kuantiti/i) is ambiguous - it also matches
+  // the "+" stepper button's aria-label ("Tambah kuantiti"). Go at the
+  // number input by its spinbutton role instead.
+  await sheet.getByRole("spinbutton", { name: /kuantiti/i }).fill("2.5");
+  await sheet.getByLabel(/saiz min/i).fill("1.3");
+  await sheet.getByLabel(/saiz maks/i).fill("1.6");
+  // RECONCILIATION: "Kalau saiz tak ada?" is a radiogroup of visible radio
+  // buttons now (was a shadcn Select opening a separate options popup).
+  await sheet.getByRole("radio", { name: "Besar pun ok" }).click();
+  await sheet.getByRole("button", { name: "Tambah ke troli" }).click();
+  await expect(sheet).toBeHidden({ timeout: 10_000 });
 
   await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/cart");
   await expect(buyerPage.getByText(productName)).toBeVisible({ timeout: 10_000 });
-  await buyerPage.getByRole("button", { name: /proceed to checkout/i }).click();
+  await buyerPage.getByRole("button", { name: "Teruskan ke checkout" }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
     timeout: 10_000,
   });
@@ -69,24 +86,22 @@ test("buyer adds a product with a size range and fallback, checks out, and sees 
   // RECONCILIATION: checkout no longer asks for a zone - the buyer types an
   // address + postcode and the zone is resolved server-side from it.
   await checkoutWithNewAddress(buyerPage, "77 Jalan Pembeli");
-  await buyerPage.getByRole("button", { name: /place order/i }).click();
+  await buyerPage.getByRole("button", { name: "Hantar pesanan" }).click();
 
   // RECONCILIATION: placeOrder doesn't redirect to /orders. It stays on
-  // /checkout and swaps in an inline "Order Placed!" confirmation card with
-  // its own "View My Orders" button, which must be clicked to navigate.
-  // The lowercase toast title ("Order placed!") and its aria-live
-  // announcement also match without an exact, case-sensitive check.
-  await expect(buyerPage.getByText("Order Placed!", { exact: true })).toBeVisible({
-    timeout: 10_000,
-  });
-  await buyerPage.getByRole("button", { name: /view my orders/i }).click();
+  // /checkout and swaps in an inline confirmation card (data-testid
+  // "order-confirmation", "Pesanan diterima!") with its own "Lihat pesanan
+  // saya" button, which must be clicked to navigate.
+  await expect(buyerPage.getByTestId("order-confirmation")).toBeVisible({ timeout: 15_000 });
+  await expect(buyerPage.getByText("Pesanan diterima!")).toBeVisible();
+  await buyerPage.getByRole("button", { name: /lihat pesanan saya/i }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/orders/, {
     timeout: 10_000,
   });
-  // RECONCILIATION: the buyer orders list renders status as a plain
-  // <span>, not the shadcn Badge component, so there is no
-  // [data-slot="badge"] here.
-  await expect(buyerPage.getByText("Pending").first()).toBeVisible({ timeout: 10_000 });
+  // RECONCILIATION: the buyer orders list no longer shows a "Pending" badge
+  // for a live order - it renders an OrderTracker whose first (current) step
+  // reads "Ditempah".
+  await expect(buyerPage.getByText("Ditempah").first()).toBeVisible({ timeout: 10_000 });
 });
 
 test("buyer cancels a pending order", async ({ page, context }) => {
@@ -104,38 +119,35 @@ test("buyer cancels a pending order", async ({ page, context }) => {
 
   const buyerPage = await context.newPage();
   await signInBuyer(buyerPage, BUYER.email, BUYER.password);
+  await dismissExplainerIfOpen(buyerPage);
 
   const productCard = buyerPage
     .locator('[data-slot="card"]')
     .filter({ hasText: productName });
   await expect(productCard).toBeVisible({ timeout: 10_000 });
-  await productCard.getByRole("button", { name: /add to cart/i }).click();
+  await productCard.getByRole("button", { name: "+ Tambah" }).click();
 
-  const addToCartDialog = buyerPage.getByRole("dialog");
-  await expect(addToCartDialog).toBeVisible({ timeout: 10_000 });
-  await addToCartDialog.getByRole("button", { name: "Piece", exact: true }).click();
-  await addToCartDialog.getByLabel(/quantity/i).fill("2");
-  await addToCartDialog.getByLabel(/min size/i).fill("1.2");
-  await addToCartDialog.getByLabel(/max size/i).fill("1.5");
-  await addToCartDialog.getByLabel(/can.t get this size/i).click();
-  await buyerPage.getByRole("option", { name: "Cancel my order" }).click();
-  await addToCartDialog.getByRole("button", { name: "Add to cart" }).click();
-  await expect(addToCartDialog).toBeHidden({ timeout: 10_000 });
+  const sheet = buyerPage.getByRole("dialog");
+  await expect(sheet).toBeVisible({ timeout: 10_000 });
+  await sheet.getByRole("radio", { name: "Ekor", exact: true }).click();
+  await sheet.getByRole("spinbutton", { name: /kuantiti/i }).fill("2");
+  await sheet.getByLabel(/saiz min/i).fill("1.2");
+  await sheet.getByLabel(/saiz maks/i).fill("1.5");
+  await sheet.getByRole("radio", { name: "Batal pesanan saya" }).click();
+  await sheet.getByRole("button", { name: "Tambah ke troli" }).click();
+  await expect(sheet).toBeHidden({ timeout: 10_000 });
 
   await buyerPage.goto("/buyer_portal/ayam-norliza-pilot/cart");
-  await buyerPage.getByRole("button", { name: /proceed to checkout/i }).click();
+  await buyerPage.getByRole("button", { name: "Teruskan ke checkout" }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/checkout/, {
     timeout: 10_000,
   });
 
   await checkoutWithNewAddress(buyerPage, "21 Jalan Batal");
-  await buyerPage.getByRole("button", { name: /place order/i }).click();
-  // The lowercase toast title ("Order placed!") and its aria-live
-  // announcement also match without an exact, case-sensitive check.
-  await expect(buyerPage.getByText("Order Placed!", { exact: true })).toBeVisible({
-    timeout: 10_000,
-  });
-  await buyerPage.getByRole("button", { name: /view my orders/i }).click();
+  await buyerPage.getByRole("button", { name: "Hantar pesanan" }).click();
+  await expect(buyerPage.getByTestId("order-confirmation")).toBeVisible({ timeout: 15_000 });
+  await expect(buyerPage.getByText("Pesanan diterima!")).toBeVisible();
+  await buyerPage.getByRole("button", { name: /lihat pesanan saya/i }).click();
   await expect(buyerPage).toHaveURL(/\/buyer_portal\/ayam-norliza-pilot\/orders/, {
     timeout: 10_000,
   });
@@ -149,7 +161,8 @@ test("buyer cancels a pending order", async ({ page, context }) => {
   });
   // RECONCILIATION: "Cancel order" only opens a confirmation dialog; the
   // actual cancellation needs a second click on the destructive "Cancel
-  // order" button inside that dialog.
+  // order" button inside that dialog. This part of the order-detail page is
+  // unchanged by the buyer redesign.
   await buyerPage.getByRole("button", { name: /cancel order/i }).click();
   const cancelDialog = buyerPage.getByRole("dialog");
   await expect(cancelDialog).toBeVisible({ timeout: 10_000 });
