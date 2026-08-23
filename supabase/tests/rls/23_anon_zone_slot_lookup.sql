@@ -1,4 +1,4 @@
--- supabase/tests/rls/22_anon_zone_slot_lookup.sql
+-- supabase/tests/rls/23_anon_zone_slot_lookup.sql
 -- Terus Segar wall-free checkout (2026-08-23): anon can execute the two
 -- read-only zone/slot lookups (get_delivery_options,
 -- resolve_zone_for_postcode) but still cannot execute place_order, which

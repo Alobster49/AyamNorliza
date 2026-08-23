@@ -1,4 +1,4 @@
--- 20260823000008_anon_zone_slot_lookup.sql
+-- 20260823000010_anon_zone_slot_lookup.sql
 -- Terus Segar wall-free checkout -- anonymous buyers must check zone
 -- coverage and slot availability before an account exists; delivery
 -- options are storefront data (any free buyer signup could read them), so
