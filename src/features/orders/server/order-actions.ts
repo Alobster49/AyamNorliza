@@ -724,3 +724,30 @@ export async function getDeliveryOptionsForOrg(
     })),
   );
 }
+
+/**
+ * Postcode to delivery zone for the manual order screen. Mirrors the buyer
+ * portal's resolveZoneForPostcode but gated on manager roles. A null zone is
+ * a valid answer — no zone covers that postcode — not an error.
+ */
+export async function resolveDeliveryZone(
+  organizationSlug: string,
+  postcode: string,
+): Promise<ActionResult<{ zoneId: string | null }>> {
+  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  if (!guard.ok) return guard;
+
+  if (!/^[0-9]{5}$/.test(postcode)) {
+    return err("validation", "Enter a 5-digit postcode");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase.rpc("resolve_zone_for_postcode", {
+    p_org: guard.orgId,
+    p_postcode: postcode,
+  });
+  if (error) {
+    return err("internal", "Failed to check delivery coverage");
+  }
+  return ok({ zoneId: (data as string | null) ?? null });
+}

@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createCustomer, searchCustomers, getCatalogForOrdering } from "@/features/seller/server/actions";
 import type { Customer } from "@/features/seller/types";
 import { getActiveZones } from "@/features/orders/server/portal-actions";
-import { getDeliveryOptionsForOrg, createManualOrder } from "@/features/orders/server/order-actions";
+import { getDeliveryOptionsForOrg, createManualOrder, resolveDeliveryZone } from "@/features/orders/server/order-actions";
 import type { DeliveryOption, DeliveryZone, OrderFallback, OrderItemMode } from "@/features/orders/types";
 import { FALLBACKS, FALLBACK_LABELS } from "@/features/orders/types";
+import { AddressFields } from "@/components/forms/address-fields";
+import { parseCustomerAddress } from "@/features/seller/lib/customer-schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -65,12 +67,28 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
 
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [zones, setZones] = useState<DeliveryZone[]>([]);
+  // Mirrors `zones` for applyCustomer to read: `zones` is filled by a
+  // fire-and-forget effect, and applyCustomer is re-created every render, so
+  // an in-flight call would otherwise see whatever `zones` was at the render
+  // it started in (often still []) instead of the latest loaded value.
+  const zonesRef = useRef<DeliveryZone[]>([]);
+  // Bumped at the start of every applyCustomer call; see the comment inside
+  // applyCustomer for what it protects against.
+  const customerSeqRef = useRef(0);
 
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [newCustomerMode, setNewCustomerMode] = useState(false);
-  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", address: "", notes: "" });
+  const [newCustomer, setNewCustomer] = useState({
+    name: "",
+    phone: "",
+    address: "",
+    postcode: "",
+    state: "",
+    area: "",
+    notes: "",
+  });
 
   const [lines, setLines] = useState<LineDraft[]>([newLine()]);
 
@@ -96,7 +114,10 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     })();
     (async () => {
       const result = await getActiveZones(organizationSlug);
-      if (result.ok) setZones(result.data);
+      if (result.ok) {
+        setZones(result.data);
+        zonesRef.current = result.data;
+      }
     })();
   }, [organizationId, organizationSlug]);
 
@@ -114,9 +135,70 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     }
   };
 
+  /**
+   * Selecting a customer is an explicit action, so their saved address and
+   * postcode authoritatively overwrite whatever is in the delivery fields
+   * (including clearing them for a customer with none on file), and the
+   * zone is resolved from the postcode the same way the buyer checkout
+   * does it.
+   */
+  const applyCustomer = async (customer: Customer) => {
+    // Guards against a cross-customer race: applyCustomer is fired without
+    // awaiting from a synchronous onClick, so clicking a second customer
+    // before the first one's resolveDeliveryZone round-trip returns must
+    // not let the first (now-superseded) response apply its zone or pop a
+    // toast on top of the second customer's selection. Do not remove.
+    const seq = ++customerSeqRef.current;
+
+    setSelectedCustomer(customer);
+    // Always assign, even when empty, so a customer with no address/postcode
+    // on file clears out whatever the previously selected customer left behind.
+    setAddress(customer.address ?? "");
+    setPostcode(customer.postcode ?? "");
+
+    if (!customer.postcode) {
+      toast({
+        title: "No postcode on file for this customer",
+        description: "Pick a delivery zone manually.",
+      });
+      return;
+    }
+
+    const result = await resolveDeliveryZone(organizationSlug, customer.postcode);
+    if (customerSeqRef.current !== seq) return;
+
+    if (!result.ok) {
+      toast({ title: "Could not check delivery coverage", description: result.message, variant: "destructive" });
+      return;
+    }
+
+    // Only adopt a zone the seller can actually see in the picker; the
+    // resolver can return a zone that is not in the active list.
+    if (result.data.zoneId && zonesRef.current.some((zone) => zone.id === result.data.zoneId)) {
+      await handleZoneChange(result.data.zoneId);
+      return;
+    }
+    toast({
+      title: `No delivery zone covers ${customer.postcode}`,
+      description: "Pick a zone manually.",
+    });
+  };
+
   const handleAddNewCustomer = async () => {
     if (!newCustomer.name || !newCustomer.phone) {
       toast({ title: "Name and phone are required", variant: "destructive" });
+      return;
+    }
+    // Validate client-side before hitting the server action: Next.js
+    // redacts uncaught Server Action error messages in production builds,
+    // so the "Enter a 5-digit postcode..." message from parseCustomerAddress
+    // would otherwise never reach the seller in prod. createCustomer still
+    // calls parseCustomerAddress itself as defence in depth.
+    try {
+      parseCustomerAddress(newCustomer);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      toast({ title: "Error", description: message, variant: "destructive" });
       return;
     }
     try {
@@ -124,9 +206,12 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
         name: newCustomer.name,
         phone: newCustomer.phone,
         address: newCustomer.address || null,
+        postcode: newCustomer.postcode || null,
+        state: newCustomer.state || null,
+        area: newCustomer.area || null,
         notes: newCustomer.notes || null,
       });
-      setSelectedCustomer(customer);
+      await applyCustomer(customer);
       setNewCustomerMode(false);
       toast({ title: "Customer created" });
     } catch (error) {
@@ -346,7 +431,22 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
             <h2 className="font-semibold">Delivery</h2>
             <div className="space-y-1">
               <Label className="text-xs">Zone</Label>
-              <Select value={zoneId} onValueChange={handleZoneChange}>
+              <Select
+                value={zoneId}
+                onValueChange={(value) => {
+                  // A manual zone pick must supersede any customer-driven
+                  // resolveDeliveryZone still in flight -- bump the seq
+                  // BEFORE calling handleZoneChange, the same way selecting
+                  // another customer does, so a late response from
+                  // applyCustomer can't clobber this choice. Bumping inside
+                  // handleZoneChange itself would be wrong: applyCustomer
+                  // calls that function too, and would end up invalidating
+                  // its own in-flight work. Do not move this into
+                  // handleZoneChange.
+                  customerSeqRef.current += 1;
+                  handleZoneChange(value);
+                }}
+              >
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select zone" />
                 </SelectTrigger>
@@ -426,7 +526,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                           type="button"
                           className="block w-full px-4 py-2 text-left hover:bg-muted"
                           onClick={() => {
-                            setSelectedCustomer(customer);
+                            void applyCustomer(customer);
                             setCustomerSearch("");
                             setCustomerResults([]);
                           }}
@@ -444,6 +544,12 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                     <div className="text-sm text-muted-foreground">{selectedCustomer.phone}</div>
                     {selectedCustomer.address && (
                       <div className="text-sm text-muted-foreground">{selectedCustomer.address}</div>
+                    )}
+                    {selectedCustomer.postcode && (
+                      <div className="text-sm text-muted-foreground">
+                        {selectedCustomer.postcode}
+                        {selectedCustomer.area ? ` · ${selectedCustomer.area}` : ""}
+                      </div>
                     )}
                   </div>
                 )}
@@ -468,13 +574,25 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                     onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>Address</Label>
-                  <Input
-                    value={newCustomer.address}
-                    onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
-                  />
-                </div>
+                <AddressFields
+                  idPrefix="customer-address"
+                  value={{
+                    addressLine: newCustomer.address,
+                    postcode: newCustomer.postcode,
+                    state: newCustomer.state,
+                    area: newCustomer.area,
+                  }}
+                  onChange={(next) =>
+                    setNewCustomer({
+                      ...newCustomer,
+                      address: next.addressLine,
+                      postcode: next.postcode,
+                      state: next.state,
+                      area: next.area,
+                    })
+                  }
+                  required={false}
+                />
                 <div className="space-y-2">
                   <Label>Notes</Label>
                   <Textarea

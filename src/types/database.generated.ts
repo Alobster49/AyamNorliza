@@ -487,6 +487,7 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          area: string | null
           created_at: string
           created_by: string
           email: string | null
@@ -496,11 +497,14 @@ export type Database = {
           organization_id: string
           phone: string
           phone_normalized: string | null
+          postcode: string | null
+          state: string | null
           updated_at: string
           version: number
         }
         Insert: {
           address?: string | null
+          area?: string | null
           created_at?: string
           created_by: string
           email?: string | null
@@ -510,11 +514,14 @@ export type Database = {
           organization_id: string
           phone: string
           phone_normalized?: string | null
+          postcode?: string | null
+          state?: string | null
           updated_at?: string
           version?: number
         }
         Update: {
           address?: string | null
+          area?: string | null
           created_at?: string
           created_by?: string
           email?: string | null
@@ -524,6 +531,8 @@ export type Database = {
           organization_id?: string
           phone?: string
           phone_normalized?: string | null
+          postcode?: string | null
+          state?: string | null
           updated_at?: string
           version?: number
         }
@@ -2012,6 +2021,7 @@ export type Database = {
       effective_capabilities:
         | { Args: { p_org: string }; Returns: Json }
         | { Args: { p_org: string; p_role: string }; Returns: Json }
+      extract_postcode: { Args: { p_address: string }; Returns: string }
       get_delivery_options: {
         Args: { p_org: string; p_zone: string }
         Returns: {

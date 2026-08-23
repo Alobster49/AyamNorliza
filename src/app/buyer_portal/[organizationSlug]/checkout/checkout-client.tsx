@@ -15,7 +15,7 @@ import {
 import type { DeliveryOption } from "@/features/orders/types";
 import { listMyAddresses, createAddress } from "@/features/buyer/server/address-actions";
 import type { BuyerAddress } from "@/features/buyer/types";
-import { AddressFields, type AddressValue } from "@/features/buyer/components/address-fields";
+import { AddressFields, type AddressValue } from "@/components/forms/address-fields";
 import { buyerSignInAction, buyerSignUpAction } from "@/features/buyer-auth/server/auth-actions";
 import { getBuyerProfile } from "@/features/buyer/server/actions";
 import { AccountSection, type AccountValue } from "./account-section";
