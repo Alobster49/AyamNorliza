@@ -3,6 +3,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SupabaseSessionProvider } from "@/components/providers/supabase-session-provider";
 import { BuyerHeader } from "@/features/buyer/components/buyer-header";
 import { CartProvider } from "@/features/buyer/components/cart-context";
+import { CartUiProvider } from "@/features/buyer/components/cart-ui-context";
+import { CartOverlay } from "@/features/buyer/components/cart-overlay";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -48,18 +50,21 @@ export default async function BuyerLayout({ children, params }: BuyerLayoutProps
   return (
     <SupabaseSessionProvider>
       <CartProvider>
-        <div
-          className={`buyer-theme min-h-screen ${fraunces.variable} ${schibsted.variable} ${plexMono.variable}`}
-        >
-          <BuyerHeader
-            organizationSlug={organizationSlug}
-            buyerName={buyerName}
-            isLoggedIn={isLoggedIn}
-          />
-          <main className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-            {children}
-          </main>
-        </div>
+        <CartUiProvider>
+          <div
+            className={`buyer-theme min-h-screen ${fraunces.variable} ${schibsted.variable} ${plexMono.variable}`}
+          >
+            <BuyerHeader
+              organizationSlug={organizationSlug}
+              buyerName={buyerName}
+              isLoggedIn={isLoggedIn}
+            />
+            <main className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+              {children}
+            </main>
+            <CartOverlay organizationSlug={organizationSlug} />
+          </div>
+        </CartUiProvider>
       </CartProvider>
     </SupabaseSessionProvider>
   );

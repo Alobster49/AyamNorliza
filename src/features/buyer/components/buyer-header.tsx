@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { buyerSignOutAction } from "@/features/buyer-auth/server/auth-actions";
 import { useRouter } from "next/navigation";
+import { useCart } from "./cart-context";
+import { useCartUi } from "./cart-ui-context";
 
 type BuyerHeaderProps = {
   organizationSlug: string;
@@ -39,6 +41,8 @@ export function BuyerHeader({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const { items } = useCart();
+  const { openCart } = useCartUi();
 
   const navItems = [
     { href: `/buyer_portal/${organizationSlug}/shop`, label: "Shop", icon: ShoppingBag },
@@ -98,11 +102,14 @@ export function BuyerHeader({
         {/* Right side actions */}
         <div className="flex items-center gap-2">
           {/* Cart button - always visible */}
-          <Button variant="ghost" size="icon" asChild>
-            <Link href={`/buyer_portal/${organizationSlug}/cart`}>
-              <ShoppingCart className="h-5 w-5" />
-              <span className="sr-only">Cart</span>
-            </Link>
+          <Button variant="ghost" size="icon" onClick={openCart} className="relative">
+            <ShoppingCart className="h-5 w-5" />
+            {items.length > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-buyer-mono text-[10px] font-medium text-primary-foreground">
+                {items.length}
+              </span>
+            )}
+            <span className="sr-only">Troli</span>
           </Button>
 
           {isLoggedIn ? (
