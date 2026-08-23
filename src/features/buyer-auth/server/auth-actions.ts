@@ -11,7 +11,6 @@ import { admin } from "@/lib/supabase/admin";
 import type { ActionResult } from "@/features/identity-access/server/actions";
 import { normalizeMalaysianMobile } from "../lib/phone";
 import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
-import type { AppLocale } from "@/lib/i18n/locales";
 
 type AuthErrorCode = "validation" | "unauthenticated" | "internal" | "conflict";
 
@@ -202,13 +201,7 @@ const BuyerLoginInput = z.object({
 
 export async function buyerSignInAction(
   rawInput: unknown,
-): Promise<
-  ActionResult<{
-    buyerId: string;
-    /** Absent only if the sync itself failed - caller should keep the URL locale. */
-    locale?: AppLocale;
-  }>
-> {
+): Promise<ActionResult<{ buyerId: string }>> {
   const parsed = BuyerLoginInput.safeParse(rawInput);
   if (!parsed.success) {
     return err("validation", "Invalid login", parsed.error.flatten().fieldErrors);
@@ -257,14 +250,19 @@ export async function buyerSignInAction(
   // to this one. Best-effort — a sync problem must never fail a sign-in
   // that has already succeeded (same swallow-errors posture as
   // `setLocaleAction`).
-  let locale: AppLocale | undefined;
+  //
+  // Unlike `loginAction`, the resolved locale isn't returned: the buyer
+  // login page (`buyer_portal/[organizationSlug]/login/page.tsx`) still
+  // navigates with the plain `next/navigation` router, not the i18n-aware
+  // one, so there is no `{ locale }` option to pass it to - the cookie this
+  // call sets is what actually steers the next request's locale.
   try {
-    locale = await syncLocaleCookieFromAccount();
+    await syncLocaleCookieFromAccount();
   } catch (syncError) {
     console.error("buyerSignInAction: locale sync failed", syncError);
   }
 
-  return ok({ buyerId: buyer.id, locale });
+  return ok({ buyerId: buyer.id });
 }
 
 export async function buyerSignOutAction(): Promise<ActionResult<{ ok: true }>> {
