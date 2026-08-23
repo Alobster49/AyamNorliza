@@ -1,3 +1,5 @@
+import createNextIntlPlugin from "next-intl/plugin";
+
 // Restrict Supabase Storage remote patterns to the public storage path so
 // /_next/image can't be used as a GET-based SSRF probe against arbitrary
 // paths/ports. Localhost entries are dev-only: a remotePattern with no
@@ -74,4 +76,12 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+const withNextIntl = createNextIntlPlugin({
+  experimental: {
+    // Generates the `Messages` type from en.json so `t('...')` keys are
+    // typechecked. en.json is the schema source of truth.
+    createMessagesDeclaration: "./src/messages/en.json",
+  },
+});
+
+export default withNextIntl(nextConfig);
