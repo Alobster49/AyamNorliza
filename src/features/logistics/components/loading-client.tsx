@@ -5,6 +5,8 @@ import { useCallback, useMemo, useState, useTransition } from "react";
 import type { DispatchBoardData } from "../types";
 import { buildLoadBoard, type LoadJob, type LoadLane } from "../lib/loading-model";
 import { getDispatchBoard, setOrderLoaded } from "../server/dispatch-actions";
+import { useTranslations } from "next-intl";
+import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -229,6 +231,7 @@ export function LoadingClient({
   initialData: DispatchBoardData;
 }) {
   const date = initialDate; // loading is always today
+  const tEmpty = useTranslations("loadingBoard.empty");
   const [data, setData] = useState(initialData);
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -296,11 +299,9 @@ export function LoadingClient({
 
   if (lanes.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-md">
+      <div className="flex w-full flex-1 flex-col">
         <h1 className="text-lg font-semibold">Loading</h1>
-        <p className="mt-3 rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-          No trucks on the board today.
-        </p>
+        <HenEmptyState title={tEmpty("title")} subtitle={tEmpty("subtitle")} className="flex-1 py-20" />
       </div>
     );
   }

@@ -183,7 +183,7 @@ function BoardColumn({
       ref={setNodeRef}
       aria-label={ORDER_STATUS_LABELS[status]}
       className={
-        "flex h-[calc(100vh-16rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/40 " +
+        "flex h-[calc(100vh-10rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/40 " +
         (isOver ? "ring-2 ring-primary/40" : "")
       }
     >

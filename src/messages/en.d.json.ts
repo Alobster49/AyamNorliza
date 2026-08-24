@@ -1719,6 +1719,25 @@ declare const messages: {
   "tasks": {
     "saveFailedTitle": "Couldn't save order",
     "completeTitle": "Order complete"
+  },
+  "warehouse": {
+    "empty": {
+      "title": "All clear — no tasks pending",
+      "subtitle": "Even the ayam is resting."
+    }
+  },
+  "deliveryRuns": {
+    "empty": {
+      "title": "No runs scheduled for this date",
+      "subtitle": "Trucks parked, ayam resting."
+    }
+  },
+  "loadingBoard": {
+    "empty": {
+      "title": "No trucks on the board today",
+      "titleDate": "No trucks on the board for this date",
+      "subtitle": "Ayam resting until the next load."
+    }
   }
 };
 export default messages;

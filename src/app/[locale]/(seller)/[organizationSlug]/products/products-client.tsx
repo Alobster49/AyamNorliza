@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LayoutGrid, Plus, Rows3 } from "lucide-react";
 import {
   countProductOrderItems,
   deleteCategory,
@@ -13,7 +13,6 @@ import {
 import type { Category, Product, ProductVariant } from "@/features/seller/types";
 import {
   ARCHIVED_VIEW,
-  catalogSummary,
   type CatalogFilter,
   type CatalogProduct,
 } from "@/features/seller/lib/catalog-model";
@@ -22,7 +21,13 @@ import { useToast } from "@/hooks/use-toast";
 import { CategoryDialog } from "@/features/seller/components/products/category-dialog";
 import { ProductDialog } from "@/features/seller/components/products/product-dialog";
 import { VariantDialog } from "@/features/seller/components/products/variant-dialog";
-import { ProductCatalog } from "@/features/seller/components/products/product-catalog";
+import {
+  ProductCatalog,
+  ViewButton,
+  type CatalogView,
+} from "@/features/seller/components/products/product-catalog";
+
+const VIEW_STORAGE_KEY = "seller-catalog-view";
 
 type DialogState =
   | { kind: "category"; category?: Category }
@@ -48,6 +53,20 @@ export function ProductsClient({
   const [products, setProducts] = useState(initialProducts);
   const [selectedCategoryId, setSelectedCategoryId] = useState<CatalogFilter>(null);
   const [dialog, setDialog] = useState<DialogState>(null);
+
+  // Default to cards; restore the device's last choice after mount so the
+  // server render never mismatches.
+  const [view, setView] = useState<CatalogView>("cards");
+  useEffect(() => {
+    const stored = window.localStorage.getItem(VIEW_STORAGE_KEY);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage restore; a lazy initializer would mismatch the SSR render
+    if (stored === "cards" || stored === "ledger") setView(stored);
+  }, []);
+
+  const changeView = (next: CatalogView) => {
+    setView(next);
+    window.localStorage.setItem(VIEW_STORAGE_KEY, next);
+  };
 
   const closeDialog = (open: boolean) => {
     if (!open) setDialog(null);
@@ -219,19 +238,26 @@ export function ProductsClient({
   const activeCategoryId =
     selectedCategoryId === ARCHIVED_VIEW ? undefined : (selectedCategoryId ?? undefined);
 
-  const summary = catalogSummary(products.filter((p) => p.is_active));
-  const subtitle = [
-    `${summary.productCount} ${summary.productCount === 1 ? "product" : "products"}`,
-    `${summary.variantCount} ${summary.variantCount === 1 ? "size" : "sizes"}`,
-    ...(summary.soldOutCount > 0 ? [`${summary.soldOutCount} sold out`] : []),
-  ].join(" · ");
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Products &amp; Catalog</h1>
-          <p className="text-muted-foreground">{subtitle}</p>
+      <div className="flex flex-wrap items-center justify-end gap-3">
+        <div
+          role="group"
+          aria-label="Catalog view"
+          className="inline-flex gap-0.5 rounded-lg border bg-muted p-0.5"
+        >
+          <ViewButton
+            active={view === "cards"}
+            onClick={() => changeView("cards")}
+            icon={<LayoutGrid className="h-3.5 w-3.5" />}
+            label="Cards"
+          />
+          <ViewButton
+            active={view === "ledger"}
+            onClick={() => changeView("ledger")}
+            icon={<Rows3 className="h-3.5 w-3.5" />}
+            label="Ledger"
+          />
         </div>
         <Button
           onClick={() =>
@@ -248,6 +274,7 @@ export function ProductsClient({
         categories={categories}
         products={products}
         selectedCategoryId={selectedCategoryId}
+        view={view}
         onSelectCategory={setSelectedCategoryId}
         onAddCategory={() => setDialog({ kind: "category" })}
         onEditCategory={(category) => setDialog({ kind: "category", category })}

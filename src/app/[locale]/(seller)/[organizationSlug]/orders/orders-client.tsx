@@ -39,7 +39,7 @@ const TAB_LABELS: Record<TabValue, string> = {
 export function OrdersClient({ organizationSlug, callerRole, initialOrders }: OrdersClientProps) {
   const router = useRouter();
   const [orders, setOrders] = useState(initialOrders);
-  const [activeTab, setActiveTab] = useState<TabValue>("pending");
+  const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [view, setView] = useState<ViewMode>("board");
 
   useEffect(() => {
@@ -92,18 +92,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Orders</h1>
-          <p className="text-muted-foreground">Manage the order pipeline</p>
-        </div>
-        <Button onClick={() => router.push(`/${organizationSlug}/orders/new`)}>
-          <Plus className="mr-2 h-4 w-4" />
-          New Order
-        </Button>
-      </div>
-
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3">
         <div className="inline-flex rounded-lg border p-0.5">
           <Button
             variant={view === "board" ? "secondary" : "ghost"}
@@ -124,10 +113,10 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
             Table
           </Button>
         </div>
-        <span className="text-sm text-muted-foreground">
-          {orders.length} {orders.length === 1 ? "order" : "orders"}
-        </span>
-        {view === "board" && <span className="text-sm text-muted-foreground">· Grouped by status</span>}
+        <Button onClick={() => router.push(`/${organizationSlug}/orders/new`)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Order
+        </Button>
       </div>
 
       {view === "board" ? (
@@ -151,7 +140,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
           </TabsList>
 
           <TabsContent value={activeTab}>
-            <div className="rounded-lg border">
+            <div className="min-h-[calc(100vh-13rem)] rounded-lg border">
               <Table>
                 <TableHeader>
                   <TableRow>

@@ -49,7 +49,6 @@ export function SellerProductCard({
             {product.name.charAt(0).toUpperCase()}
           </div>
         )}
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/75 to-transparent" />
         {product.category && (
           <span className="absolute left-2 top-2 rounded-full bg-white/85 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-stone-900 backdrop-blur-sm">
             {product.category.name}

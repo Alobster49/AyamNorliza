@@ -1716,5 +1716,24 @@
   "tasks": {
     "saveFailedTitle": "Gagal simpan pesanan",
     "completeTitle": "Pesanan selesai"
+  },
+  "warehouse": {
+    "empty": {
+      "title": "Semua siap — tiada tugasan",
+      "subtitle": "Ayam pun rehat."
+    }
+  },
+  "deliveryRuns": {
+    "empty": {
+      "title": "Tiada perjalanan untuk tarikh ini",
+      "subtitle": "Lori parkir, ayam pun rehat."
+    }
+  },
+  "loadingBoard": {
+    "empty": {
+      "title": "Tiada lori di papan hari ini",
+      "titleDate": "Tiada lori di papan untuk tarikh ini",
+      "subtitle": "Ayam rehat sehingga muatan seterusnya."
+    }
   }
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
+import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import type { DispatchBoardData } from "../types";
 import { buildTimeline, type BlockState } from "../lib/timeline-model";
 
@@ -38,6 +40,7 @@ function useNowMinutes(date: string): number | null {
 }
 
 export function DayTimeline({ date, data }: { date: string; data: DispatchBoardData }) {
+  const tEmpty = useTranslations("loadingBoard.empty");
   const nowMinutes = useNowMinutes(date);
   const view = useMemo(() => buildTimeline(data, date, nowMinutes), [data, date, nowMinutes]);
 
@@ -128,7 +131,7 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
             </div>
           ))}
           {view.rows.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No trucks on the board for this date.</p>
+            <HenEmptyState title={tEmpty("titleDate")} subtitle={tEmpty("subtitle")} className="py-10" />
           ) : null}
         </div>
       </div>

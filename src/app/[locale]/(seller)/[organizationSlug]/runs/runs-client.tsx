@@ -23,6 +23,8 @@ import {
   type StopRow,
 } from "@/features/orders/lib/run-board-model";
 import { shiftIsoDate, todayInTimeZone } from "@/lib/time/org-date";
+import { useTranslations } from "next-intl";
+import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -542,6 +544,7 @@ type RunsClientProps = {
 
 export function RunsClient({ organizationSlug, initialDate, timeZone, initialRuns }: RunsClientProps) {
   const { toast } = useToast();
+  const tEmpty = useTranslations("deliveryRuns.empty");
   const [date, setDate] = useState(initialDate);
   const [runs, setRuns] = useState(initialRuns);
   const [selectedId, setSelectedId] = useState<string | null>(initialRuns[0]?.id ?? null);
@@ -667,7 +670,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
       ) : runs.length === 0 ? (
-        <p className="text-muted-foreground">No runs scheduled for this date.</p>
+        <HenEmptyState title={tEmpty("title")} subtitle={tEmpty("subtitle")} className="py-20" />
       ) : (
         <div className="grid gap-4 lg:grid-cols-[264px_minmax(0,1fr)]">
           <div

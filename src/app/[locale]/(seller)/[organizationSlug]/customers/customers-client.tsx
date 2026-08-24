@@ -203,7 +203,7 @@ export function CustomersClient({
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border">
+      <div className="min-h-[calc(100vh-15rem)] rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>

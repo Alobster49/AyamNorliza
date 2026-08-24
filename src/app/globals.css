@@ -341,6 +341,55 @@ button[disabled] {
   }
 }
 
+/* ---- Warehouse empty state (sleeping hen doodle) ---- */
+.animate-hen-breathe {
+  animation: hen-breathe 3.4s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 70%;
+}
+
+.animate-hen-zzz {
+  opacity: 0;
+  animation: hen-zzz 3.2s ease-in-out infinite;
+}
+
+@keyframes hen-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+}
+
+@keyframes hen-zzz {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  30% {
+    opacity: 0.95;
+  }
+  70% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-11px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hen-breathe {
+    animation: none;
+  }
+  .animate-hen-zzz {
+    animation: none;
+    opacity: 0.85;
+  }
+}
+
 /* ---- Tables ---- */
 .data-table {
   width: 100%;

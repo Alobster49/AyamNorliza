@@ -12,6 +12,7 @@ import {
   type WeighState,
 } from "../lib/weigh-model";
 import { SwipeCard } from "./swipe-card";
+import { WarehouseEmptyState } from "./warehouse-empty-state";
 
 const EMPTY_DRAFT: LineDraft = { weightKg: "", pieces: "" };
 const DRAG_THRESHOLD_PX = 10;
@@ -232,7 +233,7 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
   if (!line) {
     return (
       <div className={cn("flex flex-1 items-center justify-center", className)}>
-        <p className="text-muted-foreground">No tasks pending. Nice work.</p>
+        <WarehouseEmptyState />
       </div>
     );
   }

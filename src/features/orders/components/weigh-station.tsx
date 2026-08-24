@@ -9,6 +9,7 @@ import {
   type WeighState,
 } from "../lib/weigh-model";
 import { QueueRail } from "./queue-rail";
+import { WarehouseEmptyState } from "./warehouse-empty-state";
 import { SizeBandGauge } from "./size-band-gauge";
 import { WeighNumpad } from "./weigh-numpad";
 import { WeightReadout } from "./weight-readout";
@@ -90,8 +91,8 @@ export function WeighStation({ state, dispatch, syncingTaskIds, className }: Wei
           </div>
         </div>
       ) : (
-        <div className="flex h-full items-center justify-center">
-          <p className="text-muted-foreground">No tasks pending. Nice work.</p>
+        <div className="flex h-full w-full items-center justify-center">
+          <WarehouseEmptyState />
         </div>
       )}
     </div>
