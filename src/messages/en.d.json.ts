@@ -657,7 +657,99 @@ declare const messages: {
       "resetReasonLabel": "Reason (required)",
       "resetReasonPlaceholder": "e.g. Reverting to baseline for Q3 audit",
       "resetButton": "Reset"
+    },
+    "capabilityMatrix": {
+      "heading": "The matrix",
+      "subheading": "{roleCount, plural, one {# role} other {# roles}} × {capCount, plural, one {# capability} other {# capabilities}}",
+      "description": "Each row is a role, ordered by privilege from top to bottom. Each column is a capability, grouped by category. A filled marker means the role holds that capability; an open marker means it does not.",
+      "caption": "Capability matrix for this organization, ordered by role rank.",
+      "roleColumnHeader": "Role",
+      "cellAriaLabel": "{role} {hasCapability, select, true {has} other {does not have}} capability {capability}"
+    },
+    "invitationsQueue": {
+      "heading": "The invitations queue",
+      "summary": "{pending, plural, one {# pending} other {# pending}} · {accepted, plural, one {# accepted} other {# accepted}} · {revoked, plural, one {# revoked} other {# revoked}}",
+      "description": "People who have been invited but haven't completed onboarding yet. Acceptance is owned by the invitee; revoking lives in MOD-19.",
+      "empty": "Nothing waiting. Every invitation has been accepted or revoked.",
+      "expires": "expires {date}"
+    },
+    "rankLadder": {
+      "heading": "The rank ladder",
+      "rangeLabel": "0–100",
+      "descriptionPrefix": "No role may grant a rank higher than its own. The ladder runs from",
+      "descriptionMiddle": "at the floor to",
+      "descriptionSuffix": "at the ceiling."
+    },
+    "roleRoster": {
+      "heading": "The roster",
+      "activeCount": "{count, plural, one {# active} other {# active}}",
+      "description": "People who currently hold each role. Empty rows mean no one holds that role at the moment."
+    },
+    "rolesMasthead": {
+      "kicker": "Access control — {organizationName}",
+      "issueTag": "Issue 01 · Phase 1 read-only",
+      "titleRoles": "Roles",
+      "titlePermissions": "Permissions",
+      "description": "A read-only spread of every role inside this organization and every capability each role is granted. Editing this matrix is owned by MOD-19 — until then, this page is the canonical picture.",
+      "statRoles": "Roles",
+      "statCapabilities": "Capabilities",
+      "statCategories": "Categories",
+      "lastRevised": "Last revised {date}"
+    },
+    "updateOrganizationForm": {
+      "cardTitle": "General",
+      "cardDescription": "Public-facing display and identity for your organization.",
+      "errorTitle": "Couldn't save changes",
+      "nameLabel": "Name",
+      "nameDescription": "The display name shown across the app.",
+      "legalNameLabel": "Legal name",
+      "legalNameDescription": "Used on contracts and invoices.",
+      "regionLabel": "Region",
+      "regionDescription": "Helps with date and time defaults.",
+      "localizationSectionLabel": "Localization",
+      "timezoneLabel": "Default time zone",
+      "timezonePlaceholder": "Select a time zone",
+      "localeLabel": "Default locale",
+      "localePlaceholder": "Select a locale",
+      "cancel": "Cancel",
+      "saving": "Saving...",
+      "saved": "Saved",
+      "saveChanges": "Save changes"
+    },
+    "inviteUserDialog": {
+      "title": "Invite a user",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "cancel": "Cancel",
+      "sending": "Sending...",
+      "sendInvite": "Send invite"
+    },
+    "breakGlassDialog": {
+      "title": "Open break-glass access",
+      "description": "This grants you short-window elevated access. Owners are notified within 60 seconds.",
+      "reasonLabel": "Reason (10-500 chars)",
+      "ticketLabel": "Ticket reference (optional)",
+      "durationLabel": "Duration (minutes, max 60)",
+      "cancel": "Cancel",
+      "opening": "Opening...",
+      "open": "Open",
+      "reauthRequired": "Please re-authenticate first"
+    },
+    "reauthDialog": {
+      "title": "Confirm it's you",
+      "description": "For your security, this action requires recent re-authentication.",
+      "passwordLabel": "Password",
+      "totpLabel": "6-digit code (if MFA enabled)",
+      "cancel": "Cancel",
+      "verifying": "Verifying...",
+      "confirm": "Confirm",
+      "retryFailed": "Action failed after re-auth"
     }
+  },
+  "drive": {
+    "cantOpenRunTitle": "Can't open the run",
+    "noRunTitle": "No run for you today",
+    "noRunDescription": "The office has not put you on a truck yet. This page will show the run as soon as they do."
   }
 };
 export default messages;

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { inviteUserAction } from "@/features/identity-access/server/actions";
 import { ROLES } from "@/lib/auth/permissions";
+import { roleLabelKey } from "@/features/access-control/components/role-label";
 
 export function InviteUserDialog({
   organizationId,
@@ -15,6 +17,8 @@ export function InviteUserDialog({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.inviteUserDialog");
+  const tRoles = useTranslations("roles");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("caretaker");
   const [error, setError] = useState<string | null>(null);
@@ -41,9 +45,9 @@ export function InviteUserDialog({
   return (
     <div className="dialog-backdrop" role="dialog" aria-modal="true">
       <form onSubmit={onSubmit} className="dialog">
-        <h2>Invite a user</h2>
+        <h2>{t("title")}</h2>
         <label>
-          Email
+          {t("emailLabel")}
           <input
             type="email"
             required
@@ -53,11 +57,11 @@ export function InviteUserDialog({
           />
         </label>
         <label>
-          Role
+          {t("roleLabel")}
           <select value={role} onChange={(e) => setRole(e.target.value)}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
-                {r}
+                {tRoles(roleLabelKey(r))}
               </option>
             ))}
           </select>
@@ -65,10 +69,10 @@ export function InviteUserDialog({
         {error ? <p role="alert">{error}</p> : null}
         <div className="dialog__actions">
           <button type="button" onClick={onClose}>
-            Cancel
+            {t("cancel")}
           </button>
           <button type="submit" disabled={pending || !email}>
-            {pending ? "Sending..." : "Send invite"}
+            {pending ? t("sending") : t("sendInvite")}
           </button>
         </div>
       </form>

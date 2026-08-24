@@ -654,6 +654,98 @@
       "resetReasonLabel": "Sebab (wajib)",
       "resetReasonPlaceholder": "cth. Kembali ke asas untuk audit S3",
       "resetButton": "Set semula"
+    },
+    "capabilityMatrix": {
+      "heading": "Matriks",
+      "subheading": "{roleCount, plural, other {# peranan}} × {capCount, plural, other {# keupayaan}}",
+      "description": "Setiap baris ialah satu peranan, disusun mengikut keutamaan dari atas ke bawah. Setiap lajur ialah satu keupayaan, dikumpulkan mengikut kategori. Penanda berisi bermaksud peranan itu memiliki keupayaan tersebut; penanda kosong bermaksud tidak.",
+      "caption": "Matriks keupayaan bagi organisasi ini, disusun mengikut kedudukan peranan.",
+      "roleColumnHeader": "Peranan",
+      "cellAriaLabel": "{role} {hasCapability, select, true {mempunyai} other {tidak mempunyai}} keupayaan {capability}"
+    },
+    "invitationsQueue": {
+      "heading": "Baris gilir jemputan",
+      "summary": "{pending, plural, other {# menunggu}} · {accepted, plural, other {# diterima}} · {revoked, plural, other {# dibatalkan}}",
+      "description": "Orang yang telah dijemput tetapi belum selesai proses onboarding. Penerimaan jemputan ditentukan oleh penerima; pembatalan jemputan ada dalam MOD-19.",
+      "empty": "Tiada yang menunggu. Semua jemputan telah diterima atau dibatalkan.",
+      "expires": "tamat tempoh {date}"
+    },
+    "rankLadder": {
+      "heading": "Tangga kedudukan",
+      "rangeLabel": "0–100",
+      "descriptionPrefix": "Tiada peranan boleh memberikan kedudukan lebih tinggi daripada kedudukannya sendiri. Tangga ini bermula dari",
+      "descriptionMiddle": "di dasar hingga ke",
+      "descriptionSuffix": "di puncak."
+    },
+    "roleRoster": {
+      "heading": "Senarai peranan",
+      "activeCount": "{count, plural, other {# aktif}}",
+      "description": "Orang yang sedang memegang setiap peranan. Baris kosong bermaksud tiada sesiapa memegang peranan itu buat masa ini."
+    },
+    "rolesMasthead": {
+      "kicker": "Kawalan akses — {organizationName}",
+      "issueTag": "Isu 01 · Fasa 1 baca sahaja",
+      "titleRoles": "Peranan",
+      "titlePermissions": "Kebenaran",
+      "description": "Paparan baca sahaja bagi setiap peranan dalam organisasi ini dan setiap keupayaan yang diberikan kepada setiap peranan. Penyuntingan matriks ini dikendalikan oleh MOD-19 — sehingga itu, halaman ini adalah gambaran rasmi.",
+      "statRoles": "Peranan",
+      "statCapabilities": "Keupayaan",
+      "statCategories": "Kategori",
+      "lastRevised": "Disemak kali terakhir {date}"
+    },
+    "updateOrganizationForm": {
+      "cardTitle": "Umum",
+      "cardDescription": "Paparan dan identiti awam bagi organisasi anda.",
+      "errorTitle": "Gagal simpan perubahan",
+      "nameLabel": "Nama",
+      "nameDescription": "Nama paparan yang ditunjukkan di seluruh aplikasi.",
+      "legalNameLabel": "Nama sah",
+      "legalNameDescription": "Digunakan pada kontrak dan invois.",
+      "regionLabel": "Wilayah",
+      "regionDescription": "Membantu tetapan lalai tarikh dan masa.",
+      "localizationSectionLabel": "Penyetempatan",
+      "timezoneLabel": "Zon masa lalai",
+      "timezonePlaceholder": "Pilih zon masa",
+      "localeLabel": "Tetapan lokal lalai",
+      "localePlaceholder": "Pilih tetapan lokal",
+      "cancel": "Batal",
+      "saving": "Menyimpan...",
+      "saved": "Disimpan",
+      "saveChanges": "Simpan perubahan"
+    },
+    "inviteUserDialog": {
+      "title": "Jemput pengguna",
+      "emailLabel": "E-mel",
+      "roleLabel": "Peranan",
+      "cancel": "Batal",
+      "sending": "Menghantar...",
+      "sendInvite": "Hantar jemputan"
+    },
+    "breakGlassDialog": {
+      "title": "Buka akses break-glass",
+      "description": "Ini memberi anda akses tinggi untuk tempoh singkat. Pemilik akan dimaklumkan dalam masa 60 saat.",
+      "reasonLabel": "Sebab (10-500 aksara)",
+      "ticketLabel": "Rujukan tiket (pilihan)",
+      "durationLabel": "Tempoh (minit, maksimum 60)",
+      "cancel": "Batal",
+      "opening": "Membuka...",
+      "open": "Buka",
+      "reauthRequired": "Sila sahkan semula identiti anda dahulu"
+    },
+    "reauthDialog": {
+      "title": "Sahkan ini adalah anda",
+      "description": "Demi keselamatan anda, tindakan ini memerlukan pengesahan semula baru-baru ini.",
+      "passwordLabel": "Kata laluan",
+      "totpLabel": "Kod 6-digit (jika MFA diaktifkan)",
+      "cancel": "Batal",
+      "verifying": "Mengesahkan...",
+      "confirm": "Sahkan",
+      "retryFailed": "Tindakan gagal selepas sahkan semula"
     }
+  },
+  "drive": {
+    "cantOpenRunTitle": "Tidak dapat membuka trip",
+    "noRunTitle": "Tiada trip untuk anda hari ini",
+    "noRunDescription": "Pejabat belum menetapkan anda pada mana-mana lori. Halaman ini akan memaparkan trip sebaik sahaja ia ditetapkan."
   }
 }

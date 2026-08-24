@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { reauthAction } from "@/features/identity-access/server/auth-actions";
 
 /**
@@ -21,6 +22,7 @@ export function ReauthDialog({
   retryAction: () => Promise<{ ok: boolean; code?: string; message?: string }>;
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.reauthDialog");
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +45,7 @@ export function ReauthDialog({
     onSuccess();
     const retried = await retryAction();
     if (!retried.ok) {
-      setError(retried.message ?? "Action failed after re-auth");
+      setError(retried.message ?? t("retryFailed"));
     } else {
       router.refresh();
     }
@@ -52,10 +54,10 @@ export function ReauthDialog({
   return (
     <div className="dialog-backdrop" role="dialog" aria-modal="true">
       <form onSubmit={onSubmit} className="dialog">
-        <h2>Confirm it&apos;s you</h2>
-        <p>For your security, this action requires recent re-authentication.</p>
+        <h2>{t("title")}</h2>
+        <p>{t("description")}</p>
         <label>
-          Password
+          {t("passwordLabel")}
           <input
             type="password"
             required
@@ -65,7 +67,7 @@ export function ReauthDialog({
           />
         </label>
         <label>
-          6-digit code (if MFA enabled)
+          {t("totpLabel")}
           <input
             inputMode="numeric"
             pattern="\d{6}"
@@ -77,10 +79,10 @@ export function ReauthDialog({
         {error ? <p role="alert">{error}</p> : null}
         <div className="dialog__actions">
           <button type="button" onClick={onClose}>
-            Cancel
+            {t("cancel")}
           </button>
           <button type="submit" disabled={pending || !password}>
-            {pending ? "Verifying..." : "Confirm"}
+            {pending ? t("verifying") : t("confirm")}
           </button>
         </div>
       </form>

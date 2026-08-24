@@ -1,11 +1,12 @@
+import { getTranslations } from "next-intl/server";
 import type { Invitation } from "@/features/identity-access/types";
-import { roleLabel } from "./role-label";
+import { roleLabelKey } from "./role-label";
 
 /**
  * Pending invitations queue. Shows the invitations that have not yet been
  * accepted or revoked — at-a-glance info, no actions yet (per MOD-19).
  */
-export function InvitationsQueue({
+export async function InvitationsQueue({
   invitations,
 }: {
   invitations: ReadonlyArray<Invitation>;
@@ -15,6 +16,10 @@ export function InvitationsQueue({
   );
   const accepted = invitations.filter((i) => i.acceptedAt != null).length;
   const revoked = invitations.filter((i) => i.revokedAt != null).length;
+  const [t, tRoles] = await Promise.all([
+    getTranslations("identity.invitationsQueue"),
+    getTranslations("roles"),
+  ]);
 
   return (
     <section
@@ -27,20 +32,19 @@ export function InvitationsQueue({
           className="font-display text-3xl leading-none"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          The invitations queue
+          {t("heading")}
         </h2>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          {pending.length} pending · {accepted} accepted · {revoked} revoked
+          {t("summary", { pending: pending.length, accepted, revoked })}
         </p>
       </div>
       <p className="mt-2 max-w-prose text-sm text-muted-foreground">
-        People who have been invited but haven&apos;t completed onboarding yet.
-        Acceptance is owned by the invitee; revoking lives in MOD-19.
+        {t("description")}
       </p>
 
       {pending.length === 0 ? (
         <p className="mt-6 rounded-sm border border-dashed border-foreground/15 px-4 py-6 text-center text-sm text-muted-foreground">
-          Nothing waiting. Every invitation has been accepted or revoked.
+          {t("empty")}
         </p>
       ) : (
         <ul className="mt-6 divide-y divide-foreground/10 border-y border-foreground/10">
@@ -51,10 +55,10 @@ export function InvitationsQueue({
             >
               <span className="font-medium">{invite.email}</span>
               <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                {roleLabel(invite.role)}
+                {tRoles(roleLabelKey(invite.role))}
               </span>
               <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">
-                expires {invite.expiresAt?.slice(0, 10) ?? "—"}
+                {t("expires", { date: invite.expiresAt?.slice(0, 10) ?? "—" })}
               </span>
             </li>
           ))}

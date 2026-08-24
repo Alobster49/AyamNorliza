@@ -1,5 +1,7 @@
+import { getTranslations } from "next-intl/server";
 import type { Role } from "@/lib/auth/permissions";
 import { buildRoleRoster } from "../lib/capability-matrix";
+import { roleLabelKey } from "./role-label";
 
 /**
  * Live role roster — turns "who is in this org right now" into a ranked list
@@ -8,7 +10,7 @@ import { buildRoleRoster } from "../lib/capability-matrix";
  * The caller is responsible for narrowing `member.role` from `string` to
  * `Role` — that's a DB concern, not a UI concern.
  */
-export function RoleRoster({
+export async function RoleRoster({
   members,
   totalMembers,
 }: {
@@ -17,6 +19,10 @@ export function RoleRoster({
 }) {
   const roster = buildRoleRoster(members);
   const maxCount = Math.max(1, ...roster.map((r) => r.count));
+  const [t, tRoles] = await Promise.all([
+    getTranslations("identity.roleRoster"),
+    getTranslations("roles"),
+  ]);
 
   return (
     <section aria-labelledby="roster-heading" className="space-y-5">
@@ -26,16 +32,15 @@ export function RoleRoster({
           className="font-display text-2xl leading-none"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          The roster
+          {t("heading")}
         </h2>
         <span className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          {totalMembers} active
+          {t("activeCount", { count: totalMembers })}
         </span>
       </header>
 
       <p className="text-xs text-muted-foreground">
-        People who currently hold each role. Empty rows mean no one holds that
-        role at the moment.
+        {t("description")}
       </p>
 
       <ul className="divide-y divide-foreground/10">
@@ -50,7 +55,7 @@ export function RoleRoster({
               <div className="min-w-0">
                 <div className="flex items-baseline justify-between gap-2">
                   <span className="text-sm font-medium">
-                    {roleLabel(entry.role)}
+                    {tRoles(roleLabelKey(entry.role))}
                   </span>
                   <span className="font-mono text-xs tabular-nums text-muted-foreground">
                     {entry.count}
@@ -77,11 +82,4 @@ export function RoleRoster({
       </ul>
     </section>
   );
-}
-
-function roleLabel(role: string): string {
-  return role
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }

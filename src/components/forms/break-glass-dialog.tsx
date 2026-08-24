@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { BreakGlassDialogInput } from "@/features/identity-access/components/break-glass-dialog";
 
 /**
@@ -15,6 +16,7 @@ export function BreakGlassDialog({
   onClose,
 }: BreakGlassDialogInput) {
   const router = useRouter();
+  const t = useTranslations("identity.breakGlassDialog");
   const [reason, setReason] = useState("");
   const [ticket, setTicket] = useState("");
   const [duration, setDuration] = useState(30);
@@ -36,7 +38,7 @@ export function BreakGlassDialog({
     });
     setPending(false);
     if (!result.ok) {
-      setError(result.code === "reauth_required" ? "Please re-authenticate first" : result.message);
+      setError(result.code === "reauth_required" ? t("reauthRequired") : result.message);
       return;
     }
     onClose();
@@ -46,18 +48,18 @@ export function BreakGlassDialog({
   return (
     <div className="dialog-backdrop" role="dialog" aria-modal="true">
       <form onSubmit={onSubmit} className="dialog">
-        <h2>Open break-glass access</h2>
-        <p>This grants you short-window elevated access. Owners are notified within 60 seconds.</p>
+        <h2>{t("title")}</h2>
+        <p>{t("description")}</p>
         <label>
-          Reason (10-500 chars)
+          {t("reasonLabel")}
           <textarea required minLength={10} maxLength={500} value={reason} onChange={(e) => setReason(e.target.value)} />
         </label>
         <label>
-          Ticket reference (optional)
+          {t("ticketLabel")}
           <input type="text" maxLength={100} value={ticket} onChange={(e) => setTicket(e.target.value)} />
         </label>
         <label>
-          Duration (minutes, max 60)
+          {t("durationLabel")}
           <input
             type="number"
             min={1}
@@ -69,10 +71,10 @@ export function BreakGlassDialog({
         {error ? <p role="alert">{error}</p> : null}
         <div className="dialog__actions">
           <button type="button" onClick={onClose}>
-            Cancel
+            {t("cancel")}
           </button>
           <button type="submit" disabled={pending || reason.length < 10}>
-            {pending ? "Opening..." : "Open"}
+            {pending ? t("opening") : t("open")}
           </button>
         </div>
       </form>

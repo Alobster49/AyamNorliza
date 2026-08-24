@@ -1,4 +1,6 @@
+import { getTranslations } from "next-intl/server";
 import type { CapabilityMatrixData } from "../lib/capability-matrix";
+import { roleLabelKey } from "./role-label";
 
 /**
  * Capability matrix — the editorial centerpiece.
@@ -12,9 +14,13 @@ import type { CapabilityMatrixData } from "../lib/capability-matrix";
  * Server component. No client hooks. Accessible: each cell is a labeled
  * <span> with a full sentence for screen readers.
  */
-export function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
+export async function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
   const { rows, groups } = data;
   const totalCapabilities = groups.reduce((s, g) => s + g.capabilities.length, 0);
+  const [t, tRoles] = await Promise.all([
+    getTranslations("identity.capabilityMatrix"),
+    getTranslations("roles"),
+  ]);
 
   return (
     <section
@@ -27,17 +33,15 @@ export function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
           className="font-display text-3xl leading-none"
           style={{ fontFamily: "var(--font-display)" }}
         >
-          The matrix
+          {t("heading")}
         </h2>
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          {rows.length} roles × {totalCapabilities} capabilities
+          {t("subheading", { roleCount: rows.length, capCount: totalCapabilities })}
         </p>
       </div>
 
       <p className="mt-2 max-w-prose text-sm text-muted-foreground">
-        Each row is a role, ordered by privilege from top to bottom. Each
-        column is a capability, grouped by category. A filled marker means the
-        role holds that capability; an open marker means it does not.
+        {t("description")}
       </p>
 
       <div className="mt-8 overflow-x-auto">
@@ -46,7 +50,7 @@ export function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
           aria-describedby="matrix-heading"
         >
           <caption className="sr-only">
-            Capability matrix for this organization, ordered by role rank.
+            {t("caption")}
           </caption>
           <thead>
             <tr>
@@ -54,7 +58,7 @@ export function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
                 scope="col"
                 className="sticky left-0 z-10 w-44 border-b border-foreground/20 bg-background pb-3 pr-4 text-left align-bottom text-xs uppercase tracking-[0.18em] text-muted-foreground"
               >
-                Role
+                {t("roleColumnHeader")}
               </th>
               {groups.map((group) => (
                 <th
@@ -101,7 +105,7 @@ export function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
                       className="font-display text-xl leading-none"
                       style={{ fontFamily: "var(--font-display)" }}
                     >
-                      {roleLabel(row.role)}
+                      {tRoles(roleLabelKey(row.role))}
                     </span>
                     <span className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
                       {row.rank}
@@ -122,7 +126,11 @@ export function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
                       >
                         <span
                           role="img"
-                          aria-label={`${row.role} ${has ? "has" : "does not have"} capability ${cap}`}
+                          aria-label={t("cellAriaLabel", {
+                            role: tRoles(roleLabelKey(row.role)),
+                            hasCapability: has ? "true" : "false",
+                            capability: cap,
+                          })}
                           className={
                             "inline-block size-3 rounded-full border " +
                             (has
@@ -141,11 +149,4 @@ export function CapabilityMatrix({ data }: { data: CapabilityMatrixData }) {
       </div>
     </section>
   );
-}
-
-function roleLabel(role: string): string {
-  return role
-    .split("_")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
 }

@@ -62,13 +62,6 @@ const eslintConfig = [
       "src/features/orders/components/**/*.{ts,tsx}",
       "src/features/logistics/components/**/*.{ts,tsx}",
       "src/features/overview/components/**/*.{ts,tsx}",
-      // Individually listed, not the `src/components/forms/**` directory -
-      // `login-form.tsx` and `mfa-enroll-card.tsx` are fully converted, so a
-      // directory glob would exempt them wholesale and hide a regression.
-      "src/components/forms/update-organization-form.tsx",
-      "src/components/forms/invite-user-dialog.tsx",
-      "src/components/forms/break-glass-dialog.tsx",
-      "src/components/forms/reauth-dialog.tsx",
     ],
     rules: {
       "no-restricted-imports": "off",

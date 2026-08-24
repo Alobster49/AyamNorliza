@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { AlertCircle, Check, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -80,6 +81,7 @@ export function UpdateOrganizationForm(props: {
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.updateOrganizationForm");
 
   const initial = useMemo(
     () => ({
@@ -167,10 +169,10 @@ export function UpdateOrganizationForm(props: {
 
   const saveLabel =
     status === "pending"
-      ? "Saving..."
+      ? t("saving")
       : status === "saved"
-        ? "Saved"
-        : "Save changes";
+        ? t("saved")
+        : t("saveChanges");
 
   const SaveIcon =
     status === "pending" ? (
@@ -184,8 +186,8 @@ export function UpdateOrganizationForm(props: {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>General</CardTitle>
-        <CardDescription>Public-facing display and identity for your organization.</CardDescription>
+        <CardTitle>{t("cardTitle")}</CardTitle>
+        <CardDescription>{t("cardDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} noValidate data-org-settings-form>
@@ -196,7 +198,7 @@ export function UpdateOrganizationForm(props: {
             >
               <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden />
               <div className="space-y-0.5">
-                <p className="font-medium">Couldn&apos;t save changes</p>
+                <p className="font-medium">{t("errorTitle")}</p>
                 <p className="text-destructive/90">{formError}</p>
               </div>
             </div>
@@ -206,7 +208,7 @@ export function UpdateOrganizationForm(props: {
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="org-name">
-                  Name <span className="text-destructive" aria-hidden>*</span>
+                  {t("nameLabel")} <span className="text-destructive" aria-hidden>*</span>
                 </FieldLabel>
                 <Input
                   id="org-name"
@@ -219,12 +221,12 @@ export function UpdateOrganizationForm(props: {
                   aria-required="true"
                   aria-invalid={Boolean(fieldErrors.name)}
                 />
-                <FieldDescription>The display name shown across the app.</FieldDescription>
+                <FieldDescription>{t("nameDescription")}</FieldDescription>
                 {fieldErrors.name ? <FieldError>{fieldErrors.name}</FieldError> : null}
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="org-legal-name">Legal name</FieldLabel>
+                <FieldLabel htmlFor="org-legal-name">{t("legalNameLabel")}</FieldLabel>
                 <Input
                   id="org-legal-name"
                   name="legalName"
@@ -233,12 +235,12 @@ export function UpdateOrganizationForm(props: {
                   maxLength={200}
                   aria-invalid={Boolean(fieldErrors.legalName)}
                 />
-                <FieldDescription>Used on contracts and invoices.</FieldDescription>
+                <FieldDescription>{t("legalNameDescription")}</FieldDescription>
                 {fieldErrors.legalName ? <FieldError>{fieldErrors.legalName}</FieldError> : null}
               </Field>
 
               <Field>
-                <FieldLabel htmlFor="org-region">Region</FieldLabel>
+                <FieldLabel htmlFor="org-region">{t("regionLabel")}</FieldLabel>
                 <Input
                   id="org-region"
                   name="region"
@@ -247,25 +249,25 @@ export function UpdateOrganizationForm(props: {
                   maxLength={50}
                   aria-invalid={Boolean(fieldErrors.region)}
                 />
-                <FieldDescription>Helps with date and time defaults.</FieldDescription>
+                <FieldDescription>{t("regionDescription")}</FieldDescription>
                 {fieldErrors.region ? <FieldError>{fieldErrors.region}</FieldError> : null}
               </Field>
             </FieldGroup>
 
             <FieldSeparator>
               <span className="bg-card px-2 text-xs font-medium tracking-wide text-muted-foreground uppercase">
-                Localization
+                {t("localizationSectionLabel")}
               </span>
             </FieldSeparator>
 
             <FieldGroup>
               <Field>
                 <FieldLabel htmlFor="org-timezone">
-                  Default time zone <span className="text-destructive" aria-hidden>*</span>
+                  {t("timezoneLabel")} <span className="text-destructive" aria-hidden>*</span>
                 </FieldLabel>
                 <Select value={tz} onValueChange={setTz} name="defaultTimeZone">
                   <SelectTrigger id="org-timezone" aria-required="true">
-                    <SelectValue placeholder="Select a time zone" />
+                    <SelectValue placeholder={t("timezonePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {TIMEZONE_OPTIONS.map((opt) => (
@@ -282,11 +284,11 @@ export function UpdateOrganizationForm(props: {
 
               <Field>
                 <FieldLabel htmlFor="org-locale">
-                  Default locale <span className="text-destructive" aria-hidden>*</span>
+                  {t("localeLabel")} <span className="text-destructive" aria-hidden>*</span>
                 </FieldLabel>
                 <Select value={locale} onValueChange={setLocale} name="defaultLocale">
                   <SelectTrigger id="org-locale" aria-required="true">
-                    <SelectValue placeholder="Select a locale" />
+                    <SelectValue placeholder={t("localePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {LOCALE_OPTIONS.map((opt) => (
@@ -311,7 +313,7 @@ export function UpdateOrganizationForm(props: {
           onClick={resetLocal}
           disabled={status === "pending" || !dirty}
         >
-          Cancel
+          {t("cancel")}
         </Button>
         <Button
           type="button"
