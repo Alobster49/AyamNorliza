@@ -54,7 +54,7 @@ describe("draftPlan", () => {
     expect(draft.exceptions).toEqual([]);
     expect(draft.proposals).toHaveLength(1);
     expect(draft.proposals[0]!.truckId).toBe(data.trucks[0]!.id);
-    expect(draft.proposals[0]!.reason).toContain("Zone 1");
+    expect(draft.proposals[0]!.zoneName).toBe("Zone 1");
   });
 
   it("counts its own proposals toward load, so a cap-1 slot only takes one order", () => {
@@ -72,7 +72,7 @@ describe("draftPlan", () => {
     data.orders = [order({ postcode: null })];
     const draft = draftPlan(data, DATE);
     expect(draft.exceptions[0]!.kind).toBe("no_postcode");
-    expect(draft.exceptions[0]!.detail.length).toBeGreaterThan(0);
+    expect(draft.exceptions[0]!.detailKey).toBe("exceptions.no_postcode");
   });
 
   it("ignores already-assigned orders but counts them as load", () => {

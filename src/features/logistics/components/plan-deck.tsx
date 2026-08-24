@@ -135,6 +135,7 @@ export function PlanDeck({
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const t = useTranslations("logistics.dispatch.plan");
+  const tRoot = useTranslations();
   // Dismissal belongs to the date it was made on. Plain boolean state would
   // survive a date change and silently hide the next day's draft, with a page
   // reload as the only way back.
@@ -159,7 +160,11 @@ export function PlanDeck({
         assignments: draft.proposals.map((p) => ({ orderId: p.orderId, truckId: p.truckId })),
       });
       if (!result.ok) {
-        toast({ title: t("planFailedToast"), description: result.message, variant: "destructive" });
+        toast({
+          title: t("planFailedToast"),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+          variant: "destructive",
+        });
       } else if (result.data.failed.length > 0) {
         toast({
           title: t("appliedPartialToast", {
@@ -179,7 +184,13 @@ export function PlanDeck({
   const overrideAssign = (orderId: string, truckId: string) => {
     startTransition(async () => {
       const result = await assignOrder(organizationSlug, { orderId, truckId });
-      if (!result.ok) toast({ title: t("assignFailedToast"), description: result.message, variant: "destructive" });
+      if (!result.ok) {
+        toast({
+          title: t("assignFailedToast"),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+          variant: "destructive",
+        });
+      }
       refetch();
     });
   };
@@ -187,7 +198,13 @@ export function PlanDeck({
   const depart = (truckId: string) => {
     startTransition(async () => {
       const result = await departTruck(organizationSlug, { truckId, date });
-      if (!result.ok) toast({ title: t("departFailedToast"), description: result.message, variant: "destructive" });
+      if (!result.ok) {
+        toast({
+          title: t("departFailedToast"),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+          variant: "destructive",
+        });
+      }
       refetch();
     });
   };
@@ -244,7 +261,7 @@ export function PlanDeck({
                 return (
                   <div key={ex.orderId} className="flex flex-col gap-2 rounded-lg border border-l-4 border-l-amber-500 bg-card p-3">
                     <p className="text-sm font-medium">{o?.customer?.name ?? t("orderFallback")}</p>
-                    <p className="text-xs text-muted-foreground">{ex.detail}</p>
+                    <p className="text-xs text-muted-foreground">{t(ex.detailKey)}</p>
                     {(ex.kind === "no_covering_truck" || ex.kind === "all_trucks_full") && (
                       <select
                         className="min-h-9 rounded border bg-background px-2 text-xs"
@@ -282,7 +299,11 @@ export function PlanDeck({
                 <p className="text-sm font-medium">
                   {o?.customer?.name ?? t("orderFallback")} → {truckById.get(p.truckId)?.name ?? t("truckFallback")}
                 </p>
-                <p className="text-xs text-muted-foreground">{p.reason}</p>
+                <p className="text-xs text-muted-foreground">
+                  {p.slotTime
+                    ? t("reason.withSlot", { zone: p.zoneName, slot: p.slotTime })
+                    : t("reason.withoutSlot", { zone: p.zoneName })}
+                </p>
               </div>
             );
           })}

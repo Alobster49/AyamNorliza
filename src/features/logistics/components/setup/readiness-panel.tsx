@@ -59,8 +59,8 @@ export function ReadinessPanel({
             >
               <Icon className={cn("h-4 w-4 shrink-0", style.className)} aria-hidden />
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{issue.title}</p>
-                <p className="text-sm text-muted-foreground">{issue.detail}</p>
+                <p className="font-medium">{t(issue.titleKey, issue.titleValues)}</p>
+                <p className="text-sm text-muted-foreground">{t(issue.detailKey, issue.detailValues)}</p>
               </div>
               <Button
                 variant={issue.severity === "blocker" ? "default" : "outline"}

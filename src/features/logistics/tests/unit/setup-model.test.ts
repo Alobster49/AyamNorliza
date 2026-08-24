@@ -133,7 +133,7 @@ describe("findIssues — overlaps and completeness", () => {
     }];
     const issue = findIssues(s).find((i) => i.id.startsWith("postcode-overlap:"));
     expect(issue?.severity).toBe("blocker");
-    expect(issue?.detail).toContain("47500");
+    expect(issue?.detailValues?.bStart).toBe("47500");
   });
 
   it("does not flag two ranges of the same zone overlapping", () => {
@@ -215,7 +215,7 @@ describe("searchSetup", () => {
     const hits = searchSetup(healthy(), "47100");
     const hit = hits.find((h) => h.entity === "postcodes");
     expect(hit?.recordId).toBe("zone-1".padEnd(36, "0"));
-    expect(hit?.context).toContain("47000");
+    expect(hit?.contextValues?.start).toBe("47000");
   });
 
   it("does not resolve a postcode outside every range", () => {

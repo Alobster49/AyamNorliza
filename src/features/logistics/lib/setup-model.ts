@@ -30,10 +30,18 @@ export type SetupIssue = {
   /** Stable key, unique per issue instance. Used as the React key. */
   id: string;
   severity: IssueSeverity;
-  /** One line, sentence case, names the record. */
-  title: string;
-  /** One line, explains the consequence in business terms. */
-  detail: string;
+  /**
+   * Message key relative to `logistics.setup.readiness`, e.g.
+   * "issues.noFacility.title". One line, sentence case, names the record.
+   */
+  titleKey: string;
+  titleValues?: Record<string, string>;
+  /**
+   * Message key relative to `logistics.setup.readiness`. One line, explains
+   * the consequence in business terms.
+   */
+  detailKey: string;
+  detailValues?: Record<string, string>;
   /** Where the Fix button navigates. recordId is null when the fix is "add one". */
   target: { entity: SetupEntity; recordId: string | null };
 };
@@ -88,8 +96,8 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
     issues.push({
       id: "no-facility",
       severity: "blocker",
-      title: "No factory address set",
-      detail: "Dispatch cannot plan routes or print delivery orders without it.",
+      titleKey: "issues.noFacility.title",
+      detailKey: "issues.noFacility.detail",
       target: { entity: "factory", recordId: null },
     });
   }
@@ -99,8 +107,9 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
       issues.push({
         id: `zone-no-postcodes:${zone.id}`,
         severity: "blocker",
-        title: `${zone.name} has no postcodes`,
-        detail: "No customer address can be matched to this zone at checkout.",
+        titleKey: "issues.zoneNoPostcodes.title",
+        titleValues: { zone: zone.name },
+        detailKey: "issues.zoneNoPostcodes.detail",
         target: { entity: "postcodes", recordId: zone.id },
       });
     }
@@ -108,8 +117,9 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
       issues.push({
         id: `zone-no-truck:${zone.id}`,
         severity: "warning",
-        title: `No truck covers ${zone.name}`,
-        detail: "Orders in this zone will never be auto-assigned on the dispatch board.",
+        titleKey: "issues.zoneNoTruck.title",
+        titleValues: { zone: zone.name },
+        detailKey: "issues.zoneNoTruck.detail",
         target: { entity: "zones", recordId: zone.id },
       });
     }
@@ -120,8 +130,9 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
       issues.push({
         id: `truck-no-zone:${truck.id}`,
         severity: "warning",
-        title: `${truck.name} serves no zone`,
-        detail: "Auto-plan will skip this truck, so it stays idle.",
+        titleKey: "issues.truckNoZone.title",
+        titleValues: { truck: truck.name },
+        detailKey: "issues.truckNoZone.detail",
         target: { entity: "trucks", recordId: truck.id },
       });
     }
@@ -129,8 +140,9 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
       issues.push({
         id: `truck-no-slots:${truck.id}`,
         severity: "warning",
-        title: `${truck.name} has no delivery slots`,
-        detail: "Customers cannot book a delivery date on this truck.",
+        titleKey: "issues.truckNoSlots.title",
+        titleValues: { truck: truck.name },
+        detailKey: "issues.truckNoSlots.detail",
         target: { entity: "slots", recordId: truck.id },
       });
     }
@@ -141,8 +153,9 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
       issues.push({
         id: `truck-no-capacity:${truck.id}`,
         severity: "info",
-        title: `${truck.name} has no capacity set`,
-        detail: "Load planning cannot warn when this truck is overbooked.",
+        titleKey: "issues.truckNoCapacity.title",
+        titleValues: { truck: truck.name },
+        detailKey: "issues.truckNoCapacity.detail",
         target: { entity: "trucks", recordId: truck.id },
       });
     }
@@ -154,8 +167,9 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
       issues.push({
         id: `range-inverted:${range.id}`,
         severity: "warning",
-        title: `Postcode range ${range.postcode_start}–${range.postcode_end} is backwards`,
-        detail: "The start is higher than the end, so it matches nothing.",
+        titleKey: "issues.rangeInverted.title",
+        titleValues: { start: range.postcode_start, end: range.postcode_end },
+        detailKey: "issues.rangeInverted.detail",
         target: { entity: "postcodes", recordId: range.zone_id },
       });
     }
@@ -170,8 +184,15 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
     issues.push({
       id: `postcode-overlap:${a.zone_id}:${b.zone_id}`,
       severity: "blocker",
-      title: `${zoneName(a.zone_id)} and ${zoneName(b.zone_id)} claim the same postcodes`,
-      detail: `${a.postcode_start}–${a.postcode_end} overlaps ${b.postcode_start}–${b.postcode_end}. Whichever zone sorts first silently wins.`,
+      titleKey: "issues.postcodeOverlap.title",
+      titleValues: { zoneA: zoneName(a.zone_id), zoneB: zoneName(b.zone_id) },
+      detailKey: "issues.postcodeOverlap.detail",
+      detailValues: {
+        aStart: a.postcode_start,
+        aEnd: a.postcode_end,
+        bStart: b.postcode_start,
+        bEnd: b.postcode_end,
+      },
       target: { entity: "postcodes", recordId: a.zone_id },
     });
   }
@@ -189,8 +210,15 @@ export function findIssues(snapshot: SetupSnapshot): SetupIssue[] {
     issues.push({
       id: `slot-overlap:${a.id}:${b.id}`,
       severity: "warning",
-      title: `${name} has two slots at the same time`,
-      detail: `${a.start_time.slice(0, 5)}–${a.end_time.slice(0, 5)} overlaps ${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}. Capacity is counted twice.`,
+      titleKey: "issues.slotOverlap.title",
+      titleValues: { truck: name },
+      detailKey: "issues.slotOverlap.detail",
+      detailValues: {
+        aStart: a.start_time.slice(0, 5),
+        aEnd: a.end_time.slice(0, 5),
+        bStart: b.start_time.slice(0, 5),
+        bEnd: b.end_time.slice(0, 5),
+      },
       target: { entity: "slots", recordId: a.truck_id },
     });
   }
@@ -202,12 +230,27 @@ export type SearchHit = {
   entity: SetupEntity;
   /** The record to select in the list pane; null selects the entity only. */
   recordId: string | null;
+  /** The record's own name/date — data, never localized. Used when labelKey is unset. */
   label: string;
-  /** Why it matched, shown as secondary text. */
-  context: string;
+  /**
+   * Set when the label itself is a phrase, not just a record name. Relative
+   * to `logistics.setup.search`.
+   */
+  labelKey?: string;
+  labelValues?: Record<string, string>;
+  /** Why it matched, shown as secondary text. Relative to `logistics.setup.search.context`. */
+  contextKey: string;
+  contextValues?: Record<string, string>;
 };
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+/** Keys into `logistics.setup.weekday` / the `weekday` select in search messages, indexed 0 (Sun) through 6 (Sat). */
+const WEEKDAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
+/**
+ * Canonical (locale-independent) abbreviations used only to match the query
+ * against a slot's day — display always goes through WEEKDAY_KEYS instead.
+ */
+const MATCH_WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
 
 /**
  * One box over all seven entities. A bare five-digit number is treated as a
@@ -228,7 +271,8 @@ export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[]
         entity: "trucks",
         recordId: truck.id,
         label: truck.name,
-        context: `Truck · ${truck.code}`,
+        contextKey: "context.truck",
+        contextValues: { code: truck.code },
       });
     }
   }
@@ -239,7 +283,7 @@ export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[]
         entity: "zones",
         recordId: zone.id,
         label: zone.name,
-        context: "Zone",
+        contextKey: "context.zone",
       });
     }
   }
@@ -252,8 +296,11 @@ export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[]
       hits.push({
         entity: "postcodes",
         recordId: zone.id,
-        label: `${q} is in ${zone.name}`,
-        context: `Range ${range.postcode_start}–${range.postcode_end}`,
+        label: `${q} — ${zone.name}`,
+        labelKey: "postcodeMatch",
+        labelValues: { postcode: q, zone: zone.name },
+        contextKey: "context.range",
+        contextValues: { start: range.postcode_start, end: range.postcode_end },
       });
     }
   }
@@ -261,20 +308,24 @@ export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[]
   for (const block of snapshot.blocks) {
     const reason = block.reason ?? "";
     if (!reason.toLowerCase().includes(q) && !block.block_date.includes(q)) continue;
-    const truckName = block.truck_id
-      ? (snapshot.trucks.find((t) => t.id === block.truck_id)?.name ?? "Unknown truck")
-      : "All trucks";
+    const label = reason === "" ? block.block_date : `${block.block_date} · ${reason}`;
+    if (block.truck_id === null) {
+      hits.push({ entity: "blocks", recordId: block.id, label, contextKey: "context.blockedAllTrucks" });
+      continue;
+    }
+    const truck = snapshot.trucks.find((t) => t.id === block.truck_id);
     hits.push({
       entity: "blocks",
       recordId: block.id,
-      label: reason === "" ? block.block_date : `${block.block_date} · ${reason}`,
-      context: `Blocked · ${truckName}`,
+      label,
+      contextKey: truck ? "context.blocked" : "context.blockedUnknownTruck",
+      ...(truck ? { contextValues: { truck: truck.name } } : {}),
     });
   }
 
   for (const bay of snapshot.bays) {
     if (!bay.name.toLowerCase().includes(q)) continue;
-    hits.push({ entity: "bays", recordId: bay.id, label: bay.name, context: "Bay" });
+    hits.push({ entity: "bays", recordId: bay.id, label: bay.name, contextKey: "context.bay" });
   }
 
   if (
@@ -286,7 +337,8 @@ export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[]
       entity: "factory",
       recordId: snapshot.facility.id,
       label: snapshot.facility.name,
-      context: `Factory · ${snapshot.facility.postcode}`,
+      contextKey: "context.factory",
+      contextValues: { postcode: snapshot.facility.postcode },
     });
   }
 
@@ -294,13 +346,18 @@ export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[]
     if (!slot.is_active) continue;
     const truck = liveTrucks.find((t) => t.id === slot.truck_id);
     if (!truck) continue;
-    const label = `${WEEKDAYS[slot.weekday]} ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`;
-    if (!label.toLowerCase().includes(q)) continue;
+    const start = slot.start_time.slice(0, 5);
+    const end = slot.end_time.slice(0, 5);
+    const matchLabel = `${MATCH_WEEKDAYS[slot.weekday]} ${start}–${end}`;
+    if (!matchLabel.toLowerCase().includes(q)) continue;
     hits.push({
       entity: "slots",
       recordId: slot.truck_id,
-      label,
-      context: `Slot · ${truck.name}`,
+      label: matchLabel,
+      labelKey: "slotTime",
+      labelValues: { weekday: WEEKDAY_KEYS[slot.weekday]!, start, end },
+      contextKey: "context.slot",
+      contextValues: { truck: truck.name },
     });
   }
 

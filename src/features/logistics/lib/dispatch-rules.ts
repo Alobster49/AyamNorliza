@@ -16,17 +16,18 @@ export type DispatchDropResolution =
   | { kind: "assign"; truckId: string }
   | { kind: "override"; truckId: string }
   | { kind: "unassign" }
-  | { kind: "blocked"; reason: string };
+  // reasonKey is relative to `logistics.dispatch.blocked`.
+  | { kind: "blocked"; reasonKey: string };
 
 export function resolveDispatchDrop(
   ticket: { status: OrderStatus; assignedTruckId: string | null; runStatus: RunStatus | null },
   target: DispatchDropTarget,
 ): DispatchDropResolution {
   if (ticket.status !== "confirmed" && ticket.status !== "ready") {
-    return { kind: "blocked", reason: "Only confirmed or ready orders can be dispatched." };
+    return { kind: "blocked", reasonKey: "notDispatchable" };
   }
   if (ticket.runStatus === "departed") {
-    return { kind: "blocked", reason: "This order is on a departed run and can no longer be moved." };
+    return { kind: "blocked", reasonKey: "runDeparted" };
   }
 
   if (target.type === "pool") {
@@ -35,10 +36,10 @@ export function resolveDispatchDrop(
 
   if (ticket.assignedTruckId === target.truckId) return { kind: "noop" };
   if (target.departed) {
-    return { kind: "blocked", reason: "That truck has already departed." };
+    return { kind: "blocked", reasonKey: "truckDeparted" };
   }
   if (target.atCapacity) {
-    return { kind: "blocked", reason: "That truck is at its slot capacity for this date." };
+    return { kind: "blocked", reasonKey: "truckAtCapacity" };
   }
   if (!target.compatible) return { kind: "override", truckId: target.truckId };
   return { kind: "assign", truckId: target.truckId };

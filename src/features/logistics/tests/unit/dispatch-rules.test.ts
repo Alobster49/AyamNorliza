@@ -40,7 +40,7 @@ describe("resolveDispatchDrop", () => {
       { status: "confirmed", assignedTruckId: null, runStatus: null },
       truckTarget({ atCapacity: true }),
     );
-    expect(result).toEqual({ kind: "blocked", reason: "That truck is at its slot capacity for this date." });
+    expect(result).toEqual({ kind: "blocked", reasonKey: "truckAtCapacity" });
   });
 
   it("blocks a drop onto a departed truck", () => {
@@ -48,7 +48,7 @@ describe("resolveDispatchDrop", () => {
       { status: "ready", assignedTruckId: null, runStatus: null },
       truckTarget({ departed: true }),
     );
-    expect(result).toEqual({ kind: "blocked", reason: "That truck has already departed." });
+    expect(result).toEqual({ kind: "blocked", reasonKey: "truckDeparted" });
   });
 
   it("blocks moving a ticket whose run has departed", () => {
@@ -56,7 +56,7 @@ describe("resolveDispatchDrop", () => {
       { status: "ready", assignedTruckId: "t-2", runStatus: "departed" },
       truckTarget(),
     );
-    expect(result).toEqual({ kind: "blocked", reason: "This order is on a departed run and can no longer be moved." });
+    expect(result).toEqual({ kind: "blocked", reasonKey: "runDeparted" });
   });
 
   it("blocks tickets that are not confirmed or ready", () => {
@@ -64,7 +64,7 @@ describe("resolveDispatchDrop", () => {
       { status: "pending", assignedTruckId: null, runStatus: null },
       truckTarget(),
     );
-    expect(result).toEqual({ kind: "blocked", reason: "Only confirmed or ready orders can be dispatched." });
+    expect(result).toEqual({ kind: "blocked", reasonKey: "notDispatchable" });
   });
 
   it("unassigns when an assigned ticket is dropped on the pool", () => {

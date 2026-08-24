@@ -515,6 +515,25 @@
         "invalidPostcode": "Enter a 5-digit postcode",
         "coverageCheckFailed": "Failed to check delivery coverage"
       }
+    },
+    "logistics": {
+      "dispatch": {
+        "unauthenticated": "Not authenticated",
+        "orgNotFound": "Organization not found",
+        "forbidden": "You do not have access to dispatch.",
+        "busy": "The board is busy — try that again.",
+        "runDeparted": "That run has already departed.",
+        "invalidStatus": "Only confirmed or ready orders can be dispatched.",
+        "invalidTruck": "That truck is not active in this organization.",
+        "notAssigned": "That order is not on a truck yet.",
+        "notFound": "Order not found.",
+        "invalidAssignInput": "Invalid assignment input",
+        "invalidUnassignInput": "Invalid input",
+        "invalidDepartInput": "Invalid depart input",
+        "departNotFound": "No delivery run exists for this truck on this date.",
+        "departInvalidTransition": "This run cannot depart from its current status.",
+        "internal": "Something went wrong. Please try again."
+      }
     }
   },
   "dashboard": {
@@ -1410,9 +1429,25 @@
         "assignedToast": "{count, plural, one {Assigned # order} other {Assigned # orders}}",
         "assignFailedToast": "Assign failed",
         "departFailedToast": "Depart failed",
-        "noActiveTrucks": "No active trucks in any bay."
+        "noActiveTrucks": "No active trucks in any bay.",
+        "exceptions": {
+          "no_postcode": "Order has no postcode — add one on the order first.",
+          "no_zone_match": "No delivery zone covers this postcode.",
+          "no_covering_truck": "No truck covers this zone today.",
+          "all_trucks_full": "Every covering truck is at its slot capacity."
+        },
+        "reason": {
+          "withSlot": "{zone} · slot {slot} · least loaded",
+          "withoutSlot": "{zone} · least loaded"
+        }
       },
-      "moveNotAllowed": "Move not allowed"
+      "moveNotAllowed": "Move not allowed",
+      "blocked": {
+        "notDispatchable": "Only confirmed or ready orders can be dispatched.",
+        "runDeparted": "This order is on a departed run and can no longer be moved.",
+        "truckDeparted": "That truck has already departed.",
+        "truckAtCapacity": "That truck is at its slot capacity for this date."
+      }
     },
     "facility": {
       "notConfigured": "No facility configured yet.",
@@ -1501,7 +1536,45 @@
         "issuesToFix": "{count, plural, one {# issue to fix} other {# issues to fix}}",
         "blocksCustomerOrders": "{count, plural, one {# blocks customer orders} other {# block customer orders}}",
         "fix": "Fix",
-        "ariaLabel": "Setup readiness"
+        "ariaLabel": "Setup readiness",
+        "issues": {
+          "noFacility": {
+            "title": "No factory address set",
+            "detail": "Dispatch cannot plan routes or print delivery orders without it."
+          },
+          "zoneNoPostcodes": {
+            "title": "{zone} has no postcodes",
+            "detail": "No customer address can be matched to this zone at checkout."
+          },
+          "zoneNoTruck": {
+            "title": "No truck covers {zone}",
+            "detail": "Orders in this zone will never be auto-assigned on the dispatch board."
+          },
+          "truckNoZone": {
+            "title": "{truck} serves no zone",
+            "detail": "Auto-plan will skip this truck, so it stays idle."
+          },
+          "truckNoSlots": {
+            "title": "{truck} has no delivery slots",
+            "detail": "Customers cannot book a delivery date on this truck."
+          },
+          "truckNoCapacity": {
+            "title": "{truck} has no capacity set",
+            "detail": "Load planning cannot warn when this truck is overbooked."
+          },
+          "rangeInverted": {
+            "title": "Postcode range {start}–{end} is backwards",
+            "detail": "The start is higher than the end, so it matches nothing."
+          },
+          "postcodeOverlap": {
+            "title": "{zoneA} and {zoneB} claim the same postcodes",
+            "detail": "{aStart}–{aEnd} overlaps {bStart}–{bEnd}. Whichever zone sorts first silently wins."
+          },
+          "slotOverlap": {
+            "title": "{truck} has two slots at the same time",
+            "detail": "{aStart}–{aEnd} overlaps {bStart}–{bEnd}. Capacity is counted twice."
+          }
+        }
       },
       "archived": "Archived",
       "pickRecordPrompt": "Pick a record on the left, or add a new one.",
@@ -1559,7 +1632,22 @@
       },
       "zonesServed": "Zones served",
       "savedAutomatically": "Saved automatically.",
-      "noZonesYet": "No zones yet."
+      "noZonesYet": "No zones yet.",
+      "search": {
+        "postcodeMatch": "{postcode} is in {zone}",
+        "slotTime": "{weekday, select, sun {Sun} mon {Mon} tue {Tue} wed {Wed} thu {Thu} fri {Fri} sat {Sat} other {}} {start}–{end}",
+        "context": {
+          "truck": "Truck · {code}",
+          "zone": "Zone",
+          "range": "Range {start}–{end}",
+          "blocked": "Blocked · {truck}",
+          "blockedAllTrucks": "Blocked · All trucks",
+          "blockedUnknownTruck": "Blocked · Unknown truck",
+          "bay": "Bay",
+          "factory": "Factory · {postcode}",
+          "slot": "Slot · {truck}"
+        }
+      }
     },
     "delivery": {
       "title": "Delivery Setup",

@@ -144,6 +144,7 @@ export function SetupConsole({
   const tEntities = useTranslations("logistics.setup.entities");
   const tEntitiesSingular = useTranslations("logistics.setup.entitiesSingular");
   const tWeekday = useTranslations("logistics.setup.weekday");
+  const tSearch = useTranslations("logistics.setup.search");
   const tCommon = useTranslations("common");
 
   const issues = useMemo(() => findIssues(snapshot), [snapshot]);
@@ -452,8 +453,12 @@ export function SetupConsole({
                       setQuery("");
                     }}
                   >
-                    <span className="text-sm font-medium">{hit.label}</span>
-                    <span className="text-xs text-muted-foreground">{hit.context}</span>
+                    <span className="text-sm font-medium">
+                      {hit.labelKey ? tSearch(hit.labelKey, hit.labelValues) : hit.label}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {tSearch(hit.contextKey, hit.contextValues)}
+                    </span>
                   </button>
                 </li>
               ))}

@@ -515,6 +515,25 @@
         "invalidPostcode": "Masukkan poskod 5 digit",
         "coverageCheckFailed": "Gagal menyemak liputan penghantaran"
       }
+    },
+    "logistics": {
+      "dispatch": {
+        "unauthenticated": "Tidak disahkan",
+        "orgNotFound": "Organisasi tidak dijumpai",
+        "forbidden": "Anda tiada akses kepada penghantaran keluar.",
+        "busy": "Papan sedang sibuk — cuba lagi.",
+        "runDeparted": "Trip itu sudah bertolak.",
+        "invalidStatus": "Hanya order yang disahkan atau sedia boleh dihantar keluar.",
+        "invalidTruck": "Trak itu tidak aktif dalam organisasi ini.",
+        "notAssigned": "Order itu belum berada pada mana-mana trak.",
+        "notFound": "Order tidak dijumpai.",
+        "invalidAssignInput": "Input penetapan tidak sah",
+        "invalidUnassignInput": "Input tidak sah",
+        "invalidDepartInput": "Input bertolak tidak sah",
+        "departNotFound": "Tiada trip penghantaran wujud untuk trak ini pada tarikh ini.",
+        "departInvalidTransition": "Trip ini tidak boleh bertolak daripada status semasa.",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      }
     }
   },
   "dashboard": {
@@ -1410,9 +1429,25 @@
         "assignedToast": "{count, plural, other {# pesanan ditugaskan}}",
         "assignFailedToast": "Tugasan gagal",
         "departFailedToast": "Berlepas gagal",
-        "noActiveTrucks": "Tiada trak aktif di mana-mana teluk."
+        "noActiveTrucks": "Tiada trak aktif di mana-mana teluk.",
+        "exceptions": {
+          "no_postcode": "Order tiada poskod — tambah satu pada order dahulu.",
+          "no_zone_match": "Tiada zon penghantaran meliputi poskod ini.",
+          "no_covering_truck": "Tiada trak meliputi zon ini hari ini.",
+          "all_trucks_full": "Setiap trak yang meliputi zon ini sudah pada kapasiti slotnya."
+        },
+        "reason": {
+          "withSlot": "{zone} · slot {slot} · muatan paling ringan",
+          "withoutSlot": "{zone} · muatan paling ringan"
+        }
       },
-      "moveNotAllowed": "Pergerakan tidak dibenarkan"
+      "moveNotAllowed": "Pergerakan tidak dibenarkan",
+      "blocked": {
+        "notDispatchable": "Hanya order yang disahkan atau sedia boleh dihantar keluar.",
+        "runDeparted": "Order ini berada pada trip yang sudah bertolak dan tidak boleh dipindah lagi.",
+        "truckDeparted": "Trak itu sudah bertolak.",
+        "truckAtCapacity": "Trak itu sudah pada kapasiti slotnya untuk tarikh ini."
+      }
     },
     "facility": {
       "notConfigured": "Kilang belum dikonfigurasi.",
@@ -1501,7 +1536,45 @@
         "issuesToFix": "{count, plural, other {# isu untuk dibetulkan}}",
         "blocksCustomerOrders": "{count, plural, other {# menyekat pesanan pelanggan}}",
         "fix": "Betulkan",
-        "ariaLabel": "Kesediaan persediaan"
+        "ariaLabel": "Kesediaan persediaan",
+        "issues": {
+          "noFacility": {
+            "title": "Tiada alamat kilang ditetapkan",
+            "detail": "Penghantaran keluar tidak boleh merancang laluan atau mencetak order penghantaran tanpanya."
+          },
+          "zoneNoPostcodes": {
+            "title": "{zone} tiada poskod",
+            "detail": "Tiada alamat pelanggan boleh dipadankan dengan zon ini semasa checkout."
+          },
+          "zoneNoTruck": {
+            "title": "Tiada trak meliputi {zone}",
+            "detail": "Order dalam zon ini tidak akan pernah diberikan trak secara automatik pada papan penghantaran keluar."
+          },
+          "truckNoZone": {
+            "title": "{truck} tidak melayani mana-mana zon",
+            "detail": "Auto-rancang akan melangkau trak ini, jadi ia terus terbiar."
+          },
+          "truckNoSlots": {
+            "title": "{truck} tiada slot penghantaran",
+            "detail": "Pelanggan tidak boleh tempah tarikh penghantaran pada trak ini."
+          },
+          "truckNoCapacity": {
+            "title": "{truck} tiada kapasiti ditetapkan",
+            "detail": "Perancangan muatan tidak boleh beri amaran apabila trak ini terlebih muatan."
+          },
+          "rangeInverted": {
+            "title": "Julat poskod {start}–{end} tersalah arah",
+            "detail": "Nombor mula lebih tinggi daripada nombor akhir, jadi ia tidak memadankan apa-apa."
+          },
+          "postcodeOverlap": {
+            "title": "{zoneA} dan {zoneB} mendakwa poskod yang sama",
+            "detail": "{aStart}–{aEnd} bertindih dengan {bStart}–{bEnd}. Zon mana-mana yang disusun dahulu menang secara senyap."
+          },
+          "slotOverlap": {
+            "title": "{truck} ada dua slot pada masa yang sama",
+            "detail": "{aStart}–{aEnd} bertindih dengan {bStart}–{bEnd}. Kapasiti dikira dua kali."
+          }
+        }
       },
       "archived": "Diarkibkan",
       "pickRecordPrompt": "Pilih rekod di sebelah kiri, atau tambah rekod baharu.",
@@ -1559,7 +1632,22 @@
       },
       "zonesServed": "Zon dilayan",
       "savedAutomatically": "Disimpan secara automatik.",
-      "noZonesYet": "Belum ada zon."
+      "noZonesYet": "Belum ada zon.",
+      "search": {
+        "postcodeMatch": "{postcode} berada dalam {zone}",
+        "slotTime": "{weekday, select, sun {Ahd} mon {Isn} tue {Sel} wed {Rab} thu {Kha} fri {Jum} sat {Sab} other {}} {start}–{end}",
+        "context": {
+          "truck": "Trak · {code}",
+          "zone": "Zon",
+          "range": "Julat {start}–{end}",
+          "blocked": "Disekat · {truck}",
+          "blockedAllTrucks": "Disekat · Semua trak",
+          "blockedUnknownTruck": "Disekat · Trak tidak diketahui",
+          "bay": "Petak",
+          "factory": "Kilang · {postcode}",
+          "slot": "Slot · {truck}"
+        }
+      }
     },
     "delivery": {
       "title": "Persediaan Penghantaran",

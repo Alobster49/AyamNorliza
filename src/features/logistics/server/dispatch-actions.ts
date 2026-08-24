@@ -11,26 +11,42 @@ import type { DispatchBoardData, DispatchTicket, DispatchTruck, Facility, Bay, Z
 
 type DispatchErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
 
-function err<T = never>(code: DispatchErrorCode, message: string): ActionResult<T> {
-  return { ok: false, code, message };
+function err<T = never>(code: DispatchErrorCode, message: string, messageKey?: string): ActionResult<T> {
+  return { ok: false, code, message, ...(messageKey ? { messageKey } : {}) };
 }
 
 function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };
 }
 
+/**
+ * `OrderPermissionError.message` is prose from `guards.ts`, shared with
+ * every order/logistics/driver action (mirrors `permissionMessageKey` in
+ * order-actions.ts / driver-actions.ts).
+ */
+function dispatchPermissionMessageKey(message: string): string {
+  if (message === "Not authenticated") return "errors.logistics.dispatch.unauthenticated";
+  if (message === "Organization not found") return "errors.logistics.dispatch.orgNotFound";
+  return "errors.logistics.dispatch.forbidden";
+}
+
 async function guardDispatch(
   organizationSlug: string,
 ): Promise<
   | { ok: true; orgId: string; userId: string }
-  | { ok: false; code: "forbidden"; message: string }
+  | { ok: false; code: "forbidden"; message: string; messageKey: string }
 > {
   try {
     const ctx = await requireOrgRole(organizationSlug, DISPATCH_ROLES);
     return { ok: true, orgId: ctx.orgId, userId: ctx.userId };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
-      return { ok: false, code: "forbidden", message: e.message };
+      return {
+        ok: false,
+        code: "forbidden",
+        message: e.message,
+        messageKey: dispatchPermissionMessageKey(e.message),
+      };
     }
     throw e;
   }
@@ -39,15 +55,35 @@ async function guardDispatch(
 /** Maps RPC P0001 message codes to friendly ActionResults. */
 function mapRpcError<T = void>(message: string): ActionResult<T> {
   if (message.includes("deadlock detected") || message.includes("40P01")) {
-    return err("conflict", "The board is busy — try that again.");
+    return err("conflict", "The board is busy — try that again.", "errors.logistics.dispatch.busy");
   }
-  if (message.includes("run_departed")) return err("conflict", "That run has already departed.");
-  if (message.includes("invalid_status")) return err("conflict", "Only confirmed or ready orders can be dispatched.");
-  if (message.includes("invalid_truck")) return err("conflict", "That truck is not active in this organization.");
-  if (message.includes("not_assigned")) return err("conflict", "That order is not on a truck yet.");
-  if (message.includes("forbidden")) return err("forbidden", "You do not have access to dispatch.");
-  if (message.includes("not_found")) return err("not_found", "Order not found.");
-  return err("internal", message);
+  if (message.includes("run_departed")) {
+    return err("conflict", "That run has already departed.", "errors.logistics.dispatch.runDeparted");
+  }
+  if (message.includes("invalid_status")) {
+    return err(
+      "conflict",
+      "Only confirmed or ready orders can be dispatched.",
+      "errors.logistics.dispatch.invalidStatus",
+    );
+  }
+  if (message.includes("invalid_truck")) {
+    return err(
+      "conflict",
+      "That truck is not active in this organization.",
+      "errors.logistics.dispatch.invalidTruck",
+    );
+  }
+  if (message.includes("not_assigned")) {
+    return err("conflict", "That order is not on a truck yet.", "errors.logistics.dispatch.notAssigned");
+  }
+  if (message.includes("forbidden")) {
+    return err("forbidden", "You do not have access to dispatch.", "errors.logistics.dispatch.forbidden");
+  }
+  if (message.includes("not_found")) {
+    return err("not_found", "Order not found.", "errors.logistics.dispatch.notFound");
+  }
+  return err("internal", message, "errors.logistics.dispatch.internal");
 }
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -126,7 +162,9 @@ export async function assignOrder(
   if (!guard.ok) return guard;
 
   const parsed = AssignInputSchema.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid assignment input");
+  if (!parsed.success) {
+    return err("validation", "Invalid assignment input", "errors.logistics.dispatch.invalidAssignInput");
+  }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("dispatch_assign_order", {
@@ -150,7 +188,9 @@ export async function unassignOrder(
   if (!guard.ok) return guard;
 
   const parsed = UnassignInputSchema.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input");
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.logistics.dispatch.invalidUnassignInput");
+  }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("dispatch_unassign_order", {
@@ -260,7 +300,9 @@ export async function departTruck(
   if (!guard.ok) return guard;
 
   const parsed = DepartInputSchema.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid depart input");
+  if (!parsed.success) {
+    return err("validation", "Invalid depart input", "errors.logistics.dispatch.invalidDepartInput");
+  }
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc("dispatch_depart_truck", {
@@ -269,10 +311,18 @@ export async function departTruck(
   });
   if (error) {
     if (error.message.includes("not_found")) {
-      return err("not_found", "No delivery run exists for this truck on this date.");
+      return err(
+        "not_found",
+        "No delivery run exists for this truck on this date.",
+        "errors.logistics.dispatch.departNotFound",
+      );
     }
     if (error.message.includes("invalid_transition")) {
-      return err("conflict", "This run cannot depart from its current status.");
+      return err(
+        "conflict",
+        "This run cannot depart from its current status.",
+        "errors.logistics.dispatch.departInvalidTransition",
+      );
     }
     return mapRpcError(error.message);
   }

@@ -9,17 +9,27 @@ import type { DispatchBoardData, DispatchTicket } from "../types";
 import { suggestTruck, type AssignmentContext, type AssignmentResult } from "./assignment";
 import { buildBoardView } from "./dispatch-board-model";
 
-export type PlanProposal = { orderId: string; truckId: string; zoneId: string; reason: string };
-export type ExceptionKind = Extract<AssignmentResult, { ok: false }>["reason"];
-export type PlanException = { orderId: string; kind: ExceptionKind; detail: string };
-export type PlanDraft = { proposals: PlanProposal[]; exceptions: PlanException[]; poolCount: number };
-
-const EXCEPTION_DETAIL: Record<ExceptionKind, string> = {
-  no_postcode: "Order has no postcode — add one on the order first.",
-  no_zone_match: "No delivery zone covers this postcode.",
-  no_covering_truck: "No truck covers this zone today.",
-  all_trucks_full: "Every covering truck is at its slot capacity.",
+/**
+ * `zoneName` is the seller's own zone record name — data, never localized.
+ * `slotTime` (HH:MM, or null when the order has no slot) plus `zoneName` let
+ * the component build the "why this truck" reason via
+ * `logistics.dispatch.plan.reason.withSlot` / `.withoutSlot`.
+ */
+export type PlanProposal = {
+  orderId: string;
+  truckId: string;
+  zoneId: string;
+  zoneName: string;
+  slotTime: string | null;
 };
+export type ExceptionKind = Extract<AssignmentResult, { ok: false }>["reason"];
+/**
+ * `detailKey` is relative to `logistics.dispatch.plan` — always
+ * `exceptions.${kind}`, kept as a field (rather than derived in the
+ * component) so callers don't need to know the namespace shape.
+ */
+export type PlanException = { orderId: string; kind: ExceptionKind; detailKey: string };
+export type PlanDraft = { proposals: PlanProposal[]; exceptions: PlanException[]; poolCount: number };
 
 /** Sum of recorded line weights (final wins over warehouse); null when nothing is weighed yet. */
 export function orderWeightKg(ticket: DispatchTicket): number | null {
@@ -72,12 +82,11 @@ export function draftPlan(data: DispatchBoardData, date: string): PlanDraft {
         orderId: o.id,
         truckId: result.truckId,
         zoneId: result.zoneId,
-        reason: [zoneNameById.get(result.zoneId), slot ? `slot ${slot.slice(0, 5)}` : null, "least loaded"]
-          .filter(Boolean)
-          .join(" · "),
+        zoneName: zoneNameById.get(result.zoneId) ?? "",
+        slotTime: slot ? slot.slice(0, 5) : null,
       });
     } else {
-      exceptions.push({ orderId: o.id, kind: result.reason, detail: EXCEPTION_DETAIL[result.reason] });
+      exceptions.push({ orderId: o.id, kind: result.reason, detailKey: `exceptions.${result.reason}` });
     }
   }
   return { proposals, exceptions, poolCount: pool.length };

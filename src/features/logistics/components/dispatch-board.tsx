@@ -59,6 +59,7 @@ export function DispatchBoard({
   const t = useTranslations("logistics.dispatch");
   const tCommon = useTranslations("common");
   const tLogistics = useTranslations("logistics");
+  const tRoot = useTranslations();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const view = useMemo(() => buildBoardView(data, date), [data, date]);
@@ -74,10 +75,14 @@ export function DispatchBoard({
     [toast, tLogistics],
   );
 
-  const runAction = (action: Promise<{ ok: boolean; message?: string }>) => {
+  const runAction = (action: Promise<{ ok: boolean; message?: string; messageKey?: string }>) => {
     startTransition(async () => {
       const result = await action;
-      if (!result.ok) showToast(result.message ?? tLogistics("actionFailed"));
+      if (!result.ok) {
+        showToast(
+          result.messageKey ? tRoot(result.messageKey as never) : (result.message ?? tLogistics("actionFailed")),
+        );
+      }
       refetch();
     });
   };
@@ -120,7 +125,7 @@ export function DispatchBoard({
 
     if (resolution.kind === "noop") return;
     if (resolution.kind === "blocked") {
-      showToast(resolution.reason, t("moveNotAllowed"));
+      showToast(t(`blocked.${resolution.reasonKey}` as never), t("moveNotAllowed"));
       return;
     }
     if (resolution.kind === "unassign") {
@@ -157,7 +162,7 @@ export function DispatchBoard({
       const result = await departTruck(organizationSlug, { truckId, date });
       if (!result.ok) {
         setDepartingTruckId(null);
-        showToast(result.message);
+        showToast(result.messageKey ? tRoot(result.messageKey as never) : result.message);
         return;
       }
       // Let the slide-out animation play before the board re-renders the

@@ -127,6 +127,7 @@ describe("assignOrder", () => {
       ok: false,
       code: "conflict",
       message: "That run has already departed.",
+      messageKey: "errors.logistics.dispatch.runDeparted",
     });
   });
 
@@ -138,7 +139,12 @@ describe("assignOrder", () => {
       truckId: "5b1f5c1e-0000-4000-8000-000000000002",
     });
 
-    expect(result).toEqual({ ok: false, code: "forbidden", message: expect.any(String) });
+    expect(result).toEqual({
+      ok: false,
+      code: "forbidden",
+      message: expect.any(String),
+      messageKey: expect.any(String),
+    });
   });
 });
 
@@ -198,6 +204,7 @@ describe("departTruck", () => {
       ok: false,
       code: "not_found",
       message: "No delivery run exists for this truck on this date.",
+      messageKey: "errors.logistics.dispatch.departNotFound",
     });
     expect(supabase.rpc).toHaveBeenCalledWith("dispatch_depart_truck", {
       p_truck: "5b1f5c1e-0000-4000-8000-000000000002",
@@ -234,6 +241,7 @@ describe("departTruck", () => {
       ok: false,
       code: "conflict",
       message: "This run cannot depart from its current status.",
+      messageKey: "errors.logistics.dispatch.departInvalidTransition",
     });
   });
 });
@@ -311,6 +319,7 @@ describe("setOrderLoaded", () => {
       ok: false,
       code: "conflict",
       message: "That run has already departed.",
+      messageKey: "errors.logistics.dispatch.runDeparted",
     });
   });
 });
