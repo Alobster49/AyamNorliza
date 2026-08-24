@@ -19,7 +19,7 @@ import {
 import type { OrderListItem, OrderStatus, OrderWithItems } from "@/features/orders/types";
 import { ORDER_STATUSES } from "@/features/orders/types";
 import { resolveDrop } from "@/features/orders/lib/board-rules";
-import { isAtRisk } from "@/features/orders/lib/board-view-model";
+import { classifyDropTarget, isAtRisk, type DropTarget } from "@/features/orders/lib/board-view-model";
 import { getOrderDetail, confirmOrder } from "@/features/orders/server/order-actions";
 import { OrderCard, OrderCardContent } from "./order-card";
 import {
@@ -269,53 +269,60 @@ export function OrdersBoard({
         onDragCancel={() => setActiveOrder(null)}
       >
         <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
-          {ORDER_STATUSES.map((status) => (
-            <BoardColumn
-              key={status}
-              status={status}
-              orders={orders.filter((o) => o.status === status)}
-              onOpenOrder={(id) => router.push(`/${organizationSlug}/orders/${id}`)}
-              onNewOrder={() => router.push(`/${organizationSlug}/orders/new`)}
-              cardAriaLabel={cardAriaLabel}
-              cardRisk={cardRisk}
-              cardActions={cardActions}
-              headerExtra={
-                status === "pending" ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 px-2 text-xs"
-                    disabled={bulkBusy}
-                    onClick={() => {
-                      setSelectMode((v) => !v);
-                      setSelected(new Set());
-                    }}
-                  >
-                    {selectMode ? t("bulk.exit") : t("bulk.select")}
-                  </Button>
-                ) : undefined
-              }
-              renderSelectableCard={
-                status === "pending" && selectMode
-                  ? (order) => (
-                      <label key={order.id} className="flex cursor-pointer items-start gap-2">
-                        <input
-                          type="checkbox"
-                          className="mt-3 h-4 w-4 accent-primary"
-                          checked={selected.has(order.id)}
-                          disabled={bulkBusy}
-                          onChange={() => toggleSelected(order.id)}
-                          aria-label={order.customer?.name ?? tCard("unknownCustomer")}
-                        />
-                        <div className="flex-1">
-                          <OrderCardContent order={order} risk={cardRisk(order)} />
-                        </div>
-                      </label>
-                    )
-                  : undefined
-              }
-            />
-          ))}
+          {ORDER_STATUSES.map((status) => {
+            const dropTarget = activeOrder
+              ? classifyDropTarget(activeOrder.status, status, callerRole)
+              : null;
+            return (
+              <BoardColumn
+                key={status}
+                status={status}
+                orders={orders.filter((o) => o.status === status)}
+                onOpenOrder={(id) => router.push(`/${organizationSlug}/orders/${id}`)}
+                onNewOrder={() => router.push(`/${organizationSlug}/orders/new`)}
+                cardAriaLabel={cardAriaLabel}
+                cardRisk={cardRisk}
+                cardActions={cardActions}
+                dropTarget={dropTarget}
+                hintText={dropTarget?.hintKey ? tRoot(dropTarget.hintKey as never) : null}
+                headerExtra={
+                  status === "pending" ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs"
+                      disabled={bulkBusy}
+                      onClick={() => {
+                        setSelectMode((v) => !v);
+                        setSelected(new Set());
+                      }}
+                    >
+                      {selectMode ? t("bulk.exit") : t("bulk.select")}
+                    </Button>
+                  ) : undefined
+                }
+                renderSelectableCard={
+                  status === "pending" && selectMode
+                    ? (order) => (
+                        <label key={order.id} className="flex cursor-pointer items-start gap-2">
+                          <input
+                            type="checkbox"
+                            className="mt-3 h-4 w-4 accent-primary"
+                            checked={selected.has(order.id)}
+                            disabled={bulkBusy}
+                            onChange={() => toggleSelected(order.id)}
+                            aria-label={order.customer?.name ?? tCard("unknownCustomer")}
+                          />
+                          <div className="flex-1">
+                            <OrderCardContent order={order} risk={cardRisk(order)} />
+                          </div>
+                        </label>
+                      )
+                    : undefined
+                }
+              />
+            );
+          })}
         </div>
         <DragOverlay>
           {activeOrder ? (
@@ -380,6 +387,8 @@ function BoardColumn({
   cardAriaLabel,
   cardRisk,
   cardActions,
+  dropTarget,
+  hintText,
   headerExtra,
   renderSelectableCard,
 }: {
@@ -390,6 +399,8 @@ function BoardColumn({
   cardAriaLabel: (order: OrderListItem) => string;
   cardRisk: (order: OrderListItem) => "overdue" | "dueToday" | null;
   cardActions: (order: OrderListItem) => React.ReactNode;
+  dropTarget: DropTarget | null;
+  hintText: string | null;
   headerExtra?: React.ReactNode;
   renderSelectableCard?: (order: OrderListItem) => React.ReactNode;
 }) {
@@ -404,7 +415,16 @@ function BoardColumn({
       aria-label={statusLabel}
       className={
         "flex h-[calc(100vh-10rem)] w-72 shrink-0 snap-center flex-col rounded-xl border bg-muted/40 " +
-        (isOver ? "ring-2 ring-primary/40" : "")
+        "transition-[opacity,transform,box-shadow] duration-150 motion-reduce:transition-none " +
+        (dropTarget?.mode === "invite"
+          ? isOver
+            ? "ring-2 ring-primary bg-primary/10 scale-[1.01] "
+            : "ring-2 ring-primary/50 bg-primary/5 "
+          : dropTarget?.mode === "decline"
+            ? "opacity-50 saturate-50 "
+            : isOver
+              ? "ring-2 ring-primary/40 "
+              : "")
       }
     >
       <header className="flex items-center gap-2 px-3 py-2.5">
@@ -413,17 +433,23 @@ function BoardColumn({
         <Badge variant="secondary" className="text-[10px]">
           {orders.length}
         </Badge>
-        {headerExtra}
-        {status === "pending" && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="ml-auto h-9 w-9"
-            onClick={onNewOrder}
-            aria-label={t("addToPending")}
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </Button>
+        {dropTarget?.mode === "decline" && hintText ? (
+          <span className="ml-auto text-[10px] font-medium text-muted-foreground">{hintText}</span>
+        ) : (
+          <>
+            {headerExtra}
+            {status === "pending" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="ml-auto h-9 w-9"
+                onClick={onNewOrder}
+                aria-label={t("addToPending")}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </>
         )}
       </header>
       <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">
