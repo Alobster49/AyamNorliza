@@ -575,6 +575,9 @@ declare const messages: {
       "30d": "30 days",
       "90d": "90 days",
       "custom": "Custom",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
       "vsPrevious": "vs previous period"
     },
     "kpi": {
@@ -639,6 +642,16 @@ declare const messages: {
         "slotFill": "Slot fill",
         "byZone": "Failures by zone"
       }
+    },
+    "topLists": {
+      "title": "Top performers",
+      "products": "Products",
+      "customers": "Customers",
+      "zones": "Zones",
+      "name": "Name",
+      "revenue": "Revenue",
+      "orders": "Orders",
+      "kg": "Kg"
     }
   },
   "roles": {

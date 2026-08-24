@@ -20,6 +20,7 @@ import { FunnelCard } from "./funnel-card";
 import { InsightsRow } from "./insights-row";
 import { TodayStrip } from "./today-strip";
 import { AdminPanel } from "./admin-panel";
+import { TopLists } from "./top-lists";
 
 type Props = {
   organizationSlug: string;
@@ -112,11 +113,22 @@ export function AnalyticsDashboard({
     applyRange(resolveRange(next, timeZone));
   }
 
+  function onCustom(next: { from: string; to: string }) {
+    setPreset("custom");
+    applyRange(next);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-xl font-semibold">{t("title")}</h1>
-        <RangePicker active={preset} onSelect={onPreset} disabled={isPending} />
+        <RangePicker
+          active={preset}
+          range={range}
+          onSelect={onPreset}
+          onCustom={onCustom}
+          disabled={isPending}
+        />
       </div>
       {salesError || !salesVm ? (
         <SectionError />
@@ -127,6 +139,7 @@ export function AnalyticsDashboard({
             <RevenueChart series={salesVm.series} />
             <FunnelCard vm={salesVm} />
           </div>
+          <TopLists vm={salesVm} />
         </>
       )}
       {insightsError || !insightsVm ? <SectionError /> : <InsightsRow vm={insightsVm} />}

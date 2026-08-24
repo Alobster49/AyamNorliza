@@ -572,6 +572,9 @@
       "30d": "30 hari",
       "90d": "90 hari",
       "custom": "Julat sendiri",
+      "from": "Dari",
+      "to": "Hingga",
+      "apply": "Guna",
       "vsPrevious": "berbanding tempoh sebelumnya"
     },
     "kpi": {
@@ -636,6 +639,16 @@
         "slotFill": "Kepenuhan slot",
         "byZone": "Kegagalan ikut zon"
       }
+    },
+    "topLists": {
+      "title": "Prestasi terbaik",
+      "products": "Produk",
+      "customers": "Pelanggan",
+      "zones": "Zon",
+      "name": "Nama",
+      "revenue": "Jualan",
+      "orders": "Pesanan",
+      "kg": "Kg"
     }
   },
   "roles": {
