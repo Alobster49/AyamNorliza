@@ -91,6 +91,20 @@ declare const messages: {
       "planned": "In the yard",
       "departed": "On the road",
       "completed": "Back in"
+    },
+    "delivery": {
+      "failureReason": {
+        "shopClosed": "Shop closed",
+        "rejected": "Customer rejected the goods",
+        "noCash": "No cash on hand",
+        "wrongAddress": "Wrong address",
+        "other": "Something else"
+      },
+      "nextAction": {
+        "retryToday": "Retry at the end of the run",
+        "moveTomorrow": "Move to tomorrow",
+        "returnToYard": "Return to the yard"
+      }
     }
   },
   "buyer": {
@@ -441,6 +455,13 @@ declare const messages: {
         "orgNotFound": "Organization not found",
         "forbidden": "You do not have access to this feature",
         "loadFailed": "Failed to load the run",
+        "internal": "Something went wrong. Please try again."
+      },
+      "stop": {
+        "forbidden": "You do not have permission to do that.",
+        "notDeparted": "This run has not left the yard yet.",
+        "invalidStatus": "This order is not in the right status for that action.",
+        "invalidAmount": "Cash collected cannot be negative.",
         "internal": "Something went wrong. Please try again."
       }
     }
@@ -1098,6 +1119,78 @@ declare const messages: {
         "wholeNumberPieces": "Piece quantities must be whole numbers.",
         "invalidSizeRange": "Enter a valid size range for every line.",
         "orderCreated": "Order created"
+      }
+    },
+    "driverDeck": {
+      "truckFallback": "Truck",
+      "header": {
+        "stopOf": "Stop {sequence} of {total}",
+        "runFinished": "Run finished",
+        "cash": "Cash",
+        "remaining": "{count, plural, one {# left} other {# left}}",
+        "toSortOut": "{count, plural, one {# to sort out} other {# to sort out}}"
+      },
+      "finished": {
+        "title": "Every stop is done.",
+        "delivered": "{count, plural, one {# delivered} other {# delivered}}",
+        "couldNotDeliver": "{count, plural, one {# could not be delivered} other {# could not be delivered}}",
+        "wrapUp": "Head back to the yard and hand in {amount}."
+      },
+      "retryLabel": "Retry · {reason}",
+      "atDoor": "At the door",
+      "dwellMinutes": "{count, plural, one {# min} other {# min}}",
+      "itemCount": "{count, plural, one {# item} other {# items}}",
+      "actions": {
+        "call": "Call",
+        "navigate": "Navigate",
+        "whatsapp": "WhatsApp",
+        "imAtDoor": "I'm at the door",
+        "delivered": "Delivered",
+        "cantDeliver": "Can't deliver"
+      },
+      "next": {
+        "label": "Next"
+      },
+      "wholeRun": {
+        "summary": "Whole run · {delivered}/{total} done"
+      },
+      "stopStatus": {
+        "dropped": "Dropped",
+        "failed": "Failed",
+        "cancelled": "Cancelled",
+        "hereNow": "Here now",
+        "toDo": "To do"
+      },
+      "back": "Back",
+      "deliverSheet": {
+        "title": "Proof of delivery",
+        "subtitle": "{name} · all of this is optional",
+        "receivedByLabel": "Received by",
+        "receivedByPlaceholder": "Name of whoever took it",
+        "cashLabel": "Cash collected",
+        "photoLabel": "Photo at the door",
+        "photoUploading": "Uploading…",
+        "photoReplace": "Photo attached · replace",
+        "photoTake": "Take a photo",
+        "confirm": "Confirm delivery"
+      },
+      "failSheet": {
+        "subtitle": "{name} · the order stays open, the office is told now",
+        "thenWhat": "Then what",
+        "noteLabel": "Anything the office should know",
+        "notePlaceholder": "Gate locked, guard said back at 3pm",
+        "report": "Report and move on"
+      },
+      "toast": {
+        "refreshFailedTitle": "Could not refresh the run",
+        "arriveFailedTitle": "Could not record arrival",
+        "photoFailedTitle": "Photo did not upload",
+        "cashInvalidTitle": "Check the cash amount",
+        "cashInvalidDescription": "Enter a number, or leave it blank.",
+        "deliverFailedTitle": "Could not record the delivery",
+        "deliveredTitle": "Delivered to {name}",
+        "failFailedTitle": "Could not report the stop",
+        "reportedTitle": "Reported to the office"
       }
     }
   }

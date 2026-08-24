@@ -1,10 +1,11 @@
 /**
- * Key-assertion tests for `getDriverRun` in
- * `src/features/orders/server/driver-actions.ts` — the one action in this
- * file consumed by a Task 5-converted surface (`/drive/[organizationSlug]/page.tsx`).
- * `arriveStop`/`deliverStop`/`failStop` stay prose-only: their only consumer,
- * `driver-deck.tsx`, is untouched Phase 3 scope (see the SCOPE CARE note in
- * the Task 5 brief), so they're intentionally not covered here.
+ * Key-assertion tests for `src/features/orders/server/driver-actions.ts`.
+ *
+ * `getDriverRun` is the action consumed by the Task 5-converted
+ * `/drive/[organizationSlug]/page.tsx`. `arriveStop`/`deliverStop`/`failStop`
+ * were prose-only pending `driver-deck.tsx`'s own conversion (Task 3 of the
+ * Phase 3 seller clean-file batch); now that driver-deck.tsx is converted,
+ * these three cover the `errors.drive.stop.*` messageKey they hand back.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -23,7 +24,7 @@ vi.mock("../../server/guards", async () => {
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireOrgRole, OrderPermissionError } from "../../server/guards";
-import { getDriverRun } from "../../server/driver-actions";
+import { getDriverRun, arriveStop, deliverStop, failStop } from "../../server/driver-actions";
 
 function chain(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {};
@@ -41,6 +42,23 @@ function mockSupabase(runsResult: { data: unknown; error: unknown } = { data: []
     supabase as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
   );
   return supabase;
+}
+
+function mockSupabaseRpc(rpcResult: { error: { message: string } | null }) {
+  const supabase = { rpc: vi.fn(() => Promise.resolve(rpcResult)) };
+  vi.mocked(createSupabaseServerClient).mockResolvedValue(
+    supabase as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  );
+  return supabase;
+}
+
+function mockDriverGuard() {
+  vi.mocked(requireOrgRole).mockResolvedValue({
+    orgId: "org-1",
+    userId: "user-1",
+    role: "driver",
+    timeZone: "Asia/Kuala_Lumpur",
+  });
 }
 
 beforeEach(() => {
@@ -90,5 +108,97 @@ describe("getDriverRun", () => {
     const result = await getDriverRun("ayam-norliza-pilot");
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data.run).toBeNull();
+  });
+});
+
+describe("arriveStop", () => {
+  it("returns drive.run.forbidden when the guard rejects the caller", async () => {
+    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError());
+    const result = await arriveStop("ayam-norliza-pilot", "order-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.forbidden");
+  });
+
+  it("returns drive.stop.forbidden when the RPC rejects the record (not this driver's stop)", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "forbidden" } });
+    const result = await arriveStop("ayam-norliza-pilot", "order-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.forbidden");
+  });
+
+  it("returns drive.stop.notDeparted when the run hasn't left the yard", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "run_not_departed" } });
+    const result = await arriveStop("ayam-norliza-pilot", "order-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.notDeparted");
+  });
+
+  it("returns drive.stop.internal for an unmapped RPC error code", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "not_found" } });
+    const result = await arriveStop("ayam-norliza-pilot", "order-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.internal");
+  });
+});
+
+describe("deliverStop", () => {
+  it("returns drive.stop.invalidAmount without calling the RPC when cash is negative", async () => {
+    mockDriverGuard();
+    const supabase = mockSupabaseRpc({ error: null });
+    const result = await deliverStop("ayam-norliza-pilot", "order-1", { cashCollected: -5 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidAmount");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("returns drive.stop.invalidAmount when the RPC rejects the cash amount", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "invalid_amount" } });
+    const result = await deliverStop("ayam-norliza-pilot", "order-1", { cashCollected: 10 });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidAmount");
+  });
+
+  it("returns drive.stop.invalidStatus when the order is already resolved", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "invalid_status" } });
+    const result = await deliverStop("ayam-norliza-pilot", "order-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidStatus");
+  });
+
+  it("returns drive.run.orgNotFound when the guard can't resolve the org", async () => {
+    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Organization not found"));
+    const result = await deliverStop("no-such-org", "order-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.orgNotFound");
+  });
+});
+
+describe("failStop", () => {
+  it("returns drive.stop.invalidStatus when the order is already resolved", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "invalid_status" } });
+    const result = await failStop("ayam-norliza-pilot", "order-1", "shop_closed");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidStatus");
+  });
+
+  it("returns drive.stop.forbidden when the RPC rejects the record", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "forbidden" } });
+    const result = await failStop("ayam-norliza-pilot", "order-1", "wrong_address");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.forbidden");
+  });
+
+  it("returns drive.run.internal for an unexpected guard failure", async () => {
+    vi.mocked(requireOrgRole).mockRejectedValue(new Error("boom"));
+    const result = await failStop("ayam-norliza-pilot", "order-1", "other");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.internal");
   });
 });

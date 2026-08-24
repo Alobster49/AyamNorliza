@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   arriveStop,
@@ -9,24 +10,35 @@ import {
   getDriverRun,
 } from "@/features/orders/server/driver-actions";
 import {
-  DELIVERY_FAILURE_LABELS,
   DELIVERY_FAILURE_REASONS,
   DELIVERY_NEXT_ACTIONS,
-  DELIVERY_NEXT_ACTION_LABELS,
   type DeliveryFailureReason,
   type DeliveryNextAction,
   type RunWithOrders,
 } from "@/features/orders/types";
 import { buildDriverDeck, type DriverStop } from "@/features/orders/lib/driver-run-model";
+import { formatPrice, formatWeight } from "@/features/orders/lib/order-model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 type Sheet = "none" | "deliver" | "fail";
 
-function money(amount: number): string {
-  return `RM ${amount.toFixed(2)}`;
-}
+/** `status.delivery.failureReason` sub-keys, keyed by the snake_case reason values. */
+const FAILURE_REASON_KEY: Record<DeliveryFailureReason, string> = {
+  shop_closed: "shopClosed",
+  rejected: "rejected",
+  no_cash: "noCash",
+  wrong_address: "wrongAddress",
+  other: "other",
+};
+
+/** `status.delivery.nextAction` sub-keys, keyed by the snake_case action values. */
+const NEXT_ACTION_KEY: Record<DeliveryNextAction, string> = {
+  retry_today: "retryToday",
+  move_tomorrow: "moveTomorrow",
+  return_to_yard: "returnToYard",
+};
 
 function mapsHref(stop: DriverStop): string {
   return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(stop.address)}`;
@@ -53,6 +65,9 @@ export function DriverDeck({
   initialRun: RunWithOrders;
 }) {
   const { toast } = useToast();
+  const t = useTranslations("orders.driverDeck");
+  const tStatus = useTranslations("status.delivery");
+  const tRoot = useTranslations();
   const [run, setRun] = useState(initialRun);
   const [sheet, setSheet] = useState<Sheet>("none");
   const [busy, startTransition] = useTransition();
@@ -78,7 +93,13 @@ export function DriverDeck({
       return;
     }
     if (!result.ok) {
-      toast({ title: "Could not refresh the run", description: result.message, variant: "destructive" });
+      toast({
+        title: t("toast.refreshFailedTitle"),
+        // `messageKey` is a dynamic full path (e.g. "errors.drive.run.loadFailed");
+        // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+        description: tRoot(result.messageKey as never),
+        variant: "destructive",
+      });
     }
   }
 
@@ -97,7 +118,11 @@ export function DriverDeck({
     startTransition(async () => {
       const result = await arriveStop(organizationSlug, stop.orderId);
       if (!result.ok) {
-        toast({ title: "Could not record arrival", description: result.message, variant: "destructive" });
+        toast({
+          title: t("toast.arriveFailedTitle"),
+          description: tRoot(result.messageKey as never),
+          variant: "destructive",
+        });
         return;
       }
       await refresh();
@@ -115,7 +140,8 @@ export function DriverDeck({
     });
     setPhotoBusy(false);
     if (error) {
-      toast({ title: "Photo did not upload", description: error.message, variant: "destructive" });
+      // Raw Supabase Storage error text — not part of our message catalog.
+      toast({ title: t("toast.photoFailedTitle"), description: error.message, variant: "destructive" });
       return;
     }
     setPhotoPath(path);
@@ -126,7 +152,11 @@ export function DriverDeck({
     const trimmedCash = cash.trim();
     const cashCollected = trimmedCash === "" ? null : Number(trimmedCash);
     if (cashCollected !== null && (Number.isNaN(cashCollected) || cashCollected < 0)) {
-      toast({ title: "Check the cash amount", description: "Enter a number, or leave it blank.", variant: "destructive" });
+      toast({
+        title: t("toast.cashInvalidTitle"),
+        description: t("toast.cashInvalidDescription"),
+        variant: "destructive",
+      });
       return;
     }
 
@@ -137,10 +167,14 @@ export function DriverDeck({
         cashCollected,
       });
       if (!result.ok) {
-        toast({ title: "Could not record the delivery", description: result.message, variant: "destructive" });
+        toast({
+          title: t("toast.deliverFailedTitle"),
+          description: tRoot(result.messageKey as never),
+          variant: "destructive",
+        });
         return;
       }
-      toast({ title: `Delivered to ${stop.customerName}` });
+      toast({ title: t("toast.deliveredTitle", { name: stop.customerName }) });
       resetSheet();
       await refresh();
     });
@@ -151,10 +185,14 @@ export function DriverDeck({
     startTransition(async () => {
       const result = await failStop(organizationSlug, stop.orderId, reason, nextAction, note.trim() || null);
       if (!result.ok) {
-        toast({ title: "Could not report the stop", description: result.message, variant: "destructive" });
+        toast({
+          title: t("toast.failFailedTitle"),
+          description: tRoot(result.messageKey as never),
+          variant: "destructive",
+        });
         return;
       }
-      toast({ title: "Reported to the office" });
+      toast({ title: t("toast.reportedTitle") });
       resetSheet();
       await refresh();
     });
@@ -167,16 +205,16 @@ export function DriverDeck({
         <div className="flex items-start justify-between gap-3">
           <div>
             <h1 className="text-base font-semibold">
-              {stop ? `Stop ${stop.sequence} of ${deck.total}` : "Run finished"}
+              {stop ? t("header.stopOf", { sequence: stop.sequence, total: deck.total }) : t("header.runFinished")}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {deck.truckLabel} · {deck.remaining} left
-              {deck.failed > 0 ? ` · ${deck.failed} to sort out` : ""}
+              {deck.truckLabel ?? t("truckFallback")} · {t("header.remaining", { count: deck.remaining })}
+              {deck.failed > 0 ? ` · ${t("header.toSortOut", { count: deck.failed })}` : ""}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Cash</p>
-            <p className="text-sm font-semibold tabular-nums">{money(deck.cashCollected)}</p>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("header.cash")}</p>
+            <p className="text-sm font-semibold tabular-nums">{formatPrice(deck.cashCollected)}</p>
           </div>
         </div>
         <div className="mt-2">
@@ -186,10 +224,11 @@ export function DriverDeck({
 
       {!stop ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
-          <p className="text-lg font-semibold">Every stop is done.</p>
+          <p className="text-lg font-semibold">{t("finished.title")}</p>
           <p className="text-sm text-muted-foreground">
-            {deck.delivered} delivered{deck.failed > 0 ? `, ${deck.failed} could not be delivered` : ""}. Head
-            back to the yard and hand in {money(deck.cashCollected)}.
+            {t("finished.delivered", { count: deck.delivered })}
+            {deck.failed > 0 ? `, ${t("finished.couldNotDeliver", { count: deck.failed })}` : ""}.{" "}
+            {t("finished.wrapUp", { amount: formatPrice(deck.cashCollected) })}
           </p>
         </div>
       ) : (
@@ -204,16 +243,19 @@ export function DriverDeck({
                   </span>
                 )}
                 <span className="rounded-md bg-background px-2 py-0.5 text-[11px] font-medium tabular-nums">
-                  {money(stop.amount)}
+                  {formatPrice(stop.amount)}
                 </span>
                 {stop.outcome === "failed" && stop.lastFailureReason && (
                   <span className="rounded-md bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-800 dark:bg-red-950 dark:text-red-300">
-                    Retry · {DELIVERY_FAILURE_LABELS[stop.lastFailureReason]}
+                    {t("retryLabel", {
+                      reason: tStatus(`failureReason.${FAILURE_REASON_KEY[stop.lastFailureReason]}` as never),
+                    })}
                   </span>
                 )}
                 {stop.atStop && (
                   <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-[11px] font-medium text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
-                    At the door{stop.dwellMinutes !== null ? ` · ${stop.dwellMinutes} min` : ""}
+                    {t("atDoor")}
+                    {stop.dwellMinutes !== null ? ` · ${t("dwellMinutes", { count: stop.dwellMinutes })}` : ""}
                   </span>
                 )}
               </div>
@@ -222,8 +264,8 @@ export function DriverDeck({
                 <h2 className="text-lg font-semibold leading-tight">{stop.customerName}</h2>
                 <p className="text-sm text-muted-foreground">{stop.address}</p>
                 <p className="text-xs text-muted-foreground">
-                  {stop.zoneName} · {stop.itemCount} item{stop.itemCount === 1 ? "" : "s"}
-                  {stop.weightKg > 0 ? ` · ${stop.weightKg} kg` : ""}
+                  {stop.zoneName} · {t("itemCount", { count: stop.itemCount })}
+                  {stop.weightKg > 0 ? ` · ${formatWeight(stop.weightKg)}` : ""}
                 </p>
                 {stop.notes && <p className="mt-1 text-xs italic text-muted-foreground">“{stop.notes}”</p>}
               </div>
@@ -236,7 +278,7 @@ export function DriverDeck({
                     stop.phone ? "" : "pointer-events-none opacity-40"
                   }`}
                 >
-                  Call
+                  {t("actions.call")}
                 </a>
                 <a
                   href={mapsHref(stop)}
@@ -244,7 +286,7 @@ export function DriverDeck({
                   rel="noreferrer"
                   className="flex min-h-11 flex-col items-center justify-center rounded-xl border bg-background text-xs font-medium"
                 >
-                  Navigate
+                  {t("actions.navigate")}
                 </a>
                 <a
                   href={stop.phone ? `https://wa.me/${stop.phone.replace(/[^0-9]/g, "")}` : undefined}
@@ -255,7 +297,7 @@ export function DriverDeck({
                     stop.phone ? "" : "pointer-events-none opacity-40"
                   }`}
                 >
-                  WhatsApp
+                  {t("actions.whatsapp")}
                 </a>
               </div>
             </div>
@@ -264,7 +306,7 @@ export function DriverDeck({
             <div className="flex flex-col gap-2 p-4">
               {!stop.atStop ? (
                 <Button size="lg" className="h-12 w-full text-base" disabled={busy} onClick={handleArrive}>
-                  I&apos;m at the door
+                  {t("actions.imAtDoor")}
                 </Button>
               ) : (
                 <Button
@@ -273,7 +315,7 @@ export function DriverDeck({
                   disabled={busy}
                   onClick={() => setSheet("deliver")}
                 >
-                  Delivered
+                  {t("actions.delivered")}
                 </Button>
               )}
               <Button
@@ -282,7 +324,7 @@ export function DriverDeck({
                 disabled={busy}
                 onClick={() => setSheet("fail")}
               >
-                Can&apos;t deliver
+                {t("actions.cantDeliver")}
               </Button>
             </div>
           </section>
@@ -290,13 +332,13 @@ export function DriverDeck({
           {/* Next stop peek */}
           {deck.next && (
             <section className="rounded-xl border bg-muted/40 px-4 py-2.5">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Next</p>
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("next.label")}</p>
               <p className="text-sm font-medium">
                 {deck.next.sequence} · {deck.next.customerName}
               </p>
               <p className="text-xs text-muted-foreground">
                 {deck.next.zoneName}
-                {deck.next.weightKg > 0 ? ` · ${deck.next.weightKg} kg` : ""}
+                {deck.next.weightKg > 0 ? ` · ${formatWeight(deck.next.weightKg)}` : ""}
                 {deck.next.window ? ` · ${deck.next.window.start}–${deck.next.window.end}` : ""}
               </p>
             </section>
@@ -305,7 +347,7 @@ export function DriverDeck({
           {/* Whole route, for orientation */}
           <details className="rounded-xl border bg-card">
             <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium">
-              Whole run · {deck.delivered}/{deck.total} done
+              {t("wholeRun.summary", { delivered: deck.delivered, total: deck.total })}
             </summary>
             <ul className="divide-y border-t">
               {deck.stops.map((item) => (
@@ -316,14 +358,14 @@ export function DriverDeck({
                   </span>
                   <span className="shrink-0 text-[11px] text-muted-foreground">
                     {item.outcome === "delivered"
-                      ? "Dropped"
+                      ? t("stopStatus.dropped")
                       : item.outcome === "failed"
-                        ? "Failed"
+                        ? t("stopStatus.failed")
                         : item.outcome === "cancelled"
-                          ? "Cancelled"
+                          ? t("stopStatus.cancelled")
                           : item.atStop
-                            ? "Here now"
-                            : "To do"}
+                            ? t("stopStatus.hereNow")
+                            : t("stopStatus.toDo")}
                   </span>
                 </li>
               ))}
@@ -337,35 +379,35 @@ export function DriverDeck({
         <div className="fixed inset-0 z-20 flex items-end bg-black/40" role="dialog" aria-modal="true">
           <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4">
             <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted" />
-            <h2 className="text-base font-semibold">Proof of delivery</h2>
+            <h2 className="text-base font-semibold">{t("deliverSheet.title")}</h2>
             <p className="mb-3 text-xs text-muted-foreground">
-              {stop.customerName} · all of this is optional
+              {t("deliverSheet.subtitle", { name: stop.customerName })}
             </p>
 
             <div className="flex flex-col gap-3">
               <label className="flex flex-col gap-1 text-xs font-medium">
-                Received by
+                {t("deliverSheet.receivedByLabel")}
                 <Input
                   value={receivedBy}
                   onChange={(event) => setReceivedBy(event.target.value)}
-                  placeholder="Name of whoever took it"
+                  placeholder={t("deliverSheet.receivedByPlaceholder")}
                   className="h-11"
                 />
               </label>
 
               <label className="flex flex-col gap-1 text-xs font-medium">
-                Cash collected
+                {t("deliverSheet.cashLabel")}
                 <Input
                   value={cash}
                   onChange={(event) => setCash(event.target.value)}
                   inputMode="decimal"
-                  placeholder={money(stop.amount)}
+                  placeholder={formatPrice(stop.amount)}
                   className="h-11"
                 />
               </label>
 
               <div className="flex flex-col gap-1 text-xs font-medium">
-                Photo at the door
+                {t("deliverSheet.photoLabel")}
                 <input
                   ref={fileRef}
                   type="file"
@@ -384,20 +426,24 @@ export function DriverDeck({
                   disabled={photoBusy}
                   onClick={() => fileRef.current?.click()}
                 >
-                  {photoBusy ? "Uploading…" : photoPath ? "Photo attached · replace" : "Take a photo"}
+                  {photoBusy
+                    ? t("deliverSheet.photoUploading")
+                    : photoPath
+                      ? t("deliverSheet.photoReplace")
+                      : t("deliverSheet.photoTake")}
                 </Button>
               </div>
 
               <div className="mt-1 flex gap-2">
                 <Button variant="outline" className="h-11 flex-1" onClick={resetSheet} disabled={busy}>
-                  Back
+                  {t("back")}
                 </Button>
                 <Button
                   className="h-11 flex-[2] bg-emerald-600 hover:bg-emerald-700"
                   onClick={handleDeliver}
                   disabled={busy || photoBusy}
                 >
-                  Confirm delivery
+                  {t("deliverSheet.confirm")}
                 </Button>
               </div>
             </div>
@@ -410,9 +456,9 @@ export function DriverDeck({
         <div className="fixed inset-0 z-20 flex items-end bg-black/40" role="dialog" aria-modal="true">
           <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4">
             <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted" />
-            <h2 className="text-base font-semibold">Can&apos;t deliver</h2>
+            <h2 className="text-base font-semibold">{t("actions.cantDeliver")}</h2>
             <p className="mb-3 text-xs text-muted-foreground">
-              {stop.customerName} · the order stays open, the office is told now
+              {t("failSheet.subtitle", { name: stop.customerName })}
             </p>
 
             <div className="flex flex-col gap-2">
@@ -425,11 +471,13 @@ export function DriverDeck({
                     reason === value ? "border-destructive bg-destructive/10" : "bg-card"
                   }`}
                 >
-                  {DELIVERY_FAILURE_LABELS[value]}
+                  {tStatus(`failureReason.${FAILURE_REASON_KEY[value]}` as never)}
                 </button>
               ))}
 
-              <p className="mt-2 text-[11px] uppercase tracking-wide text-muted-foreground">Then what</p>
+              <p className="mt-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                {t("failSheet.thenWhat")}
+              </p>
               <div className="flex flex-wrap gap-2">
                 {DELIVERY_NEXT_ACTIONS.map((value) => (
                   <button
@@ -440,24 +488,24 @@ export function DriverDeck({
                       nextAction === value ? "border-primary bg-accent" : "bg-card"
                     }`}
                   >
-                    {DELIVERY_NEXT_ACTION_LABELS[value]}
+                    {tStatus(`nextAction.${NEXT_ACTION_KEY[value]}` as never)}
                   </button>
                 ))}
               </div>
 
               <label className="mt-1 flex flex-col gap-1 text-xs font-medium">
-                Anything the office should know
+                {t("failSheet.noteLabel")}
                 <Input
                   value={note}
                   onChange={(event) => setNote(event.target.value)}
-                  placeholder="Gate locked, guard said back at 3pm"
+                  placeholder={t("failSheet.notePlaceholder")}
                   className="h-11"
                 />
               </label>
 
               <div className="mt-1 flex gap-2">
                 <Button variant="outline" className="h-11 flex-1" onClick={resetSheet} disabled={busy}>
-                  Back
+                  {t("back")}
                 </Button>
                 <Button
                   className="h-11 flex-[2]"
@@ -465,7 +513,7 @@ export function DriverDeck({
                   onClick={handleFail}
                   disabled={busy || reason === null}
                 >
-                  Report and move on
+                  {t("failSheet.report")}
                 </Button>
               </div>
             </div>

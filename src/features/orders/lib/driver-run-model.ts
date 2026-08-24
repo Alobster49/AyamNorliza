@@ -89,7 +89,8 @@ export type DriverStop = {
 
 export type DriverDeck = {
   runId: string;
-  truckLabel: string;
+  /** Null when the run has no truck assigned — the caller supplies its own translated fallback. */
+  truckLabel: string | null;
   stops: DriverStop[];
   /** The stop the driver is standing at, or the next one to drive to. */
   current: DriverStop | null;
@@ -154,7 +155,9 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
 
   return {
     runId: run.id,
-    truckLabel: run.truck?.code ? `${run.truck.name} (${run.truck.code})` : (run.truck?.name ?? "Truck"),
+    truckLabel: run.truck?.code
+      ? `${run.truck.name} (${run.truck.code})`
+      : (run.truck?.name ?? null),
     stops,
     current,
     next,

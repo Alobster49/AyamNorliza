@@ -123,19 +123,42 @@ export async function getDriverRun(
   });
 }
 
+/**
+ * `mapRpcError` is shared with `order-actions.ts`/`schedule-actions.ts`
+ * (still Phase 3, prose-only) and reuses the same raw codes across unrelated
+ * RPCs — e.g. "forbidden" and "invalid_status" aren't specific to stop
+ * recording. So the `errors.drive.stop.*` messageKey is derived here, from
+ * the raw RPC message, rather than added to the shared mapper (which would
+ * hand every other unconverted caller a driver-flavoured key).
+ */
+function stopMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.drive.stop.forbidden";
+    case "run_not_departed":
+      return "errors.drive.stop.notDeparted";
+    case "invalid_status":
+      return "errors.drive.stop.invalidStatus";
+    case "invalid_amount":
+      return "errors.drive.stop.invalidAmount";
+    default:
+      return "errors.drive.stop.internal";
+  }
+}
+
 async function callStopRpc(
   organizationSlug: string,
   fn: string,
   args: Record<string, unknown>,
 ): Promise<ActionResult> {
   const ctx = await guard(organizationSlug);
-  if (!ctx.ok) return err(ctx.code, ctx.message);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
 
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.rpc(fn, args);
   if (error) {
     const mapped = mapRpcError(error.message);
-    return err(mapped.code as DriverErrorCode, mapped.message);
+    return err(mapped.code as DriverErrorCode, mapped.message, stopMessageKey(error.message));
   }
 
   revalidatePath(`/drive/${organizationSlug}`);
@@ -162,7 +185,7 @@ export async function deliverStop(
   proof: DeliverStopInput = {},
 ): Promise<ActionResult> {
   if (proof.cashCollected !== null && proof.cashCollected !== undefined && proof.cashCollected < 0) {
-    return err("validation", "Cash collected cannot be negative.");
+    return err("validation", "Cash collected cannot be negative.", "errors.drive.stop.invalidAmount");
   }
 
   return callStopRpc(organizationSlug, "driver_deliver_stop", {

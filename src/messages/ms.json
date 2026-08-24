@@ -88,6 +88,20 @@
       "planned": "Belum bertolak",
       "departed": "Dalam perjalanan",
       "completed": "Sudah kembali"
+    },
+    "delivery": {
+      "failureReason": {
+        "shopClosed": "Kedai tutup",
+        "rejected": "Pelanggan menolak barang",
+        "noCash": "Tiada wang tunai",
+        "wrongAddress": "Alamat salah",
+        "other": "Sebab lain"
+      },
+      "nextAction": {
+        "retryToday": "Cuba lagi di akhir trip",
+        "moveTomorrow": "Pindah ke esok",
+        "returnToYard": "Pulang ke garaj"
+      }
     }
   },
   "buyer": {
@@ -438,6 +452,13 @@
         "orgNotFound": "Organisasi tidak dijumpai",
         "forbidden": "Anda tidak mempunyai akses kepada ciri ini",
         "loadFailed": "Gagal memuatkan trip",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      },
+      "stop": {
+        "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+        "notDeparted": "Trip ini belum bertolak.",
+        "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
+        "invalidAmount": "Wang tunai yang dikutip tidak boleh negatif.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi."
       }
     }
@@ -1095,6 +1116,78 @@
         "wholeNumberPieces": "Kuantiti ekor mesti nombor bulat.",
         "invalidSizeRange": "Masukkan julat saiz yang sah untuk setiap baris.",
         "orderCreated": "Pesanan dicipta"
+      }
+    },
+    "driverDeck": {
+      "truckFallback": "Lori",
+      "header": {
+        "stopOf": "Perhentian {sequence} daripada {total}",
+        "runFinished": "Trip selesai",
+        "cash": "Tunai",
+        "remaining": "{count, plural, other {# lagi}}",
+        "toSortOut": "{count, plural, other {# perlu diselesaikan}}"
+      },
+      "finished": {
+        "title": "Semua perhentian selesai.",
+        "delivered": "{count, plural, other {# dihantar}}",
+        "couldNotDeliver": "{count, plural, other {# tidak dapat dihantar}}",
+        "wrapUp": "Pulang ke garaj dan serahkan {amount}."
+      },
+      "retryLabel": "Cuba lagi · {reason}",
+      "atDoor": "Di pintu",
+      "dwellMinutes": "{count, plural, other {# min}}",
+      "itemCount": "{count, plural, other {# item}}",
+      "actions": {
+        "call": "Panggil",
+        "navigate": "Navigasi",
+        "whatsapp": "WhatsApp",
+        "imAtDoor": "Saya di pintu",
+        "delivered": "Dihantar",
+        "cantDeliver": "Tidak dapat hantar"
+      },
+      "next": {
+        "label": "Seterusnya"
+      },
+      "wholeRun": {
+        "summary": "Seluruh trip · {delivered}/{total} selesai"
+      },
+      "stopStatus": {
+        "dropped": "Dihantar",
+        "failed": "Gagal",
+        "cancelled": "Dibatalkan",
+        "hereNow": "Di sini sekarang",
+        "toDo": "Belum selesai"
+      },
+      "back": "Kembali",
+      "deliverSheet": {
+        "title": "Bukti penghantaran",
+        "subtitle": "{name} · semua ini pilihan",
+        "receivedByLabel": "Diterima oleh",
+        "receivedByPlaceholder": "Nama orang yang menerima",
+        "cashLabel": "Tunai dikutip",
+        "photoLabel": "Foto di pintu",
+        "photoUploading": "Memuat naik…",
+        "photoReplace": "Foto dilampirkan · ganti",
+        "photoTake": "Ambil foto",
+        "confirm": "Sahkan penghantaran"
+      },
+      "failSheet": {
+        "subtitle": "{name} · pesanan kekal terbuka, pejabat sudah dimaklumkan",
+        "thenWhat": "Kemudian apa",
+        "noteLabel": "Apa-apa yang pejabat perlu tahu",
+        "notePlaceholder": "Pagar berkunci, pengawal kata kembali jam 3 petang",
+        "report": "Lapor dan teruskan"
+      },
+      "toast": {
+        "refreshFailedTitle": "Tidak dapat menyegarkan trip",
+        "arriveFailedTitle": "Tidak dapat merekod ketibaan",
+        "photoFailedTitle": "Foto gagal dimuat naik",
+        "cashInvalidTitle": "Semak jumlah tunai",
+        "cashInvalidDescription": "Masukkan nombor, atau biarkan kosong.",
+        "deliverFailedTitle": "Tidak dapat merekod penghantaran",
+        "deliveredTitle": "Dihantar kepada {name}",
+        "failFailedTitle": "Tidak dapat melaporkan perhentian",
+        "reportedTitle": "Dilaporkan kepada pejabat"
       }
     }
   }
