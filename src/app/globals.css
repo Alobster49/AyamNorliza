@@ -2,6 +2,12 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Tailwind v4 auto-detects sources across the repo, including markdown in
+   docs/. A class-shaped string in a plan document (e.g. an arbitrary
+   variant with invalid CSS output) then gets compiled into the stylesheet
+   and can crash the dev server's CSS parse. Docs are not UI source. */
+@source not "../../docs";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {
