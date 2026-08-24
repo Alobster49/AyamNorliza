@@ -27,6 +27,7 @@ type OrdersClientProps = {
   organizationSlug: string;
   callerRole: string;
   initialOrders: OrderListItem[];
+  today: string;
 };
 
 type ViewMode = "board" | "table";
@@ -35,7 +36,7 @@ const VIEW_STORAGE_KEY = "orders-view";
 const TABS = ["all", ...ORDER_STATUSES] as const;
 type TabValue = (typeof TABS)[number];
 
-export function OrdersClient({ organizationSlug, callerRole, initialOrders }: OrdersClientProps) {
+export function OrdersClient({ organizationSlug, callerRole, initialOrders, today }: OrdersClientProps) {
   const router = useRouter();
   const t = useTranslations("orders.client");
   const tStatus = useTranslations("status.order");

@@ -1,9 +1,10 @@
 import { notFound } from "next/navigation";
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
-import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
+import { requireOrgRole, OrderPermissionError, getOrgTimeZone } from "@/features/orders/server/guards";
 import { MANAGER_ROLES } from "@/features/orders/lib/roles";
 import { getOrders } from "@/features/orders/server/order-actions";
+import { todayInTimeZone } from "@/lib/time/org-date";
 import { OrdersClient } from "./orders-client";
 
 export default async function OrdersPage({
@@ -23,6 +24,9 @@ export default async function OrdersPage({
     throw error;
   }
 
+  const timeZone = await getOrgTimeZone(organizationSlug);
+  const today = todayInTimeZone(timeZone);
+
   const result = await getOrders(organizationSlug);
   if (!result.ok) notFound();
 
@@ -31,6 +35,7 @@ export default async function OrdersPage({
       organizationSlug={organizationSlug}
       callerRole={callerRole}
       initialOrders={result.data}
+      today={today}
     />
   );
 }

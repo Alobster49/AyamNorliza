@@ -312,7 +312,7 @@ export type OrderWithItems = Order & {
 };
 
 export type OrderListItem = Order & {
-  customer?: { name: string };
+  customer?: { name: string; phone?: string | null };
   zone?: { name: string };
 };
 

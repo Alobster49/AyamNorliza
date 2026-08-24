@@ -99,7 +99,7 @@ export async function getOrders(
   const supabase = await createSupabaseServerClient();
   let query = supabase
     .from("orders")
-    .select("*, customer:customers(name), zone:delivery_zones(name)")
+    .select("*, customer:customers(name, phone), zone:delivery_zones(name)")
     .eq("organization_id", orgId)
     .order("created_at", { ascending: false });
 
