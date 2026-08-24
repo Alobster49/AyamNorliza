@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -36,7 +36,10 @@ export default async function OrganizationLayout({
     .eq("user_id", user.id)
     .eq("status", "active")
     .maybeSingle();
-  if (!member) redirect("/login");
+  // Locale-prefixed explicitly (same pattern as `requireUserOrRedirect`):
+  // a bare `/login` here bounced through the middleware's 307 and dropped
+  // the active locale.
+  if (!member) redirect(`/${await getLocale()}/login`);
 
   const t = await getTranslations("dashboard");
   const profile = await getProfile(user.id);
