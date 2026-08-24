@@ -66,7 +66,14 @@ begin
     and o.run_id is null
     and o.delivery_date = v_today;
 
-  select max(mp.price_date) into v_market_date from public.market_prices mp;
+  select max(mp.price_date) into v_market_date
+  from public.market_prices mp
+  where mp.state = any (
+    coalesce(
+      (select ms.states from public.market_settings ms where ms.org_id = p_organization_id),
+      array['Selangor']
+    )
+  );
 
   return jsonb_build_object(
     'date', v_today,
