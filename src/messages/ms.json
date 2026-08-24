@@ -1599,7 +1599,7 @@
       "moveNotAllowedTitle": "Pergerakan tidak dibenarkan",
       "blocked": {
         "ready": "Status Sedia ditetapkan oleh tugasan timbang di gudang.",
-        "delivered": "Status Sampai ditetapkan apabila trip penghantaran selesai.",
+        "delivered": "Status Dihantar ditetapkan apabila trip penghantaran selesai.",
         "pending": "Pesanan tidak boleh kembali ke status menunggu.",
         "confirmed": "Hanya pesanan yang menunggu boleh disahkan.",
         "cancelled": "Hanya pesanan menunggu atau disahkan boleh dibatalkan.",

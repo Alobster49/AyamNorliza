@@ -50,7 +50,7 @@ type OrdersBoardProps = {
   organizationSlug: string;
   orders: OrderListItem[];
   callerRole: string;
-  onOrdersChange: (orders: OrderListItem[]) => void;
+  onOrderStatusChange: (orderId: string, status: OrderStatus) => void;
   today: string;
 };
 
@@ -58,7 +58,7 @@ export function OrdersBoard({
   organizationSlug,
   orders,
   callerRole,
-  onOrdersChange,
+  onOrderStatusChange,
   today,
 }: OrdersBoardProps) {
   const router = useRouter();
@@ -117,8 +117,13 @@ export function OrdersBoard({
     onDragStart: ({ active }) => t("announce.pickedUp", { customer: customerOf(active.id) }),
     onDragOver: ({ over }) =>
       over ? t("announce.over", { column: columnOf(over.id) }) : undefined,
-    onDragEnd: ({ over }) =>
-      over ? t("announce.dropped", { column: columnOf(over.id) }) : t("announce.cancelled"),
+    onDragEnd: ({ active, over }) => {
+      const o = orders.find((x) => x.id === active.id);
+      if (over && o && classifyDropTarget(o.status, over.id as OrderStatus, callerRole).mode === "decline") {
+        return t("moveNotAllowedTitle");
+      }
+      return over ? t("announce.dropped", { column: columnOf(over.id) }) : t("announce.cancelled");
+    },
     onDragCancel: () => t("announce.cancelled"),
   };
 
@@ -131,7 +136,7 @@ export function OrdersBoard({
   const cardRisk = (order: OrderListItem) => isAtRisk(order, today);
 
   function moveOrder(orderId: string, to: OrderStatus) {
-    onOrdersChange(orders.map((o) => (o.id === orderId ? { ...o, status: to } : o)));
+    onOrderStatusChange(orderId, to);
     router.refresh();
   }
 
@@ -232,7 +237,6 @@ export function OrdersBoard({
     const order = orders.find((o) => o.id === active.id);
     if (!order) return;
     if (confirmingId === order.id) return; // quick-confirm in flight for this card — ignore the drop
-    const token = ++detailFetchToken.current;
     const to = over.id as OrderStatus;
     const resolution = resolveDrop(order.status, to, callerRole);
 
@@ -260,6 +264,7 @@ export function OrdersBoard({
         setWorkflow({ kind: "reopen", orderId: order.id });
         return;
       case "confirm": {
+        const token = ++detailFetchToken.current;
         const result = await getOrderDetail(organizationSlug, order.id);
         if (token !== detailFetchToken.current) return; // a newer drag superseded this fetch
         if (!result.ok) {
@@ -445,7 +450,7 @@ function BoardColumn({
             ? "ring-2 ring-primary bg-primary/10 scale-[1.01] "
             : "ring-2 ring-primary/50 bg-primary/5 "
           : dropTarget?.mode === "decline"
-            ? "opacity-50 saturate-50 "
+            ? "border-dashed "
             : isOver
               ? "ring-2 ring-primary/40 "
               : "")
@@ -458,7 +463,7 @@ function BoardColumn({
           {orders.length}
         </Badge>
         {dropTarget?.mode === "decline" && hintText ? (
-          <span className="ml-auto text-[10px] font-medium text-muted-foreground">{hintText}</span>
+          <span className="ml-auto text-[10px] font-medium text-foreground/80">{hintText}</span>
         ) : (
           <>
             {headerExtra}
@@ -476,7 +481,12 @@ function BoardColumn({
           </>
         )}
       </header>
-      <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">
+      <div
+        className={
+          "flex-1 space-y-2 overflow-y-auto px-2 pb-2 " +
+          (dropTarget?.mode === "decline" ? "opacity-50 saturate-50" : "")
+        }
+      >
         {orders.length === 0 ? (
           <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
             {t(`empty.${status}`)}

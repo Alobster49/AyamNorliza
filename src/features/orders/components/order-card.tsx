@@ -28,9 +28,9 @@ export function OrderCardContent({
     <div
       className={`space-y-2 rounded-lg border bg-card p-3 shadow-sm ${
         risk === "overdue"
-          ? "border-l-4 border-l-red-500"
+          ? "border-l-4 border-l-[var(--status-cancelled)]"
           : risk === "dueToday"
-            ? "border-l-4 border-l-amber-500"
+            ? "border-l-4 border-l-[var(--status-confirmed)]"
             : ""
       }`}
     >
@@ -85,11 +85,18 @@ export function OrderCardContent({
         <Badge variant="secondary" className="text-[10px]">
           {formatDate(order.delivery_date)}
         </Badge>
-        {risk && (
+        {risk === "overdue" ? (
           <Badge variant="destructive" className="text-[10px]">
             {tList(`atRisk.${risk}`)}
           </Badge>
-        )}
+        ) : risk === "dueToday" ? (
+          <Badge
+            variant="outline"
+            className="border-transparent bg-[var(--status-confirmed-soft)] text-[var(--status-confirmed-text)] text-[10px]"
+          >
+            {tList(`atRisk.${risk}`)}
+          </Badge>
+        ) : null}
         {(() => {
           const amount = displayAmount(order);
           if (amount.kind === "none") return null;

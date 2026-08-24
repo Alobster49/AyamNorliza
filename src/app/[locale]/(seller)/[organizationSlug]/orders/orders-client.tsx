@@ -162,13 +162,21 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
           className="min-h-[50vh]"
         />
       ) : view === "board" ? (
-        <OrdersBoard
-          organizationSlug={organizationSlug}
-          orders={visibleBase}
-          callerRole={callerRole}
-          onOrdersChange={setOrders}
-          today={today}
-        />
+        visibleBase.length === 0 ? (
+          <div className="flex min-h-[40vh] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+            {t("table.empty")}
+          </div>
+        ) : (
+          <OrdersBoard
+            organizationSlug={organizationSlug}
+            orders={visibleBase}
+            callerRole={callerRole}
+            onOrderStatusChange={(orderId, status) =>
+              setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)))
+            }
+            today={today}
+          />
+        )
       ) : (
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
           <TabsList>
