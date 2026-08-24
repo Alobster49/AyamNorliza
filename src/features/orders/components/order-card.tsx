@@ -11,9 +11,11 @@ import { Badge } from "@/components/ui/badge";
 export function OrderCardContent({
   order,
   risk,
+  actions,
 }: {
   order: OrderListItem;
   risk?: "overdue" | "dueToday" | null;
+  actions?: React.ReactNode;
 }) {
   const t = useTranslations("orders.card");
   const tList = useTranslations("orders.client");
@@ -65,6 +67,7 @@ export function OrderCardContent({
           );
         })()}
       </div>
+      {actions && <div className="pt-1">{actions}</div>}
     </div>
   );
 }
@@ -74,11 +77,13 @@ export function OrderCard({
   onOpen,
   ariaLabel,
   risk,
+  actions,
 }: {
   order: OrderListItem;
   onOpen: () => void;
   ariaLabel: string;
   risk?: "overdue" | "dueToday" | null;
+  actions?: React.ReactNode;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: order.id,
@@ -104,7 +109,7 @@ export function OrderCard({
         "cursor-grab [touch-action:pan-y] active:cursor-grabbing " + (isDragging ? "opacity-40" : "")
       }
     >
-      <OrderCardContent order={order} risk={risk} />
+      <OrderCardContent order={order} risk={risk} actions={actions} />
     </div>
   );
 }

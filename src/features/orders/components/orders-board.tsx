@@ -20,7 +20,7 @@ import type { OrderListItem, OrderStatus, OrderWithItems } from "@/features/orde
 import { ORDER_STATUSES } from "@/features/orders/types";
 import { resolveDrop } from "@/features/orders/lib/board-rules";
 import { isAtRisk } from "@/features/orders/lib/board-view-model";
-import { getOrderDetail } from "@/features/orders/server/order-actions";
+import { getOrderDetail, confirmOrder } from "@/features/orders/server/order-actions";
 import { OrderCard, OrderCardContent } from "./order-card";
 import {
   ConfirmOrderDialog,
@@ -70,6 +70,7 @@ export function OrdersBoard({
   const { toast } = useToast();
   const [activeOrder, setActiveOrder] = useState<OrderListItem | null>(null);
   const [workflow, setWorkflow] = useState<PendingWorkflow | null>(null);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const sensors = useSensors(
     // Mouse keeps the quick 6px pickup.
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -107,6 +108,57 @@ export function OrdersBoard({
     onOrdersChange(orders.map((o) => (o.id === orderId ? { ...o, status: to } : o)));
     router.refresh();
   }
+
+  async function quickConfirm(orderId: string) {
+    if (confirmingId) return;
+    setConfirmingId(orderId);
+    try {
+      const detail = await getOrderDetail(organizationSlug, orderId);
+      if (!detail.ok) {
+        toast({
+          title: tError("error"),
+          description: detail.messageKey ? tRoot(detail.messageKey as never) : detail.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      const result = await confirmOrder({
+        organizationSlug,
+        orderId,
+        decisions: detail.data.items.map((item) => ({ itemId: item.id, available: true })),
+      });
+      if (!result.ok) {
+        toast({
+          title: tError("error"),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: t("quickConfirm.success") });
+      moveOrder(orderId, "confirmed");
+    } finally {
+      setConfirmingId(null);
+    }
+  }
+
+  const cardActions = (order: OrderListItem) =>
+    order.status === "pending" ? (
+      <Button
+        size="sm"
+        variant="outline"
+        className="h-8 w-full"
+        disabled={confirmingId === order.id}
+        onClick={(e) => {
+          e.stopPropagation();
+          quickConfirm(order.id);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
+      >
+        {confirmingId === order.id ? t("quickConfirm.busy") : t("quickConfirm.action")}
+      </Button>
+    ) : undefined;
 
   function handleDragStart(event: DragStartEvent) {
     setActiveOrder(orders.find((o) => o.id === event.active.id) ?? null);
@@ -180,6 +232,7 @@ export function OrdersBoard({
               onNewOrder={() => router.push(`/${organizationSlug}/orders/new`)}
               cardAriaLabel={cardAriaLabel}
               cardRisk={cardRisk}
+              cardActions={cardActions}
             />
           ))}
         </div>
@@ -236,6 +289,7 @@ function BoardColumn({
   onNewOrder,
   cardAriaLabel,
   cardRisk,
+  cardActions,
 }: {
   status: OrderStatus;
   orders: OrderListItem[];
@@ -243,6 +297,7 @@ function BoardColumn({
   onNewOrder: () => void;
   cardAriaLabel: (order: OrderListItem) => string;
   cardRisk: (order: OrderListItem) => "overdue" | "dueToday" | null;
+  cardActions: (order: OrderListItem) => React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const t = useTranslations("orders.board");
@@ -289,6 +344,7 @@ function BoardColumn({
               onOpen={() => onOpenOrder(order.id)}
               ariaLabel={cardAriaLabel(order)}
               risk={cardRisk(order)}
+              actions={cardActions(order)}
             />
           ))
         )}

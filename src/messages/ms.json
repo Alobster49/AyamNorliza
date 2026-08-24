@@ -1618,6 +1618,11 @@
         "over": "Di atas {column}",
         "dropped": "Dilepaskan di {column}",
         "cancelled": "Pergerakan dibatalkan"
+      },
+      "quickConfirm": {
+        "action": "Sahkan",
+        "busy": "Mengesahkan…",
+        "success": "Pesanan disahkan"
       }
     },
     "station": {

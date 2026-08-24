@@ -1621,6 +1621,11 @@ declare const messages: {
         "over": "Over {column}",
         "dropped": "Dropped on {column}",
         "cancelled": "Move cancelled"
+      },
+      "quickConfirm": {
+        "action": "Confirm",
+        "busy": "Confirming…",
+        "success": "Order confirmed"
       }
     },
     "station": {
