@@ -38,6 +38,14 @@ export function RevenueChart({ series }: { series: SeriesPoint[] }) {
                   t("kpi.revenue"),
                 ];
               }}
+              contentStyle={{
+                backgroundColor: "var(--popover)",
+                border: "1px solid var(--border)",
+                borderRadius: "0.5rem",
+                color: "var(--popover-foreground)",
+              }}
+              labelStyle={{ color: "var(--muted-foreground)" }}
+              itemStyle={{ color: "var(--popover-foreground)" }}
             />
             <Area
               type="monotone"

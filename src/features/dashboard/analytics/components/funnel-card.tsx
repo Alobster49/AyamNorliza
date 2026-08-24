@@ -24,7 +24,7 @@ export function FunnelCard({ vm }: { vm: SalesViewModel }) {
             <span className="w-24 shrink-0 text-xs text-muted-foreground">{tStatus(status)}</span>
             <div className="h-4 flex-1 rounded bg-muted">
               <div
-                className={`h-4 rounded ${status === "cancelled" ? "bg-red-400" : "bg-primary"}`}
+                className={`h-4 rounded ${status === "cancelled" ? "bg-destructive" : "bg-primary"}`}
                 style={{ width: `${(count / max) * 100}%` }}
               />
             </div>
