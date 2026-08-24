@@ -19,6 +19,7 @@ export function ImageUpload({ organizationId, value, onChange }: ImageUploadProp
   const t = useTranslations("seller.products.imageUpload");
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleFile = async (file: File) => {
@@ -69,7 +70,23 @@ export function ImageUpload({ organizationId, value, onChange }: ImageUploadProp
           type="button"
           disabled={uploading}
           onClick={() => inputRef.current?.click()}
-          className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed bg-muted/50 text-muted-foreground hover:bg-muted"
+          onDragOver={(e) => {
+            e.preventDefault();
+            if (!uploading) setDragActive(true);
+          }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragActive(false);
+            if (uploading) return;
+            const file = e.dataTransfer.files?.[0];
+            if (file) void handleFile(file);
+          }}
+          className={`flex aspect-[4/3] w-full flex-col items-center justify-center gap-2 rounded-md border border-dashed text-muted-foreground transition-colors duration-150 ${
+            dragActive
+              ? "border-primary bg-accent text-foreground"
+              : "bg-muted/50 hover:bg-muted"
+          }`}
         >
           {uploading ? (
             <Loader2 className="h-6 w-6 animate-spin" />

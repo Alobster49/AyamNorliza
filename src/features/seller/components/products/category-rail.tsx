@@ -1,9 +1,15 @@
 "use client";
 
-import { Archive, Pencil, Trash2 } from "lucide-react";
+import { Archive, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Category } from "@/features/seller/types";
 import { ARCHIVED_VIEW, type CatalogFilter } from "@/features/seller/lib/catalog-model";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 type CategoryRailProps = {
   categories: Category[];
@@ -36,7 +42,7 @@ export function CategoryRail({
   return (
     <nav
       aria-label={t("ariaLabel")}
-      className="flex items-center gap-1 overflow-x-auto rounded-full border bg-card p-1 md:block md:w-56 md:shrink-0 md:overflow-visible md:rounded-lg md:p-0"
+      className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-full border bg-card p-1 md:sticky md:top-20 md:block md:w-56 md:shrink-0 md:overflow-visible md:rounded-lg md:p-0"
     >
       <div className="hidden px-3 pb-1 pt-3 md:block">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -78,7 +84,7 @@ export function CategoryRail({
         <button
           type="button"
           onClick={onAddCategory}
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
         >
           {t("addCategory")}
         </button>
@@ -101,7 +107,7 @@ function RailItem({ label, count, selected, onSelect, onEdit, onDelete, icon }: 
   const t = useTranslations("seller.products.categoryRail");
   return (
     <div
-      className={`group flex shrink-0 items-center rounded-full md:w-full md:rounded-none md:border-l-2 ${
+      className={`group flex shrink-0 items-center rounded-full transition-colors duration-150 md:w-full md:rounded-none md:border-l-2 ${
         selected
           ? "bg-primary text-primary-foreground md:border-primary md:bg-accent md:text-accent-foreground"
           : "text-muted-foreground hover:text-foreground md:border-transparent md:hover:bg-accent/50"
@@ -118,24 +124,50 @@ function RailItem({ label, count, selected, onSelect, onEdit, onDelete, icon }: 
         <span className="text-xs tabular-nums opacity-60">{count}</span>
       </button>
       {selected && onEdit && onDelete && (
-        <span className="hidden items-center gap-0.5 pr-2 md:flex">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded p-1 hover:bg-background/60"
-            aria-label={t("editAriaLabel", { label })}
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded p-1 text-destructive hover:bg-background/60"
-            aria-label={t("deleteAriaLabel", { label })}
-          >
-            <Trash2 className="h-3 w-3" />
-          </button>
-        </span>
+        <>
+          <span className="hidden items-center gap-0.5 pr-2 md:flex">
+            <button
+              type="button"
+              onClick={onEdit}
+              className="rounded p-1 hover:bg-background/60"
+              aria-label={t("editAriaLabel", { label })}
+            >
+              <Pencil className="h-3 w-3" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="rounded p-1 text-destructive hover:bg-background/60"
+              aria-label={t("deleteAriaLabel", { label })}
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </span>
+          {/* Chips have no hover, so the selected chip carries a compact menu */}
+          <span className="pr-1.5 md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                aria-label={t("optionsAriaLabel", { label })}
+                className="grid h-6 w-6 place-items-center rounded-full hover:bg-background/20"
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuItem onSelect={onEdit}>
+                  <Pencil className="mr-2 h-3.5 w-3.5" />
+                  {t("edit")}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={onDelete}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Trash2 className="mr-2 h-3.5 w-3.5" />
+                  {t("delete")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </span>
+        </>
       )}
     </div>
   );

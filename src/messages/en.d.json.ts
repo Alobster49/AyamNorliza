@@ -66,6 +66,8 @@ declare const messages: {
       "setupPending": "Starting...",
       "skip": "Skip for now",
       "removeConfirm": "Are you sure you want to remove two-factor authentication? Your account will be less secure.",
+      "removeTitle": "Remove two-factor authentication?",
+      "removeAction": "Remove",
       "statusEnabled": "Two-factor authentication is <strong>enabled</strong> using your authenticator app.",
       "statusDisabled": "Two-factor authentication is currently <strong>disabled</strong>.",
       "enableButton": "Enable two-factor authentication",
@@ -1216,7 +1218,10 @@ declare const messages: {
         "archived": "Archived",
         "addCategory": "+ Add category",
         "editAriaLabel": "Edit {label}",
-        "deleteAriaLabel": "Delete {label}"
+        "deleteAriaLabel": "Delete {label}",
+        "optionsAriaLabel": "Options for {label}",
+        "edit": "Edit category",
+        "delete": "Delete category"
       },
       "actionsMenu": {
         "ariaLabel": "Actions for {name}",
@@ -1233,6 +1238,7 @@ declare const messages: {
         "status": "Status",
         "archived": "Archived",
         "noSizesYet": "no sizes yet",
+        "priceRange": "{range} · {count, plural, one {# size} other {# sizes}}",
         "addSizeAriaLabel": "Add size to {name}",
         "editAriaLabel": "Edit {name}",
         "addFirstSize": "+ Add the first size for {name}",
@@ -1258,19 +1264,33 @@ declare const messages: {
         "viewAriaLabel": "Catalog view",
         "cardsView": "Cards",
         "ledgerView": "Ledger",
-        "addProduct": "Add Product"
+        "addProduct": "Add Product",
+        "searchPlaceholder": "Search products, sizes…"
       },
       "catalog": {
         "archivedNotice": "Archived products are hidden from the buyer portal, but their past orders stay intact. Restore one to put it back on sale.",
-        "emptyArchived": "Nothing archived.",
-        "emptyNoCategories": "Create your first category, then add products to it.",
-        "emptyNoProducts": "No products in this category yet. Click “{addProduct}” to create one."
+        "emptyArchived": "Products you archive land here, ready to restore anytime.",
+        "emptyArchivedTitle": "Archive is empty",
+        "emptyNoCategories": "Products live in categories — create your first one to start building the catalog.",
+        "emptyNoCategoriesTitle": "Set up your catalog",
+        "emptyNoProducts": "No products in this category yet.",
+        "emptyNoProductsTitle": "Nothing here yet",
+        "emptyCreateCategoryCta": "Create your first category",
+        "emptyAddProductCta": "Add your first product",
+        "emptySearch": "No products match \"{query}\".",
+        "clearSearch": "Clear search"
       },
       "card": {
         "noSizes": "No sizes/prices yet."
       },
       "client": {
-        "deleteCategoryConfirm": "Delete category \"{name}\"?",
+        "deleteCategoryConfirm": "\"{name}\" will be removed. A category that still has products cannot be deleted.",
+        "deleteCategoryTitle": "Delete category?",
+        "deleteProductTitle": "Delete product permanently?",
+        "deleteVariantTitle": "Delete size/option?",
+        "confirmDelete": "Delete",
+        "needCategoryFirstTitle": "Create a category first",
+        "needCategoryFirstDescription": "Every product lives in a category — set one up and you can add products right after.",
         "categoryDeleted": "Category deleted",
         "error": "Error",
         "productArchived": "Product archived",
@@ -1281,10 +1301,7 @@ declare const messages: {
         "cannotDeleteDescription": "{name} appears on {count, plural, one {# past order line} other {# past order lines}}. Archive it instead: it disappears from the shop and the orders stay intact.",
         "deleteProductConfirm": "Permanently delete \"{name}\" and its sizes? It has never been ordered, so nothing else is affected.",
         "productDeleted": "Product deleted",
-        "markedAvailable": "Marked available",
-        "markedSoldOut": "Marked sold out",
-        "variantToggleDescription": "{product} — {variant}",
-        "deleteVariantConfirm": "Delete \"{variant}\" from {product}?",
+        "deleteVariantConfirm": "\"{variant}\" will be removed from {product}. Buyers can no longer order it.",
         "variantDeleted": "Size/option deleted"
       }
     },
@@ -1314,7 +1331,9 @@ declare const messages: {
       "customerUpdated": "Customer updated",
       "customerCreated": "Customer created",
       "customerDeleted": "Customer deleted",
-      "deleteConfirm": "Are you sure you want to delete this customer?",
+      "deleteConfirm": "\"{name}\" will be removed permanently.",
+      "deleteTitle": "Delete customer?",
+      "confirmDelete": "Delete",
       "error": "Error"
     }
   },
@@ -2007,10 +2026,16 @@ declare const messages: {
         "restored": "Restored",
         "archivedDescription": "Hidden from live views. Nothing was deleted.",
         "undo": "Undo",
-        "confirmDeleteZone": "Delete zone \"{name}\" permanently?",
-        "confirmDeleteTruck": "Delete truck \"{name}\" permanently?",
-        "confirmDeleteSlot": "Delete this delivery slot permanently?",
-        "confirmRemoveBlock": "Remove this blocked date?",
+        "confirmDeleteZone": "Zone \"{name}\" will be deleted permanently.",
+        "confirmDeleteTruck": "Truck \"{name}\" will be deleted permanently.",
+        "confirmDeleteSlot": "This delivery slot will be deleted permanently.",
+        "confirmRemoveBlock": "This blocked date will be removed and the truck becomes bookable again that day.",
+        "deleteZoneTitle": "Delete zone?",
+        "deleteTruckTitle": "Delete truck?",
+        "deleteSlotTitle": "Delete slot?",
+        "removeBlockTitle": "Remove blocked date?",
+        "confirmDelete": "Delete",
+        "confirmRemove": "Remove",
         "zoneDeleted": "Zone deleted",
         "truckDeleted": "Truck deleted",
         "slotDeleted": "Slot deleted",

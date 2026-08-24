@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Plus, Rows3 } from "lucide-react";
+import { LayoutGrid, Plus, Rows3, Search } from "lucide-react";
 import {
   countProductOrderItems,
   deleteCategory,
@@ -18,7 +18,9 @@ import {
   type CatalogProduct,
 } from "@/features/seller/lib/catalog-model";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { CategoryDialog } from "@/features/seller/components/products/category-dialog";
 import { ProductDialog } from "@/features/seller/components/products/product-dialog";
 import { VariantDialog } from "@/features/seller/components/products/variant-dialog";
@@ -34,6 +36,12 @@ type DialogState =
   | { kind: "category"; category?: Category }
   | { kind: "product"; product?: CatalogProduct; defaultCategoryId?: string }
   | { kind: "variant"; productId: string; variant?: ProductVariant }
+  | null;
+
+type ConfirmState =
+  | { kind: "category"; category: Category }
+  | { kind: "product"; product: CatalogProduct }
+  | { kind: "variant"; product: CatalogProduct; variant: ProductVariant }
   | null;
 
 type ProductsClientProps = {
@@ -55,7 +63,17 @@ export function ProductsClient({
   const [categories, setCategories] = useState(initialCategories);
   const [products, setProducts] = useState(initialProducts);
   const [selectedCategoryId, setSelectedCategoryId] = useState<CatalogFilter>(null);
+  const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<DialogState>(null);
+  // Content and visibility are separate so the closing dialog keeps its text
+  // during the exit animation instead of unmounting abruptly.
+  const [confirm, setConfirm] = useState<ConfirmState>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const openConfirm = (state: NonNullable<ConfirmState>) => {
+    setConfirm(state);
+    setConfirmOpen(true);
+  };
 
   // Default to cards; restore the device's last choice after mount so the
   // server render never mismatches.
@@ -109,8 +127,7 @@ export function ProductsClient({
     );
   };
 
-  const handleDeleteCategory = async (category: Category) => {
-    if (!confirm(t("deleteCategoryConfirm", { name: category.name }))) return;
+  const performDeleteCategory = async (category: Category) => {
     try {
       await deleteCategory(category.id, organizationSlug);
       setCategories((prev) => prev.filter((c) => c.id !== category.id));
@@ -149,7 +166,7 @@ export function ProductsClient({
    * Anything with history is pushed towards archive, which is reversible and
    * keeps invoices and revenue reports whole.
    */
-  const handleDeleteProduct = async (product: CatalogProduct) => {
+  const requestDeleteProduct = async (product: CatalogProduct) => {
     try {
       const orderCount = await countProductOrderItems(product.id);
       if (orderCount > 0) {
@@ -160,9 +177,18 @@ export function ProductsClient({
         });
         return;
       }
-      if (!confirm(t("deleteProductConfirm", { name: product.name }))) {
-        return;
-      }
+      openConfirm({ kind: "product", product });
+    } catch (error) {
+      toast({
+        title: t("error"),
+        description: error instanceof Error ? error.message : String(error),
+        variant: "destructive",
+      });
+    }
+  };
+
+  const performDeleteProduct = async (product: CatalogProduct) => {
+    try {
       await deleteProduct(product.id, organizationSlug);
       setProducts((prev) => prev.filter((p) => p.id !== product.id));
       toast({ title: t("productDeleted") });
@@ -190,16 +216,14 @@ export function ProductsClient({
     );
   };
 
-  // Optimistic one-tap sold-out toggle; rolls back on failure.
+  // Optimistic one-tap sold-out toggle; rolls back on failure. The switch
+  // itself is the success feedback — a toast per tap turns rapid price-list
+  // sweeps into a notification storm, so only failures speak up.
   const handleToggleVariant = async (product: CatalogProduct, variant: ProductVariant) => {
     const next = !variant.is_available;
     setVariantAvailability(variant.id, product.id, next);
     try {
       await updateVariant(variant.id, { is_available: next }, organizationSlug);
-      toast({
-        title: next ? t("markedAvailable") : t("markedSoldOut"),
-        description: t("variantToggleDescription", { product: product.name, variant: variant.name }),
-      });
     } catch (error) {
       setVariantAvailability(variant.id, product.id, !next);
       toast({
@@ -210,9 +234,7 @@ export function ProductsClient({
     }
   };
 
-  const handleDeleteVariant = async (product: CatalogProduct, variant: ProductVariant) => {
-    if (!confirm(t("deleteVariantConfirm", { variant: variant.name, product: product.name })))
-      return;
+  const performDeleteVariant = async (product: CatalogProduct, variant: ProductVariant) => {
     try {
       await deleteVariant(variant.id, organizationSlug);
       setProducts((prev) =>
@@ -236,9 +258,59 @@ export function ProductsClient({
   const activeCategoryId =
     selectedCategoryId === ARCHIVED_VIEW ? undefined : (selectedCategoryId ?? undefined);
 
+  // With no categories yet, "Add Product" routes to the category dialog with
+  // a hint instead of sitting disabled with no explanation.
+  const handleAddProduct = () => {
+    if (categories.length === 0) {
+      toast({
+        title: t("needCategoryFirstTitle"),
+        description: t("needCategoryFirstDescription"),
+      });
+      setDialog({ kind: "category" });
+      return;
+    }
+    setDialog({ kind: "product", defaultCategoryId: activeCategoryId });
+  };
+
+  const confirmContent =
+    confirm?.kind === "category"
+      ? {
+          title: t("deleteCategoryTitle"),
+          description: t("deleteCategoryConfirm", { name: confirm.category.name }),
+          onConfirm: () => performDeleteCategory(confirm.category),
+        }
+      : confirm?.kind === "product"
+        ? {
+            title: t("deleteProductTitle"),
+            description: t("deleteProductConfirm", { name: confirm.product.name }),
+            onConfirm: () => performDeleteProduct(confirm.product),
+          }
+        : confirm?.kind === "variant"
+          ? {
+              title: t("deleteVariantTitle"),
+              description: t("deleteVariantConfirm", {
+                variant: confirm.variant.name,
+                product: confirm.product.name,
+              }),
+              onConfirm: () => performDeleteVariant(confirm.product, confirm.variant),
+            }
+          : null;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="relative mr-auto w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={tToolbar("searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setSearch("");
+            }}
+            className="pl-9"
+          />
+        </div>
         <ViewToggle label={tToolbar("viewAriaLabel")}>
           <ViewButton
             active={view === "cards"}
@@ -253,12 +325,7 @@ export function ProductsClient({
             label={tToolbar("ledgerView")}
           />
         </ViewToggle>
-        <Button
-          onClick={() =>
-            setDialog({ kind: "product", defaultCategoryId: activeCategoryId })
-          }
-          disabled={categories.length === 0}
-        >
+        <Button onClick={handleAddProduct}>
           <Plus className="mr-2 h-4 w-4" />
           {tToolbar("addProduct")}
         </Button>
@@ -269,20 +336,34 @@ export function ProductsClient({
         products={products}
         selectedCategoryId={selectedCategoryId}
         view={view}
+        searchQuery={search}
+        onClearSearch={() => setSearch("")}
         onSelectCategory={setSelectedCategoryId}
         onAddCategory={() => setDialog({ kind: "category" })}
         onEditCategory={(category) => setDialog({ kind: "category", category })}
-        onDeleteCategory={handleDeleteCategory}
+        onDeleteCategory={(category) => openConfirm({ kind: "category", category })}
         onEditProduct={(product) => setDialog({ kind: "product", product })}
-        onDeleteProduct={handleDeleteProduct}
+        onDeleteProduct={requestDeleteProduct}
+        onAddProduct={handleAddProduct}
         onArchiveProduct={(product) => handleArchiveProduct(product, true)}
         onRestoreProduct={(product) => handleArchiveProduct(product, false)}
         onAddVariant={(product) => setDialog({ kind: "variant", productId: product.id })}
         onEditVariant={(product, variant) =>
           setDialog({ kind: "variant", productId: product.id, variant })
         }
-        onDeleteVariant={handleDeleteVariant}
+        onDeleteVariant={(product, variant) => openConfirm({ kind: "variant", product, variant })}
         onToggleVariant={handleToggleVariant}
+      />
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={(next) => {
+          if (!next) setConfirmOpen(false);
+        }}
+        title={confirmContent?.title ?? ""}
+        description={confirmContent?.description ?? ""}
+        confirmLabel={t("confirmDelete")}
+        onConfirm={() => confirmContent?.onConfirm()}
       />
 
       <CategoryDialog

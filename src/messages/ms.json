@@ -63,6 +63,8 @@
       "setupPending": "Memulakan...",
       "skip": "Langkau buat masa ini",
       "removeConfirm": "Adakah anda pasti mahu membuang pengesahan dua faktor? Akaun anda akan menjadi kurang selamat.",
+      "removeTitle": "Buang pengesahan dua faktor?",
+      "removeAction": "Buang",
       "statusEnabled": "Pengesahan dua faktor <strong>diaktifkan</strong> menggunakan aplikasi pengesah anda.",
       "statusDisabled": "Pengesahan dua faktor kini <strong>dimatikan</strong>.",
       "enableButton": "Aktifkan pengesahan dua faktor",
@@ -1213,7 +1215,10 @@
         "archived": "Diarkibkan",
         "addCategory": "+ Tambah kategori",
         "editAriaLabel": "Sunting {label}",
-        "deleteAriaLabel": "Padam {label}"
+        "deleteAriaLabel": "Padam {label}",
+        "optionsAriaLabel": "Pilihan untuk {label}",
+        "edit": "Sunting kategori",
+        "delete": "Padam kategori"
       },
       "actionsMenu": {
         "ariaLabel": "Tindakan untuk {name}",
@@ -1230,6 +1235,7 @@
         "status": "Status",
         "archived": "Diarkibkan",
         "noSizesYet": "belum ada saiz",
+        "priceRange": "{range} · {count} saiz",
         "addSizeAriaLabel": "Tambah saiz untuk {name}",
         "editAriaLabel": "Sunting {name}",
         "addFirstSize": "+ Tambah saiz pertama untuk {name}",
@@ -1255,19 +1261,33 @@
         "viewAriaLabel": "Paparan katalog",
         "cardsView": "Kad",
         "ledgerView": "Lejar",
-        "addProduct": "Tambah Produk"
+        "addProduct": "Tambah Produk",
+        "searchPlaceholder": "Cari produk, saiz…"
       },
       "catalog": {
         "archivedNotice": "Produk yang diarkibkan disembunyikan daripada portal pembeli, tetapi pesanan lampau kekal utuh. Kembalikan satu untuk menjualnya semula.",
-        "emptyArchived": "Tiada apa yang diarkibkan.",
-        "emptyNoCategories": "Cipta kategori pertama anda, kemudian tambah produk ke dalamnya.",
-        "emptyNoProducts": "Belum ada produk dalam kategori ini. Klik “{addProduct}” untuk mencipta satu."
+        "emptyArchived": "Produk yang anda arkibkan akan berada di sini, sedia untuk dikembalikan bila-bila masa.",
+        "emptyArchivedTitle": "Arkib kosong",
+        "emptyNoCategories": "Produk berada dalam kategori — cipta yang pertama untuk mula membina katalog.",
+        "emptyNoCategoriesTitle": "Sediakan katalog anda",
+        "emptyNoProducts": "Belum ada produk dalam kategori ini.",
+        "emptyNoProductsTitle": "Belum ada apa di sini",
+        "emptyCreateCategoryCta": "Cipta kategori pertama anda",
+        "emptyAddProductCta": "Tambah produk pertama anda",
+        "emptySearch": "Tiada produk sepadan dengan \"{query}\".",
+        "clearSearch": "Kosongkan carian"
       },
       "card": {
         "noSizes": "Belum ada saiz/harga."
       },
       "client": {
-        "deleteCategoryConfirm": "Padam kategori \"{name}\"?",
+        "deleteCategoryConfirm": "\"{name}\" akan dibuang. Kategori yang masih mempunyai produk tidak boleh dipadam.",
+        "deleteCategoryTitle": "Padam kategori?",
+        "deleteProductTitle": "Padam produk secara kekal?",
+        "deleteVariantTitle": "Padam saiz/pilihan?",
+        "confirmDelete": "Padam",
+        "needCategoryFirstTitle": "Cipta kategori dahulu",
+        "needCategoryFirstDescription": "Setiap produk berada dalam kategori — sediakan satu dan anda boleh menambah produk selepas itu.",
         "categoryDeleted": "Kategori dipadam",
         "error": "Ralat",
         "productArchived": "Produk diarkibkan",
@@ -1278,10 +1298,7 @@
         "cannotDeleteDescription": "{name} muncul pada {count, plural, other {# baris pesanan lampau}}. Arkibkan sebagai gantinya: ia akan hilang daripada kedai dan pesanan kekal utuh.",
         "deleteProductConfirm": "Padam \"{name}\" dan saiznya secara kekal? Ia tidak pernah ditempah, jadi tiada apa lain yang terjejas.",
         "productDeleted": "Produk dipadam",
-        "markedAvailable": "Ditandakan tersedia",
-        "markedSoldOut": "Ditandakan habis dijual",
-        "variantToggleDescription": "{product} — {variant}",
-        "deleteVariantConfirm": "Padam \"{variant}\" daripada {product}?",
+        "deleteVariantConfirm": "\"{variant}\" akan dibuang daripada {product}. Pembeli tidak lagi boleh menempahnya.",
         "variantDeleted": "Saiz/pilihan dipadam"
       }
     },
@@ -1311,7 +1328,9 @@
       "customerUpdated": "Pelanggan dikemas kini",
       "customerCreated": "Pelanggan dicipta",
       "customerDeleted": "Pelanggan dipadam",
-      "deleteConfirm": "Adakah anda pasti mahu memadam pelanggan ini?",
+      "deleteConfirm": "\"{name}\" akan dibuang secara kekal.",
+      "deleteTitle": "Padam pelanggan?",
+      "confirmDelete": "Padam",
       "error": "Ralat"
     }
   },
@@ -2004,10 +2023,16 @@
         "restored": "Dipulihkan",
         "archivedDescription": "Disembunyikan daripada paparan langsung. Tiada apa dipadam.",
         "undo": "Buat asal",
-        "confirmDeleteZone": "Padam zon \"{name}\" secara kekal?",
-        "confirmDeleteTruck": "Padam trak \"{name}\" secara kekal?",
-        "confirmDeleteSlot": "Padam slot penghantaran ini secara kekal?",
-        "confirmRemoveBlock": "Buang tarikh disekat ini?",
+        "confirmDeleteZone": "Zon \"{name}\" akan dipadam secara kekal.",
+        "confirmDeleteTruck": "Trak \"{name}\" akan dipadam secara kekal.",
+        "confirmDeleteSlot": "Slot penghantaran ini akan dipadam secara kekal.",
+        "confirmRemoveBlock": "Tarikh disekat ini akan dibuang dan trak boleh ditempah semula pada hari itu.",
+        "deleteZoneTitle": "Padam zon?",
+        "deleteTruckTitle": "Padam trak?",
+        "deleteSlotTitle": "Padam slot?",
+        "removeBlockTitle": "Buang tarikh disekat?",
+        "confirmDelete": "Padam",
+        "confirmRemove": "Buang",
         "zoneDeleted": "Zon dipadam",
         "truckDeleted": "Trak dipadam",
         "slotDeleted": "Slot dipadam",
