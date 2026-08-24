@@ -2,9 +2,10 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
+import { Phone, MessageCircle } from "lucide-react";
 import type { OrderListItem } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
-import { displayAmount } from "@/features/orders/lib/board-view-model";
+import { displayAmount, waLink } from "@/features/orders/lib/board-view-model";
 import { Badge } from "@/components/ui/badge";
 
 /** Presentational card body — shared by the board card and the DragOverlay preview. */
@@ -35,9 +36,39 @@ export function OrderCardContent({
     >
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs text-muted-foreground">{order.id.slice(0, 8)}</span>
-        <Badge variant="outline" className="text-[10px] capitalize">
-          {t(`source.${order.source}`)}
-        </Badge>
+        <div className="flex items-center gap-0.5">
+          <Badge variant="outline" className="text-[10px] capitalize">
+            {t(`source.${order.source}`)}
+          </Badge>
+          {order.customer?.phone && (
+            <span className="flex items-center gap-0.5">
+              <a
+                href={`tel:${order.customer.phone}`}
+                aria-label={t("call", { name: order.customer.name })}
+                className="rounded p-1.5 text-muted-foreground hover:text-foreground"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                <Phone className="h-3.5 w-3.5" />
+              </a>
+              <a
+                href={waLink(order.customer.phone)}
+                target="_blank"
+                rel="noreferrer"
+                aria-label={t("whatsapp", { name: order.customer.name })}
+                className="rounded p-1.5 text-muted-foreground hover:text-foreground"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+              </a>
+            </span>
+          )}
+        </div>
       </div>
       <div className="text-sm font-medium leading-snug">{order.customer?.name ?? t("unknownCustomer")}</div>
       {order.notes && (

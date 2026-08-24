@@ -81,3 +81,10 @@ export function matchesSearch(order: OrderListItem, query: string): boolean {
     order.id.toLowerCase().startsWith(q)
   );
 }
+
+/** wa.me needs digits with country code; MY local numbers start with 0. */
+export function waLink(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  const withCountry = digits.startsWith("0") ? `6${digits}` : digits;
+  return `https://wa.me/${withCountry}`;
+}

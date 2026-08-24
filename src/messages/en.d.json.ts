@@ -1247,7 +1247,9 @@ declare const messages: {
         "portal": "Portal",
         "manual": "Manual"
       },
-      "unweighed": "Not weighed yet"
+      "unweighed": "Not weighed yet",
+      "call": "Call {name}",
+      "whatsapp": "WhatsApp {name}"
     },
     "journey": {
       "ariaLabel": "Order progress: step {step} of {total}",
@@ -1293,6 +1295,7 @@ declare const messages: {
       "orderedKg": "{quantity} kg ordered · size {min}–{max} kg",
       "orderedPieces": "{quantity, plural, one {# pc} other {# pcs}} ordered · size {min}–{max} kg",
       "saveNext": "Save & next",
+      "undo": "Undo",
       "swipeHint": "Swipe left to skip · swipe right to undo"
     },
     "sizeBand": {
@@ -1626,17 +1629,11 @@ declare const messages: {
         "action": "Confirm",
         "busy": "Confirming…",
         "success": "Order confirmed"
-      },
-      "bulk": {
-        "select": "Select",
-        "exit": "Done",
-        "confirmN": "Confirm {count, plural, one {# order} other {# orders}}",
-        "summary": "{confirmed} confirmed, {failed} failed"
       }
     },
     "station": {
       "slotSuffix": " · slot {start}–{end}",
-      "autosaveHint": "Orders save automatically after their last item. Keyboard works too: digits, ⌫, Enter."
+      "autosaveHint": "Orders save automatically after their last item. Keyboard works too: digits, ⌫, Enter · P for pieces."
     }
   },
   "logistics": {
@@ -2009,7 +2006,8 @@ declare const messages: {
   },
   "tasks": {
     "saveFailedTitle": "Couldn't save order",
-    "completeTitle": "Order complete"
+    "completeTitle": "Order complete",
+    "completeBody": "Weighed and saved for {customerName}."
   },
   "warehouse": {
     "empty": {
@@ -2124,6 +2122,7 @@ declare const messages: {
     "empty": {
       "title": "No trucks on the board today",
       "titleDate": "No trucks on the board for this date",
+      "noLoadTitle": "No load assigned to any truck yet",
       "subtitle": "Ayam resting until the next load."
     },
     "capacity": {
@@ -2144,7 +2143,10 @@ declare const messages: {
     "lane": {
       "ariaLabel": "{truck}, {done} of {total} loaded",
       "departedNotice": "This truck has departed — loading is closed.",
-      "emptyNotice": "Nothing assigned to this truck yet."
+      "allLoaded": "All loaded"
+    },
+    "idle": {
+      "title": "Idle trucks"
     },
     "toast": {
       "couldNotUpdateTitle": "Could not update",
