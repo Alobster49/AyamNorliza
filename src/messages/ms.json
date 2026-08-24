@@ -1816,6 +1816,7 @@
         "assignedToast": "{count, plural, other {# pesanan ditugaskan}}",
         "assignFailedToast": "Tugasan gagal",
         "departFailedToast": "Berlepas gagal",
+        "departedToast": "{name} berlepas",
         "noActiveTrucks": "Tiada trak aktif di mana-mana teluk.",
         "exceptions": {
           "no_postcode": "Order tiada poskod — tambah satu pada order dahulu.",
@@ -1844,6 +1845,9 @@
         }
       },
       "moveNotAllowed": "Pergerakan tidak dibenarkan",
+      "dateAriaLabel": "Tarikh penghantaran keluar",
+      "refreshing": "Memuat semula",
+      "dropHere": "Letak pesanan di sini",
       "blocked": {
         "notDispatchable": "Hanya order yang disahkan atau sedia boleh dihantar keluar.",
         "runDeparted": "Order ini berada pada trip yang sudah bertolak dan tidak boleh dipindah lagi.",

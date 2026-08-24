@@ -26,9 +26,10 @@ export function TicketCard({
       ref={overlay ? undefined : setNodeRef}
       {...(overlay ? {} : { ...attributes, ...listeners })}
       className={[
-        "rounded-md border bg-card p-2 text-sm shadow-sm",
+        "rounded-md border bg-card p-2 text-sm shadow-sm transition-opacity duration-150 motion-reduce:transition-none",
         disabled ? "opacity-60" : "cursor-grab active:cursor-grabbing",
         isDragging && !overlay ? "opacity-40" : "",
+        overlay ? "shadow-lg" : "",
       ].join(" ")}
     >
       <div className="flex items-center justify-between gap-2">

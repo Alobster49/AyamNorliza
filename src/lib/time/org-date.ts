@@ -41,6 +41,40 @@ function formatterFor(timeZone: string): Intl.DateTimeFormat {
   return formatter;
 }
 
+const timeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function timeFormatterFor(timeZone: string): Intl.DateTimeFormat {
+  const cached = timeFormatters.get(timeZone);
+  if (cached) return cached;
+
+  const options: Intl.DateTimeFormatOptions = {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  };
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat("en-US", { ...options, timeZone });
+  } catch {
+    formatter = new Intl.DateTimeFormat("en-US", { ...options, timeZone: "UTC" });
+  }
+
+  timeFormatters.set(timeZone, formatter);
+  return formatter;
+}
+
+/**
+ * Wall-clock minutes since midnight in `timeZone` right now. Pairs with
+ * `todayInTimeZone` for "now" markers on day views: comparing the depot's
+ * date with the browser's clock mixes two zones and drifts by the offset.
+ */
+export function minutesOfDayInTimeZone(timeZone: string, now: Date = new Date()): number {
+  const parts = timeFormatterFor(timeZone).formatToParts(now);
+  const pick = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value ?? "0");
+  return pick("hour") * 60 + pick("minute");
+}
+
 /** The calendar date in `timeZone` right now, as yyyy-mm-dd. */
 export function todayInTimeZone(timeZone: string, now: Date = new Date()): string {
   // formatToParts rather than format(): the assembled parts are locale-proof,

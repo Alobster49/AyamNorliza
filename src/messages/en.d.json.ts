@@ -1819,6 +1819,7 @@ declare const messages: {
         "assignedToast": "{count, plural, one {Assigned # order} other {Assigned # orders}}",
         "assignFailedToast": "Assign failed",
         "departFailedToast": "Depart failed",
+        "departedToast": "{name} departed",
         "noActiveTrucks": "No active trucks in any bay.",
         "exceptions": {
           "no_postcode": "Order has no postcode — add one on the order first.",
@@ -1847,6 +1848,9 @@ declare const messages: {
         }
       },
       "moveNotAllowed": "Move not allowed",
+      "dateAriaLabel": "Dispatch date",
+      "refreshing": "Refreshing",
+      "dropHere": "Drop orders here",
       "blocked": {
         "notDispatchable": "Only confirmed or ready orders can be dispatched.",
         "runDeparted": "This order is on a departed run and can no longer be moved.",
