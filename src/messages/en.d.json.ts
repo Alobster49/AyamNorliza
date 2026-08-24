@@ -1455,7 +1455,7 @@ declare const messages: {
     },
     "board": {
       "newOrder": "New order",
-      "addOrderAria": "Add order to {status}",
+      "addToPending": "Add a new pending order",
       "empty": "No orders",
       "moveNotAllowedTitle": "Move not allowed"
     },

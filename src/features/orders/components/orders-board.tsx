@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import {
   DndContext,
@@ -199,15 +199,17 @@ function BoardColumn({
         <Badge variant="secondary" className="text-[10px]">
           {orders.length}
         </Badge>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="ml-auto h-6 w-6"
-          onClick={onNewOrder}
-          aria-label={t("addOrderAria", { status: statusLabel })}
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </Button>
+        {status === "pending" && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="ml-auto h-6 w-6"
+            onClick={onNewOrder}
+            aria-label={t("addToPending")}
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </header>
       <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">
         {orders.length === 0 ? (
@@ -220,12 +222,14 @@ function BoardColumn({
           ))
         )}
       </div>
-      <footer className="px-2 pb-2">
-        <Button variant="ghost" className="w-full justify-start text-muted-foreground" size="sm" onClick={onNewOrder}>
-          <Plus className="mr-2 h-3.5 w-3.5" />
-          {t("newOrder")}
-        </Button>
-      </footer>
+      {status === "pending" && (
+        <footer className="px-2 pb-2">
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground" size="sm" onClick={onNewOrder}>
+            <Plus className="mr-2 h-3.5 w-3.5" />
+            {t("newOrder")}
+          </Button>
+        </footer>
+      )}
     </section>
   );
 }

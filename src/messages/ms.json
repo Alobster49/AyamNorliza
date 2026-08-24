@@ -1452,7 +1452,7 @@
     },
     "board": {
       "newOrder": "Pesanan baharu",
-      "addOrderAria": "Tambah pesanan ke {status}",
+      "addToPending": "Tambah pesanan baharu",
       "empty": "Tiada pesanan",
       "moveNotAllowedTitle": "Pergerakan tidak dibenarkan"
     },
