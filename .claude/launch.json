@@ -6,6 +6,13 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "port": 9999
+    },
+    {
+      "name": "ayamnorliza-dev-alt",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "dev"],
+      "port": 9999,
+      "autoPort": true
     }
   ]
 }
