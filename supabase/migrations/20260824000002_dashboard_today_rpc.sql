@@ -82,7 +82,7 @@ begin
     'tasksDoneToday', v_tasks_done_today,
     'ordersWithoutRun', v_orders_without_run,
     'marketPriceDate', v_market_date,
-    'marketStale', (v_market_date is null or v_market_date < v_today - 3)
+    'marketStale', (v_market_date is null or v_market_date <= v_today - 3)
   );
 end;
 $$;

@@ -30,6 +30,7 @@ export function TodayStrip({ payload }: { payload: TodayPayload }) {
           <span>{t("tasksPending")}: <strong className="tabular-nums">{vm.tasksPending}</strong></span>
           <span>{t("tasksDoneToday")}: <strong className="tabular-nums">{vm.tasksDoneToday}</strong></span>
         </div>
+        <p className="text-xs font-medium text-muted-foreground">{t("runs")}</p>
         {vm.runs.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("noRuns")}</p>
         ) : (
