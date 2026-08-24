@@ -23,10 +23,22 @@ export function buildInsightsViewModel(
   payload: InsightsPayload,
   suggestions: MarketSuggestion[],
 ): InsightsViewModel {
+  // market_base is per-variant; a product's benchmark is the mean of its
+  // variants' bases so pairing is deterministic regardless of input order.
+  const basesByProduct = new Map<string, number[]>();
+  for (const s of suggestions) {
+    if (s.market_base == null) continue;
+    const base = Number(s.market_base);
+    if (!Number.isFinite(base) || base <= 0) continue;
+    const list = basesByProduct.get(s.product_name);
+    if (list) list.push(base);
+    else basesByProduct.set(s.product_name, [base]);
+  }
   const marketByProduct = new Map(
-    suggestions
-      .filter((s) => s.market_base != null)
-      .map((s) => [s.product_name, Number(s.market_base)]),
+    [...basesByProduct].map(([name, bases]) => [
+      name,
+      bases.reduce((a, b) => a + b, 0) / bases.length,
+    ]),
   );
   return {
     pricing: payload.pricing.map((row) => {

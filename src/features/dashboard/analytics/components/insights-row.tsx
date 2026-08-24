@@ -39,11 +39,7 @@ function PricingCard({ vm }: { vm: InsightsViewModel }) {
                   {row.realizedPerKg !== null ? money(row.realizedPerKg) : "—"}
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {row.marketBase !== null ? (
-                    money(row.marketBase)
-                  ) : (
-                    <span className="text-muted-foreground">{t("noMarket")}</span>
-                  )}
+                  {row.marketBase !== null ? money(row.marketBase) : "—"}
                 </TableCell>
                 <TableCell
                   className={`text-right tabular-nums ${
@@ -54,9 +50,11 @@ function PricingCard({ vm }: { vm: InsightsViewModel }) {
                         : "text-emerald-600"
                   }`}
                 >
-                  {row.gapPct !== null
-                    ? format.number(row.gapPct / 100, { style: "percent", maximumFractionDigits: 1 })
-                    : "—"}
+                  {row.gapPct !== null ? (
+                    format.number(row.gapPct / 100, { style: "percent", maximumFractionDigits: 1 })
+                  ) : (
+                    <span className="text-muted-foreground">{t("noMarket")}</span>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -71,28 +69,30 @@ function WeightCard({ vm }: { vm: InsightsViewModel }) {
   const t = useTranslations("analytics.insights.weight");
   const format = useFormatter();
   const kg = (n: number) => format.number(n, { maximumFractionDigits: 1 });
-  const hasLeakage = vm.weight.diffKg > 0 && vm.weight.byProduct.length > 0;
+  const hasLeakage = vm.weight.diffKg > 0;
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-sm font-medium">{t("title")}</CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2">
-        <p className="text-sm">
-          {t("summary", {
-            diff: kg(vm.weight.diffKg),
-            pct: format.number(vm.weight.leakagePct / 100, { style: "percent", maximumFractionDigits: 1 }),
-          })}
-        </p>
         {hasLeakage ? (
-          <ul className="flex flex-col gap-1">
-            {vm.weight.byProduct.map((p) => (
-              <li key={p.name} className="flex items-center justify-between text-sm">
-                <span>{p.name}</span>
-                <span className="tabular-nums text-muted-foreground">{kg(p.diffKg)}</span>
-              </li>
-            ))}
-          </ul>
+          <>
+            <p className="text-sm">
+              {t("summary", {
+                diff: kg(vm.weight.diffKg),
+                pct: format.number(vm.weight.leakagePct / 100, { style: "percent", maximumFractionDigits: 1 }),
+              })}
+            </p>
+            <ul className="flex flex-col gap-1">
+              {vm.weight.byProduct.map((p) => (
+                <li key={p.name} className="flex items-center justify-between text-sm">
+                  <span>{p.name}</span>
+                  <span className="tabular-nums text-muted-foreground">{kg(p.diffKg)}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         ) : (
           <p className="text-sm text-muted-foreground">{t("none")}</p>
         )}

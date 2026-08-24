@@ -27,6 +27,16 @@ describe("buildInsightsViewModel", () => {
     expect(none.pricing[0]!.gapPct).toBeNull();
   });
 
+  it("averages market_base across multiple suggestions for the same product", () => {
+    const multiVariant = [
+      { product_name: "Whole Chicken", market_base: 9 } as unknown as MarketSuggestion,
+      { product_name: "Whole Chicken", market_base: 10 } as unknown as MarketSuggestion,
+    ];
+    const averaged = buildInsightsViewModel(payload, multiVariant);
+    expect(averaged.pricing[0]!.marketBase).toBe(9.5);
+    expect(averaged.pricing[0]!.gapPct).toBeCloseTo(((10 - 9.5) / 9.5) * 100);
+  });
+
   it("computes failure rate and slot fill", () => {
     expect(vm.delivery.failureRate).toBeCloseTo(0.1);
     expect(vm.delivery.slotFillPct).toBeCloseTo(50);
