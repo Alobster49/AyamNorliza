@@ -20,7 +20,7 @@ nobody uses makes the interface harder to read, not easier.
 | Product | Produk | |
 | Delivery | Penghantaran | |
 | Dispatch | Penghantaran keluar | Distinct from Delivery; confirm with staff. |
-| Run | Trip | Staff say "trip"; "larian" reads as a running race. |
+| Run | Trip | Staff say "trip"; "larian" reads as a running race. Exception (user-confirmed 2026-08-24): the *departed* run status stays "Dalam perjalanan" — en-route sense, not the Trip object. |
 | Zone | Zon | |
 | Batch | Kelompok | |
 | Coop | Reban | |
