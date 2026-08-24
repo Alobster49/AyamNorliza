@@ -55,6 +55,7 @@ import {
   adminRevokeUserSessions,
   adminRotateInvitationToken,
 } from "./admin-queries";
+import { groupOwnerEmailsByLocale } from "./break-glass-recipients";
 import { sendEmail } from "@/lib/email/resend";
 import { renderInvite } from "@/lib/email/render-invite";
 import { renderBreakGlassUsed } from "@/lib/email/render-break-glass";
@@ -1276,11 +1277,16 @@ export async function openBreakGlassAction(
       .from("profiles")
       .select("user_id, locale")
       .in("user_id", ownerRecipients);
-    const localeGroups = new Map<AppLocale, string[]>();
-    for (const uid of ownerRecipients) {
-      const locale = resolveLocale(ownerProfiles?.find((p) => p.user_id === uid)?.locale);
-      localeGroups.set(locale, [...(localeGroups.get(locale) ?? []), uid]);
-    }
+    // Membership rows only carry user ids — emails live on `auth.users`,
+    // so resolve them through the service-role client before sending.
+    const ownerEmails = await admin.getUserEmailsByIds(ownerRecipients);
+    const localeGroups = groupOwnerEmailsByLocale(
+      ownerRecipients.map((uid) => ({
+        userId: uid,
+        email: ownerEmails.get(uid) ?? null,
+        locale: ownerProfiles?.find((p) => p.user_id === uid)?.locale,
+      })),
+    );
     for (const [locale, recipients] of localeGroups) {
       const { subject, html } = renderBreakGlassUsed({
         organizationName: org?.name ?? "AyamNorliza",

@@ -85,6 +85,29 @@ export const admin = {
   },
 
   /**
+   * Resolve auth emails for a set of user ids. Emails live only on
+   * `auth.users`, which RLS-scoped clients cannot read — the break-glass
+   * owner notification uses this to turn membership `user_id`s into
+   * deliverable addresses. A failed lookup maps to null; the caller
+   * decides whether to skip or fail.
+   */
+  async getUserEmailsByIds(userIds: string[]): Promise<Map<string, string | null>> {
+    const c = client();
+    const entries = await Promise.all(
+      userIds.map(async (id) => {
+        try {
+          const { data, error } = await c.auth.admin.getUserById(id);
+          if (error || !data.user) return [id, null] as const;
+          return [id, data.user.email ?? null] as const;
+        } catch {
+          return [id, null] as const;
+        }
+      }),
+    );
+    return new Map(entries);
+  },
+
+  /**
    * Append-only insert into the `audit_log` table. The DB trigger blocks
    * UPDATE/DELETE, so even this admin path cannot mutate history.
    */
