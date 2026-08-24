@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(8);
+select plan(10);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as postgres, bypasses RLS)
@@ -88,6 +88,16 @@ values ('d1000000-0000-0000-0000-000000000040', 'd1000000-0000-0000-0000-0000000
         'd1000000-0000-0000-0000-000000000011', 'pending')
 on conflict (id) do nothing;
 
+update public.order_items set warehouse_weight_kg = 5.400
+where id = 'd1000000-0000-0000-0000-000000000020';
+
+insert into public.delivery_attempts (id, organization_id, run_id, order_id, outcome, reason,
+                                      next_action, recorded_by)
+values ('d1000000-0000-0000-0000-000000000050', 'd1000000-0000-0000-0000-00000000000a',
+        'd1000000-0000-0000-0000-000000000030', 'd1000000-0000-0000-0000-000000000010',
+        'failed', 'shop_closed', 'retry_today', 'd1000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- anon: no execute grant
 -- ---------------------------------------------------------------------------
@@ -148,6 +158,18 @@ select is(
   jsonb_array_length(
     (select public.get_dashboard_today('d1000000-0000-0000-0000-00000000000a') -> 'runs')),
   1, 'one run today');
+
+select ok(
+  (select public.get_dashboard_insights('d1000000-0000-0000-0000-00000000000a',
+     (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date))
+    ?& array['pricing','weight','retention','delivery'],
+  'insights payload has all keys');
+
+select is(
+  (select public.get_dashboard_insights('d1000000-0000-0000-0000-00000000000a',
+     (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date) -> 'weight' ->> 'diffKg')::numeric,
+  0.400::numeric,
+  'weight leakage is warehouse minus final');
 
 select * from finish();
 rollback;
