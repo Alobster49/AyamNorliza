@@ -68,15 +68,14 @@ const eslintConfig = [
     },
   },
   {
-    // These three shells have already converted `usePathname` to the
-    // locale-aware import - only `Link` and `useRouter` still come from
-    // `next/link` / `next/navigation` directly. A wholesale exemption (as
-    // above) would leave the converted `usePathname` unguarded against
-    // regressing back to `next/navigation`, so this override keeps that one
-    // import name restricted while permitting the rest.
+    // This shell has already converted `usePathname` to the locale-aware
+    // import - only `Link` and `useRouter` still come from `next/link` /
+    // `next/navigation` directly. A wholesale exemption (as above) would
+    // leave the converted `usePathname` unguarded against regressing back
+    // to `next/navigation`, so this override keeps that one import name
+    // restricted while permitting the rest.
     files: [
       "src/features/dashboard/components/app-sidebar.tsx",
-      "src/features/seller/components/seller-sidebar.tsx",
     ],
     rules: {
       "no-restricted-imports": [

@@ -849,6 +849,11 @@ declare const messages: {
       "subject": "Support session opened in {organizationName}",
       "bodyHtml": "<p>A support session has been opened for you in <strong>{organizationName}</strong>.</p><p><strong>Purpose:</strong> {purpose}</p><p><strong>Window:</strong> {startsAt} → {endsAt}</p>"
     }
+  },
+  "seller": {
+    "shell": {
+      "title": "Seller Dashboard"
+    }
   }
 };
 export default messages;

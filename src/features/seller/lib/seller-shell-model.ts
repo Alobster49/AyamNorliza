@@ -2,12 +2,16 @@ import { isRouteActive } from "@/lib/i18n/route-active";
 
 export type SellerRoute = {
   title: string;
+  /** Message key (scoped to the `dashboard` namespace) for `title`. */
+  titleKey: string;
   href: string;
   isActive: boolean;
 };
 
 export type SellerRouteGroup = {
   title: string;
+  /** Message key (scoped to the `dashboard` namespace) for `title`. */
+  sectionKey: string;
   isActive: boolean;
   items: SellerRoute[];
 };
@@ -17,13 +21,17 @@ type SellerPathInput = {
   pathname: string;
 };
 
+// Reuses the `dashboard` namespace's `sections.*`/`pages.*` keys: the label
+// text here is identical to the dashboard sidebar's Sales group, so a
+// separate `seller.*` translation would just duplicate it.
 const routeGroups = [
   {
     title: "Sales",
+    sectionKey: "sections.sales",
     items: [
-      { title: "Products", segment: "products" },
-      { title: "Orders", segment: "orders" },
-      { title: "Customers", segment: "customers" },
+      { title: "Products", titleKey: "pages.products", segment: "products" },
+      { title: "Orders", titleKey: "pages.orders", segment: "orders" },
+      { title: "Customers", titleKey: "pages.customers", segment: "customers" },
     ],
   },
 ] as const;
@@ -37,6 +45,7 @@ export function getSellerSidebarGroups({
       const href = `/${organizationSlug}/${item.segment}`;
       return {
         title: item.title,
+        titleKey: item.titleKey,
         href,
         isActive: isRouteActive(pathname, href),
       };
@@ -44,6 +53,7 @@ export function getSellerSidebarGroups({
 
     return {
       title: group.title,
+      sectionKey: group.sectionKey,
       isActive: items.some((item) => item.isActive),
       items,
     };
@@ -58,9 +68,11 @@ export function getSellerPageContext({
   const activeGroup = groups.find((group) => group.isActive);
   const activeItem = activeGroup?.items.find((item) => item.isActive);
 
+  // `section`/`title` are message keys scoped to the `dashboard` namespace
+  // (e.g. resolve with `useTranslations("dashboard")`), not display text.
   return {
-    section: activeGroup?.title ?? "Sales",
-    title: activeItem?.title ?? "Products",
+    section: activeGroup?.sectionKey ?? "sections.sales",
+    title: activeItem?.titleKey ?? "pages.products",
   };
 }
 

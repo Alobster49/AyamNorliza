@@ -1,8 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { usePathname } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
   BadgeCheck,
@@ -60,7 +59,7 @@ type SellerSidebarProps = {
 };
 
 const groupIcons: Record<string, typeof Package> = {
-  Sales: ShoppingCart,
+  "sections.sales": ShoppingCart,
 };
 
 export function SellerSidebar({
@@ -70,6 +69,7 @@ export function SellerSidebar({
   userName,
   userEmail,
 }: SellerSidebarProps) {
+  const tDashboard = useTranslations("dashboard");
   const pathname = usePathname();
   const groups = getSellerSidebarGroups({ organizationSlug, pathname });
 
@@ -84,11 +84,12 @@ export function SellerSidebar({
       </SidebarHeader>
       <SidebarContent>
         {groups.map((group) => {
-          const GroupIcon = groupIcons[group.title] ?? Package;
+          const GroupIcon = groupIcons[group.sectionKey] ?? Package;
+          const groupTitle = tDashboard(group.sectionKey);
 
           return (
             <Collapsible
-              key={group.title}
+              key={group.sectionKey}
               asChild
               defaultOpen
               className="group/collapsible"
@@ -99,11 +100,11 @@ export function SellerSidebar({
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         isActive={group.isActive}
-                        tooltip={group.title}
+                        tooltip={groupTitle}
                         className="h-9 rounded-lg font-medium"
                       >
                         <GroupIcon />
-                        <span>{group.title}</span>
+                        <span>{groupTitle}</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
@@ -122,7 +123,7 @@ export function SellerSidebar({
                             href={item.href}
                             aria-current={item.isActive ? "page" : undefined}
                           >
-                            <span>{item.title}</span>
+                            <span>{tDashboard(item.titleKey)}</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -155,6 +156,8 @@ function OrganizationSwitcher({
   organizationSlug: string;
   organizationRegion: string | null;
 }) {
+  const t = useTranslations("seller");
+  const tDashboard = useTranslations("dashboard");
   const { isMobile } = useSidebar();
 
   return (
@@ -173,7 +176,7 @@ function OrganizationSwitcher({
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{organizationName}</span>
                 <span className="truncate text-xs text-sidebar-foreground/70">
-                  {organizationRegion ?? "Seller Dashboard"}
+                  {organizationRegion ?? t("shell.title")}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -185,11 +188,11 @@ function OrganizationSwitcher({
             sideOffset={4}
             className="min-w-56 rounded-lg"
           >
-            <DropdownMenuLabel>Organization</DropdownMenuLabel>
+            <DropdownMenuLabel>{tDashboard("pages.organization")}</DropdownMenuLabel>
             <DropdownMenuItem asChild>
               <Link href={`/${organizationSlug}/products`}>
                 <Package />
-                Seller Dashboard
+                {t("shell.title")}
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -208,6 +211,8 @@ function NavUser({
   userEmail: string;
   userName: string;
 }) {
+  const t = useTranslations("common");
+  const tSettings = useTranslations("settings");
   const { isMobile } = useSidebar();
   const router = useRouter();
   const initials = getUserInitials(userName, userEmail);
@@ -258,7 +263,7 @@ function NavUser({
               <DropdownMenuItem asChild>
                 <Link href={`/${organizationSlug}/profile/security`}>
                   <BadgeCheck />
-                  My security
+                  {tSettings("security.title")}
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
@@ -270,7 +275,7 @@ function NavUser({
               }}
             >
               <LogOut />
-              Sign out
+              {t("signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
 import { STAFF_ROLES } from "@/features/orders/lib/roles";
@@ -42,10 +43,14 @@ export default async function SellerLayout({
     redirect(`/${organizationSlug}`);
   }
 
+  // Reuses the `roles` namespace's "seller" key: the fallback text here is
+  // identical to that role label, so a separate `seller.*` translation
+  // would just duplicate it.
+  const t = await getTranslations("roles");
   const profile = await getProfile(user.id);
   const userEmail = user.email ?? "seller@ayam-norliza.local";
   const userName =
-    profile?.displayName?.trim() || userEmail.split("@")[0] || "Seller";
+    profile?.displayName?.trim() || userEmail.split("@")[0] || t("seller");
 
   return (
     <SupabaseSessionProvider>

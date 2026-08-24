@@ -846,5 +846,10 @@
       "subject": "Sesi sokongan dibuka dalam {organizationName}",
       "bodyHtml": "<p>Sesi sokongan telah dibuka untuk anda dalam <strong>{organizationName}</strong>.</p><p><strong>Tujuan:</strong> {purpose}</p><p><strong>Tempoh:</strong> {startsAt} → {endsAt}</p>"
     }
+  },
+  "seller": {
+    "shell": {
+      "title": "Papan Pemuka Penjual"
+    }
   }
 }
