@@ -285,6 +285,7 @@ export function OrdersBoard({
                     variant="ghost"
                     size="sm"
                     className="h-7 px-2 text-xs"
+                    disabled={bulkBusy}
                     onClick={() => {
                       setSelectMode((v) => !v);
                       setSelected(new Set());
@@ -302,6 +303,7 @@ export function OrdersBoard({
                           type="checkbox"
                           className="mt-3 h-4 w-4 accent-primary"
                           checked={selected.has(order.id)}
+                          disabled={bulkBusy}
                           onChange={() => toggleSelected(order.id)}
                           aria-label={order.customer?.name ?? tCard("unknownCustomer")}
                         />
