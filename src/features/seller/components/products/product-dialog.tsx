@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createProduct, updateProduct } from "@/features/seller/server/actions";
 import type { Category, Product } from "@/features/seller/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -40,6 +41,8 @@ export function ProductDialog({
   onSaved,
 }: ProductDialogProps) {
   const { toast } = useToast();
+  const tCommon = useTranslations("common");
+  const t = useTranslations("seller.products.productDialog");
   const [saving, setSaving] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(product?.image_url ?? null);
   const [categoryId, setCategoryId] = useState<string>(
@@ -50,7 +53,7 @@ export function ProductDialog({
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     if (!categoryId) {
-      toast({ title: "Please choose a category", variant: "destructive" });
+      toast({ title: t("chooseCategory"), variant: "destructive" });
       return;
     }
     setSaving(true);
@@ -66,10 +69,10 @@ export function ProductDialog({
         : await createProduct(organizationId, { ...input, is_active: true }, organizationSlug);
       onSaved(saved);
       onOpenChange(false);
-      toast({ title: product ? "Product updated" : "Product created" });
+      toast({ title: product ? t("updated") : t("created") });
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -82,22 +85,22 @@ export function ProductDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{product ? "Edit Product" : "Add Product"}</DialogTitle>
+          <DialogTitle>{product ? t("editTitle") : t("addTitle")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Photo</Label>
+            <Label>{t("photoLabel")}</Label>
             <ImageUpload organizationId={organizationId} value={imageUrl} onChange={setImageUrl} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product-name">Product Name</Label>
+            <Label htmlFor="product-name">{t("nameLabel")}</Label>
             <Input id="product-name" name="name" defaultValue={product?.name ?? ""} required />
           </div>
           <div className="space-y-2">
-            <Label>Category</Label>
+            <Label>{t("categoryLabel")}</Label>
             <Select value={categoryId} onValueChange={setCategoryId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select category" />
+                <SelectValue placeholder={t("categoryPlaceholder")} />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
@@ -109,7 +112,7 @@ export function ProductDialog({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="product-description">Description</Label>
+            <Label htmlFor="product-description">{t("descriptionLabel")}</Label>
             <Textarea
               id="product-description"
               name="description"
@@ -118,10 +121,10 @@ export function ProductDialog({
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
-              {product ? "Save Changes" : "Create"}
+              {product ? t("saveChanges") : t("create")}
             </Button>
           </div>
         </form>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createCategory, updateCategory } from "@/features/seller/server/actions";
 import type { Category } from "@/features/seller/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -28,6 +29,8 @@ export function CategoryDialog({
   onSaved,
 }: CategoryDialogProps) {
   const { toast } = useToast();
+  const tCommon = useTranslations("common");
+  const t = useTranslations("seller.products.categoryDialog");
   const [saving, setSaving] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -45,10 +48,10 @@ export function CategoryDialog({
         : await createCategory(organizationId, { ...input, is_active: true }, organizationSlug);
       onSaved(saved);
       onOpenChange(false);
-      toast({ title: category ? "Category updated" : "Category created" });
+      toast({ title: category ? t("updated") : t("created") });
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -61,15 +64,15 @@ export function CategoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{category ? "Edit Category" : "Add Category"}</DialogTitle>
+          <DialogTitle>{category ? t("editTitle") : t("addTitle")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="category-name">Category Name</Label>
+            <Label htmlFor="category-name">{t("nameLabel")}</Label>
             <Input id="category-name" name="name" defaultValue={category?.name ?? ""} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="category-description">Description</Label>
+            <Label htmlFor="category-description">{t("descriptionLabel")}</Label>
             <Textarea
               id="category-description"
               name="description"
@@ -77,7 +80,7 @@ export function CategoryDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="category-display-order">Display Order</Label>
+            <Label htmlFor="category-display-order">{t("displayOrderLabel")}</Label>
             <Input
               id="category-display-order"
               name="display_order"
@@ -87,10 +90,10 @@ export function CategoryDialog({
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
-              {category ? "Save Changes" : "Create"}
+              {category ? t("saveChanges") : t("create")}
             </Button>
           </div>
         </form>

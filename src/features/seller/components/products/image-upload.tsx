@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { ImagePlus, Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -15,6 +16,7 @@ type ImageUploadProps = {
 };
 
 export function ImageUpload({ organizationId, value, onChange }: ImageUploadProps) {
+  const t = useTranslations("seller.products.imageUpload");
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,11 +24,11 @@ export function ImageUpload({ organizationId, value, onChange }: ImageUploadProp
   const handleFile = async (file: File) => {
     setError(null);
     if (!file.type.startsWith("image/")) {
-      setError("Please choose an image file.");
+      setError(t("invalidType"));
       return;
     }
     if (file.size > MAX_SIZE_BYTES) {
-      setError("Image must be under 5 MB.");
+      setError(t("tooLarge"));
       return;
     }
     setUploading(true);
@@ -41,7 +43,7 @@ export function ImageUpload({ organizationId, value, onChange }: ImageUploadProp
       const { data } = supabase.storage.from("product-images").getPublicUrl(path);
       onChange(data.publicUrl);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed.");
+      setError(e instanceof Error ? e.message : t("uploadFailed"));
     } finally {
       setUploading(false);
     }
@@ -51,7 +53,7 @@ export function ImageUpload({ organizationId, value, onChange }: ImageUploadProp
     <div className="space-y-2">
       {value ? (
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md border bg-muted">
-          <Image src={value} alt="Product image" fill className="object-cover" />
+          <Image src={value} alt={t("imageAlt")} fill className="object-cover" />
           <Button
             type="button"
             variant="secondary"
@@ -74,7 +76,7 @@ export function ImageUpload({ organizationId, value, onChange }: ImageUploadProp
           ) : (
             <>
               <ImagePlus className="h-6 w-6" />
-              <span className="text-sm">Upload photo</span>
+              <span className="text-sm">{t("uploadPhoto")}</span>
             </>
           )}
         </button>

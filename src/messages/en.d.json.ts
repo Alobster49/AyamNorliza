@@ -874,6 +874,101 @@ declare const messages: {
   "seller": {
     "shell": {
       "title": "Seller Dashboard"
+    },
+    "products": {
+      "categoryDialog": {
+        "editTitle": "Edit Category",
+        "addTitle": "Add Category",
+        "nameLabel": "Category Name",
+        "descriptionLabel": "Description",
+        "displayOrderLabel": "Display Order",
+        "saveChanges": "Save Changes",
+        "create": "Create",
+        "updated": "Category updated",
+        "created": "Category created",
+        "error": "Error"
+      },
+      "productDialog": {
+        "editTitle": "Edit Product",
+        "addTitle": "Add Product",
+        "photoLabel": "Photo",
+        "nameLabel": "Product Name",
+        "categoryLabel": "Category",
+        "categoryPlaceholder": "Select category",
+        "descriptionLabel": "Description",
+        "chooseCategory": "Please choose a category",
+        "saveChanges": "Save Changes",
+        "create": "Create",
+        "updated": "Product updated",
+        "created": "Product created",
+        "error": "Error"
+      },
+      "variantDialog": {
+        "editTitle": "Edit Size/Option",
+        "addTitle": "Add Size/Option",
+        "nameLabel": "Name (e.g., Standard, Small, 1kg Pack)",
+        "soldByLabel": "Sold by",
+        "priceLabelKg": "Price (RM per kg)",
+        "priceLabelPiece": "Price (RM per piece)",
+        "benchmarkLabel": "Market benchmark (KPDN)",
+        "notTracked": "Not tracked",
+        "marginTypeLabel": "Margin type",
+        "marginRm": "RM per kg",
+        "marginPct": "% of market",
+        "marginLabelPct": "Margin (%)",
+        "marginLabelRm": "Margin (RM)",
+        "availableLabel": "Available for ordering",
+        "saveChanges": "Save Changes",
+        "create": "Create",
+        "updated": "Size/option updated",
+        "created": "Size/option created",
+        "error": "Error"
+      },
+      "categoryRail": {
+        "ariaLabel": "Categories",
+        "heading": "Categories",
+        "allProducts": "All products",
+        "archived": "Archived",
+        "addCategory": "+ Add category",
+        "editAriaLabel": "Edit {label}",
+        "deleteAriaLabel": "Delete {label}"
+      },
+      "actionsMenu": {
+        "ariaLabel": "Actions for {name}",
+        "edit": "Edit product",
+        "addSize": "Add size",
+        "restore": "Restore to catalog",
+        "archive": "Archive",
+        "delete": "Delete permanently"
+      },
+      "ledger": {
+        "sizeOption": "Size / option",
+        "unit": "Unit",
+        "price": "Price",
+        "status": "Status",
+        "archived": "Archived",
+        "noSizesYet": "no sizes yet",
+        "addSizeAriaLabel": "Add size to {name}",
+        "editAriaLabel": "Edit {name}",
+        "addFirstSize": "+ Add the first size for {name}",
+        "deleteAriaLabel": "Delete {name}"
+      },
+      "unitTypes": {
+        "perKg": "Per kg",
+        "perPiece": "Per piece"
+      },
+      "imageUpload": {
+        "invalidType": "Please choose an image file.",
+        "tooLarge": "Image must be under 5 MB.",
+        "uploadFailed": "Upload failed.",
+        "uploadPhoto": "Upload photo",
+        "imageAlt": "Product image"
+      },
+      "availabilitySwitch": {
+        "statusAriaLabel": "{label}: {status}",
+        "available": "available",
+        "soldOut": "sold out"
+      }
     }
   },
   "orders": {
@@ -1434,6 +1529,54 @@ declare const messages: {
         "status": "Status"
       }
     }
+  },
+  "market": {
+    "pageTitle": "Market Prices",
+    "subtitle": "KPDN retail survey medians",
+    "subtitleWithDate": "KPDN retail survey medians — latest data {date}",
+    "staleWarning": "Market data is more than 3 days old. Suggestions may not reflect today's market.",
+    "noData": "No data",
+    "premisesCount": "{count, plural, one {# premise} other {# premises}}",
+    "priceSuggestionsTitle": "Price suggestions",
+    "noSuggestions": "No variants are tracking a market benchmark yet. Edit a size/option under Products and pick a benchmark to get suggestions here.",
+    "table": {
+      "variant": "Variant",
+      "benchmark": "Benchmark",
+      "marketBase": "Market base",
+      "current": "Current",
+      "suggested": "Suggested"
+    },
+    "upToDate": "Up to date",
+    "apply": "Apply",
+    "priceUpdated": "Price updated to {price}",
+    "error": "Error",
+    "source": "Source: PriceCatcher, KPDN / data.gov.my (CC BY 4.0)"
+  },
+  "dataConsole": {
+    "title": "Data console",
+    "subtitle": "Reset or seed the demo data for this organization. Pilot-only, owner-only.",
+    "clearedRows": "Cleared {count, plural, one {# row} other {# rows}}. Users were kept.",
+    "seededSummary": "Seeded {products, plural, one {# product} other {# products}}, {customers, plural, one {# customer} other {# customers}}, {orders, plural, one {# order} other {# orders}}, {runs, plural, one {# run} other {# runs}}.",
+    "clearCard": {
+      "title": "Clear all data",
+      "description": "Permanently deletes products, customers, orders, and runs for this organization. User accounts and logins are kept.",
+      "confirmLabel": "Type {phrase} to enable",
+      "confirmPhrase": "DELETE ALL",
+      "button": "Clear all data"
+    },
+    "seedCard": {
+      "title": "Seed demo data",
+      "description": "Creates a full set of demo products, customers, orders, and runs, and ensures the console accounts below can log in.",
+      "trigger": "Seed demo data",
+      "dialogTitle": "Seed demo data?",
+      "dialogDescription": "This clears existing data first, then creates a fresh set of demo products, customers, orders, and runs.",
+      "cancel": "Cancel",
+      "confirm": "Seed demo data"
+    }
+  },
+  "tasks": {
+    "saveFailedTitle": "Couldn't save order",
+    "completeTitle": "Order complete"
   }
 };
 export default messages;

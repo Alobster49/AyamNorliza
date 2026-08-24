@@ -1,6 +1,7 @@
 "use client";
 
 import { Archive, ArchiveRestore, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,12 +35,13 @@ export function ProductActionsMenu({
   onDelete,
   className,
 }: ProductActionsMenuProps) {
+  const t = useTranslations("seller.products.actionsMenu");
   const archived = !product.is_active;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        aria-label={`Actions for ${product.name}`}
+        aria-label={t("ariaLabel", { name: product.name })}
         className={className ?? "rounded p-1 text-muted-foreground hover:text-foreground"}
       >
         <MoreHorizontal className="h-4 w-4" />
@@ -47,27 +49,27 @@ export function ProductActionsMenu({
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuItem onSelect={onEdit}>
           <Pencil className="mr-2 h-3.5 w-3.5" />
-          Edit product
+          {t("edit")}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={onAddVariant}>
           <Plus className="mr-2 h-3.5 w-3.5" />
-          Add size
+          {t("addSize")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         {archived ? (
           <DropdownMenuItem onSelect={onRestore}>
             <ArchiveRestore className="mr-2 h-3.5 w-3.5" />
-            Restore to catalog
+            {t("restore")}
           </DropdownMenuItem>
         ) : (
           <DropdownMenuItem onSelect={onArchive}>
             <Archive className="mr-2 h-3.5 w-3.5" />
-            Archive
+            {t("archive")}
           </DropdownMenuItem>
         )}
         <DropdownMenuItem onSelect={onDelete} className="text-destructive focus:text-destructive">
           <Trash2 className="mr-2 h-3.5 w-3.5" />
-          Delete permanently
+          {t("delete")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

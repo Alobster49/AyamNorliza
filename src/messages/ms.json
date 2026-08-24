@@ -871,6 +871,101 @@
   "seller": {
     "shell": {
       "title": "Papan Pemuka Penjual"
+    },
+    "products": {
+      "categoryDialog": {
+        "editTitle": "Sunting Kategori",
+        "addTitle": "Tambah Kategori",
+        "nameLabel": "Nama Kategori",
+        "descriptionLabel": "Penerangan",
+        "displayOrderLabel": "Susunan Paparan",
+        "saveChanges": "Simpan Perubahan",
+        "create": "Cipta",
+        "updated": "Kategori dikemas kini",
+        "created": "Kategori dicipta",
+        "error": "Ralat"
+      },
+      "productDialog": {
+        "editTitle": "Sunting Produk",
+        "addTitle": "Tambah Produk",
+        "photoLabel": "Gambar",
+        "nameLabel": "Nama Produk",
+        "categoryLabel": "Kategori",
+        "categoryPlaceholder": "Pilih kategori",
+        "descriptionLabel": "Penerangan",
+        "chooseCategory": "Sila pilih kategori",
+        "saveChanges": "Simpan Perubahan",
+        "create": "Cipta",
+        "updated": "Produk dikemas kini",
+        "created": "Produk dicipta",
+        "error": "Ralat"
+      },
+      "variantDialog": {
+        "editTitle": "Sunting Saiz/Pilihan",
+        "addTitle": "Tambah Saiz/Pilihan",
+        "nameLabel": "Nama (cth., Standard, Kecil, Paket 1kg)",
+        "soldByLabel": "Dijual mengikut",
+        "priceLabelKg": "Harga (RM sekilo)",
+        "priceLabelPiece": "Harga (RM seketul)",
+        "benchmarkLabel": "Penanda aras pasaran (KPDN)",
+        "notTracked": "Tidak dijejak",
+        "marginTypeLabel": "Jenis margin",
+        "marginRm": "RM sekilo",
+        "marginPct": "% daripada pasaran",
+        "marginLabelPct": "Margin (%)",
+        "marginLabelRm": "Margin (RM)",
+        "availableLabel": "Tersedia untuk tempahan",
+        "saveChanges": "Simpan Perubahan",
+        "create": "Cipta",
+        "updated": "Saiz/pilihan dikemas kini",
+        "created": "Saiz/pilihan dicipta",
+        "error": "Ralat"
+      },
+      "categoryRail": {
+        "ariaLabel": "Kategori",
+        "heading": "Kategori",
+        "allProducts": "Semua produk",
+        "archived": "Diarkibkan",
+        "addCategory": "+ Tambah kategori",
+        "editAriaLabel": "Sunting {label}",
+        "deleteAriaLabel": "Padam {label}"
+      },
+      "actionsMenu": {
+        "ariaLabel": "Tindakan untuk {name}",
+        "edit": "Sunting produk",
+        "addSize": "Tambah saiz",
+        "restore": "Kembalikan ke katalog",
+        "archive": "Arkibkan",
+        "delete": "Padam secara kekal"
+      },
+      "ledger": {
+        "sizeOption": "Saiz / pilihan",
+        "unit": "Unit",
+        "price": "Harga",
+        "status": "Status",
+        "archived": "Diarkibkan",
+        "noSizesYet": "belum ada saiz",
+        "addSizeAriaLabel": "Tambah saiz untuk {name}",
+        "editAriaLabel": "Sunting {name}",
+        "addFirstSize": "+ Tambah saiz pertama untuk {name}",
+        "deleteAriaLabel": "Padam {name}"
+      },
+      "unitTypes": {
+        "perKg": "Sekilo",
+        "perPiece": "Seketul"
+      },
+      "imageUpload": {
+        "invalidType": "Sila pilih fail imej.",
+        "tooLarge": "Imej mesti kurang daripada 5 MB.",
+        "uploadFailed": "Muat naik gagal.",
+        "uploadPhoto": "Muat naik gambar",
+        "imageAlt": "Gambar produk"
+      },
+      "availabilitySwitch": {
+        "statusAriaLabel": "{label}: {status}",
+        "available": "tersedia",
+        "soldOut": "habis dijual"
+      }
     }
   },
   "orders": {
@@ -1431,5 +1526,53 @@
         "status": "Status"
       }
     }
+  },
+  "market": {
+    "pageTitle": "Harga Pasaran",
+    "subtitle": "Median tinjauan runcit KPDN",
+    "subtitleWithDate": "Median tinjauan runcit KPDN — data terkini {date}",
+    "staleWarning": "Data pasaran sudah lebih 3 hari. Cadangan mungkin tidak mencerminkan pasaran hari ini.",
+    "noData": "Tiada data",
+    "premisesCount": "{count, plural, other {# premis}}",
+    "priceSuggestionsTitle": "Cadangan harga",
+    "noSuggestions": "Belum ada saiz/pilihan yang menjejak penanda aras pasaran. Sunting saiz/pilihan di bawah Produk dan pilih penanda aras untuk mendapatkan cadangan di sini.",
+    "table": {
+      "variant": "Saiz/pilihan",
+      "benchmark": "Penanda aras",
+      "marketBase": "Asas pasaran",
+      "current": "Semasa",
+      "suggested": "Dicadangkan"
+    },
+    "upToDate": "Terkini",
+    "apply": "Guna pakai",
+    "priceUpdated": "Harga dikemas kini kepada {price}",
+    "error": "Ralat",
+    "source": "Sumber: PriceCatcher, KPDN / data.gov.my (CC BY 4.0)"
+  },
+  "dataConsole": {
+    "title": "Konsol data",
+    "subtitle": "Tetapkan semula atau semai data demo untuk organisasi ini. Khas untuk rintis, pemilik sahaja.",
+    "clearedRows": "{count, plural, other {# baris}} dipadam. Pengguna dikekalkan.",
+    "seededSummary": "{products, plural, other {# produk}}, {customers, plural, other {# pelanggan}}, {orders, plural, other {# pesanan}}, {runs, plural, other {# trip}} disemai.",
+    "clearCard": {
+      "title": "Padam semua data",
+      "description": "Memadam produk, pelanggan, pesanan dan trip untuk organisasi ini secara kekal. Akaun pengguna dan log masuk dikekalkan.",
+      "confirmLabel": "Taip {phrase} untuk mendayakan",
+      "confirmPhrase": "PADAM SEMUA",
+      "button": "Padam semua data"
+    },
+    "seedCard": {
+      "title": "Semai data demo",
+      "description": "Mencipta set penuh produk, pelanggan, pesanan dan trip demo, dan memastikan akaun konsol di bawah boleh log masuk.",
+      "trigger": "Semai data demo",
+      "dialogTitle": "Semai data demo?",
+      "dialogDescription": "Ini akan memadam data sedia ada dahulu, kemudian mencipta set baharu produk, pelanggan, pesanan dan trip demo.",
+      "cancel": "Batal",
+      "confirm": "Semai data demo"
+    }
+  },
+  "tasks": {
+    "saveFailedTitle": "Gagal simpan pesanan",
+    "completeTitle": "Pesanan selesai"
   }
 }

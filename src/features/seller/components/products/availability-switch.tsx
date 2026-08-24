@@ -1,5 +1,7 @@
 "use client";
 
+import { useTranslations } from "next-intl";
+
 type AvailabilitySwitchProps = {
   available: boolean;
   onToggle: () => void;
@@ -14,12 +16,16 @@ export function AvailabilitySwitch({
   label,
   disabled,
 }: AvailabilitySwitchProps) {
+  const t = useTranslations("seller.products.availabilitySwitch");
   return (
     <button
       type="button"
       role="switch"
       aria-checked={available}
-      aria-label={`${label}: ${available ? "available" : "sold out"}`}
+      aria-label={t("statusAriaLabel", {
+        label,
+        status: available ? t("available") : t("soldOut"),
+      })}
       disabled={disabled}
       onClick={onToggle}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${

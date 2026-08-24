@@ -1,6 +1,7 @@
 "use client";
 
 import { Archive, Pencil, Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Category } from "@/features/seller/types";
 import { ARCHIVED_VIEW, type CatalogFilter } from "@/features/seller/lib/catalog-model";
 
@@ -31,19 +32,20 @@ export function CategoryRail({
   onEditCategory,
   onDeleteCategory,
 }: CategoryRailProps) {
+  const t = useTranslations("seller.products.categoryRail");
   return (
     <nav
-      aria-label="Categories"
+      aria-label={t("ariaLabel")}
       className="flex items-center gap-1 overflow-x-auto rounded-full border bg-card p-1 md:block md:w-56 md:shrink-0 md:overflow-visible md:rounded-lg md:p-0"
     >
       <div className="hidden px-3 pb-1 pt-3 md:block">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Categories
+          {t("heading")}
         </span>
       </div>
 
       <RailItem
-        label="All products"
+        label={t("allProducts")}
         count={totalCount}
         selected={selectedCategoryId === null}
         onSelect={() => onSelectCategory(null)}
@@ -64,7 +66,7 @@ export function CategoryRail({
           archived product doesn't strand the user on a filter with no entry. */}
       {(archivedCount > 0 || selectedCategoryId === ARCHIVED_VIEW) && (
         <RailItem
-          label="Archived"
+          label={t("archived")}
           count={archivedCount}
           icon={<Archive className="h-3.5 w-3.5 shrink-0 opacity-70" />}
           selected={selectedCategoryId === ARCHIVED_VIEW}
@@ -78,7 +80,7 @@ export function CategoryRail({
           onClick={onAddCategory}
           className="text-sm text-muted-foreground hover:text-foreground"
         >
-          + Add category
+          {t("addCategory")}
         </button>
       </div>
     </nav>
@@ -96,6 +98,7 @@ type RailItemProps = {
 };
 
 function RailItem({ label, count, selected, onSelect, onEdit, onDelete, icon }: RailItemProps) {
+  const t = useTranslations("seller.products.categoryRail");
   return (
     <div
       className={`group flex shrink-0 items-center rounded-full md:w-full md:rounded-none md:border-l-2 ${
@@ -120,7 +123,7 @@ function RailItem({ label, count, selected, onSelect, onEdit, onDelete, icon }: 
             type="button"
             onClick={onEdit}
             className="rounded p-1 hover:bg-background/60"
-            aria-label={`Edit ${label}`}
+            aria-label={t("editAriaLabel", { label })}
           >
             <Pencil className="h-3 w-3" />
           </button>
@@ -128,7 +131,7 @@ function RailItem({ label, count, selected, onSelect, onEdit, onDelete, icon }: 
             type="button"
             onClick={onDelete}
             className="rounded p-1 text-destructive hover:bg-background/60"
-            aria-label={`Delete ${label}`}
+            aria-label={t("deleteAriaLabel", { label })}
           >
             <Trash2 className="h-3 w-3" />
           </button>

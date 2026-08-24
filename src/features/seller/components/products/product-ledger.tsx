@@ -1,8 +1,8 @@
 "use client";
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import type { ProductVariant, UnitType } from "@/features/seller/types";
-import { UNIT_TYPE_LABELS } from "@/features/seller/types";
+import { useTranslations } from "next-intl";
+import type { ProductVariant } from "@/features/seller/types";
 import { priceRangeLabel, type CatalogProduct } from "@/features/seller/lib/catalog-model";
 import { formatPrice } from "@/features/seller/lib/pricing";
 import { AvailabilitySwitch } from "./availability-switch";
@@ -35,14 +35,15 @@ export function ProductLedger({
   onDeleteVariant,
   onToggleVariant,
 }: ProductLedgerProps) {
+  const t = useTranslations("seller.products.ledger");
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
       {/* Column header (hidden on small screens where rows stack) */}
       <div className="hidden grid-cols-[minmax(10rem,1.6fr)_6rem_7rem_7rem] items-center gap-3 border-b bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
-        <span>Size / option</span>
-        <span>Unit</span>
-        <span className="text-right">Price</span>
-        <span className="text-right">Status</span>
+        <span>{t("sizeOption")}</span>
+        <span>{t("unit")}</span>
+        <span className="text-right">{t("price")}</span>
+        <span className="text-right">{t("status")}</span>
       </div>
 
       {products.map((product) => (
@@ -52,17 +53,17 @@ export function ProductLedger({
             <span className="min-w-0 truncate text-sm font-semibold">{product.name}</span>
             {!product.is_active && (
               <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                Archived
+                {t("archived")}
               </span>
             )}
             <span className="ml-auto hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
-              {priceRangeLabel(product) ?? "no sizes yet"}
+              {priceRangeLabel(product) ?? t("noSizesYet")}
             </span>
             <span className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => onAddVariant(product)}
-                aria-label={`Add size to ${product.name}`}
+                aria-label={t("addSizeAriaLabel", { name: product.name })}
                 className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <Plus className="h-3.5 w-3.5" />
@@ -70,7 +71,7 @@ export function ProductLedger({
               <button
                 type="button"
                 onClick={() => onEditProduct(product)}
-                aria-label={`Edit ${product.name}`}
+                aria-label={t("editAriaLabel", { name: product.name })}
                 className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
               >
                 <Pencil className="h-3.5 w-3.5" />
@@ -92,7 +93,7 @@ export function ProductLedger({
               onClick={() => onAddVariant(product)}
               className="block w-full border-b px-4 py-2.5 text-left text-sm text-muted-foreground hover:bg-accent/40"
             >
-              + Add the first size for {product.name}
+              {t("addFirstSize", { name: product.name })}
             </button>
           ) : (
             product.variants.map((variant) => (
@@ -121,7 +122,15 @@ type LedgerRowProps = {
 };
 
 function LedgerRow({ product, variant, onEdit, onDelete, onToggle }: LedgerRowProps) {
+  const t = useTranslations("seller.products.ledger");
+  const tUnit = useTranslations("seller.products.unitTypes");
   const unavailable = !variant.is_available;
+  const unitLabel =
+    variant.unit_type === "per_kg"
+      ? tUnit("perKg")
+      : variant.unit_type === "per_piece"
+        ? tUnit("perPiece")
+        : variant.unit_type;
   return (
     <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b px-4 py-2.5 text-sm last:border-b-0 hover:bg-accent/30 sm:grid-cols-[minmax(10rem,1.6fr)_6rem_7rem_7rem] sm:items-center">
       <button
@@ -131,9 +140,7 @@ function LedgerRow({ product, variant, onEdit, onDelete, onToggle }: LedgerRowPr
       >
         {variant.name}
       </button>
-      <span className="order-3 text-xs text-muted-foreground sm:order-none">
-        {UNIT_TYPE_LABELS[variant.unit_type as UnitType] ?? variant.unit_type}
-      </span>
+      <span className="order-3 text-xs text-muted-foreground sm:order-none">{unitLabel}</span>
       <button
         type="button"
         onClick={onEdit}
@@ -152,7 +159,7 @@ function LedgerRow({ product, variant, onEdit, onDelete, onToggle }: LedgerRowPr
         <button
           type="button"
           onClick={onDelete}
-          aria-label={`Delete ${variant.name}`}
+          aria-label={t("deleteAriaLabel", { name: variant.name })}
           className="rounded p-1 text-muted-foreground hover:text-destructive"
         >
           <Trash2 className="h-3.5 w-3.5" />

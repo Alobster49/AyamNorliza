@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,6 +45,7 @@ export function MarketPricesClient({
 }: Props) {
   const router = useRouter();
   const { toast } = useToast();
+  const t = useTranslations("market");
   const [isPending, startTransition] = useTransition();
   const [applyingId, setApplyingId] = useState<string | null>(null);
 
@@ -67,7 +69,7 @@ export function MarketPricesClient({
         router.refresh();
       } catch (error) {
         toast({
-          title: "Error",
+          title: t("error"),
           description: error instanceof Error ? error.message : String(error),
           variant: "destructive",
         });
@@ -81,11 +83,11 @@ export function MarketPricesClient({
     startTransition(async () => {
       try {
         await applySuggestedPrice(s.variant_id, s.suggested_price!, organizationSlug);
-        toast({ title: `Price updated to ${formatPrice(s.suggested_price!)}` });
+        toast({ title: t("priceUpdated", { price: formatPrice(s.suggested_price!) }) });
         router.refresh();
       } catch (error) {
         toast({
-          title: "Error",
+          title: t("error"),
           description: error instanceof Error ? error.message : String(error),
           variant: "destructive",
         });
@@ -99,9 +101,9 @@ export function MarketPricesClient({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Harga Pasaran</h1>
+          <h1 className="text-2xl font-bold">{t("pageTitle")}</h1>
           <p className="text-muted-foreground">
-            KPDN retail survey medians{latestDate ? ` — latest data ${latestDate}` : ""}
+            {latestDate ? t("subtitleWithDate", { date: latestDate }) : t("subtitle")}
           </p>
         </div>
         <div className="w-56">
@@ -123,7 +125,7 @@ export function MarketPricesClient({
       {anyStale && (
         <div className="flex items-center gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-700 dark:bg-amber-950 dark:text-amber-200">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          Market data is more than 3 days old. Suggestions may not reflect today&apos;s market.
+          {t("staleWarning")}
         </div>
       )}
 
@@ -142,11 +144,12 @@ export function MarketPricesClient({
               <CardContent className="flex items-end justify-between gap-2">
                 <div>
                   <div className="text-2xl font-semibold">
-                    {latest ? `${formatPrice(latest.median_price)}/kg` : "Tiada data"}
+                    {latest ? `${formatPrice(latest.median_price)}/kg` : t("noData")}
                   </div>
                   {latest && (
                     <div className="text-xs text-muted-foreground">
-                      {latest.premise_count} premises · {latest.price_date}
+                      {t("premisesCount", { count: latest.premise_count })} ·{" "}
+                      {latest.price_date}
                     </div>
                   )}
                 </div>
@@ -174,24 +177,21 @@ export function MarketPricesClient({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Price suggestions</CardTitle>
+          <CardTitle className="text-base">{t("priceSuggestionsTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {suggestions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No variants are tracking a market benchmark yet. Edit a size/option under
-              Products and pick a benchmark to get suggestions here.
-            </p>
+            <p className="text-sm text-muted-foreground">{t("noSuggestions")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-left text-muted-foreground">
                   <tr>
-                    <th className="py-2 font-medium">Variant</th>
-                    <th className="py-2 font-medium">Benchmark</th>
-                    <th className="py-2 font-medium">Market base</th>
-                    <th className="py-2 font-medium">Current</th>
-                    <th className="py-2 font-medium">Suggested</th>
+                    <th className="py-2 font-medium">{t("table.variant")}</th>
+                    <th className="py-2 font-medium">{t("table.benchmark")}</th>
+                    <th className="py-2 font-medium">{t("table.marketBase")}</th>
+                    <th className="py-2 font-medium">{t("table.current")}</th>
+                    <th className="py-2 font-medium">{t("table.suggested")}</th>
                     <th className="py-2" />
                   </tr>
                 </thead>
@@ -210,7 +210,7 @@ export function MarketPricesClient({
                         </td>
                         <td className="py-2">{marketItemLabel(s.market_item_code)}</td>
                         <td className="py-2">
-                          {s.market_base != null ? formatPrice(s.market_base) : "Tiada data"}
+                          {s.market_base != null ? formatPrice(s.market_base) : t("noData")}
                         </td>
                         <td className="py-2">{formatPrice(s.current_price)}</td>
                         <td className="py-2">
@@ -240,7 +240,7 @@ export function MarketPricesClient({
                             }
                             onClick={() => handleApply(s)}
                           >
-                            {matches ? "Up to date" : "Apply"}
+                            {matches ? t("upToDate") : t("apply")}
                           </Button>
                         </td>
                       </tr>
@@ -253,9 +253,7 @@ export function MarketPricesClient({
         </CardContent>
       </Card>
 
-      <p className="text-xs text-muted-foreground">
-        Sumber: PriceCatcher, KPDN / data.gov.my (CC BY 4.0)
-      </p>
+      <p className="text-xs text-muted-foreground">{t("source")}</p>
     </div>
   );
 }

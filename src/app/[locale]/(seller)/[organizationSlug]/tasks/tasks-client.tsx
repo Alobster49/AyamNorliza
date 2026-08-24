@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { completeTask } from "@/features/orders/server/order-actions";
 import type { TaskWithOrder } from "@/features/orders/types";
 import {
@@ -27,6 +28,7 @@ type TasksClientProps = {
  */
 export function TasksClient({ organizationSlug, initialTasks, focusOrderId }: TasksClientProps) {
   const { toast } = useToast();
+  const t = useTranslations("tasks");
   const [state, dispatch] = useReducer(weighReducer, { initialTasks, focusOrderId }, (init) =>
     createWeighState(init.initialTasks, init.focusOrderId),
   );
@@ -44,12 +46,12 @@ export function TasksClient({ organizationSlug, initialTasks, focusOrderId }: Ta
       pendingRef.current.delete(taskId);
       if (!result.ok) {
         dispatch({ type: "RESTORE_TASK", taskId });
-        toast({ title: "Couldn't save order", description: result.message, variant: "destructive" });
+        toast({ title: t("saveFailedTitle"), description: result.message, variant: "destructive" });
         return;
       }
-      toast({ title: "Order complete" });
+      toast({ title: t("completeTitle") });
     });
-  }, [state, organizationSlug, toast]);
+  }, [state, organizationSlug, toast, t]);
 
   // Physical keyboard entry for the kiosk (md+ only, checked at event time).
   useEffect(() => {

@@ -1,13 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createVariant, updateVariant } from "@/features/seller/server/actions";
-import {
-  UNIT_TYPE_LABELS,
-  UNIT_TYPES,
-  type ProductVariant,
-  type UnitType,
-} from "@/features/seller/types";
+import { UNIT_TYPES, type ProductVariant, type UnitType } from "@/features/seller/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +38,9 @@ export function VariantDialog({
   onSaved,
 }: VariantDialogProps) {
   const { toast } = useToast();
+  const tCommon = useTranslations("common");
+  const t = useTranslations("seller.products.variantDialog");
+  const tUnit = useTranslations("seller.products.unitTypes");
   const [saving, setSaving] = useState(false);
   const [unitType, setUnitType] = useState<UnitType>(
     (variant?.unit_type as UnitType) ?? "per_piece",
@@ -54,7 +53,8 @@ export function VariantDialog({
     (variant?.market_margin_type as MarketMarginType) ?? "rm",
   );
 
-  const priceLabel = unitType === "per_kg" ? "Price (RM per kg)" : "Price (RM per piece)";
+  const unitLabel = (u: UnitType) => (u === "per_kg" ? tUnit("perKg") : tUnit("perPiece"));
+  const priceLabel = unitType === "per_kg" ? t("priceLabelKg") : t("priceLabelPiece");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -76,10 +76,10 @@ export function VariantDialog({
         : await createVariant(organizationId, { ...input, product_id: productId }, organizationSlug);
       onSaved(saved);
       onOpenChange(false);
-      toast({ title: variant ? "Size/option updated" : "Size/option created" });
+      toast({ title: variant ? t("updated") : t("created") });
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -92,15 +92,15 @@ export function VariantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{variant ? "Edit Size/Option" : "Add Size/Option"}</DialogTitle>
+          <DialogTitle>{variant ? t("editTitle") : t("addTitle")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="variant-name">Name (e.g., Standard, Small, 1kg Pack)</Label>
+            <Label htmlFor="variant-name">{t("nameLabel")}</Label>
             <Input id="variant-name" name="name" defaultValue={variant?.name ?? ""} required />
           </div>
           <div className="space-y-2">
-            <Label>Sold by</Label>
+            <Label>{t("soldByLabel")}</Label>
             <Select value={unitType} onValueChange={(v) => setUnitType(v as UnitType)}>
               <SelectTrigger>
                 <SelectValue />
@@ -108,7 +108,7 @@ export function VariantDialog({
               <SelectContent>
                 {UNIT_TYPES.map((u) => (
                   <SelectItem key={u} value={u}>
-                    {UNIT_TYPE_LABELS[u]}
+                    {unitLabel(u)}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -127,13 +127,13 @@ export function VariantDialog({
             />
           </div>
           <div className="space-y-2">
-            <Label>Market benchmark (KPDN)</Label>
+            <Label>{t("benchmarkLabel")}</Label>
             <Select value={benchmark} onValueChange={setBenchmark}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Not tracked</SelectItem>
+                <SelectItem value="none">{t("notTracked")}</SelectItem>
                 {MARKET_ITEMS.map((item) => (
                   <SelectItem key={item.code} value={String(item.code)}>
                     {item.label}
@@ -145,20 +145,20 @@ export function VariantDialog({
           {benchmark !== "none" && (
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-2">
-                <Label>Margin type</Label>
+                <Label>{t("marginTypeLabel")}</Label>
                 <Select value={marginType} onValueChange={(v) => setMarginType(v as MarketMarginType)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="rm">RM per kg</SelectItem>
-                    <SelectItem value="pct">% of market</SelectItem>
+                    <SelectItem value="rm">{t("marginRm")}</SelectItem>
+                    <SelectItem value="pct">{t("marginPct")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="variant-margin">
-                  {marginType === "pct" ? "Margin (%)" : "Margin (RM)"}
+                  {marginType === "pct" ? t("marginLabelPct") : t("marginLabelRm")}
                 </Label>
                 <Input
                   id="variant-margin"
@@ -179,14 +179,14 @@ export function VariantDialog({
               onChange={(e) => setAvailable(e.target.checked)}
               className="h-4 w-4"
             />
-            <Label htmlFor="variant-available">Available for ordering</Label>
+            <Label htmlFor="variant-available">{t("availableLabel")}</Label>
           </div>
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
-              {variant ? "Save Changes" : "Create"}
+              {variant ? t("saveChanges") : t("create")}
             </Button>
           </div>
         </form>
