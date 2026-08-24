@@ -547,6 +547,7 @@ declare const messages: {
       "system": "System"
     },
     "pages": {
+      "dashboard": "Dashboard",
       "products": "Products",
       "orders": "Orders",
       "customers": "Customers",
@@ -565,6 +566,26 @@ declare const messages: {
       "dataConsole": "Data console"
     },
     "fallbackUserName": "Team member"
+  },
+  "analytics": {
+    "title": "Dashboard",
+    "range": {
+      "today": "Today",
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "custom": "Custom",
+      "vsPrevious": "vs previous period"
+    },
+    "kpi": {
+      "revenue": "Sales",
+      "orders": "Orders",
+      "kg": "Kg sold",
+      "aov": "Avg order value",
+      "rmPerKg": "Realized RM/kg"
+    },
+    "sectionError": "This section failed to load.",
+    "empty": "No data for this period yet."
   },
   "roles": {
     "owner": "Owner",

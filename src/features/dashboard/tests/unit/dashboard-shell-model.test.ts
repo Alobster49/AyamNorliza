@@ -171,6 +171,7 @@ describe("dashboard shell model", () => {
     expect(groups).toHaveLength(2);
     const salesTitles = groups[0]?.items.map((item) => item.title);
     expect(salesTitles).toEqual([
+      "Dashboard",
       "Products",
       "Orders",
       "Customers",
