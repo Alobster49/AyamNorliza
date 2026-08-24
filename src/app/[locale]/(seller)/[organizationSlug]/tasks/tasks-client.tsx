@@ -34,12 +34,12 @@ export function TasksClient({ organizationSlug, initialTasks, focusOrderId }: Ta
   );
   // Tasks with an in-flight completeTask call (also mirrored in state.pendingRemovals).
   const pendingRef = useRef<Set<string>>(new Set());
-  const syncingTaskIds = new Set(Object.keys(state.pendingRemovals));
 
   useEffect(() => {
     const taskId = firstReadyUnsubmittedTaskId(state, pendingRef.current);
     if (!taskId) return;
     const weights = buildCompletePayload(state.queue, state.drafts, taskId);
+    const customerName = state.queue.find((l) => l.taskId === taskId)?.customerName;
     pendingRef.current.add(taskId);
     dispatch({ type: "OPTIMISTIC_COMPLETE", taskId });
     void completeTask({ organizationSlug, taskId, weights }).then((result) => {
@@ -49,7 +49,11 @@ export function TasksClient({ organizationSlug, initialTasks, focusOrderId }: Ta
         toast({ title: t("saveFailedTitle"), description: result.message, variant: "destructive" });
         return;
       }
-      toast({ title: t("completeTitle") });
+      dispatch({ type: "COMPLETE_SUCCESS", taskId });
+      toast({
+        title: t("completeTitle"),
+        description: customerName ? t("completeBody", { customerName }) : undefined,
+      });
     });
   }, [state, organizationSlug, toast, t]);
 
@@ -57,8 +61,10 @@ export function TasksClient({ organizationSlug, initialTasks, focusOrderId }: Ta
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (!window.matchMedia("(min-width: 768px)").matches) return;
+      // Leave browser/OS shortcuts (Cmd+P, Ctrl+1…) alone.
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
-      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      if (target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) return;
       if (/^[0-9]$/.test(event.key)) {
         dispatch({ type: "DIGIT", digit: event.key });
       } else if (event.key === "." || event.key === ",") {
@@ -80,12 +86,7 @@ export function TasksClient({ organizationSlug, initialTasks, focusOrderId }: Ta
 
   return (
     <div className="flex h-[calc(100svh-4rem-1.5rem)] flex-col gap-4 md:h-[calc(100svh-4rem-2rem)]">
-      <WeighStation
-        state={state}
-        dispatch={dispatch}
-        syncingTaskIds={syncingTaskIds}
-        className="hidden md:flex"
-      />
+      <WeighStation state={state} dispatch={dispatch} className="hidden md:flex" />
       <SwipeDeck state={state} dispatch={dispatch} className="flex md:hidden" />
     </div>
   );

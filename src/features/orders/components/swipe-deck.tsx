@@ -12,6 +12,7 @@ import {
   type WeighAction,
   type WeighState,
 } from "../lib/weigh-model";
+import { OrderProgressTicks } from "./order-progress-ticks";
 import { SwipeCard } from "./swipe-card";
 import { WarehouseEmptyState } from "./warehouse-empty-state";
 
@@ -33,11 +34,14 @@ type SwipeDeckProps = {
  * Apple's fluid-interface model. Swipe left = skip, right = undo.
  */
 export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
-  const t = useTranslations("orders.queue");
+  const tNumpad = useTranslations("orders.numpad");
+  const tSwipeCard = useTranslations("orders.swipeCard");
   const line = state.queue[state.cursor];
   const draft = line ? (state.drafts[line.itemId] ?? EMPTY_DRAFT) : EMPTY_DRAFT;
 
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const skipChipRef = useRef<HTMLDivElement | null>(null);
+  const undoChipRef = useRef<HTMLDivElement | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const positionRef = useRef(0);
   const velocityRef = useRef(0);
@@ -59,6 +63,21 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
     const el = cardRef.current;
     if (!el) return;
     el.style.transform = `translateX(${x}px) rotate(${x / 20}deg)`;
+    // Direction chips fade in with drag progress toward the commit point.
+    const width = wrapperRef.current?.clientWidth ?? 320;
+    const progress = Math.min(1, Math.abs(x) / (width * COMMIT_DISTANCE_FRACTION));
+    const skipChip = skipChipRef.current;
+    const undoChip = undoChipRef.current;
+    if (skipChip) {
+      const visible = x < 0 ? progress : 0;
+      skipChip.style.opacity = String(visible);
+      skipChip.style.transform = `translateY(-50%) scale(${0.9 + 0.1 * visible})`;
+    }
+    if (undoChip) {
+      const visible = x > 0 && canUndo(modelRef.current.state) ? progress : 0;
+      undoChip.style.opacity = String(visible);
+      undoChip.style.transform = `translateY(-50%) scale(${0.9 + 0.1 * visible})`;
+    }
   }, []);
 
   const stopAnimation = useCallback(() => {
@@ -247,22 +266,7 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
 
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
-      {/* Progress ticks for the current order */}
-      <div className="flex gap-1" aria-label={t("orderProgressAriaLabel", { customerName: line.customerName })}>
-        {taskLines.map((l) => (
-          <span
-            key={l.itemId}
-            className={cn(
-              "h-1 flex-1 rounded-full transition-colors duration-200 motion-reduce:transition-none",
-              state.confirmed[l.itemId]
-                ? "bg-emerald-500"
-                : l.itemId === line.itemId
-                  ? "bg-primary"
-                  : "bg-muted",
-            )}
-          />
-        ))}
-      </div>
+      <OrderProgressTicks lines={taskLines} confirmed={state.confirmed} currentItemId={line.itemId} />
 
       <div ref={wrapperRef} className="relative flex-1">
         {/* Peek cards behind the stack */}
@@ -302,6 +306,23 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
             onSave={() => commit(-1, { type: "NEXT" })}
             onSkip={() => commit(-1, { type: "SKIP" })}
           />
+        </div>
+        {/* Drag-direction chips: opacity driven imperatively from applyTransform. */}
+        <div
+          ref={skipChipRef}
+          aria-hidden
+          className="pointer-events-none absolute right-4 top-1/2 z-10 rounded-full border border-border bg-background/90 px-4 py-1.5 text-sm font-semibold text-muted-foreground opacity-0 shadow-sm backdrop-blur"
+          style={{ transform: "translateY(-50%) scale(0.9)" }}
+        >
+          {tNumpad("skip")}
+        </div>
+        <div
+          ref={undoChipRef}
+          aria-hidden
+          className="pointer-events-none absolute left-4 top-1/2 z-10 rounded-full border border-border bg-background/90 px-4 py-1.5 text-sm font-semibold text-muted-foreground opacity-0 shadow-sm backdrop-blur"
+          style={{ transform: "translateY(-50%) scale(0.9)" }}
+        >
+          {tSwipeCard("undo")}
         </div>
       </div>
     </div>

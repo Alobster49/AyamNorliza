@@ -55,6 +55,7 @@ export type WeighAction =
   | { type: "UNDO" }
   | { type: "GO_TO"; index: number }
   | { type: "OPTIMISTIC_COMPLETE"; taskId: string }
+  | { type: "COMPLETE_SUCCESS"; taskId: string }
   | { type: "RESTORE_TASK"; taskId: string };
 
 export type BandStatus = "empty" | "in_band" | "out_of_band" | "delta_only";
@@ -122,6 +123,25 @@ export type TaskGroup = {
   truckCode: string;
   lines: WeighLine[];
 };
+
+/**
+ * The queue with optimistically removed tasks spliced back at their original
+ * positions — used by the rail so a saving order stays visible (with a
+ * spinner) instead of vanishing the instant its last line is confirmed.
+ */
+export function queueWithPendingRemovals(
+  queue: WeighLine[],
+  pendingRemovals: WeighState["pendingRemovals"],
+): WeighLine[] {
+  const snapshots = Object.values(pendingRemovals);
+  if (snapshots.length === 0) return queue;
+  const merged = [...queue];
+  snapshots.sort((a, b) => a.insertAt - b.insertAt);
+  for (const snapshot of snapshots) {
+    merged.splice(Math.min(snapshot.insertAt, merged.length), 0, ...snapshot.removedLines);
+  }
+  return merged;
+}
 
 export function groupQueueByTask(queue: WeighLine[]): TaskGroup[] {
   const groups: TaskGroup[] = [];
@@ -393,6 +413,12 @@ export function weighReducer(state: WeighState, action: WeighAction): WeighState
           [action.taskId]: { removedLines, insertAt },
         },
       };
+    }
+    case "COMPLETE_SUCCESS": {
+      if (!state.pendingRemovals[action.taskId]) return state;
+      const pendingRemovals = { ...state.pendingRemovals };
+      delete pendingRemovals[action.taskId];
+      return { ...state, pendingRemovals };
     }
     case "RESTORE_TASK": {
       const snapshot = state.pendingRemovals[action.taskId];

@@ -17,6 +17,7 @@ import {
   isTaskComplete,
   isWeightValid,
   nextIncompleteIndex,
+  queueWithPendingRemovals,
   sizeBandTrackPosition,
   weighReducer,
   type WeighState,
@@ -521,6 +522,20 @@ describe("weighReducer", () => {
     expect(s.cursor).toBe(0); // now points at remaining line
   });
 
+  it("COMPLETE_SUCCESS drops the pending snapshot so the saving row disappears", () => {
+    let s = stateWith();
+    s = confirmLine(s, 0, "41.6");
+    s = confirmLine(s, 1, "24");
+    const taskId = s.queue[0]!.taskId;
+    s = weighReducer(s, { type: "OPTIMISTIC_COMPLETE", taskId });
+    expect(s.pendingRemovals[taskId]).toBeDefined();
+    s = weighReducer(s, { type: "COMPLETE_SUCCESS", taskId });
+    expect(s.pendingRemovals[taskId]).toBeUndefined();
+    expect(queueWithPendingRemovals(s.queue, s.pendingRemovals)).toBe(s.queue);
+    // unknown taskId is a no-op
+    expect(weighReducer(s, { type: "COMPLETE_SUCCESS", taskId: "nope" })).toBe(s);
+  });
+
   it("RESTORE_TASK re-splices lines at original index, drafts intact, lines unconfirmed", () => {
     let s = stateWith();
     s = confirmLine(s, 0, "41.6");
@@ -549,5 +564,37 @@ describe("weighReducer", () => {
     expect(isTaskComplete(s, taskId)).toBe(false);
     s = weighReducer(s, { type: "NEXT" });
     expect(isTaskComplete(s, taskId)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// queueWithPendingRemovals — rail display of orders mid-save
+// ---------------------------------------------------------------------------
+
+describe("queueWithPendingRemovals", () => {
+  it("returns the queue untouched when nothing is pending", () => {
+    const s = stateWith();
+    expect(queueWithPendingRemovals(s.queue, s.pendingRemovals)).toBe(s.queue);
+  });
+
+  it("splices a pending task back at its original position", () => {
+    let s = stateWith();
+    const original = s.queue.map((l) => l.itemId);
+    s = confirmLine(s, 0, "41.6");
+    s = confirmLine(s, 1, "24");
+    s = weighReducer(s, { type: "OPTIMISTIC_COMPLETE", taskId: s.queue[0]!.taskId });
+    const display = queueWithPendingRemovals(s.queue, s.pendingRemovals);
+    expect(display.map((l) => l.itemId)).toEqual(original);
+    expect(s.queue).toHaveLength(1); // live queue stays without the saving task
+  });
+
+  it("clamps insertAt beyond the current queue length", () => {
+    let s = stateWith();
+    s = confirmLine(s, 2, "12");
+    const lastTaskId = s.queue[2]!.taskId;
+    s = weighReducer(s, { type: "OPTIMISTIC_COMPLETE", taskId: lastTaskId });
+    const display = queueWithPendingRemovals(s.queue, s.pendingRemovals);
+    expect(display).toHaveLength(3);
+    expect(display[2]!.taskId).toBe(lastTaskId);
   });
 });

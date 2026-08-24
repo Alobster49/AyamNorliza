@@ -9,6 +9,7 @@ import {
   type WeighAction,
   type WeighState,
 } from "../lib/weigh-model";
+import { OrderProgressTicks } from "./order-progress-ticks";
 import { QueueRail } from "./queue-rail";
 import { WarehouseEmptyState } from "./warehouse-empty-state";
 import { SizeBandGauge } from "./size-band-gauge";
@@ -20,7 +21,6 @@ const EMPTY_DRAFT: LineDraft = { weightKg: "", pieces: "" };
 type WeighStationProps = {
   state: WeighState;
   dispatch: (action: WeighAction) => void;
-  syncingTaskIds: ReadonlySet<string>;
   className?: string;
 };
 
@@ -28,7 +28,7 @@ type WeighStationProps = {
  * Desktop/tablet kiosk: queue rail on the left, one line at a time on the
  * right with a scale-sized readout, size-band gauge and numpad.
  */
-export function WeighStation({ state, dispatch, syncingTaskIds, className }: WeighStationProps) {
+export function WeighStation({ state, dispatch, className }: WeighStationProps) {
   const tDetail = useTranslations("orders.detail");
   const tQueue = useTranslations("orders.queue");
   const tStation = useTranslations("orders.station");
@@ -43,49 +43,65 @@ export function WeighStation({ state, dispatch, syncingTaskIds, className }: Wei
             queue={state.queue}
             confirmed={state.confirmed}
             cursor={state.cursor}
-            syncingTaskIds={syncingTaskIds}
+            pendingRemovals={state.pendingRemovals}
             onSelect={(index) => dispatch({ type: "GO_TO", index })}
           />
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center overflow-y-auto p-8 [scrollbar-gutter:stable_both-edges]">
-            <div className="flex w-full max-w-xl flex-col gap-8">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h1 className="truncate text-2xl font-semibold">{line.customerName}</h1>
-                  <p className="font-mono text-xs text-muted-foreground">
-                    {tDetail("heading", { id: line.orderIdShort })} ·{" "}
-                    {tQueue("itemProgress", { index: line.indexInTask, total: line.totalInTask })}
-                    {line.slotWindow &&
-                      tStation("slotSuffix", { start: line.slotWindow.start, end: line.slotWindow.end })}
-                  </p>
+          {/* my-auto instead of justify-center: centered when it fits, but the top
+              stays scroll-reachable when the viewport is short. */}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center overflow-y-auto p-8 [scrollbar-gutter:stable_both-edges]">
+            <div className="my-auto flex w-full max-w-xl flex-col gap-8">
+              {/* Remounts per line so each one enters with a quick rise-and-fade;
+                  the numpad below stays put across lines. */}
+              <div
+                key={line.itemId}
+                className="flex flex-col gap-8 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 motion-safe:duration-200 motion-safe:ease-out"
+              >
+                <div className="flex flex-col gap-3">
+                  <OrderProgressTicks
+                    lines={state.queue.filter((l) => l.taskId === line.taskId)}
+                    confirmed={state.confirmed}
+                    currentItemId={line.itemId}
+                  />
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h1 className="truncate text-2xl font-semibold">{line.customerName}</h1>
+                      <p className="font-mono text-xs text-muted-foreground">
+                        {tDetail("heading", { id: line.orderIdShort })} ·{" "}
+                        {tQueue("itemProgress", { index: line.indexInTask, total: line.totalInTask })}
+                        {line.slotWindow &&
+                          tStation("slotSuffix", { start: line.slotWindow.start, end: line.slotWindow.end })}
+                      </p>
+                    </div>
+                    <Badge variant="secondary">{line.truckCode}</Badge>
+                  </div>
                 </div>
-                <Badge variant="secondary">{line.truckCode}</Badge>
-              </div>
 
-              <div>
-                <div className="text-xl font-medium">{line.productName}</div>
-                <div className="text-sm text-muted-foreground">
-                  {line.mode === "kg"
-                    ? tSwipeCard("orderedKg", {
-                        quantity: line.orderedQuantity,
-                        min: line.sizeMinKg,
-                        max: line.sizeMaxKg,
-                      })
-                    : tSwipeCard("orderedPieces", {
-                        quantity: line.orderedQuantity,
-                        min: line.sizeMinKg,
-                        max: line.sizeMaxKg,
-                      })}
+                <div>
+                  <div className="text-xl font-medium">{line.productName}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {line.mode === "kg"
+                      ? tSwipeCard("orderedKg", {
+                          quantity: line.orderedQuantity,
+                          min: line.sizeMinKg,
+                          max: line.sizeMaxKg,
+                        })
+                      : tSwipeCard("orderedPieces", {
+                          quantity: line.orderedQuantity,
+                          min: line.sizeMinKg,
+                          max: line.sizeMaxKg,
+                        })}
+                  </div>
                 </div>
+
+                <WeightReadout
+                  weightKg={(state.drafts[line.itemId] ?? EMPTY_DRAFT).weightKg}
+                  pieces={(state.drafts[line.itemId] ?? EMPTY_DRAFT).pieces}
+                  entryTarget={state.entryTarget}
+                  size="kiosk"
+                />
+
+                <SizeBandGauge line={line} draft={state.drafts[line.itemId] ?? EMPTY_DRAFT} />
               </div>
-
-              <WeightReadout
-                weightKg={(state.drafts[line.itemId] ?? EMPTY_DRAFT).weightKg}
-                pieces={(state.drafts[line.itemId] ?? EMPTY_DRAFT).pieces}
-                entryTarget={state.entryTarget}
-                size="kiosk"
-              />
-
-              <SizeBandGauge line={line} draft={state.drafts[line.itemId] ?? EMPTY_DRAFT} />
 
               <WeighNumpad
                 variant="kiosk"

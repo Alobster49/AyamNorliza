@@ -20,8 +20,8 @@ type WeighNumpadProps = {
 
 /**
  * On-screen numpad shared by the kiosk (large keys, side action column) and
- * the mobile card (thumb grid). Buttons respond on pointer-down for
- * instant feedback; the browser click still commits the action.
+ * the mobile card (thumb grid). Keys press-scale via :active for instant
+ * feedback; the click commits the action.
  */
 export function WeighNumpad({
   variant,
@@ -39,12 +39,12 @@ export function WeighNumpad({
   const resolvedNextLabel = nextLabel ?? t("nextDefault");
   const kiosk = variant === "kiosk";
   const keyBase = cn(
-    "select-none rounded-xl border border-border bg-secondary font-mono transition-transform duration-100 motion-reduce:transition-none active:scale-95",
+    "select-none rounded-xl border border-border bg-secondary font-mono transition-transform duration-100 ease-out motion-reduce:transition-none active:scale-95",
     "focus-visible:outline-2 focus-visible:outline-ring",
     kiosk ? "h-20 text-3xl" : "h-16 text-2xl",
   );
   const actionBase = cn(
-    "select-none rounded-xl font-sans font-semibold transition-transform duration-100 motion-reduce:transition-none active:scale-95",
+    "select-none rounded-xl font-sans font-semibold transition-transform duration-100 ease-out motion-reduce:transition-none active:scale-95",
     "focus-visible:outline-2 focus-visible:outline-ring",
     kiosk ? "h-20 text-base" : "h-16 text-sm",
   );
