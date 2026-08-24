@@ -14,18 +14,55 @@ const eslintConfig = [
     ],
   },
   {
-    // Bilingual UI guard rail: `Link`/`useRouter`/`usePathname` must come
-    // from `@/i18n/navigation`, never from `next/link` / `next/navigation`
-    // directly, or the locale prefix gets dropped and every navigation
-    // costs an extra redirect (see README "Internationalisation").
-    //
-    // Applied to the whole tree (`src/**`) rather than an allowlist of
-    // converted subtrees: an allowlist only ever flags files already known
-    // to be clean, so it can never catch a regression in a file it doesn't
-    // list, and every Phase 2+ surface (src/features/**, src/components/**)
-    // sat outside it entirely. The block below turns the rule back `off`
-    // for the areas still carrying real, pre-existing bare-path usage.
+    // Bilingual UI guard rail: `Link`/`useRouter`/`usePathname`/`redirect`
+    // must come from `@/i18n/navigation`, never from `next/link` /
+    // `next/navigation` directly, or the locale prefix gets dropped and
+    // every navigation costs an extra redirect (see README
+    // "Internationalisation"). Applied to the whole tree - every surface is
+    // converted as of Phase 3, so there is no remaining allowlist/denylist
+    // to maintain here; the two overrides below cover the small number of
+    // sites that legitimately build an explicit `/${locale}/...` path
+    // themselves and so have no locale-prefix bug to guard against.
     files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "next/link",
+              message: "Import `Link` from `@/i18n/navigation` instead - it carries the locale prefix.",
+            },
+            {
+              name: "next/navigation",
+              importNames: ["useRouter", "usePathname", "redirect"],
+              message: "Import `useRouter`/`usePathname`/`redirect` from `@/i18n/navigation` instead - the `next/navigation` versions drop the locale prefix.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // These sites build the destination path themselves as
+    // `/${locale}/...` (via `getLocale()`/`next-intl/server`, or a `locale`
+    // route param already in scope) before calling `redirect()`, so the
+    // `next/navigation` version's missing locale prefix is not a bug here -
+    // it's the point. Using `@/i18n/navigation`'s `redirect()` instead would
+    // double-prefix the locale, and - for `guards.ts`/`buyer-auth.ts`,
+    // reachable from Vitest unit tests - `@/i18n/navigation`'s
+    // client-navigation build fails to resolve `next/navigation` under
+    // Vitest's node environment at all. Kept as a narrow per-file exemption
+    // rather than folding into the base rule so a regression to a *bare*
+    // path in these same files is still caught.
+    files: [
+      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/layout.tsx",
+      "src/app/\\[locale\\]/(dashboard)/\\[organizationSlug\\]/layout.tsx",
+      "src/app/\\[locale\\]/(auth)/invite/\\[token\\]/page.tsx",
+      "src/lib/auth/require-user.ts",
+      "src/lib/auth/buyer-auth.ts",
+      "src/features/orders/server/guards.ts",
+    ],
     rules: {
       "no-restricted-imports": [
         "error",
@@ -39,66 +76,6 @@ const eslintConfig = [
               name: "next/navigation",
               importNames: ["useRouter", "usePathname"],
               message: "Import `useRouter`/`usePathname` from `@/i18n/navigation` instead - the `next/navigation` versions drop the locale prefix.",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    // Legacy surfaces not yet converted to the locale-aware imports above.
-    // Each entry here is deleted as Phase 2+ converts that surface - do not
-    // add new files to this list; convert them instead.
-    //
-    // `[locale]` must be escaped (`\\[locale\\]`) - minimatch treats an
-    // unescaped `[...]` as a character class, so an un-escaped pattern here
-    // never matches any file at all. That bug is also why the original
-    // (pre-this-change) version of this rule's `files` list - which used
-    // the same unescaped `[locale]`/`[organizationSlug]` glob syntax -
-    // matched nothing, not just the files it happened to list: the rule was
-    // vacuous for every path, not only the ones its comment described.
-    files: [
-      // Phase 3 seller clean-file batch (Task 6): the broad `(seller)/**`,
-      // `orders/components/**`, and `logistics/components/**` globs above
-      // were narrowed to this explicit list of the DEFERRED-DIRTY files
-      // (see .superpowers/sdd/task-6-brief.md) once every other file under
-      // those trees was converted to `@/i18n/navigation` - a broad glob
-      // only ever flags files already known to be clean, so it can't catch
-      // a regression in a converted file the way an explicit list can.
-      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/customers/customers-client.tsx",
-      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/orders/orders-client.tsx",
-      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/products/products-client.tsx",
-      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/runs/runs-client.tsx",
-      "src/features/orders/components/orders-board.tsx",
-      "src/features/orders/components/swipe-deck.tsx",
-      "src/features/orders/components/weigh-station.tsx",
-      "src/features/logistics/components/loading-client.tsx",
-      "src/features/logistics/components/timeline-view.tsx",
-      "src/features/overview/components/**/*.{ts,tsx}",
-    ],
-    rules: {
-      "no-restricted-imports": "off",
-    },
-  },
-  {
-    // This shell has already converted `usePathname` to the locale-aware
-    // import - only `Link` and `useRouter` still come from `next/link` /
-    // `next/navigation` directly. A wholesale exemption (as above) would
-    // leave the converted `usePathname` unguarded against regressing back
-    // to `next/navigation`, so this override keeps that one import name
-    // restricted while permitting the rest.
-    files: [
-      "src/features/dashboard/components/app-sidebar.tsx",
-    ],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "next/navigation",
-              importNames: ["usePathname"],
-              message: "Import `usePathname` from `@/i18n/navigation` instead - the `next/navigation` version drops the locale prefix.",
             },
           ],
         },

@@ -95,7 +95,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="inline-flex rounded-lg border p-0.5">
+        <div className="inline-flex rounded-lg border p-0.5" role="group" aria-label={t("viewToggle.label")}>
           <Button
             variant={view === "board" ? "secondary" : "ghost"}
             size="sm"

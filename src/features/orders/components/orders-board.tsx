@@ -53,6 +53,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
   const router = useRouter();
   const t = useTranslations("orders.board");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const { toast } = useToast();
   const [activeOrder, setActiveOrder] = useState<OrderListItem | null>(null);
   const [workflow, setWorkflow] = useState<PendingWorkflow | null>(null);
@@ -99,7 +100,11 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
         const result = await getOrderDetail(organizationSlug, order.id);
         if (token !== detailFetchToken.current) return; // a newer drag superseded this fetch
         if (!result.ok) {
-          toast({ title: tError("error"), description: result.message, variant: "destructive" });
+          toast({
+            title: tError("error"),
+            description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+            variant: "destructive",
+          });
           return;
         }
         setWorkflow({ kind: "confirm", orderId: order.id, detail: result.data });

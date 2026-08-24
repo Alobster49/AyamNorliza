@@ -2,11 +2,11 @@
  * Key-assertion tests for the `errors.orders.*` messageKeys added to
  * `src/features/orders/server/order-actions.ts` (Phase 3 seller clean-file
  * batch, Task 6). Covers only the actions consumed by the converted seller
- * screens (order-detail-client.tsx, new-order-client.tsx, board-dialogs.tsx):
- * getOrderDetail, createManualOrder, confirmOrder, cancelOrder, closeOrder,
- * reopenOrder, getDeliveryOptionsForOrg, resolveDeliveryZone. Every other
- * action in the file stays prose-only (`message`), consumed by the
- * still-dirty orders-client.tsx / orders-board.tsx / swipe-deck.tsx /
+ * screens (order-detail-client.tsx, new-order-client.tsx, board-dialogs.tsx,
+ * orders-board.tsx): getOrderDetail, createManualOrder, confirmOrder,
+ * cancelOrder, closeOrder, reopenOrder, getDeliveryOptionsForOrg,
+ * resolveDeliveryZone. Every other action in the file stays prose-only
+ * (`message`), consumed by the still-dirty swipe-deck.tsx /
  * weigh-station.tsx / runs-client.tsx.
  */
 

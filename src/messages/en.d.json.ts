@@ -1400,7 +1400,6 @@ declare const messages: {
         "hereNow": "Here now",
         "toDo": "To do"
       },
-      "back": "Back",
       "deliverSheet": {
         "title": "Proof of delivery",
         "subtitle": "{name} · all of this is optional",
@@ -1434,6 +1433,7 @@ declare const messages: {
     },
     "client": {
       "viewToggle": {
+        "label": "Orders view",
         "board": "Board",
         "table": "Table"
       },
@@ -1829,7 +1829,6 @@ declare const messages: {
       "trigger": "Seed demo data",
       "dialogTitle": "Seed demo data?",
       "dialogDescription": "This clears existing data first, then creates a fresh set of demo products, customers, orders, and runs.",
-      "cancel": "Cancel",
       "confirm": "Seed demo data"
     }
   },

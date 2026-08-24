@@ -1397,7 +1397,6 @@
         "hereNow": "Di sini sekarang",
         "toDo": "Belum selesai"
       },
-      "back": "Kembali",
       "deliverSheet": {
         "title": "Bukti penghantaran",
         "subtitle": "{name} · semua ini pilihan",
@@ -1431,6 +1430,7 @@
     },
     "client": {
       "viewToggle": {
+        "label": "Paparan pesanan",
         "board": "Papan",
         "table": "Jadual"
       },
@@ -1826,7 +1826,6 @@
       "trigger": "Semai data demo",
       "dialogTitle": "Semai data demo?",
       "dialogDescription": "Ini akan memadam data sedia ada dahulu, kemudian mencipta set baharu produk, pelanggan, pesanan dan trip demo.",
-      "cancel": "Batal",
       "confirm": "Semai data demo"
     }
   },
