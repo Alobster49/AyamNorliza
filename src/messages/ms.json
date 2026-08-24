@@ -1483,6 +1483,13 @@
         "cancelled": "Menunggu/disahkan sahaja",
         "closed": "Selepas sampai sahaja",
         "reopenRole": "Admin sahaja"
+      },
+      "cardAria": "Pesanan {customer}, {status}. Enter untuk buka, Space untuk alih.",
+      "announce": {
+        "pickedUp": "Pesanan {customer} diangkat",
+        "over": "Di atas {column}",
+        "dropped": "Dilepaskan di {column}",
+        "cancelled": "Pergerakan dibatalkan"
       }
     },
     "station": {

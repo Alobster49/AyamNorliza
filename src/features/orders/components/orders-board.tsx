@@ -6,10 +6,13 @@ import { useTranslations } from "next-intl";
 import {
   DndContext,
   DragOverlay,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
+  KeyboardSensor,
   useSensor,
   useSensors,
   useDroppable,
+  type Announcements,
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
@@ -54,11 +57,41 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
   const t = useTranslations("orders.board");
   const tError = useTranslations("orders");
   const tRoot = useTranslations();
+  const tStatus = useTranslations("status.order");
+  const tCard = useTranslations("orders.card");
   const { toast } = useToast();
   const [activeOrder, setActiveOrder] = useState<OrderListItem | null>(null);
   const [workflow, setWorkflow] = useState<PendingWorkflow | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    // Mouse keeps the quick 6px pickup.
+    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
+    // Touch requires a 250ms hold so a scroll swipe stays a scroll.
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+    // Space picks up / drops; Enter stays reserved for opening the order.
+    useSensor(KeyboardSensor, {
+      keyboardCodes: { start: ["Space"], cancel: ["Escape"], end: ["Space"] },
+    }),
+  );
   const detailFetchToken = useRef(0);
+
+  const customerOf = (id: unknown) =>
+    orders.find((o) => o.id === id)?.customer?.name ?? tCard("unknownCustomer");
+  const columnOf = (id: unknown) => tStatus(String(id) as OrderStatus);
+
+  const announcements: Announcements = {
+    onDragStart: ({ active }) => t("announce.pickedUp", { customer: customerOf(active.id) }),
+    onDragOver: ({ over }) =>
+      over ? t("announce.over", { column: columnOf(over.id) }) : undefined,
+    onDragEnd: ({ over }) =>
+      over ? t("announce.dropped", { column: columnOf(over.id) }) : t("announce.cancelled"),
+    onDragCancel: () => t("announce.cancelled"),
+  };
+
+  const cardAriaLabel = (order: OrderListItem) =>
+    t("cardAria", {
+      customer: order.customer?.name ?? tCard("unknownCustomer"),
+      status: tStatus(order.status),
+    });
 
   function moveOrder(orderId: string, to: OrderStatus) {
     onOrdersChange(orders.map((o) => (o.id === orderId ? { ...o, status: to } : o)));
@@ -119,7 +152,14 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
 
   return (
     <>
-      <DndContext id="orders-board" sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd} onDragCancel={() => setActiveOrder(null)}>
+      <DndContext
+        id="orders-board"
+        sensors={sensors}
+        accessibility={{ announcements }}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragCancel={() => setActiveOrder(null)}
+      >
         <div className="flex gap-4 overflow-x-auto pb-4">
           {ORDER_STATUSES.map((status) => (
             <BoardColumn
@@ -128,6 +168,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
               orders={orders.filter((o) => o.status === status)}
               onOpenOrder={(id) => router.push(`/${organizationSlug}/orders/${id}`)}
               onNewOrder={() => router.push(`/${organizationSlug}/orders/new`)}
+              cardAriaLabel={cardAriaLabel}
             />
           ))}
         </div>
@@ -182,11 +223,13 @@ function BoardColumn({
   orders,
   onOpenOrder,
   onNewOrder,
+  cardAriaLabel,
 }: {
   status: OrderStatus;
   orders: OrderListItem[];
   onOpenOrder: (id: string) => void;
   onNewOrder: () => void;
+  cardAriaLabel: (order: OrderListItem) => string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const t = useTranslations("orders.board");
@@ -227,7 +270,12 @@ function BoardColumn({
           </div>
         ) : (
           orders.map((order) => (
-            <OrderCard key={order.id} order={order} onOpen={() => onOpenOrder(order.id)} />
+            <OrderCard
+              key={order.id}
+              order={order}
+              onOpen={() => onOpenOrder(order.id)}
+              ariaLabel={cardAriaLabel(order)}
+            />
           ))
         )}
       </div>

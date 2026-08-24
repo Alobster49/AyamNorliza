@@ -1486,6 +1486,13 @@ declare const messages: {
         "cancelled": "Pending/confirmed only",
         "closed": "From delivered only",
         "reopenRole": "Admins only"
+      },
+      "cardAria": "Order for {customer}, {status}. Enter opens, Space picks up to move.",
+      "announce": {
+        "pickedUp": "Picked up {customer}'s order",
+        "over": "Over {column}",
+        "dropped": "Dropped on {column}",
+        "cancelled": "Move cancelled"
       }
     },
     "station": {

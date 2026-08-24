@@ -49,7 +49,15 @@ export function OrderCardContent({ order }: { order: OrderListItem }) {
   );
 }
 
-export function OrderCard({ order, onOpen }: { order: OrderListItem; onOpen: () => void }) {
+export function OrderCard({
+  order,
+  onOpen,
+  ariaLabel,
+}: {
+  order: OrderListItem;
+  onOpen: () => void;
+  ariaLabel: string;
+}) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: order.id,
     data: { status: order.status },
@@ -62,13 +70,14 @@ export function OrderCard({ order, onOpen }: { order: OrderListItem; onOpen: () 
       {...listeners}
       onClick={onOpen}
       onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+        if (e.key === "Enter") {
           e.preventDefault();
           onOpen();
         }
       }}
+      aria-label={ariaLabel}
       className={
-        "cursor-grab touch-none active:cursor-grabbing " + (isDragging ? "opacity-40" : "")
+        "cursor-grab [touch-action:pan-y] active:cursor-grabbing " + (isDragging ? "opacity-40" : "")
       }
     >
       <OrderCardContent order={order} />
