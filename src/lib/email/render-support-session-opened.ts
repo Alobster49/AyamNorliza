@@ -1,27 +1,33 @@
 /**
- * Render the "support session opened" email sent to the technician.
+ * Render the "support session opened" email sent to the technician, in
+ * the recipient's locale.
  */
 
 import "server-only";
 
-import { getMessages, interpolate } from "./messages";
+import type { AppLocale } from "@/lib/i18n/locales";
+import { getEmailTranslator } from "./messages";
 
 export function renderSupportSessionOpened(input: {
   organizationName: string;
   purpose: string;
   startsAt: Date;
   endsAt: Date;
-  locale?: string;
+  locale?: AppLocale;
 }): { subject: string; html: string } {
-  const messages = getMessages(input.locale ?? "en");
-  const values: Record<string, string> = {
+  const t = getEmailTranslator(input.locale);
+  const values = {
     organizationName: input.organizationName,
     purpose: input.purpose,
     startsAt: input.startsAt.toUTCString(),
     endsAt: input.endsAt.toUTCString(),
   };
   return {
-    subject: interpolate(messages.supportSessionOpened.subject, values),
-    html: interpolate(messages.supportSessionOpened.bodyHtml, values),
+    subject: t("supportSessionOpened.subject", values),
+    html: t.markup("supportSessionOpened.bodyHtml", {
+      ...values,
+      p: (chunks) => `<p>${chunks}</p>`,
+      strong: (chunks) => `<strong>${chunks}</strong>`,
+    }),
   };
 }

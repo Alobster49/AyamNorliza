@@ -59,6 +59,15 @@ import { sendEmail } from "@/lib/email/resend";
 import { renderInvite } from "@/lib/email/render-invite";
 import { renderBreakGlassUsed } from "@/lib/email/render-break-glass";
 import { serverEnv } from "@/lib/env";
+import { DEFAULT_LOCALE, isSupportedLocale, type AppLocale } from "@/lib/i18n/locales";
+
+/** The invitee has no `profiles`/`buyers` row yet — the organization's
+ * default locale is the best available signal for which language to send
+ * the invitation in. Falls back to `DEFAULT_LOCALE` for an unrecognized
+ * value (the column predates the `en`/`ms` check constraint). */
+function resolveLocale(value: unknown): AppLocale {
+  return isSupportedLocale(value) ? value : DEFAULT_LOCALE;
+}
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
@@ -369,6 +378,7 @@ export async function inviteUserAction(
       role: input.role,
       acceptUrl: `${env.INVITE_BASE_URL}/invite/${created.rawToken}`,
       expiresAt: new Date(expiresAt),
+      locale: resolveLocale(org?.default_locale),
     });
     await sendEmail({ to: [input.email], subject, html });
   } catch {
@@ -424,7 +434,7 @@ export async function resendInvitationAction(
     const env = serverEnv();
     const { data: org } = await supabase
       .from("organizations")
-      .select("name")
+      .select("name, default_locale")
       .eq("id", invitation.organization_id)
       .single();
     const { subject, html } = renderInvite({
@@ -433,6 +443,7 @@ export async function resendInvitationAction(
       role: invitation.role,
       acceptUrl: `${env.INVITE_BASE_URL}/invite/${rawToken}`,
       expiresAt: new Date(newExpires),
+      locale: resolveLocale(org?.default_locale),
     });
     await sendEmail({ to: [invitation.email], subject, html });
   } catch {
@@ -1258,14 +1269,29 @@ export async function openBreakGlassAction(
       .select("display_name")
       .eq("user_id", user.id)
       .maybeSingle();
-    const { subject, html } = renderBreakGlassUsed({
-      organizationName: org?.name ?? "AyamNorliza",
-      userEmail: profile?.display_name ?? user.email ?? "unknown",
-      reason: input.reason,
-      ticketReference: input.ticketReference ?? null,
-      expiresAt,
-    });
-    await sendEmail({ to: ownerRecipients, subject, html });
+    // Owners can each have their own `profiles.locale`; group them so
+    // every owner gets the email in their own language instead of
+    // widening the query beyond the locale column.
+    const { data: ownerProfiles } = await supabase
+      .from("profiles")
+      .select("user_id, locale")
+      .in("user_id", ownerRecipients);
+    const localeGroups = new Map<AppLocale, string[]>();
+    for (const uid of ownerRecipients) {
+      const locale = resolveLocale(ownerProfiles?.find((p) => p.user_id === uid)?.locale);
+      localeGroups.set(locale, [...(localeGroups.get(locale) ?? []), uid]);
+    }
+    for (const [locale, recipients] of localeGroups) {
+      const { subject, html } = renderBreakGlassUsed({
+        organizationName: org?.name ?? "AyamNorliza",
+        userEmail: profile?.display_name ?? user.email ?? "unknown",
+        reason: input.reason,
+        ticketReference: input.ticketReference ?? null,
+        expiresAt,
+        locale,
+      });
+      await sendEmail({ to: recipients, subject, html });
+    }
     void env; // referenced for future SMTP fallback
   }
 

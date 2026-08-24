@@ -1,11 +1,12 @@
 /**
  * Render the break-glass-used email sent to owners and the security
- * contact. Locale-aware via the messages catalog.
+ * contact, in the recipient's locale.
  */
 
 import "server-only";
 
-import { getMessages, interpolate } from "./messages";
+import type { AppLocale } from "@/lib/i18n/locales";
+import { getEmailTranslator } from "./messages";
 
 export function renderBreakGlassUsed(input: {
   organizationName: string;
@@ -13,10 +14,10 @@ export function renderBreakGlassUsed(input: {
   reason: string;
   ticketReference: string | null;
   expiresAt: Date;
-  locale?: string;
+  locale?: AppLocale;
 }): { subject: string; html: string } {
-  const messages = getMessages(input.locale ?? "en");
-  const values: Record<string, string> = {
+  const t = getEmailTranslator(input.locale);
+  const values = {
     organizationName: input.organizationName,
     userEmail: input.userEmail,
     reason: input.reason,
@@ -24,7 +25,11 @@ export function renderBreakGlassUsed(input: {
     expiresAt: input.expiresAt.toUTCString(),
   };
   return {
-    subject: interpolate(messages.breakGlassUsed.subject, values),
-    html: interpolate(messages.breakGlassUsed.bodyHtml, values),
+    subject: t("breakGlassUsed.subject", values),
+    html: t.markup("breakGlassUsed.bodyHtml", {
+      ...values,
+      p: (chunks) => `<p>${chunks}</p>`,
+      strong: (chunks) => `<strong>${chunks}</strong>`,
+    }),
   };
 }

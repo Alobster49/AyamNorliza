@@ -818,5 +818,27 @@
     "cantOpenRunTitle": "Tidak dapat membuka trip",
     "noRunTitle": "Tiada trip untuk anda hari ini",
     "noRunDescription": "Pejabat belum menetapkan anda pada mana-mana lori. Halaman ini akan memaparkan trip sebaik sahaja ia ditetapkan."
+  },
+  "email": {
+    "invite": {
+      "subject": "Anda dijemput ke {organizationName}",
+      "bodyHtml": "<p>{inviterName} menjemput anda menyertai <strong>{organizationName}</strong> sebagai <strong>{role}</strong>.</p><p>Jemputan ini luput pada {expiresAt}.</p><p><a>Terima jemputan</a></p>"
+    },
+    "mfaEnrolled": {
+      "subject": "Pengesahan dua faktor diaktifkan",
+      "bodyHtml": "<p>Pengesahan dua faktor telah diaktifkan pada akaun AyamNorliza anda.</p><p>Jika ini bukan anda, hubungi pemilik organisasi anda dengan segera.</p>"
+    },
+    "breakGlassUsed": {
+      "subject": "[{organizationName}] Akses break-glass digunakan",
+      "bodyHtml": "<p><strong>{userEmail}</strong> menggunakan akses break-glass dalam <strong>{organizationName}</strong>.</p><p><strong>Sebab:</strong> {reason}</p><p><strong>Rujukan tiket:</strong> {ticketReference}</p><p><strong>Luput:</strong> {expiresAt}</p><p>Semakan selepas penggunaan diperlukan selepas sesi tamat.</p>"
+    },
+    "temporaryAccessExpiring": {
+      "subject": "Akses sementara akan luput tidak lama lagi",
+      "bodyHtml": "<p>Akses sementara anda kepada <strong>{organizationName}</strong> akan luput pada {expiresAt}.</p><p>Minta pemilik organisasi anda memperbaharuinya jika anda masih memerlukan akses.</p>"
+    },
+    "supportSessionOpened": {
+      "subject": "Sesi sokongan dibuka dalam {organizationName}",
+      "bodyHtml": "<p>Sesi sokongan telah dibuka untuk anda dalam <strong>{organizationName}</strong>.</p><p><strong>Tujuan:</strong> {purpose}</p><p><strong>Tempoh:</strong> {startsAt} → {endsAt}</p>"
+    }
   }
 }

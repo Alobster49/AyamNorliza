@@ -1,82 +1,29 @@
 /**
- * Locale copy for identity-access email templates. The `en` baseline
- * is the canonical copy; additional locales are layered on top via
- * deep-merge when supplied.
+ * Locale-aware translator for transactional email templates. Backed by the
+ * shared `email.*` namespace in `src/messages/{locale}.json` and rendered
+ * with next-intl's `createTranslator`, which works outside the request
+ * scope (Server Actions, background jobs) unlike `useTranslations`.
  */
 
-export type IdentityMessages = {
-  invite: { subject: string; bodyHtml: string };
-  inviteResent: { subject: string; bodyHtml: string };
-  mfaEnrolled: { subject: string; bodyHtml: string };
-  breakGlassUsed: { subject: string; bodyHtml: string };
-  temporaryAccessExpiring: { subject: string; bodyHtml: string };
-  supportSessionOpened: { subject: string; bodyHtml: string };
-};
+import "server-only";
 
-const en: IdentityMessages = {
-  invite: {
-    subject: "You are invited to {organizationName}",
-    bodyHtml: `
-      <p>{inviterName} invited you to join <strong>{organizationName}</strong>
-      as <strong>{role}</strong>.</p>
-      <p>This invitation expires {expiresAt}.</p>
-      <p><a href="{acceptUrl}">Accept invitation</a></p>
-    `,
-  },
-  inviteResent: {
-    subject: "Reminder: your invitation to {organizationName}",
-    bodyHtml: `
-      <p>{inviterName} resent the invitation to join <strong>{organizationName}</strong>
-      as <strong>{role}</strong>.</p>
-      <p>This invitation expires {expiresAt}.</p>
-      <p><a href="{acceptUrl}">Accept invitation</a></p>
-    `,
-  },
-  mfaEnrolled: {
-    subject: "Two-factor authentication enabled",
-    bodyHtml: `<p>Two-factor authentication was enabled on your AyamNorliza account.</p>
-      <p>If this was not you, contact your organization owner immediately.</p>`,
-  },
-  breakGlassUsed: {
-    subject: "[{organizationName}] Break-glass access used",
-    bodyHtml: `
-      <p><strong>{userEmail}</strong> used break-glass access in
-      <strong>{organizationName}</strong>.</p>
-      <p><strong>Reason:</strong> {reason}</p>
-      <p><strong>Ticket:</strong> {ticketReference}</p>
-      <p><strong>Expires:</strong> {expiresAt}</p>
-      <p>A post-use review is required after the session ends.</p>
-    `,
-  },
-  temporaryAccessExpiring: {
-    subject: "Temporary access expiring soon",
-    bodyHtml: `
-      <p>Your temporary access to <strong>{organizationName}</strong>
-      expires on {expiresAt}.</p>
-      <p>Ask your organization owner to renew it if you still need access.</p>
-    `,
-  },
-  supportSessionOpened: {
-    subject: "Support session opened in {organizationName}",
-    bodyHtml: `
-      <p>A support session has been opened for you in
-      <strong>{organizationName}</strong>.</p>
-      <p><strong>Purpose:</strong> {purpose}</p>
-      <p><strong>Window:</strong> {startsAt} → {endsAt}</p>
-    `,
-  },
-};
+import { createTranslator } from "next-intl";
 
-const catalogs: Record<string, IdentityMessages> = { en };
+import { DEFAULT_LOCALE, type AppLocale } from "@/lib/i18n/locales";
+import en from "@/messages/en.json";
+import ms from "@/messages/ms.json";
 
-export function getMessages(locale: string): IdentityMessages {
-  return catalogs[locale] ?? catalogs.en!;
-}
+// `ms.json` has the same shape as `en.json` (enforced by the catalog parity
+// test), but its string literals differ, so TS infers a structurally
+// incompatible literal type for it. Cast through `typeof en` — the shape
+// guarantee comes from the parity test, not from TS here.
+const catalogs: Record<AppLocale, typeof en> = { en, ms: ms as typeof en };
 
-export function interpolate(template: string, values: Record<string, string | null | undefined>): string {
-  return template.replace(/\{(\w+)\}/g, (_, key) => {
-    const v = values[key];
-    if (v === null || v === undefined) return "";
-    return String(v);
-  });
+export type EmailTranslator = ReturnType<typeof createTranslator<typeof en, "email">>;
+
+/** Returns a translator scoped to the `email` namespace for the given
+ * locale, falling back to `DEFAULT_LOCALE` for anything unrecognized. */
+export function getEmailTranslator(locale: AppLocale = DEFAULT_LOCALE): EmailTranslator {
+  const messages = catalogs[locale] ?? catalogs[DEFAULT_LOCALE];
+  return createTranslator({ locale, messages, namespace: "email" });
 }
