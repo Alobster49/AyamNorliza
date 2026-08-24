@@ -139,10 +139,10 @@ export function AnalyticsDashboard({
             <RevenueChart series={salesVm.series} />
             <FunnelCard vm={salesVm} />
           </div>
-          <TopLists vm={salesVm} />
         </>
       )}
       {insightsError || !insightsVm ? <SectionError /> : <InsightsRow vm={insightsVm} />}
+      {!salesError && salesVm && <TopLists vm={salesVm} />}
       {today ? <TodayStrip payload={today} /> : <SectionError />}
       {adminSummary && <AdminPanel summary={adminSummary} organizationSlug={organizationSlug} />}
     </div>
