@@ -1457,7 +1457,25 @@ declare const messages: {
       "newOrder": "New order",
       "addToPending": "Add a new pending order",
       "empty": "No orders",
-      "moveNotAllowedTitle": "Move not allowed"
+      "moveNotAllowedTitle": "Move not allowed",
+      "blocked": {
+        "ready": "Ready is set by the warehouse weigh task.",
+        "delivered": "Delivered is set when the delivery run completes.",
+        "pending": "Orders cannot move back to pending.",
+        "confirmed": "Only pending orders can be confirmed.",
+        "cancelled": "Only pending or confirmed orders can be cancelled.",
+        "closed": "Only delivered orders can be closed.",
+        "reopenRole": "Only owners or admins can reopen closed orders."
+      },
+      "hint": {
+        "ready": "Set by warehouse",
+        "delivered": "Set by delivery run",
+        "pending": "No going back",
+        "confirmed": "From pending only",
+        "cancelled": "Pending/confirmed only",
+        "closed": "From delivered only",
+        "reopenRole": "Admins only"
+      }
     },
     "station": {
       "slotSuffix": " · slot {start}–{end}",

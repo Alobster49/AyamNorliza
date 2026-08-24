@@ -1454,7 +1454,25 @@
       "newOrder": "Pesanan baharu",
       "addToPending": "Tambah pesanan baharu",
       "empty": "Tiada pesanan",
-      "moveNotAllowedTitle": "Pergerakan tidak dibenarkan"
+      "moveNotAllowedTitle": "Pergerakan tidak dibenarkan",
+      "blocked": {
+        "ready": "Status Ready ditetapkan oleh tugasan timbang di gudang.",
+        "delivered": "Status Sampai ditetapkan apabila trip penghantaran selesai.",
+        "pending": "Pesanan tidak boleh kembali ke status menunggu.",
+        "confirmed": "Hanya pesanan yang menunggu boleh disahkan.",
+        "cancelled": "Hanya pesanan menunggu atau disahkan boleh dibatalkan.",
+        "closed": "Hanya pesanan yang sudah sampai boleh ditutup.",
+        "reopenRole": "Hanya pemilik atau admin boleh buka semula pesanan yang ditutup."
+      },
+      "hint": {
+        "ready": "Ditetapkan oleh gudang",
+        "delivered": "Ditetapkan oleh trip",
+        "pending": "Tidak boleh patah balik",
+        "confirmed": "Dari menunggu sahaja",
+        "cancelled": "Menunggu/disahkan sahaja",
+        "closed": "Selepas sampai sahaja",
+        "reopenRole": "Admin sahaja"
+      }
     },
     "station": {
       "slotSuffix": " · slot {start}–{end}",

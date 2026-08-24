@@ -30,50 +30,58 @@ describe("resolveDrop", () => {
   });
 
   it("blocks moves into ready with the weigh-task reason", () => {
-    const result = resolveDrop("confirmed", "ready", "owner");
-    expect(result).toEqual({
+    expect(resolveDrop("confirmed", "ready", "owner")).toEqual({
       kind: "blocked",
-      reason: "Ready is set by the warehouse weigh task.",
+      reasonKey: "orders.board.blocked.ready",
+      hintKey: "orders.board.hint.ready",
     });
   });
 
   it("blocks moves into delivered (except from closed) with the run reason", () => {
-    const result = resolveDrop("ready", "delivered", "owner");
-    expect(result).toEqual({
+    expect(resolveDrop("ready", "delivered", "owner")).toEqual({
       kind: "blocked",
-      reason: "Delivered is set when the delivery run completes.",
+      reasonKey: "orders.board.blocked.delivered",
+      hintKey: "orders.board.hint.delivered",
     });
   });
 
   it("blocks moves back to pending", () => {
-    const result = resolveDrop("confirmed", "pending", "owner");
-    expect(result).toEqual({
+    expect(resolveDrop("confirmed", "pending", "owner")).toEqual({
       kind: "blocked",
-      reason: "Orders cannot move back to pending.",
+      reasonKey: "orders.board.blocked.pending",
+      hintKey: "orders.board.hint.pending",
     });
   });
 
   it("blocks confirming a non-pending order", () => {
-    const result = resolveDrop("ready", "confirmed", "owner");
-    expect(result).toEqual({
+    expect(resolveDrop("ready", "confirmed", "owner")).toEqual({
       kind: "blocked",
-      reason: "Only pending orders can be confirmed.",
+      reasonKey: "orders.board.blocked.confirmed",
+      hintKey: "orders.board.hint.confirmed",
     });
   });
 
   it("blocks cancelling ready/delivered/closed orders", () => {
-    const result = resolveDrop("delivered", "cancelled", "owner");
-    expect(result).toEqual({
+    expect(resolveDrop("delivered", "cancelled", "owner")).toEqual({
       kind: "blocked",
-      reason: "Only pending or confirmed orders can be cancelled.",
+      reasonKey: "orders.board.blocked.cancelled",
+      hintKey: "orders.board.hint.cancelled",
     });
   });
 
   it("blocks closing a non-delivered order", () => {
-    const result = resolveDrop("pending", "closed", "owner");
-    expect(result).toEqual({
+    expect(resolveDrop("pending", "closed", "owner")).toEqual({
       kind: "blocked",
-      reason: "Only delivered orders can be closed.",
+      reasonKey: "orders.board.blocked.closed",
+      hintKey: "orders.board.hint.closed",
+    });
+  });
+
+  it("blocks reopening a closed order for a non-admin role", () => {
+    expect(resolveDrop("closed", "delivered", "sales")).toEqual({
+      kind: "blocked",
+      reasonKey: "orders.board.blocked.reopenRole",
+      hintKey: "orders.board.hint.reopenRole",
     });
   });
 
@@ -82,7 +90,7 @@ describe("resolveDrop", () => {
       for (const to of ORDER_STATUSES) {
         const result = resolveDrop(from, to, "owner");
         expect(result.kind).toBeDefined();
-        if (result.kind === "blocked") expect(result.reason.length).toBeGreaterThan(0);
+        if (result.kind === "blocked") expect(result.reasonKey.length).toBeGreaterThan(0);
       }
     }
   });

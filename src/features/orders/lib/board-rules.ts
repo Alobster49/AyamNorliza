@@ -12,9 +12,15 @@ export type DropResolution =
   | { kind: "cancel" }
   | { kind: "settle" }
   | { kind: "reopen" }
-  | { kind: "blocked"; reason: string };
+  | { kind: "blocked"; reasonKey: string; hintKey: string };
 
 const REOPEN_ROLES = ["owner", "org_admin"];
+
+const blocked = (slug: string): DropResolution => ({
+  kind: "blocked",
+  reasonKey: `orders.board.blocked.${slug}`,
+  hintKey: `orders.board.hint.${slug}`,
+});
 
 export function resolveDrop(
   from: OrderStatus,
@@ -33,24 +39,14 @@ export function resolveDrop(
 
   if (from === "closed" && to === "delivered") {
     if (REOPEN_ROLES.includes(callerRole)) return { kind: "reopen" };
-    return { kind: "blocked", reason: "Only owners or admins can reopen closed orders." };
+    return blocked("reopenRole");
   }
 
-  if (to === "ready") {
-    return { kind: "blocked", reason: "Ready is set by the warehouse weigh task." };
-  }
-  if (to === "delivered") {
-    return { kind: "blocked", reason: "Delivered is set when the delivery run completes." };
-  }
-  if (to === "pending") {
-    return { kind: "blocked", reason: "Orders cannot move back to pending." };
-  }
-  if (to === "confirmed") {
-    return { kind: "blocked", reason: "Only pending orders can be confirmed." };
-  }
-  if (to === "cancelled") {
-    return { kind: "blocked", reason: "Only pending or confirmed orders can be cancelled." };
-  }
+  if (to === "ready") return blocked("ready");
+  if (to === "delivered") return blocked("delivered");
+  if (to === "pending") return blocked("pending");
+  if (to === "confirmed") return blocked("confirmed");
+  if (to === "cancelled") return blocked("cancelled");
   // to === "closed"
-  return { kind: "blocked", reason: "Only delivered orders can be closed." };
+  return blocked("closed");
 }

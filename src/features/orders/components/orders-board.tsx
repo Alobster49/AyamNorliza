@@ -85,7 +85,11 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
       case "noop":
         return;
       case "blocked":
-        toast({ title: t("moveNotAllowedTitle"), description: resolution.reason, variant: "destructive" });
+        toast({
+          title: t("moveNotAllowedTitle"),
+          description: tRoot(resolution.reasonKey as never),
+          variant: "destructive",
+        });
         return;
       case "settle":
         router.push(`/${organizationSlug}/orders/${order.id}`);
