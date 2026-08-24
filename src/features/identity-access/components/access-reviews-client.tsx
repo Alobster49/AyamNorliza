@@ -21,6 +21,7 @@ export function AccessReviewsClient(props: {
 }) {
   const router = useRouter();
   const t = useTranslations("identity.accessReviews");
+  const tRoot = useTranslations();
   const format = useFormatter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -37,7 +38,9 @@ export function AccessReviewsClient(props: {
     });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.common.forbidden");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(tRoot(result.messageKey as never));
       return;
     }
     router.refresh();
@@ -47,7 +50,7 @@ export function AccessReviewsClient(props: {
     setError(null);
     const result = await decideReviewItemAction({ itemId, decision });
     if (!result.ok) {
-      setError(result.message);
+      setError(tRoot(result.messageKey as never));
       return;
     }
     router.refresh();

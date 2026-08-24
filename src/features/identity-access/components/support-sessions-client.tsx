@@ -65,12 +65,15 @@ export function SupportSessionsClient(props: {
 
 function EndButton({ sessionId, onDone, onError }: { sessionId: string; onDone: () => void; onError: (m: string) => void }) {
   const t = useTranslations("identity.supportSessions");
+  const tRoot = useTranslations();
   return (
     <button
       type="button"
       onClick={async () => {
         const result = await endSupportSessionAction({ sessionId, revokeMembership: true });
-        if (!result.ok) onError(result.message);
+        // `messageKey` is a dynamic full path (e.g. "errors.identity.supportSession.alreadyEnded");
+        // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+        if (!result.ok) onError(tRoot(result.messageKey as never));
         else onDone();
       }}
     >
@@ -91,6 +94,7 @@ function OpenDialog({
   onSaved: () => void;
 }) {
   const t = useTranslations("identity.supportSessions");
+  const tRoot = useTranslations();
   const [sponsorId, setSponsorId] = useState(members[0]?.userId ?? "");
   const [technicianId, setTechnicianId] = useState("");
   const [purpose, setPurpose] = useState("");
@@ -115,7 +119,9 @@ function OpenDialog({
     });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.common.forbidden");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(tRoot(result.messageKey as never));
       return;
     }
     onSaved();

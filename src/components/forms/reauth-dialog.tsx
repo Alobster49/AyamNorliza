@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { reauthAction } from "@/features/identity-access/server/auth-actions";
 
 /**
@@ -19,10 +20,17 @@ export function ReauthDialog({
   open: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  retryAction: () => Promise<{ ok: boolean; code?: string; message?: string }>;
+  retryAction: () => Promise<{
+    ok: boolean;
+    code?: string;
+    message?: string;
+    messageKey?: string;
+    messageParams?: Record<string, string | number>;
+  }>;
 }) {
   const router = useRouter();
   const t = useTranslations("identity.reauthDialog");
+  const tRoot = useTranslations();
   const [password, setPassword] = useState("");
   const [totpCode, setTotpCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +45,9 @@ export function ReauthDialog({
     const result = await reauthAction({ password, totpCode: totpCode || undefined });
     if (!result.ok) {
       setPending(false);
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.auth.passwordMismatch");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(result.messageKey ? resolveMessageKey(tRoot, result.messageKey) : result.message ?? t("retryFailed"));
       return;
     }
     setPending(false);
@@ -45,7 +55,14 @@ export function ReauthDialog({
     onSuccess();
     const retried = await retryAction();
     if (!retried.ok) {
-      setError(retried.message ?? t("retryFailed"));
+      // The retried action can be any sensitive identity-access mutation;
+      // fall back through messageKey -> message -> a generic string so this
+      // stays safe even for a branch that hasn't been converted yet.
+      setError(
+        retried.messageKey
+          ? resolveMessageKey(tRoot, retried.messageKey, retried.messageParams)
+          : retried.message ?? t("retryFailed"),
+      );
     } else {
       router.refresh();
     }

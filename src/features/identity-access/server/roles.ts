@@ -312,7 +312,21 @@ const CAPABILITY_LABELS: Record<Capability, { label: string; description: string
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
-  | { ok: false; code: ActionErrorCode; message: string; fieldErrors?: Record<string, string[]> };
+  | {
+      ok: false;
+      code: ActionErrorCode;
+      message: string;
+      /**
+       * Full path under `errors.identity.*` for a client to resolve with a
+       * root-namespace `useTranslations()` + `t(messageKey as never)`.
+       * Additive: `roles-page-client.tsx` is the only consumer, but kept
+       * optional for the same reason as `actions.ts`'s `ActionResult`.
+       */
+      messageKey?: string;
+      /** ICU params for `messageKey` (e.g. `{ role: input.role }`). */
+      messageParams?: Record<string, string | number>;
+      fieldErrors?: Record<string, string[]>;
+    };
 
 export type ActionErrorCode =
   | "validation"
@@ -325,9 +339,18 @@ export type ActionErrorCode =
 function err<T = never>(
   code: ActionErrorCode,
   message: string,
+  messageKey?: string,
   fieldErrors?: Record<string, string[]>,
+  messageParams?: Record<string, string | number>,
 ): ActionResult<T> {
-  return { ok: false, code, message, ...(fieldErrors ? { fieldErrors } : {}) };
+  return {
+    ok: false,
+    code,
+    message,
+    ...(messageKey ? { messageKey } : {}),
+    ...(messageParams ? { messageParams } : {}),
+    ...(fieldErrors ? { fieldErrors } : {}),
+  };
 }
 
 function ok<T>(data: T): ActionResult<T> {
@@ -351,7 +374,7 @@ async function reauthOrError(): Promise<
     };
   } catch (e) {
     if (e instanceof ReauthRequiredError) {
-      return { ok: false, result: err("reauth_required", e.message) };
+      return { ok: false, result: err("reauth_required", e.message, "errors.identity.common.reauthRequired") };
     }
     throw e;
   }
@@ -362,6 +385,11 @@ async function reauthOrError(): Promise<
 // ---------------------------------------------------------------------------
 
 type CallerRole = { userId: string; role: Role };
+
+/** Maps `callerRole()`'s two fixed forbidden strings to `errors.identity.*`. */
+function callerForbiddenKey(message: string): string {
+  return message === "Sign in first" ? "errors.identity.common.unauthenticated" : "errors.identity.common.notMember";
+}
 
 async function callerRole(organizationId: string): Promise<CallerRole | { forbidden: string }> {
   let user;
@@ -513,21 +541,33 @@ export async function updateRoleCapabilityAction(
 
   const parsed = UpdateCapabilityInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
 
   if (!isRoleEditable(input.role)) {
-    return err("forbidden", `Role '${input.role}' is not editable`);
+    return err(
+      "forbidden",
+      `Role '${input.role}' is not editable`,
+      "errors.identity.roles.notEditable",
+      undefined,
+      { role: input.role },
+    );
   }
   if (!isCapabilityOverridable(input.capability)) {
-    return err("forbidden", `Capability '${input.capability}' is locked`);
+    return err(
+      "forbidden",
+      `Capability '${input.capability}' is locked`,
+      "errors.identity.roles.capabilityLocked",
+      undefined,
+      { capability: input.capability },
+    );
   }
 
   const caller = await callerRole(input.organizationId);
-  if ("forbidden" in caller) return err("forbidden", caller.forbidden);
+  if ("forbidden" in caller) return err("forbidden", caller.forbidden, callerForbiddenKey(caller.forbidden));
   if (caller.role !== "owner") {
-    return err("forbidden", "Only the owner can edit capabilities");
+    return err("forbidden", "Only the owner can edit capabilities", "errors.identity.roles.ownerOnlyEdit");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -546,7 +586,13 @@ export async function updateRoleCapabilityAction(
     )
     .select("id")
     .single();
-  if (error || !upserted) return err("internal", error?.message ?? "Failed to save override");
+  if (error || !upserted) {
+    return err(
+      "internal",
+      error?.message ?? "Failed to save override",
+      error ? "errors.identity.common.internal" : "errors.identity.roles.saveOverrideFailed",
+    );
+  }
 
   const ctx = await ctxFor(reauth.userId);
   await recordAudit(
@@ -588,17 +634,23 @@ export async function resetRoleToDefaultsAction(
 
   const parsed = ResetRoleInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
 
   if (!isRoleEditable(input.role)) {
-    return err("forbidden", `Role '${input.role}' is not editable`);
+    return err(
+      "forbidden",
+      `Role '${input.role}' is not editable`,
+      "errors.identity.roles.notEditable",
+      undefined,
+      { role: input.role },
+    );
   }
   const caller = await callerRole(input.organizationId);
-  if ("forbidden" in caller) return err("forbidden", caller.forbidden);
+  if ("forbidden" in caller) return err("forbidden", caller.forbidden, callerForbiddenKey(caller.forbidden));
   if (caller.role !== "owner") {
-    return err("forbidden", "Only the owner can reset capabilities");
+    return err("forbidden", "Only the owner can reset capabilities", "errors.identity.roles.ownerOnlyReset");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -608,7 +660,7 @@ export async function resetRoleToDefaultsAction(
     .select("id, capability, granted")
     .eq("organization_id", input.organizationId)
     .eq("role", input.role);
-  if (beforeErr) return err("internal", beforeErr.message);
+  if (beforeErr) return err("internal", beforeErr.message, "errors.identity.common.internal");
 
   const { data: deleted, error } = await supabase
     .from("role_capability_overrides")
@@ -616,7 +668,7 @@ export async function resetRoleToDefaultsAction(
     .eq("organization_id", input.organizationId)
     .eq("role", input.role)
     .select("id");
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
   const removed = (deleted ?? []).length;
 
   const ctx = await ctxFor(reauth.userId);

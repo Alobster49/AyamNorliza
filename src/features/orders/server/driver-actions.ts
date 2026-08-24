@@ -17,8 +17,8 @@ import type {
 
 type DriverErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
 
-function err<T = never>(code: DriverErrorCode, message: string): ActionResult<T> {
-  return { ok: false, code, message };
+function err<T = never>(code: DriverErrorCode, message: string, messageKey?: string): ActionResult<T> {
+  return { ok: false, code, message, ...(messageKey ? { messageKey } : {}) };
 }
 
 function ok<T>(data: T): ActionResult<T> {
@@ -27,7 +27,20 @@ function ok<T>(data: T): ActionResult<T> {
 
 type GuardResult =
   | { ok: true; orgId: string; userId: string; role: string }
-  | { ok: false; code: DriverErrorCode; message: string };
+  | { ok: false; code: DriverErrorCode; message: string; messageKey: string };
+
+/**
+ * `OrderPermissionError.message` is prose from `guards.ts`, shared with
+ * every other order/logistics action (still Phase 3, untranslated). This
+ * maps its known messages to `errors.drive.run.*` keys for the one
+ * consumer that has been converted (the drive page) without touching the
+ * shared error class or its other, unconverted call sites.
+ */
+function permissionMessageKey(message: string): string {
+  if (message === "Not authenticated") return "errors.drive.run.unauthenticated";
+  if (message === "Organization not found") return "errors.drive.run.orgNotFound";
+  return "errors.drive.run.forbidden";
+}
 
 async function guard(organizationSlug: string): Promise<GuardResult> {
   try {
@@ -35,9 +48,19 @@ async function guard(organizationSlug: string): Promise<GuardResult> {
     return { ok: true, ...ctx };
   } catch (error) {
     if (error instanceof OrderPermissionError) {
-      return { ok: false, code: "forbidden", message: error.message };
+      return {
+        ok: false,
+        code: "forbidden",
+        message: error.message,
+        messageKey: permissionMessageKey(error.message),
+      };
     }
-    return { ok: false, code: "internal", message: "Something went wrong. Please try again." };
+    return {
+      ok: false,
+      code: "internal",
+      message: "Something went wrong. Please try again.",
+      messageKey: "errors.drive.run.internal",
+    };
   }
 }
 
@@ -58,7 +81,7 @@ export async function getDriverRun(
   runId?: string,
 ): Promise<ActionResult<DriverRunPayload>> {
   const ctx = await guard(organizationSlug);
-  if (!ctx.ok) return err(ctx.code, ctx.message);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
 
   const supabase = await createSupabaseServerClient();
   let query = supabase
@@ -71,7 +94,7 @@ export async function getDriverRun(
   query = runId ? query.eq("id", runId) : query.eq("driver_id", ctx.userId);
 
   const { data: runs, error } = await query;
-  if (error) return err("internal", "Failed to load the run");
+  if (error) return err("internal", "Failed to load the run", "errors.drive.run.loadFailed");
 
   const run = (runs ?? [])[0] as (DeliveryRun & { truck?: Truck }) | undefined;
   if (!run) {

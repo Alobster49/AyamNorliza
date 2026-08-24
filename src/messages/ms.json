@@ -363,6 +363,77 @@
         "forbidden": "Anda tidak boleh membatalkan pesanan ini.",
         "internal": "Ada masalah berlaku. Sila cuba lagi."
       }
+    },
+    "identity": {
+      "common": {
+        "unauthenticated": "Log masuk dahulu",
+        "forbidden": "Peranan tidak mencukupi",
+        "notMember": "Bukan ahli organisasi ini",
+        "reauthRequired": "Pengesahan semula diperlukan",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi.",
+        "invalidInput": "Input tidak sah"
+      },
+      "organization": {
+        "invalidUpdate": "Kemas kini organisasi tidak sah",
+        "updateForbidden": "Peranan tidak mencukupi untuk mengemas kini tetapan organisasi"
+      },
+      "invite": {
+        "invalidInput": "Input jemputan tidak sah",
+        "notFound": "Jemputan tidak dijumpai",
+        "alreadyAccepted": "Sudah diterima",
+        "revoked": "Telah dibatalkan",
+        "roleCannotInvite": "Peranan ini tidak boleh menjemput pengguna",
+        "createFailed": "Tidak dapat mencipta jemputan. Sila cuba lagi.",
+        "expired": "Jemputan telah tamat tempoh",
+        "acceptFailed": "Gagal menerima jemputan",
+        "createFailedUnknown": "Gagal mencipta jemputan"
+      },
+      "member": {
+        "notFound": "Ahli tidak dijumpai",
+        "alreadyHasRole": "Ahli sudah mempunyai peranan itu",
+        "ownerNeedsApprover": "Perubahan pemilik memerlukan pelulus kedua",
+        "transferOwnershipFirst": "Pindahkan pemilikan sebelum menyahaktifkan pemilik"
+      },
+      "accessReview": {
+        "itemNotFound": "Item semakan tidak dijumpai",
+        "reviewNotFound": "Semakan tidak dijumpai"
+      },
+      "supportSession": {
+        "notFound": "Sesi tidak dijumpai",
+        "alreadyEnded": "Sudah tamat"
+      },
+      "breakGlass": {
+        "cannotOpen": "Peranan ini tidak boleh membuka break-glass"
+      },
+      "roles": {
+        "notEditable": "Peranan '{role}' tidak boleh disunting",
+        "capabilityLocked": "Keupayaan '{capability}' dikunci",
+        "ownerOnlyEdit": "Hanya pemilik boleh menyunting keupayaan",
+        "ownerOnlyReset": "Hanya pemilik boleh menetapkan semula keupayaan",
+        "cannotGrantRole": "Tidak boleh memberikan peranan '{role}'",
+        "saveOverrideFailed": "Gagal menyimpan override"
+      },
+      "auth": {
+        "invalidLogin": "Log masuk tidak sah",
+        "invalidCredentials": "E-mel atau kata laluan salah",
+        "invalidReauthInput": "Input pengesahan semula tidak sah",
+        "passwordMismatch": "Kata laluan tidak sepadan",
+        "mfaCodeRequired": "Kod MFA diperlukan",
+        "mfaCodeMismatch": "Kod MFA tidak sepadan",
+        "invalidSignup": "Pendaftaran tidak sah",
+        "signupFailed": "Tidak dapat mencipta akaun anda. Sila cuba lagi.",
+        "alreadyRegistered": "E-mel ini telah didaftarkan.",
+        "mfaVerifyFailed": "Kod pengesahan tidak sepadan. Sila cuba lagi."
+      }
+    },
+    "drive": {
+      "run": {
+        "unauthenticated": "Belum disahkan",
+        "orgNotFound": "Organisasi tidak dijumpai",
+        "forbidden": "Anda tidak mempunyai akses kepada ciri ini",
+        "loadFailed": "Gagal memuatkan trip",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      }
     }
   },
   "dashboard": {

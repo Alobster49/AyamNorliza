@@ -17,6 +17,7 @@ export function BreakGlassDialog({
 }: BreakGlassDialogInput) {
   const router = useRouter();
   const t = useTranslations("identity.breakGlassDialog");
+  const tRoot = useTranslations();
   const [reason, setReason] = useState("");
   const [ticket, setTicket] = useState("");
   const [duration, setDuration] = useState(30);
@@ -38,7 +39,9 @@ export function BreakGlassDialog({
     });
     setPending(false);
     if (!result.ok) {
-      setError(result.code === "reauth_required" ? t("reauthRequired") : result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.breakGlass.cannotOpen");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(result.code === "reauth_required" ? t("reauthRequired") : tRoot(result.messageKey as never));
       return;
     }
     onClose();

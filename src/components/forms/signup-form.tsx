@@ -6,6 +6,7 @@ import { signUpAction } from "@/features/identity-access/server/auth-actions";
 
 export function SignupForm() {
   const t = useTranslations("auth.signup");
+  const tRoot = useTranslations();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -20,7 +21,9 @@ export function SignupForm() {
     const result = await signUpAction({ email, password, displayName });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.auth.alreadyRegistered");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(tRoot(result.messageKey as never));
       return;
     }
     if (result.data.requiresEmailConfirm) {

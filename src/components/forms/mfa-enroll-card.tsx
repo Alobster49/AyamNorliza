@@ -22,6 +22,7 @@ interface MfaEnrollCardProps {
 
 export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollCardProps) {
   const t = useTranslations("auth.mfa");
+  const tRoot = useTranslations();
   const router = useRouter();
   const [enrolled, setEnrolled] = useState<EnrolledFactor | null>(null);
   const [code, setCode] = useState("");
@@ -34,7 +35,9 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
     const result = await startMfaEnrollAction();
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.common.unauthenticated");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(tRoot(result.messageKey as never));
       return;
     }
     setEnrolled(result.data);
@@ -47,7 +50,7 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
     const result = await verifyMfaChallengeAction({ factorId: enrolled.factorId, code });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      setError(tRoot(result.messageKey as never));
       return;
     }
     // `nextPath` comes in from the server page's `?next=` query read. This
@@ -71,7 +74,7 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
     const result = await unenrollMfaAction({ factorId });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      setError(tRoot(result.messageKey as never));
       return;
     }
     setEnrolled(null);
@@ -158,6 +161,7 @@ export function MfaStatusCard({
   factors: { id: string; friendly_name: string | null; created_at: string }[];
   nextPath?: string;
 }) {
+  const tRoot = useTranslations();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [removed, setRemoved] = useState(false);
@@ -174,7 +178,7 @@ export function MfaStatusCard({
     const result = await unenrollMfaAction({ factorId: totp.id });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      setError(tRoot(result.messageKey as never));
       return;
     }
     setRemoved(true);

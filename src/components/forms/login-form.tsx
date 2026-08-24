@@ -45,6 +45,7 @@ export function LoginForm({
   className?: string;
 }) {
   const t = useTranslations("auth.login");
+  const tRoot = useTranslations();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -58,7 +59,9 @@ export function LoginForm({
     const result = await loginAction({ email, password });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.auth.invalidCredentials");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(tRoot(result.messageKey as never));
       return;
     }
     // Always proceed to the destination; MFA enrollment is optional.

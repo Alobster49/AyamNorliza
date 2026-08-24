@@ -34,7 +34,7 @@ export default async function InviteAcceptPage({
 
   const result = await acceptInvitationAction({ token, displayName: user.user_metadata?.display_name });
   if (!result.ok) {
-    const t = await getTranslations("auth.invite");
+    const [t, tRoot] = await Promise.all([getTranslations("auth.invite"), getTranslations()]);
     return (
       <main className="auth-page">
         <div className="flex justify-end">
@@ -42,7 +42,9 @@ export default async function InviteAcceptPage({
         </div>
         <section>
           <h1>{t("failureTitle")}</h1>
-          <p role="alert">{result.message}</p>
+          {/* `messageKey` is a dynamic full path (e.g. "errors.identity.invite.expired");
+              next-intl's typed `t()` only accepts literal keys, so this is cast at the call site. */}
+          <p role="alert">{tRoot(result.messageKey as never)}</p>
         </section>
       </main>
     );

@@ -82,6 +82,7 @@ export function UpdateOrganizationForm(props: {
 }) {
   const router = useRouter();
   const t = useTranslations("identity.updateOrganizationForm");
+  const tRoot = useTranslations();
 
   const initial = useMemo(
     () => ({
@@ -159,7 +160,9 @@ export function UpdateOrganizationForm(props: {
         if (Array.isArray(v) && v.length > 0) flat[k] = v[0]!;
       }
       setFieldErrors(flat);
-      setFormError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.organization.updateForbidden");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setFormError(tRoot(result.messageKey as never));
       setStatus("error");
       return;
     }

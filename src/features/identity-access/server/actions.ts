@@ -62,7 +62,22 @@ import { serverEnv } from "@/lib/env";
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
-  | { ok: false; code: ActionErrorCode; message: string; fieldErrors?: Record<string, string[]> };
+  | {
+      ok: false;
+      code: ActionErrorCode;
+      message: string;
+      /**
+       * Full path under `errors.identity.*` for a client to resolve with a
+       * root-namespace `useTranslations()` + `t(messageKey as never)`.
+       * Additive: only the branches consumed by converted i18n surfaces set
+       * it — `message` stays the source of truth for non-UI callers (the
+       * `/api/auth/*` routes, which return it verbatim as JSON).
+       */
+      messageKey?: string;
+      /** ICU params for `messageKey` (e.g. `{ role: input.newRole }`). */
+      messageParams?: Record<string, string | number>;
+      fieldErrors?: Record<string, string[]>;
+    };
 
 export type ActionErrorCode =
   | "validation"
@@ -76,9 +91,18 @@ export type ActionErrorCode =
 function err<T = never>(
   code: ActionErrorCode,
   message: string,
+  messageKey?: string,
   fieldErrors?: Record<string, string[]>,
+  messageParams?: Record<string, string | number>,
 ): ActionResult<T> {
-  return { ok: false, code, message, ...(fieldErrors ? { fieldErrors } : {}) };
+  return {
+    ok: false,
+    code,
+    message,
+    ...(messageKey ? { messageKey } : {}),
+    ...(messageParams ? { messageParams } : {}),
+    ...(fieldErrors ? { fieldErrors } : {}),
+  };
 }
 
 function ok<T>(data: T): ActionResult<T> {
@@ -91,14 +115,19 @@ async function ctxFor(userId: string): Promise<AdminContext> {
 
 async function reauthOrError(): Promise<
   | { ok: true; ctx: AdminContext }
-  | { ok: false; code: "reauth_required"; message: string }
+  | { ok: false; code: "reauth_required"; message: string; messageKey: string }
 > {
   try {
     const proof = await requireReauth();
     return { ok: true, ctx: { actorUserId: proof.userId, correlationId: randomUUID() } };
   } catch (e) {
     if (e instanceof ReauthRequiredError) {
-      return { ok: false, code: "reauth_required", message: e.message };
+      return {
+        ok: false,
+        code: "reauth_required",
+        message: e.message,
+        messageKey: "errors.identity.common.reauthRequired",
+      };
     }
     throw e;
   }
@@ -112,7 +141,7 @@ export async function createOrganizationAction(
 ): Promise<ActionResult<{ organizationId: string; slug: string }>> {
   const parsed = CreateOrganizationInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid organization input", parsed.error.flatten().fieldErrors);
+    return err("validation", "Invalid organization input", undefined, parsed.error.flatten().fieldErrors);
   }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
@@ -177,18 +206,27 @@ export async function updateOrganizationSettingsAction(
 ): Promise<ActionResult<{ organizationId: string }>> {
   const parsed = UpdateOrganizationInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid organization update", parsed.error.flatten().fieldErrors);
+    return err(
+      "validation",
+      "Invalid organization update",
+      "errors.identity.organization.invalidUpdate",
+      parsed.error.flatten().fieldErrors,
+    );
   }
   const input = parsed.data;
   let member: Awaited<ReturnType<typeof requireOrgMember>>;
   try {
     member = await requireOrgMember(input.organizationId);
   } catch (e) {
-    if (e instanceof PermissionError) return err("forbidden", e.message);
+    if (e instanceof PermissionError) return err("forbidden", e.message, "errors.identity.common.notMember");
     throw e;
   }
   if (!can(member.role as Role, "organization.settings.update")) {
-    return err("forbidden", "Insufficient role to update organization settings");
+    return err(
+      "forbidden",
+      "Insufficient role to update organization settings",
+      "errors.identity.organization.updateForbidden",
+    );
   }
   const supabase = await createSupabaseServerClient();
   const before = await supabase
@@ -196,7 +234,7 @@ export async function updateOrganizationSettingsAction(
     .select("name, legal_name, region, default_time_zone, default_locale, version")
     .eq("id", input.organizationId)
     .single();
-  if (before.error) return err("internal", before.error.message);
+  if (before.error) return err("internal", before.error.message, "errors.identity.common.internal");
 
   const updates: Record<string, unknown> = { version: (before.data.version ?? 0) + 1 };
   if (input.name !== undefined) updates.name = input.name;
@@ -209,7 +247,7 @@ export async function updateOrganizationSettingsAction(
     .from("organizations")
     .update(updates)
     .eq("id", input.organizationId);
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   const ctx = await ctxFor(member.user_id);
   await recordAudit(
@@ -240,14 +278,19 @@ export async function inviteUserAction(
 ): Promise<ActionResult<{ invitationId: string }>> {
   const parsed = InviteUserInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid invitation input", parsed.error.flatten().fieldErrors);
+    return err(
+      "validation",
+      "Invalid invitation input",
+      "errors.identity.invite.invalidInput",
+      parsed.error.flatten().fieldErrors,
+    );
   }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return err("unauthenticated", "Sign in first");
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
 
   const { data: actor, error: actorErr } = await supabase
     .from("organization_members")
@@ -256,13 +299,19 @@ export async function inviteUserAction(
     .eq("user_id", user.id)
     .eq("status", "active")
     .maybeSingle();
-  if (actorErr) return err("internal", actorErr.message);
-  if (!actor) return err("forbidden", "Not a member of this organization");
+  if (actorErr) return err("internal", actorErr.message, "errors.identity.common.internal");
+  if (!actor) return err("forbidden", "Not a member of this organization", "errors.identity.common.notMember");
   if (!can(actor.role as Role, "membership.invite")) {
-    return err("forbidden", "Role cannot invite users");
+    return err("forbidden", "Role cannot invite users", "errors.identity.invite.roleCannotInvite");
   }
   if (!canGrantRole(actor.role as Role, input.role)) {
-    return err("forbidden", `Cannot grant role '${input.role}'`);
+    return err(
+      "forbidden",
+      `Cannot grant role '${input.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: input.role },
+    );
   }
 
   const ctx = await ctxFor(user.id);
@@ -283,7 +332,11 @@ export async function inviteUserAction(
       ctx,
     );
   } catch (e) {
-    return err("conflict", e instanceof Error ? e.message : "Failed to create invitation");
+    return err(
+      "conflict",
+      e instanceof Error ? e.message : "Failed to create invitation",
+      e instanceof Error ? "errors.identity.invite.createFailed" : "errors.identity.invite.createFailedUnknown",
+    );
   }
 
   await recordAudit(
@@ -333,22 +386,24 @@ export async function resendInvitationAction(
   rawInput: unknown,
 ): Promise<ActionResult<{ invitationId: string }>> {
   const parsed = ResendInvitationInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return err("unauthenticated", "Sign in first");
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
 
   const { data: invitation } = await supabase
     .from("invitations")
     .select("id, organization_id, email, role, accepted_at, revoked_at")
     .eq("id", input.invitationId)
     .maybeSingle();
-  if (!invitation) return err("not_found", "Invitation not found");
-  if (invitation.accepted_at) return err("conflict", "Already accepted");
-  if (invitation.revoked_at) return err("conflict", "Revoked");
+  if (!invitation) return err("not_found", "Invitation not found", "errors.identity.invite.notFound");
+  if (invitation.accepted_at) return err("conflict", "Already accepted", "errors.identity.invite.alreadyAccepted");
+  if (invitation.revoked_at) return err("conflict", "Revoked", "errors.identity.invite.revoked");
 
   const { data: actor } = await supabase
     .from("organization_members")
@@ -358,7 +413,7 @@ export async function resendInvitationAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "membership.invite")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   const ctx = await ctxFor(user.id);
@@ -394,20 +449,22 @@ export async function revokeInvitationAction(
   rawInput: unknown,
 ): Promise<ActionResult<{ invitationId: string }>> {
   const parsed = RevokeInvitationInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return err("unauthenticated", "Sign in first");
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
 
   const { data: invitation } = await supabase
     .from("invitations")
     .select("id, organization_id")
     .eq("id", input.invitationId)
     .maybeSingle();
-  if (!invitation) return err("not_found", "Invitation not found");
+  if (!invitation) return err("not_found", "Invitation not found", "errors.identity.invite.notFound");
 
   const { data: actor } = await supabase
     .from("organization_members")
@@ -417,14 +474,14 @@ export async function revokeInvitationAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "membership.invite")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   const { error } = await supabase
     .from("invitations")
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", input.invitationId);
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   const ctx = await ctxFor(user.id);
   await recordAudit(
@@ -456,7 +513,9 @@ export async function acceptInvitationAction(
   rawInput: unknown,
 ): Promise<ActionResult<{ organizationId: string }>> {
   const parsed = AcceptInvitationInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
 
   // The Edge Function `invitation-accept` does the auth.users / membership
@@ -475,14 +534,24 @@ export async function acceptInvitationAction(
       }),
     });
   } catch (e) {
-    return err("internal", e instanceof Error ? e.message : "Failed to call accept endpoint");
+    return err(
+      "internal",
+      e instanceof Error ? e.message : "Failed to call accept endpoint",
+      "errors.identity.common.internal",
+    );
   }
   if (!res.ok) {
     const body = (await res.json().catch(() => ({}))) as { error?: string };
-    if (body.error === "expired") return err("conflict", "Invitation expired");
-    if (body.error === "already_accepted") return err("conflict", "Already accepted");
-    if (body.error === "revoked") return err("conflict", "Revoked");
-    return err("internal", body.error ?? "Failed to accept invitation");
+    if (body.error === "expired") return err("conflict", "Invitation expired", "errors.identity.invite.expired");
+    if (body.error === "already_accepted") {
+      return err("conflict", "Already accepted", "errors.identity.invite.alreadyAccepted");
+    }
+    if (body.error === "revoked") return err("conflict", "Revoked", "errors.identity.invite.revoked");
+    return err(
+      "internal",
+      body.error ?? "Failed to accept invitation",
+      "errors.identity.invite.acceptFailed",
+    );
   }
   const data = (await res.json()) as { organization_id: string };
   return ok({ organizationId: data.organization_id });
@@ -521,7 +590,9 @@ export async function changeMemberRoleAction(
   if (!reauth.ok) return reauth;
 
   const parsed = ChangeRoleInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -531,7 +602,7 @@ export async function changeMemberRoleAction(
     .select("id, organization_id, role, user_id")
     .eq("id", input.memberId)
     .maybeSingle();
-  if (!target) return err("not_found", "Member not found");
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
 
   const { data: actor } = await supabase
     .from("organization_members")
@@ -541,13 +612,19 @@ export async function changeMemberRoleAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "membership.role.change")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
   if (!canGrantRole(actor.role as Role, input.newRole)) {
-    return err("forbidden", `Cannot grant role '${input.newRole}'`);
+    return err(
+      "forbidden",
+      `Cannot grant role '${input.newRole}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: input.newRole },
+    );
   }
   if (((target as { role: string }).role) === input.newRole) {
-    return err("conflict", "Member already has that role");
+    return err("conflict", "Member already has that role", "errors.identity.member.alreadyHasRole");
   }
   // Plan §6: "high-risk changes require second approver".
   const targetRole: string = (target as { role: string }).role;
@@ -556,7 +633,7 @@ export async function changeMemberRoleAction(
     (newRole === "owner" || (targetRole === "owner" && newRole !== "owner")) &&
     !input.approverUserId;
   if (needsApprover) {
-    return err("forbidden", "Owner changes require a second approver");
+    return err("forbidden", "Owner changes require a second approver", "errors.identity.member.ownerNeedsApprover");
   }
 
   const { data: updated, error } = await supabase
@@ -565,7 +642,7 @@ export async function changeMemberRoleAction(
     .eq("id", input.memberId)
     .select("id, role")
     .single();
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   await recordAudit(
     {
@@ -605,7 +682,9 @@ export async function changeMemberScopeAction(
   if (!reauth.ok) return reauth;
 
   const parsed = ChangeScopeInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -615,7 +694,7 @@ export async function changeMemberScopeAction(
     .select("id, organization_id, user_id")
     .eq("id", input.memberId)
     .maybeSingle();
-  if (!target) return err("not_found", "Member not found");
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
 
   const { data: actor } = await supabase
     .from("organization_members")
@@ -625,7 +704,7 @@ export async function changeMemberScopeAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "membership.scope.change")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   // Replace the scope set in a transaction-like sequence: delete old,
@@ -635,7 +714,7 @@ export async function changeMemberScopeAction(
     .from("member_scopes")
     .delete()
     .eq("organization_member_id", target.id);
-  if (deleteErr) return err("internal", deleteErr.message);
+  if (deleteErr) return err("internal", deleteErr.message, "errors.identity.common.internal");
 
   if (input.scopes.length > 0) {
     const { error: insertErr } = await supabase.from("member_scopes").insert(
@@ -649,7 +728,7 @@ export async function changeMemberScopeAction(
         expires_at: s.expiresAt ?? null,
       })),
     );
-    if (insertErr) return err("internal", insertErr.message);
+    if (insertErr) return err("internal", insertErr.message, "errors.identity.common.internal");
   }
 
   await recordAudit(
@@ -690,7 +769,9 @@ export async function deactivateUserAction(
   if (!reauth.ok) return reauth;
 
   const parsed = DeactivateUserInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -700,9 +781,13 @@ export async function deactivateUserAction(
     .select("id, organization_id, user_id, role, status")
     .eq("id", input.memberId)
     .maybeSingle();
-  if (!target) return err("not_found", "Member not found");
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
   if ((target.role as string) === "owner" && target.status === "active") {
-    return err("forbidden", "Transfer ownership before deactivating the owner");
+    return err(
+      "forbidden",
+      "Transfer ownership before deactivating the owner",
+      "errors.identity.member.transferOwnershipFirst",
+    );
   }
 
   const { data: actor } = await supabase
@@ -713,19 +798,19 @@ export async function deactivateUserAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "membership.deactivate")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   const { error: memberErr } = await supabase
     .from("organization_members")
     .update({ status: "suspended" })
     .eq("id", target.id);
-  if (memberErr) return err("internal", memberErr.message);
+  if (memberErr) return err("internal", memberErr.message, "errors.identity.common.internal");
   const { error: profileErr } = await supabase
     .from("profiles")
     .update({ status: "inactive" })
     .eq("user_id", target.user_id);
-  if (profileErr) return err("internal", profileErr.message);
+  if (profileErr) return err("internal", profileErr.message, "errors.identity.common.internal");
 
   await adminRevokeUserSessions(target.user_id, input.reason, reauth.ctx);
 
@@ -765,7 +850,9 @@ export async function startAccessReviewAction(
   rawInput: unknown,
 ): Promise<ActionResult<{ reviewId: string }>> {
   const parsed = StartAccessReviewInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -777,7 +864,7 @@ export async function startAccessReviewAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "access_review.run")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   const { data: review, error } = await supabase
@@ -792,7 +879,7 @@ export async function startAccessReviewAction(
     })
     .select("id")
     .single();
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   // One item per active member in scope, excluding the actor: reviewers do
   // not review their own access, and `access_review_items_admin_write`
@@ -811,7 +898,7 @@ export async function startAccessReviewAction(
         decision: "pending" as const,
       })),
     );
-    if (itemErr) return err("internal", itemErr.message);
+    if (itemErr) return err("internal", itemErr.message, "errors.identity.common.internal");
   }
 
   const ctx = await ctxFor(user.id);
@@ -841,7 +928,9 @@ export async function decideReviewItemAction(
   rawInput: unknown,
 ): Promise<ActionResult<{ itemId: string }>> {
   const parsed = DecideReviewItemInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -851,14 +940,14 @@ export async function decideReviewItemAction(
     .select("id, access_review_id, organization_member_id, decision")
     .eq("id", input.itemId)
     .maybeSingle();
-  if (!item) return err("not_found", "Review item not found");
+  if (!item) return err("not_found", "Review item not found", "errors.identity.accessReview.itemNotFound");
 
   const { data: review } = await supabase
     .from("access_reviews")
     .select("id, organization_id")
     .eq("id", item.access_review_id)
     .single();
-  if (!review) return err("not_found", "Review not found");
+  if (!review) return err("not_found", "Review not found", "errors.identity.accessReview.reviewNotFound");
 
   const { data: actor } = await supabase
     .from("organization_members")
@@ -868,7 +957,7 @@ export async function decideReviewItemAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "access_review.decide")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   const { error } = await supabase
@@ -881,7 +970,7 @@ export async function decideReviewItemAction(
       decided_by: user.id,
     })
     .eq("id", input.itemId);
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   // If decision is `revoke`, suspend the underlying member.
   if (input.decision === "revoke") {
@@ -889,7 +978,7 @@ export async function decideReviewItemAction(
       .from("organization_members")
       .update({ status: "suspended" })
       .eq("id", item.organization_member_id);
-    if (suspendErr) return err("internal", suspendErr.message);
+    if (suspendErr) return err("internal", suspendErr.message, "errors.identity.common.internal");
   }
 
   const ctx = await ctxFor(user.id);
@@ -922,7 +1011,9 @@ export async function openSupportSessionAction(
   if (!reauth.ok) return reauth;
 
   const parsed = OpenSupportSessionInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -934,7 +1025,7 @@ export async function openSupportSessionAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "support_session.open")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   const { data: session, error } = await supabase
@@ -951,7 +1042,7 @@ export async function openSupportSessionAction(
     })
     .select("id")
     .single();
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   // Ensure the technician has a `support` membership for the window.
   await supabase.from("organization_members").upsert(
@@ -1003,7 +1094,9 @@ export async function endSupportSessionAction(
   if (!reauth.ok) return reauth;
 
   const parsed = EndSupportSessionInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -1013,9 +1106,9 @@ export async function endSupportSessionAction(
     .select("id, organization_id, technician_id, status")
     .eq("id", input.sessionId)
     .maybeSingle();
-  if (!session) return err("not_found", "Session not found");
+  if (!session) return err("not_found", "Session not found", "errors.identity.supportSession.notFound");
   if (session.status === "ended" || session.status === "revoked") {
-    return err("conflict", "Already ended");
+    return err("conflict", "Already ended", "errors.identity.supportSession.alreadyEnded");
   }
 
   const { data: actor } = await supabase
@@ -1026,14 +1119,14 @@ export async function endSupportSessionAction(
     .eq("status", "active")
     .maybeSingle();
   if (!actor || !can(actor.role as Role, "support_session.end")) {
-    return err("forbidden", "Insufficient role");
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
 
   const { error } = await supabase
     .from("support_sessions")
     .update({ status: "ended" })
     .eq("id", input.sessionId);
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   if (input.revokeMembership) {
     await supabase
@@ -1074,7 +1167,9 @@ export async function openBreakGlassAction(
   if (!reauth.ok) return reauth;
 
   const parsed = OpenBreakGlassInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -1086,9 +1181,9 @@ export async function openBreakGlassAction(
     .eq("user_id", user.id)
     .eq("status", "active")
     .maybeSingle();
-  if (!actor) return err("forbidden", "Not a member of this organization");
+  if (!actor) return err("forbidden", "Not a member of this organization", "errors.identity.common.notMember");
   if (!can(actor.role as Role, "break_glass.open")) {
-    return err("forbidden", "Role cannot open break-glass");
+    return err("forbidden", "Role cannot open break-glass", "errors.identity.breakGlass.cannotOpen");
   }
 
   const startsAt = new Date();
@@ -1107,7 +1202,7 @@ export async function openBreakGlassAction(
     })
     .select("id, expires_at")
     .single();
-  if (error) return err("internal", error.message);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   await recordAudit(
     {
@@ -1184,7 +1279,7 @@ export async function endBreakGlassAction(
   rawInput: unknown,
 ): Promise<ActionResult<{ eventId: string }>> {
   const parsed = EndBreakGlassInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) return err("validation", "Invalid input", undefined, parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();
@@ -1228,7 +1323,7 @@ export async function finalizeBreakGlassReviewAction(
   rawInput: unknown,
 ): Promise<ActionResult<{ eventId: string }>> {
   const parsed = FinalizeBreakGlassReviewInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) return err("validation", "Invalid input", undefined, parsed.error.flatten().fieldErrors);
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const user = await requireUser();

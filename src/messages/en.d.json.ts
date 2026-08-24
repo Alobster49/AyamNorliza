@@ -366,6 +366,77 @@ declare const messages: {
         "forbidden": "You cannot cancel this order.",
         "internal": "Something went wrong. Please try again."
       }
+    },
+    "identity": {
+      "common": {
+        "unauthenticated": "Sign in first",
+        "forbidden": "Insufficient role",
+        "notMember": "Not a member of this organization",
+        "reauthRequired": "Step-up re-authentication required",
+        "internal": "Something went wrong. Please try again.",
+        "invalidInput": "Invalid input"
+      },
+      "organization": {
+        "invalidUpdate": "Invalid organization update",
+        "updateForbidden": "Insufficient role to update organization settings"
+      },
+      "invite": {
+        "invalidInput": "Invalid invitation input",
+        "notFound": "Invitation not found",
+        "alreadyAccepted": "Already accepted",
+        "revoked": "Revoked",
+        "roleCannotInvite": "Role cannot invite users",
+        "createFailed": "Could not create the invitation. Please try again.",
+        "expired": "Invitation expired",
+        "acceptFailed": "Failed to accept invitation",
+        "createFailedUnknown": "Failed to create invitation"
+      },
+      "member": {
+        "notFound": "Member not found",
+        "alreadyHasRole": "Member already has that role",
+        "ownerNeedsApprover": "Owner changes require a second approver",
+        "transferOwnershipFirst": "Transfer ownership before deactivating the owner"
+      },
+      "accessReview": {
+        "itemNotFound": "Review item not found",
+        "reviewNotFound": "Review not found"
+      },
+      "supportSession": {
+        "notFound": "Session not found",
+        "alreadyEnded": "Already ended"
+      },
+      "breakGlass": {
+        "cannotOpen": "Role cannot open break-glass"
+      },
+      "roles": {
+        "notEditable": "Role '{role}' is not editable",
+        "capabilityLocked": "Capability '{capability}' is locked",
+        "ownerOnlyEdit": "Only the owner can edit capabilities",
+        "ownerOnlyReset": "Only the owner can reset capabilities",
+        "cannotGrantRole": "Cannot grant role '{role}'",
+        "saveOverrideFailed": "Failed to save override"
+      },
+      "auth": {
+        "invalidLogin": "Invalid login",
+        "invalidCredentials": "Invalid email or password",
+        "invalidReauthInput": "Invalid reauth input",
+        "passwordMismatch": "Password did not match",
+        "mfaCodeRequired": "MFA code is required",
+        "mfaCodeMismatch": "MFA code did not match",
+        "invalidSignup": "Invalid signup",
+        "signupFailed": "Could not create your account. Please try again.",
+        "alreadyRegistered": "This email is already registered.",
+        "mfaVerifyFailed": "The verification code did not match. Please try again."
+      }
+    },
+    "drive": {
+      "run": {
+        "unauthenticated": "Not authenticated",
+        "orgNotFound": "Organization not found",
+        "forbidden": "You do not have access to this feature",
+        "loadFailed": "Failed to load the run",
+        "internal": "Something went wrong. Please try again."
+      }
     }
   },
   "dashboard": {

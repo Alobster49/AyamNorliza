@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { changeMemberRoleAction, changeMemberScopeAction, deactivateUserAction } from "@/features/identity-access/server/actions";
 import { ROLES } from "@/lib/auth/permissions";
 import { roleLabelKey } from "@/features/access-control/components/role-label";
@@ -23,6 +24,7 @@ export function UserDetailClient(props: {
 }) {
   const router = useRouter();
   const t = useTranslations("identity.userDetail");
+  const tRoot = useTranslations();
   const tRoles = useTranslations("roles");
   const tStatus = useTranslations("identity.memberStatus");
   const [role, setRole] = useState(props.member.role);
@@ -30,9 +32,16 @@ export function UserDetailClient(props: {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [reauthOpen, setReauthOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<null | (() => Promise<{ ok: boolean; message?: string }>)>(null);
+  const [pendingAction, setPendingAction] = useState<null | (() => Promise<{
+    ok: boolean;
+    message?: string;
+    messageKey?: string;
+    messageParams?: Record<string, string | number>;
+  }>)>(null);
 
-  async function reauthThen(retry: () => Promise<{ ok: boolean; message?: string }>) {
+  async function reauthThen(
+    retry: () => Promise<{ ok: boolean; message?: string; messageKey?: string; messageParams?: Record<string, string | number> }>,
+  ) {
     setPendingAction(() => retry);
     setReauthOpen(true);
   }
@@ -53,7 +62,9 @@ export function UserDetailClient(props: {
         );
         return;
       }
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.member.notFound");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
       return;
     }
     router.refresh();
@@ -71,7 +82,7 @@ export function UserDetailClient(props: {
         );
         return;
       }
-      setError(result.message);
+      setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
       return;
     }
     router.refresh();

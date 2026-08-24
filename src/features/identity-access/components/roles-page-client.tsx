@@ -3,6 +3,7 @@
 import { useCallback, useMemo, useState, useTransition } from "react";
 import { useTranslations, useFormatter } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import {
   AlertTriangle,
   Check,
@@ -336,6 +337,7 @@ export function RolesPageClient(props: {
 }) {
   const router = useRouter();
   const t = useTranslations("identity.rolesPage");
+  const tRoot = useTranslations();
   const format = useFormatter();
   const [view, setView] = useState<RolesViewModel>(props.view);
   const [pendingOverrides, setPendingOverrides] = useState<Set<string>>(new Set());
@@ -400,7 +402,9 @@ export function RolesPageClient(props: {
           });
           return;
         }
-        setError(result.message);
+        // `messageKey` is a dynamic full path (e.g. "errors.identity.roles.notEditable");
+        // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+        setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
         return;
       }
       setView((prev) => withCell(prev, role, capability, next));
@@ -408,7 +412,7 @@ export function RolesPageClient(props: {
       setTimeout(() => setSavedFlash(null), 1500);
       refresh();
     },
-    [view.organizationId, refresh, t],
+    [view.organizationId, refresh, t, tRoot],
   );
 
   const applyReset = useCallback(
@@ -433,14 +437,16 @@ export function RolesPageClient(props: {
           });
           return;
         }
-        setError(result.message);
+        // `messageKey` is a dynamic full path (e.g. "errors.identity.roles.notEditable");
+        // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+        setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
         return;
       }
       setSavedFlash(t("saved"));
       setTimeout(() => setSavedFlash(null), 1500);
       refresh();
     },
-    [view.organizationId, refresh, t],
+    [view.organizationId, refresh, t, tRoot],
   );
 
   const roles = view.roles;
@@ -789,7 +795,13 @@ function ReauthDialogLite(props: {
         if (!pending) return { ok: true };
         const result = await pending();
         if (!result.ok) {
-          return { ok: false, code: result.code, message: result.message };
+          return {
+            ok: false,
+            code: result.code,
+            message: result.message,
+            messageKey: result.messageKey,
+            messageParams: result.messageParams,
+          };
         }
         return { ok: true };
       }}
@@ -801,6 +813,8 @@ type ActionResultLite = {
   ok: boolean;
   code?: string;
   message?: string;
+  messageKey?: string;
+  messageParams?: Record<string, string | number>;
 };
 
 // ---------------------------------------------------------------------------

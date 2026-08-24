@@ -13,16 +13,19 @@ export default async function DrivePage({
   // ?run= lets the office open a driver's deck to record a drop phoned in.
   const { run: runId } = await searchParams;
 
-  const [result, t] = await Promise.all([
+  const [result, t, tRoot] = await Promise.all([
     getDriverRun(organizationSlug, runId),
     getTranslations("drive"),
+    getTranslations(),
   ]);
 
   if (!result.ok) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
         <h1 className="text-lg font-semibold">{t("cantOpenRunTitle")}</h1>
-        <p className="text-sm text-muted-foreground">{result.message}</p>
+        {/* `messageKey` is a dynamic full path (e.g. "errors.drive.run.loadFailed");
+            next-intl's typed `t()` only accepts literal keys, so this is cast at the call site. */}
+        <p className="text-sm text-muted-foreground">{tRoot(result.messageKey as never)}</p>
       </main>
     );
   }

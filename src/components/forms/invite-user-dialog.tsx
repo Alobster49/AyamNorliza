@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { inviteUserAction } from "@/features/identity-access/server/actions";
 import { ROLES } from "@/lib/auth/permissions";
 import { roleLabelKey } from "@/features/access-control/components/role-label";
@@ -18,6 +19,7 @@ export function InviteUserDialog({
 }) {
   const router = useRouter();
   const t = useTranslations("identity.inviteUserDialog");
+  const tRoot = useTranslations();
   const tRoles = useTranslations("roles");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<string>("caretaker");
@@ -33,7 +35,9 @@ export function InviteUserDialog({
     const result = await inviteUserAction({ organizationId, email, role, scopes: [] });
     setPending(false);
     if (!result.ok) {
-      setError(result.message);
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.roles.cannotGrantRole");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
       return;
     }
     setEmail("");

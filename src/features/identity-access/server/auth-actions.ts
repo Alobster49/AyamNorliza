@@ -24,12 +24,19 @@ type AuthErrorCode = "validation" | "unauthenticated" | "internal" | "conflict";
 function err<T = never>(
   code: AuthErrorCode,
   message: string,
+  messageKey?: string,
   fieldErrors?: Record<string, string[]>,
 ): ActionResult<T> {
-  return { ok: false, code, message, ...(fieldErrors ? { fieldErrors } : {}) };
+  return { ok: false, code, message, ...(messageKey ? { messageKey } : {}), ...(fieldErrors ? { fieldErrors } : {}) };
 }
 function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };
+}
+
+/** Supabase reports a duplicate email as an AuthApiError, not a field error. */
+function isAlreadyRegistered(error: { message: string; code?: string }): boolean {
+  if (error.code === "user_already_exists" || error.code === "email_exists") return true;
+  return /already\s+(been\s+)?registered|already\s+exists/i.test(error.message);
 }
 
 export async function loginAction(
@@ -43,7 +50,9 @@ export async function loginAction(
   }>
 > {
   const parsed = LoginInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid login", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid login", "errors.identity.auth.invalidLogin", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithPassword({
@@ -51,7 +60,7 @@ export async function loginAction(
     password: input.password,
   });
   if (error || !data.user) {
-    return err("unauthenticated", "Invalid email or password");
+    return err("unauthenticated", "Invalid email or password", "errors.identity.auth.invalidCredentials");
   }
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
   const requiresMfa = (aal?.currentLevel ?? "aal1") !== "aal2";
@@ -89,13 +98,20 @@ export async function signOutAction(): Promise<ActionResult<{ ok: true }>> {
 
 export async function reauthAction(rawInput: unknown): Promise<ActionResult<{ jti: string; expiresAt: string }>> {
   const parsed = ReauthInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid reauth input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err(
+      "validation",
+      "Invalid reauth input",
+      "errors.identity.auth.invalidReauthInput",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return err("unauthenticated", "Sign in first");
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
 
   // Validate password by re-signing-in (this is the canonical way with
   // Supabase Auth: there is no separate "verify password" endpoint).
@@ -103,18 +119,18 @@ export async function reauthAction(rawInput: unknown): Promise<ActionResult<{ jt
     email: user.email ?? "",
     password: input.password,
   });
-  if (pwdErr) return err("unauthenticated", "Password did not match");
+  if (pwdErr) return err("unauthenticated", "Password did not match", "errors.identity.auth.passwordMismatch");
 
   // If the user has MFA factors, also verify a TOTP code.
   const factors = await listFactors();
   const totp = factors.totp[0];
   if (totp && !input.totpCode) {
-    return err("validation", "MFA code is required");
+    return err("validation", "MFA code is required", "errors.identity.auth.mfaCodeRequired");
   }
   if (totp && input.totpCode) {
     const ctx: AdminContext = { actorUserId: user.id, correlationId: randomUUID() };
     const result = await verifyChallenge(totp.id, input.totpCode, ctx);
-    if (!result.success) return err("unauthenticated", "MFA code did not match");
+    if (!result.success) return err("unauthenticated", "MFA code did not match", "errors.identity.auth.mfaCodeMismatch");
   }
 
   const { jti, expiresAt } = await setReauthCookie(user.id);
@@ -137,7 +153,7 @@ export async function startMfaEnrollAction() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return err("unauthenticated", "Sign in first");
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
   const ctx: AdminContext = { actorUserId: user.id, correlationId: randomUUID() };
   const data = await startEnroll(ctx);
   return ok({
@@ -150,28 +166,32 @@ export async function startMfaEnrollAction() {
 
 export async function verifyMfaChallengeAction(rawInput: unknown): Promise<ActionResult<{ factorId: string }>> {
   const parsed = MfaChallengeInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return err("unauthenticated", "Sign in first");
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
   const ctx: AdminContext = { actorUserId: user.id, correlationId: randomUUID() };
   const result = await verifyChallenge(input.factorId, input.code, ctx);
-  if (!result.success) return err("unauthenticated", result.error);
+  if (!result.success) return err("unauthenticated", result.error, "errors.identity.auth.mfaVerifyFailed");
   return ok({ factorId: input.factorId });
 }
 
 export async function unenrollMfaAction(rawInput: unknown): Promise<ActionResult<{ factorId: string }>> {
   const parsed = z.object({ factorId: z.string().uuid() }).safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid input", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return err("unauthenticated", "Sign in first");
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
   const ctx: AdminContext = { actorUserId: user.id, correlationId: randomUUID() };
   await unenroll(input.factorId, ctx);
   return ok({ factorId: input.factorId });
@@ -184,7 +204,9 @@ const SignupInput = z.object({
 });
 export async function signUpAction(rawInput: unknown): Promise<ActionResult<{ requiresEmailConfirm: boolean }>> {
   const parsed = SignupInput.safeParse(rawInput);
-  if (!parsed.success) return err("validation", "Invalid signup", parsed.error.flatten().fieldErrors);
+  if (!parsed.success) {
+    return err("validation", "Invalid signup", "errors.identity.auth.invalidSignup", parsed.error.flatten().fieldErrors);
+  }
   const input = parsed.data;
   const supabase = await createSupabaseServerClient();
   const env = (await import("@/lib/env")).serverEnv();
@@ -196,7 +218,13 @@ export async function signUpAction(rawInput: unknown): Promise<ActionResult<{ re
       emailRedirectTo: `${env.SITE_URL}/auth/callback`,
     },
   });
-  if (error) return err("conflict", error.message);
+  if (error) {
+    return err(
+      "conflict",
+      error.message,
+      isAlreadyRegistered(error) ? "errors.identity.auth.alreadyRegistered" : "errors.identity.auth.signupFailed",
+    );
+  }
   // Best-effort profile bootstrap. Triggered on the client after sign-in
   // if missing.
   if (data.user) {

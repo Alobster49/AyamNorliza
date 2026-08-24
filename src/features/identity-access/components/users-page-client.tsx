@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { InviteUserDialog } from "@/components/forms/invite-user-dialog";
 import {
   resendInvitationAction,
@@ -24,17 +25,32 @@ export function UsersPageClient(props: {
 }) {
   const router = useRouter();
   const t = useTranslations("identity.usersPage");
+  const tRoot = useTranslations();
   const tRoles = useTranslations("roles");
   const tStatus = useTranslations("identity.memberStatus");
   const tInvitationStatus = useTranslations("identity.invitationStatus");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [reauthOpen, setReauthOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<null | (() => Promise<{ ok: boolean; code?: string; message?: string }>)>(null);
+  const [pendingAction, setPendingAction] = useState<null | (() => Promise<{
+    ok: boolean;
+    code?: string;
+    message?: string;
+    messageKey?: string;
+    messageParams?: Record<string, string | number>;
+  }>)>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function reauthThen(retry: () => Promise<{ ok: boolean; code?: string; message?: string }>) {
+  async function reauthThen(
+    retry: () => Promise<{ ok: boolean; code?: string; message?: string; messageKey?: string; messageParams?: Record<string, string | number> }>,
+  ) {
     setPendingAction(() => retry);
     setReauthOpen(true);
+  }
+
+  // `messageKey` is a dynamic full path (e.g. "errors.identity.member.notFound");
+  // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+  function showError(result: { messageKey?: string; messageParams?: Record<string, string | number> }) {
+    setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
   }
 
   async function changeRole(memberId: string, newRole: string) {
@@ -51,7 +67,7 @@ export function UsersPageClient(props: {
         );
         return;
       }
-      setError(result.message);
+      showError(result);
       return;
     }
     router.refresh();
@@ -65,7 +81,7 @@ export function UsersPageClient(props: {
         await reauthThen(() => deactivateUserAction({ memberId, reason: t("defaultDeactivateReason") }));
         return;
       }
-      setError(result.message);
+      showError(result);
       return;
     }
     router.refresh();
@@ -73,13 +89,13 @@ export function UsersPageClient(props: {
 
   async function resend(invitationId: string) {
     const result = await resendInvitationAction({ invitationId });
-    if (!result.ok) setError(result.message);
+    if (!result.ok) showError(result);
   }
 
   async function revoke(invitationId: string) {
     const result = await revokeInvitationAction({ invitationId });
     if (!result.ok) {
-      setError(result.message);
+      showError(result);
       return;
     }
     router.refresh();

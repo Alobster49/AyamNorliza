@@ -62,7 +62,20 @@ export type RunStatus = "planned" | "departed" | "completed";
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
-  | { ok: false; code: string; message: string; fieldErrors?: Record<string, string[]> };
+  | {
+      ok: false;
+      code: string;
+      message: string;
+      /**
+       * Full path under `errors.drive.*` for a client to resolve with
+       * `useTranslations()` + `t(messageKey)`. Additive: only the actions
+       * consumed by converted i18n surfaces set it — `message` stays the
+       * source of truth for callers (e.g. `driver-deck.tsx`, Phase 3) that
+       * haven't been converted yet.
+       */
+      messageKey?: string;
+      fieldErrors?: Record<string, string[]>;
+    };
 
 // ---------------------------------------------------------------------------
 // Row types (snake_case fields mirroring the DB)
