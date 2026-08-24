@@ -154,6 +154,8 @@ export function OrdersBoard({
           quickConfirm(order.id);
         }}
         onPointerDown={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
         {confirmingId === order.id ? t("quickConfirm.busy") : t("quickConfirm.action")}
@@ -172,6 +174,7 @@ export function OrdersBoard({
 
     const order = orders.find((o) => o.id === active.id);
     if (!order) return;
+    if (confirmingId === order.id) return; // quick-confirm in flight for this card — ignore the drop
     const token = ++detailFetchToken.current;
     const to = over.id as OrderStatus;
     const resolution = resolveDrop(order.status, to, callerRole);
