@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import type { Truck } from "@/features/orders/types";
 import type { Bay } from "../types";
 import { createBay, deleteBay, setTruckBay } from "../server/facility-actions";
@@ -25,18 +26,20 @@ export function BaysPanel({
   const [newName, setNewName] = useState("");
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("logistics.bays");
+  const tLogistics = useTranslations("logistics");
 
   return (
     <div className="flex flex-col gap-4">
       {facilityId ? (
         <div className="flex items-end gap-2">
           <label className="flex flex-col gap-1 text-sm">
-            <span className="font-medium">New bay name</span>
+            <span className="font-medium">{t("newNameLabel")}</span>
             <input
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               className="rounded border px-2 py-1"
-              placeholder="Bay 3"
+              placeholder={t("newNamePlaceholder")}
             />
           </label>
           <button
@@ -50,7 +53,7 @@ export function BaysPanel({
                   name,
                   position: bays.length + 1,
                 });
-                setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                setMessage(result.ok ? null : (result.message ?? tLogistics("actionFailed")));
                 if (result.ok) {
                   onBayCreated(result.data);
                 }
@@ -59,11 +62,11 @@ export function BaysPanel({
             }}
             className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
           >
-            Add bay
+            {t("add")}
           </button>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">Configure the factory first.</p>
+        <p className="text-sm text-muted-foreground">{t("needFacility")}</p>
       )}
 
       <ul className="flex flex-col gap-2">
@@ -77,7 +80,7 @@ export function BaysPanel({
                 const bayId = bay.id;
                 startTransition(async () => {
                   const result = await deleteBay(organizationSlug, bayId);
-                  setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                  setMessage(result.ok ? null : (result.message ?? tLogistics("actionFailed")));
                   if (result.ok) {
                     onBayDeleted(bayId);
                   }
@@ -85,14 +88,14 @@ export function BaysPanel({
               }}
               className="text-xs text-destructive"
             >
-              Delete
+              {tLogistics("delete")}
             </button>
           </li>
         ))}
       </ul>
 
       <div>
-        <h3 className="mb-2 text-sm font-semibold">Truck bay assignment</h3>
+        <h3 className="mb-2 text-sm font-semibold">{t("truckAssignmentTitle")}</h3>
         <ul className="flex flex-col gap-2">
           {trucks.map((truck) => (
             <li key={truck.id} className="flex items-center justify-between rounded border p-2 text-sm">
@@ -107,7 +110,7 @@ export function BaysPanel({
                   const bayId = e.target.value || null;
                   startTransition(async () => {
                     const result = await setTruckBay(organizationSlug, truckId, bayId);
-                    setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                    setMessage(result.ok ? null : (result.message ?? tLogistics("actionFailed")));
                     if (result.ok) {
                       onTruckBayChanged(truckId, bayId);
                     }
@@ -115,7 +118,7 @@ export function BaysPanel({
                 }}
                 className="rounded border px-2 py-1 text-sm"
               >
-                <option value="">No bay</option>
+                <option value="">{t("noBay")}</option>
                 {bays.map((bay) => (
                   <option key={bay.id} value={bay.id}>
                     {bay.name}

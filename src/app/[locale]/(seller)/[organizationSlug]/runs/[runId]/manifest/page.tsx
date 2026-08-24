@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { getRunManifest } from "@/features/orders/server/order-actions";
-import { ORDER_STATUS_LABELS } from "@/features/orders/types";
 import { formatWeight } from "@/features/orders/lib/order-model";
 import { sortedRunOrders } from "@/features/orders/lib/run-board-model";
 import { PrintButton } from "./print-button";
@@ -11,7 +11,12 @@ export default async function ManifestPage({
   params: Promise<{ organizationSlug: string; runId: string }>;
 }) {
   const { organizationSlug, runId } = await params;
-  const result = await getRunManifest(organizationSlug, runId);
+  const [result, t, tStatus, tUnits] = await Promise.all([
+    getRunManifest(organizationSlug, runId),
+    getTranslations("logistics.manifest"),
+    getTranslations("status.order"),
+    getTranslations("orders.units"),
+  ]);
   if (!result.ok) notFound();
   const run = result.data;
   // Print in route order, so the paper matches the runs screen.
@@ -22,7 +27,8 @@ export default async function ManifestPage({
       <div className="flex items-center justify-between print:hidden">
         <div>
           <h1 className="text-xl font-bold">
-            Manifest — {run.truck?.name ?? "Truck"} {run.truck?.code ? `(${run.truck.code})` : ""}
+            {t("title", { truck: run.truck?.name ?? t("truckFallback") })}{" "}
+            {run.truck?.code ? `(${run.truck.code})` : ""}
           </h1>
           <p className="text-muted-foreground">{run.run_date}</p>
         </div>
@@ -32,13 +38,13 @@ export default async function ManifestPage({
       <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="border-b text-left">
-            <th className="p-2">#</th>
-            <th className="p-2">Order</th>
-            <th className="p-2">Customer</th>
-            <th className="p-2">Zone</th>
-            <th className="p-2">Address</th>
-            <th className="p-2">Items</th>
-            <th className="p-2">Status</th>
+            <th className="p-2">{t("headers.index")}</th>
+            <th className="p-2">{t("headers.order")}</th>
+            <th className="p-2">{t("headers.customer")}</th>
+            <th className="p-2">{t("headers.zone")}</th>
+            <th className="p-2">{t("headers.address")}</th>
+            <th className="p-2">{t("headers.items")}</th>
+            <th className="p-2">{t("headers.status")}</th>
           </tr>
         </thead>
         <tbody>
@@ -55,13 +61,15 @@ export default async function ManifestPage({
                     .filter((item) => !item.is_cancelled)
                     .map((item) => (
                       <li key={item.id}>
-                        {item.product?.name ?? "Item"} —{" "}
-                        {item.mode === "kg" ? formatWeight(item.quantity) : `${item.quantity} pcs`}
+                        {item.product?.name ?? t("itemFallback")} —{" "}
+                        {item.mode === "kg"
+                          ? formatWeight(item.quantity)
+                          : tUnits("pieces", { count: item.quantity })}
                       </li>
                     ))}
                 </ul>
               </td>
-              <td className="p-2">{ORDER_STATUS_LABELS[order.status]}</td>
+              <td className="p-2">{tStatus(order.status)}</td>
             </tr>
           ))}
         </tbody>

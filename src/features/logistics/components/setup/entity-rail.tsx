@@ -1,17 +1,8 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { SetupEntity } from "../../lib/setup-model";
-
-export const ENTITY_LABELS: Record<SetupEntity, string> = {
-  zones: "Zones",
-  trucks: "Trucks",
-  slots: "Slots",
-  blocks: "Blocked dates",
-  factory: "Factory",
-  bays: "Bays",
-  postcodes: "Zone postcodes",
-};
 
 export const ENTITY_ORDER: SetupEntity[] = [
   "zones",
@@ -34,9 +25,11 @@ export function EntityRail({
   issueCounts: Record<SetupEntity, number>;
   onSelect: (entity: SetupEntity) => void;
 }) {
+  const t = useTranslations("logistics.setup");
+  const tEntities = useTranslations("logistics.setup.entities");
   return (
     <nav
-      aria-label="Setup sections"
+      aria-label={t("sectionsAriaLabel")}
       className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:overflow-visible"
     >
       {ENTITY_ORDER.map((entity) => {
@@ -55,11 +48,11 @@ export function EntityRail({
                 : "text-muted-foreground hover:bg-background/60",
             )}
           >
-            <span className="whitespace-nowrap">{ENTITY_LABELS[entity]}</span>
+            <span className="whitespace-nowrap">{tEntities(entity)}</span>
             <span className="flex items-center gap-1.5">
               {issues > 0 ? (
                 <span
-                  aria-label={`${issues} issues`}
+                  aria-label={t("issuesAriaLabel", { count: issues })}
                   className="h-1.5 w-1.5 rounded-full bg-amber-500"
                 />
               ) : null}

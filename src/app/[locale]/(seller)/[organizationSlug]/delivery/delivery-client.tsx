@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   createBlock,
   createSlot,
@@ -50,6 +51,9 @@ export function DeliveryClient({
   role,
 }: DeliveryClientProps) {
   const { toast } = useToast();
+  const t = useTranslations("logistics.setup.toasts");
+  const tDelivery = useTranslations("logistics.delivery");
+  const tLogistics = useTranslations("logistics");
   const [zones, setZones] = useState<DeliveryZone[]>(initialSetup.zones);
   const [trucks, setTrucks] = useState<Truck[]>(initialSetup.trucks);
   const [truckZones, setTruckZonesList] = useState<TruckZone[]>(initialSetup.truckZones);
@@ -62,7 +66,7 @@ export function DeliveryClient({
   const canEdit = role === "owner" || role === "org_admin";
 
   function fail(message: string) {
-    toast({ title: "Error", description: message, variant: "destructive" });
+    toast({ title: tLogistics("error"), description: message, variant: "destructive" });
   }
 
   // -- Saving ---------------------------------------------------------
@@ -88,7 +92,7 @@ export function DeliveryClient({
         ? prev.map((z) => (z.id === result.data.id ? result.data : z))
         : [...prev, result.data],
     );
-    toast({ title: editing ? "Zone updated" : "Zone created" });
+    toast({ title: editing ? t("zoneUpdated") : t("zoneCreated") });
     return result.data.id;
   }
 
@@ -112,10 +116,10 @@ export function DeliveryClient({
     }
     setTrucks((prev) =>
       editing
-        ? prev.map((t) => (t.id === result.data.id ? result.data : t))
+        ? prev.map((tr) => (tr.id === result.data.id ? result.data : tr))
         : [...prev, result.data],
     );
-    toast({ title: editing ? "Truck updated" : "Truck created" });
+    toast({ title: editing ? t("truckUpdated") : t("truckCreated") });
     return result.data.id;
   }
 
@@ -142,7 +146,7 @@ export function DeliveryClient({
         ? prev.map((s) => (s.id === result.data.id ? result.data : s))
         : [...prev, result.data],
     );
-    toast({ title: editing ? "Slot updated" : "Slot created" });
+    toast({ title: editing ? t("slotUpdated") : t("slotCreated") });
     return result.data.id;
   }
 
@@ -160,7 +164,7 @@ export function DeliveryClient({
       return null;
     }
     setBlocks((prev) => [...prev, result.data]);
-    toast({ title: "Blocked date added" });
+    toast({ title: t("blockAdded") });
     return result.data.id;
   }
 
@@ -210,14 +214,14 @@ export function DeliveryClient({
     }
 
     toast({
-      title: archived ? "Archived" : "Restored",
-      description: archived ? "Hidden from live views. Nothing was deleted." : undefined,
+      title: archived ? t("archived") : t("restored"),
+      description: archived ? t("archivedDescription") : undefined,
       action: (
         <ToastAction
-          altText="Undo"
+          altText={t("undo")}
           onClick={() => void handleArchive(entity, recordId, !archived)}
         >
-          Undo
+          {t("undo")}
         </ToastAction>
       ),
     });
@@ -228,34 +232,34 @@ export function DeliveryClient({
   async function handleRemove(entity: SetupEntity, recordId: string) {
     if (entity === "zones") {
       const zone = zones.find((z) => z.id === recordId);
-      if (!zone || !confirm(`Delete zone "${zone.name}" permanently?`)) return;
+      if (!zone || !confirm(t("confirmDeleteZone", { name: zone.name }))) return;
       const result = await deleteZone(organizationSlug, zone.id);
       if (!result.ok) return fail(result.message);
       setZones((prev) => prev.filter((z) => z.id !== zone.id));
       setTruckZonesList((prev) => prev.filter((tz) => tz.zone_id !== zone.id));
-      toast({ title: "Zone deleted" });
+      toast({ title: t("zoneDeleted") });
     } else if (entity === "trucks") {
-      const truck = trucks.find((t) => t.id === recordId);
-      if (!truck || !confirm(`Delete truck "${truck.name}" permanently?`)) return;
+      const truck = trucks.find((tr) => tr.id === recordId);
+      if (!truck || !confirm(t("confirmDeleteTruck", { name: truck.name }))) return;
       const result = await deleteTruck(organizationSlug, truck.id);
       if (!result.ok) return fail(result.message);
-      setTrucks((prev) => prev.filter((t) => t.id !== truck.id));
+      setTrucks((prev) => prev.filter((tr) => tr.id !== truck.id));
       setTruckZonesList((prev) => prev.filter((tz) => tz.truck_id !== truck.id));
       setSlots((prev) => prev.filter((s) => s.truck_id !== truck.id));
       setBlocks((prev) => prev.filter((b) => b.truck_id !== truck.id));
-      toast({ title: "Truck deleted" });
+      toast({ title: t("truckDeleted") });
     } else if (entity === "slots") {
-      if (!confirm("Delete this delivery slot permanently?")) return;
+      if (!confirm(t("confirmDeleteSlot"))) return;
       const result = await deleteSlot(organizationSlug, recordId);
       if (!result.ok) return fail(result.message);
       setSlots((prev) => prev.filter((s) => s.id !== recordId));
-      toast({ title: "Slot deleted" });
+      toast({ title: t("slotDeleted") });
     } else if (entity === "blocks") {
-      if (!confirm("Remove this blocked date?")) return;
+      if (!confirm(t("confirmRemoveBlock"))) return;
       const result = await deleteBlock(organizationSlug, recordId);
       if (!result.ok) return fail(result.message);
       setBlocks((prev) => prev.filter((b) => b.id !== recordId));
-      toast({ title: "Blocked date removed" });
+      toast({ title: t("blockRemoved") });
     }
   }
 
@@ -336,10 +340,8 @@ export function DeliveryClient({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Delivery Setup</h1>
-        <p className="text-muted-foreground">
-          Zones, trucks, weekly slots, and blocked dates for the delivery schedule
-        </p>
+        <h1 className="text-2xl font-bold">{tDelivery("title")}</h1>
+        <p className="text-muted-foreground">{tDelivery("subtitle")}</p>
       </div>
 
       <SetupConsole

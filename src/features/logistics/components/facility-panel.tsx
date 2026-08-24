@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import type { Facility } from "../types";
 import { updateFacility } from "../server/facility-actions";
 
@@ -23,15 +24,16 @@ export function FacilityPanel({
   });
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("logistics.facility");
 
   if (!facility) {
-    return <p className="text-sm text-muted-foreground">No facility configured yet.</p>;
+    return <p className="text-sm text-muted-foreground">{t("notConfigured")}</p>;
   }
 
   const save = () => {
     startTransition(async () => {
       const result = await updateFacility(organizationSlug, facility.id, form);
-      setMessage(result.ok ? "Saved." : result.message);
+      setMessage(result.ok ? t("saved") : result.message);
       if (result.ok) {
         onSaved(result.data);
       }
@@ -53,15 +55,13 @@ export function FacilityPanel({
   return (
     <div className="flex max-w-lg flex-col gap-3">
       {!canEdit ? (
-        <p className="text-xs text-muted-foreground">
-          Only owners and admins can edit the factory location.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("readOnlyNotice")}</p>
       ) : null}
-      {field("Name", "name")}
-      {field("Address", "addressLine")}
+      {field(t("fields.name"), "name")}
+      {field(t("fields.address"), "addressLine")}
       <div className="grid grid-cols-2 gap-3">
-        {field("Postcode", "postcode")}
-        {field("State", "state")}
+        {field(t("fields.postcode"), "postcode")}
+        {field(t("fields.state"), "state")}
       </div>
       {canEdit ? (
         <button
@@ -70,7 +70,7 @@ export function FacilityPanel({
           disabled={pending}
           className="self-start rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
         >
-          Save factory
+          {t("save")}
         </button>
       ) : null}
       {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   DragOverlay,
@@ -21,17 +22,18 @@ import { useToast } from "@/hooks/use-toast";
 
 function PoolColumn({ tickets }: { tickets: DispatchTicket[] }) {
   const { setNodeRef, isOver } = useDroppable({ id: "pool" });
+  const t = useTranslations("logistics.dispatch");
   return (
     <div
       ref={setNodeRef}
       className={`flex w-72 shrink-0 flex-col gap-2 rounded-lg border p-3 ${isOver ? "bg-accent" : "bg-muted/30"}`}
     >
-      <h2 className="text-sm font-semibold">Order pool</h2>
-      {tickets.map((t) => (
-        <TicketCard key={t.id} ticket={t} />
+      <h2 className="text-sm font-semibold">{t("pool.title")}</h2>
+      {tickets.map((ticket) => (
+        <TicketCard key={ticket.id} ticket={ticket} />
       ))}
       {tickets.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No unassigned orders for this date.</p>
+        <p className="text-xs text-muted-foreground">{t("pool.empty")}</p>
       ) : null}
     </div>
   );
@@ -54,6 +56,9 @@ export function DispatchBoard({
   const [departConfirm, setDepartConfirm] = useState<{ truckId: string; notReady: number } | null>(null);
   const [departingTruckId, setDepartingTruckId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const t = useTranslations("logistics.dispatch");
+  const tCommon = useTranslations("common");
+  const tLogistics = useTranslations("logistics");
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 4 } }));
   const view = useMemo(() => buildBoardView(data, date), [data, date]);
@@ -63,16 +68,16 @@ export function DispatchBoard({
   );
 
   const showToast = useCallback(
-    (message: string, title = "Error") => {
+    (message: string, title = tLogistics("error")) => {
       toast({ title, description: message, variant: "destructive" });
     },
-    [toast],
+    [toast, tLogistics],
   );
 
   const runAction = (action: Promise<{ ok: boolean; message?: string }>) => {
     startTransition(async () => {
       const result = await action;
-      if (!result.ok) showToast(result.message ?? "Action failed");
+      if (!result.ok) showToast(result.message ?? tLogistics("actionFailed"));
       refetch();
     });
   };
@@ -93,7 +98,7 @@ export function DispatchBoard({
       target = { type: "pool" };
     } else if (overId.startsWith("truck:")) {
       const truckId = overId.slice("truck:".length);
-      const boardTruck = view.bays.flatMap((b) => b.trucks).find((t) => t.truck.id === truckId);
+      const boardTruck = view.bays.flatMap((b) => b.trucks).find((bt) => bt.truck.id === truckId);
       if (!boardTruck) return;
       target = {
         type: "truck",
@@ -115,7 +120,7 @@ export function DispatchBoard({
 
     if (resolution.kind === "noop") return;
     if (resolution.kind === "blocked") {
-      showToast(resolution.reason, "Move not allowed");
+      showToast(resolution.reason, t("moveNotAllowed"));
       return;
     }
     if (resolution.kind === "unassign") {
@@ -123,17 +128,21 @@ export function DispatchBoard({
       return;
     }
     if (resolution.kind === "override") {
-      const truck = data.trucks.find((t) => t.id === resolution.truckId);
-      setOverride({ orderId: ticket.id, truckId: resolution.truckId, truckName: truck?.name ?? "this truck" });
+      const truck = data.trucks.find((tr) => tr.id === resolution.truckId);
+      setOverride({
+        orderId: ticket.id,
+        truckId: resolution.truckId,
+        truckName: truck?.name ?? t("override.fallbackTruckName"),
+      });
       return;
     }
     runAction(assignOrder(organizationSlug, { orderId: ticket.id, truckId: resolution.truckId }));
   };
 
   const requestDepart = (truckId: string) => {
-    const boardTruck = view.bays.flatMap((b) => b.trucks).find((t) => t.truck.id === truckId);
+    const boardTruck = view.bays.flatMap((b) => b.trucks).find((bt) => bt.truck.id === truckId);
     if (!boardTruck) return;
-    const notReady = boardTruck.tickets.filter((t) => t.status !== "ready").length;
+    const notReady = boardTruck.tickets.filter((tk) => tk.status !== "ready").length;
     if (notReady > 0) {
       setDepartConfirm({ truckId, notReady });
     } else {
@@ -178,11 +187,11 @@ export function DispatchBoard({
                   dim={compatible !== null && !compatible.has(bt.truck.id)}
                   departing={departingTruckId === bt.truck.id}
                   onDepart={() => requestDepart(bt.truck.id)}
-                  canDepart={!bt.departed && bt.tickets.some((t) => t.status === "ready")}
+                  canDepart={!bt.departed && bt.tickets.some((tk) => tk.status === "ready")}
                 />
               ))}
               {trucks.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No trucks in this bay.</p>
+                <p className="text-xs text-muted-foreground">{t("bay.empty")}</p>
               ) : null}
             </div>
           ))}
@@ -193,13 +202,13 @@ export function DispatchBoard({
       {override ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-96 rounded-lg bg-background p-4 shadow-xl">
-            <h3 className="font-semibold">Override coverage?</h3>
+            <h3 className="font-semibold">{t("override.title")}</h3>
             <p className="mt-2 text-sm text-muted-foreground">
-              {override.truckName} does not cover this order&apos;s zone. Assign anyway?
+              {t("override.body", { truckName: override.truckName })}
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" className="rounded border px-3 py-1.5 text-sm" onClick={() => setOverride(null)}>
-                Cancel
+                {tCommon("cancel")}
               </button>
               <button
                 type="button"
@@ -209,7 +218,7 @@ export function DispatchBoard({
                   setOverride(null);
                 }}
               >
-                Override
+                {t("override.confirm")}
               </button>
             </div>
           </div>
@@ -219,20 +228,20 @@ export function DispatchBoard({
       {departConfirm ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-96 rounded-lg bg-background p-4 shadow-xl">
-            <h3 className="font-semibold">Depart without {departConfirm.notReady} unready order{departConfirm.notReady === 1 ? "" : "s"}?</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Orders that are not ready stay behind and return to the pool for a later run.
-            </p>
+            <h3 className="font-semibold">
+              {t("departConfirm.title", { count: departConfirm.notReady })}
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">{t("departConfirm.body")}</p>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" className="rounded border px-3 py-1.5 text-sm" onClick={() => setDepartConfirm(null)}>
-                Cancel
+                {tCommon("cancel")}
               </button>
               <button
                 type="button"
                 className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
                 onClick={() => doDepart(departConfirm.truckId)}
               >
-                Depart
+                {t("departConfirm.confirm")}
               </button>
             </div>
           </div>

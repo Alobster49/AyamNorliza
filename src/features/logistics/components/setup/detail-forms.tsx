@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import type {
@@ -9,14 +10,15 @@ import type {
 } from "@/features/orders/types";
 import type { Bay } from "../../types";
 
-export const WEEKDAY_LABELS = [
-  "Sun",
-  "Mon",
-  "Tue",
-  "Wed",
-  "Thu",
-  "Fri",
-  "Sat",
+/** Keys into `logistics.setup.weekday`, indexed 0 (Sun) through 6 (Sat). */
+export const WEEKDAY_KEYS = [
+  "sun",
+  "mon",
+  "tue",
+  "wed",
+  "thu",
+  "fri",
+  "sat",
 ] as const;
 
 const selectClass =
@@ -26,6 +28,7 @@ const selectClass =
 const inputClass = "min-h-11 lg:min-h-10";
 
 function ActiveToggle({ defaultChecked }: { defaultChecked: boolean }) {
+  const t = useTranslations("logistics.setup.fields");
   return (
     <label className="flex min-h-11 items-center gap-2 text-sm">
       <input
@@ -34,16 +37,17 @@ function ActiveToggle({ defaultChecked }: { defaultChecked: boolean }) {
         defaultChecked={defaultChecked}
         className="h-4 w-4"
       />
-      Active
+      {t("active")}
     </label>
   );
 }
 
 export function ZoneFields({ zone }: { zone?: DeliveryZone }) {
+  const t = useTranslations("logistics.setup.fields");
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor="zone-name">Name</Label>
+        <Label htmlFor="zone-name">{t("name")}</Label>
         <Input
           id="zone-name"
           name="name"
@@ -53,7 +57,7 @@ export function ZoneFields({ zone }: { zone?: DeliveryZone }) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="zone-order">Display order</Label>
+        <Label htmlFor="zone-order">{t("displayOrder")}</Label>
         <Input
           id="zone-order"
           name="displayOrder"
@@ -70,10 +74,11 @@ export function ZoneFields({ zone }: { zone?: DeliveryZone }) {
 }
 
 export function TruckFields({ truck, bays }: { truck?: Truck; bays: Bay[] }) {
+  const t = useTranslations("logistics.setup.fields");
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2">
-        <Label htmlFor="truck-name">Name</Label>
+        <Label htmlFor="truck-name">{t("name")}</Label>
         <Input
           id="truck-name"
           name="name"
@@ -83,7 +88,7 @@ export function TruckFields({ truck, bays }: { truck?: Truck; bays: Bay[] }) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="truck-code">Code</Label>
+        <Label htmlFor="truck-code">{t("code")}</Label>
         <Input
           id="truck-code"
           name="code"
@@ -93,9 +98,7 @@ export function TruckFields({ truck, bays }: { truck?: Truck; bays: Bay[] }) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="truck-capacity">
-          Capacity kg (blank = not recorded)
-        </Label>
+        <Label htmlFor="truck-capacity">{t("capacityKg")}</Label>
         <Input
           id="truck-capacity"
           name="capacityKg"
@@ -106,14 +109,14 @@ export function TruckFields({ truck, bays }: { truck?: Truck; bays: Bay[] }) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="truck-bay">Bay</Label>
+        <Label htmlFor="truck-bay">{t("bay")}</Label>
         <select
           id="truck-bay"
           name="bayId"
           defaultValue={truck?.bay_id ?? ""}
           className={selectClass}
         >
-          <option value="">Unassigned</option>
+          <option value="">{t("unassigned")}</option>
           {bays.map((bay) => (
             <option key={bay.id} value={bay.id}>
               {bay.name}
@@ -137,10 +140,12 @@ export function SlotFields({
   trucks: Truck[];
   defaultTruckId: string;
 }) {
+  const t = useTranslations("logistics.setup.fields");
+  const tWeekday = useTranslations("logistics.setup.weekday");
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2">
-        <Label htmlFor="slot-truck">Truck</Label>
+        <Label htmlFor="slot-truck">{t("truck")}</Label>
         <select
           id="slot-truck"
           name="truckId"
@@ -155,22 +160,22 @@ export function SlotFields({
         </select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="slot-weekday">Weekday</Label>
+        <Label htmlFor="slot-weekday">{t("weekday")}</Label>
         <select
           id="slot-weekday"
           name="weekday"
           defaultValue={String(slot?.weekday ?? 1)}
           className={selectClass}
         >
-          {WEEKDAY_LABELS.map((label, index) => (
-            <option key={label} value={index}>
-              {label}
+          {WEEKDAY_KEYS.map((key, index) => (
+            <option key={key} value={index}>
+              {tWeekday(key)}
             </option>
           ))}
         </select>
       </div>
       <div className="space-y-2">
-        <Label htmlFor="slot-start">Start time</Label>
+        <Label htmlFor="slot-start">{t("startTime")}</Label>
         <Input
           id="slot-start"
           name="startTime"
@@ -181,7 +186,7 @@ export function SlotFields({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="slot-end">End time</Label>
+        <Label htmlFor="slot-end">{t("endTime")}</Label>
         <Input
           id="slot-end"
           name="endTime"
@@ -192,7 +197,7 @@ export function SlotFields({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="slot-max">Max orders (blank = unlimited)</Label>
+        <Label htmlFor="slot-max">{t("maxOrders")}</Label>
         <Input
           id="slot-max"
           name="maxOrders"
@@ -210,10 +215,12 @@ export function SlotFields({
 }
 
 export function BlockFields({ trucks }: { trucks: Truck[] }) {
+  const t = useTranslations("logistics.setup.fields");
+  const tSetup = useTranslations("logistics.setup");
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="space-y-2">
-        <Label htmlFor="block-date">Date</Label>
+        <Label htmlFor="block-date">{t("date")}</Label>
         <Input
           id="block-date"
           name="blockDate"
@@ -223,14 +230,14 @@ export function BlockFields({ trucks }: { trucks: Truck[] }) {
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="block-truck">Truck</Label>
+        <Label htmlFor="block-truck">{t("truck")}</Label>
         <select
           id="block-truck"
           name="truckId"
           defaultValue="all"
           className={selectClass}
         >
-          <option value="all">All trucks</option>
+          <option value="all">{tSetup("allTrucks")}</option>
           {trucks.map((truck) => (
             <option key={truck.id} value={truck.id}>
               {truck.name}
@@ -239,11 +246,11 @@ export function BlockFields({ trucks }: { trucks: Truck[] }) {
         </select>
       </div>
       <div className="space-y-2 sm:col-span-2">
-        <Label htmlFor="block-reason">Reason</Label>
+        <Label htmlFor="block-reason">{t("reason")}</Label>
         <Input
           id="block-reason"
           name="reason"
-          placeholder="e.g. Hari Raya Haji"
+          placeholder={t("reasonPlaceholder")}
           className={inputClass}
         />
       </div>

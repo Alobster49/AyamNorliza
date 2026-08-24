@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import type { DispatchBoardData } from "../types";
 import { buildBoardView, type BoardTruck } from "../lib/dispatch-board-model";
 import { draftPlan, orderWeightKg, totalWeightKg, type PlanDraft } from "../lib/plan-model";
@@ -34,8 +35,11 @@ function TruckPlanCard({
   departPending: boolean;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const t = useTranslations("logistics.dispatch.plan");
+  const tCommon = useTranslations("common");
   const kg = totalWeightKg(bt.tickets);
-  const notReady = bt.tickets.filter((t) => t.status !== "ready").length;
+  const notReady = bt.tickets.filter((tk) => tk.status !== "ready").length;
+  const readyCount = bt.tickets.filter((tk) => tk.status === "ready").length;
   const pct =
     bt.truck.capacity_kg !== null && bt.truck.capacity_kg > 0
       ? (kg / bt.truck.capacity_kg) * 100
@@ -46,39 +50,42 @@ function TruckPlanCard({
   return (
     <article className="flex flex-col gap-3 rounded-lg border bg-card p-3">
       <div className="flex items-center gap-3">
-        <Dial pct={pct} label={`${bt.truck.name} load`} />
+        <Dial pct={pct} label={t("loadLabel", { name: bt.truck.name })} />
         <div className="min-w-0">
           <p className="truncate font-semibold">{bt.truck.name}</p>
           <p className="text-xs text-muted-foreground">
             {bt.truck.code}
-            {bt.truck.capacity_kg !== null ? ` · ${kg.toFixed(1)} / ${bt.truck.capacity_kg} kg` : kg > 0 ? ` · ${kg.toFixed(1)} kg` : ""}
+            {bt.truck.capacity_kg !== null
+              ? ` · ${t("weightFraction", { kg: kg.toFixed(1), capacity: bt.truck.capacity_kg })}`
+              : kg > 0
+                ? ` · ${t("weightOnly", { kg: kg.toFixed(1) })}`
+                : ""}
             {" · "}
-            {bt.load}
-            {bt.cap !== null ? `/${bt.cap}` : ""} orders
-            {incoming > 0 ? ` · +${incoming} proposed` : ""}
+            {t("orderCount", { load: bt.load, capSuffix: bt.cap !== null ? `/${bt.cap}` : "" })}
+            {incoming > 0 ? ` · ${t("proposedSuffix", { count: incoming })}` : ""}
           </p>
         </div>
       </div>
 
       <ul className="flex flex-col gap-1">
-        {bt.tickets.slice(0, 5).map((t) => (
-          <li key={t.id} className="flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-xs">
-            <span className="truncate">{t.customer?.name ?? "Customer"}</span>
-            {t.loaded_at ? <span className="text-green-700 dark:text-green-400">loaded</span> : null}
+        {bt.tickets.slice(0, 5).map((tk) => (
+          <li key={tk.id} className="flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-xs">
+            <span className="truncate">{tk.customer?.name ?? t("orderFallback")}</span>
+            {tk.loaded_at ? <span className="text-green-700 dark:text-green-400">{t("loaded")}</span> : null}
             <span className="ml-auto tabular-nums text-muted-foreground">
-              {orderWeightKg(t) !== null ? `${orderWeightKg(t)!.toFixed(1)} kg` : "—"}
+              {orderWeightKg(tk) !== null ? `${orderWeightKg(tk)!.toFixed(1)} kg` : "—"}
             </span>
           </li>
         ))}
         {bt.tickets.length > 5 ? (
-          <li className="px-2 text-xs text-muted-foreground">+{bt.tickets.length - 5} more</li>
+          <li className="px-2 text-xs text-muted-foreground">{t("more", { count: bt.tickets.length - 5 })}</li>
         ) : null}
-        {bt.tickets.length === 0 ? <li className="px-2 text-xs text-muted-foreground">No orders yet.</li> : null}
+        {bt.tickets.length === 0 ? <li className="px-2 text-xs text-muted-foreground">{t("noOrdersYet")}</li> : null}
       </ul>
 
       {bt.departed ? (
         <p className="rounded border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
-          On the road with {bt.load} order{bt.load === 1 ? "" : "s"}
+          {t("onRoad", { count: bt.load })}
         </p>
       ) : confirming ? (
         <div className="flex gap-2">
@@ -87,7 +94,7 @@ function TruckPlanCard({
             className="min-h-9 flex-1 rounded border px-2 text-xs"
             onClick={() => setConfirming(false)}
           >
-            Cancel
+            {tCommon("cancel")}
           </button>
           <button
             type="button"
@@ -97,17 +104,17 @@ function TruckPlanCard({
               onDepart();
             }}
           >
-            Depart, leave {notReady} behind
+            {t("departLeaveBehind", { count: notReady })}
           </button>
         </div>
       ) : (
         <button
           type="button"
-          disabled={departPending || !bt.tickets.some((t) => t.status === "ready")}
+          disabled={departPending || readyCount === 0}
           className="min-h-9 rounded bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-40"
           onClick={() => (notReady > 0 ? setConfirming(true) : onDepart())}
         >
-          Depart · {bt.tickets.filter((t) => t.status === "ready").length} of {bt.load} ready
+          {t("departButton", { ready: readyCount, load: bt.load })}
         </button>
       )}
     </article>
@@ -127,6 +134,7 @@ export function PlanDeck({
 }) {
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
+  const t = useTranslations("logistics.dispatch.plan");
   // Dismissal belongs to the date it was made on. Plain boolean state would
   // survive a date change and silently hide the next day's draft, with a page
   // reload as the only way back.
@@ -151,15 +159,18 @@ export function PlanDeck({
         assignments: draft.proposals.map((p) => ({ orderId: p.orderId, truckId: p.truckId })),
       });
       if (!result.ok) {
-        toast({ title: "Plan failed", description: result.message, variant: "destructive" });
+        toast({ title: t("planFailedToast"), description: result.message, variant: "destructive" });
       } else if (result.data.failed.length > 0) {
         toast({
-          title: `Applied ${result.data.applied}, ${result.data.failed.length} failed`,
+          title: t("appliedPartialToast", {
+            applied: result.data.applied,
+            failed: result.data.failed.length,
+          }),
           description: result.data.failed[0]!.message,
           variant: "destructive",
         });
       } else {
-        toast({ title: `Assigned ${result.data.applied} orders` });
+        toast({ title: t("assignedToast", { count: result.data.applied }) });
       }
       refetch();
     });
@@ -168,7 +179,7 @@ export function PlanDeck({
   const overrideAssign = (orderId: string, truckId: string) => {
     startTransition(async () => {
       const result = await assignOrder(organizationSlug, { orderId, truckId });
-      if (!result.ok) toast({ title: "Assign failed", description: result.message, variant: "destructive" });
+      if (!result.ok) toast({ title: t("assignFailedToast"), description: result.message, variant: "destructive" });
       refetch();
     });
   };
@@ -176,7 +187,7 @@ export function PlanDeck({
   const depart = (truckId: string) => {
     startTransition(async () => {
       const result = await departTruck(organizationSlug, { truckId, date });
-      if (!result.ok) toast({ title: "Depart failed", description: result.message, variant: "destructive" });
+      if (!result.ok) toast({ title: t("departFailedToast"), description: result.message, variant: "destructive" });
       refetch();
     });
   };
@@ -187,17 +198,17 @@ export function PlanDeck({
         <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-accent/60 p-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold">
-              Draft plan ready — {draft.proposals.length} of {draft.poolCount} orders placed
+              {t("draftReady", { placed: draft.proposals.length, pool: draft.poolCount })}
             </p>
             <p className="text-xs text-muted-foreground">
               {draft.exceptions.length > 0
-                ? `${draft.exceptions.length} need a decision below.`
-                : "Everything in the pool has a truck."}
+                ? t("exceptionsNeedDecision", { count: draft.exceptions.length })
+                : t("allAssigned")}
             </p>
           </div>
           <div className="ml-auto flex gap-2">
             <button type="button" className="min-h-9 rounded border px-3 text-sm" onClick={() => setDismissedFor(date)}>
-              Dismiss
+              {t("dismiss")}
             </button>
             <button
               type="button"
@@ -205,7 +216,7 @@ export function PlanDeck({
               className="min-h-9 rounded bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
               onClick={acceptAll}
             >
-              Accept {draft.proposals.length}
+              {t("accept", { count: draft.proposals.length })}
             </button>
           </div>
         </div>
@@ -219,20 +230,20 @@ export function PlanDeck({
               className="min-h-9 rounded-lg border border-dashed px-3 text-sm text-muted-foreground hover:text-foreground"
               onClick={() => setDismissedFor(null)}
             >
-              Show draft plan · {draft.proposals.length}
+              {t("showDraftPlan", { count: draft.proposals.length })}
             </button>
           ) : null}
 
           {draft.exceptions.length > 0 ? (
             <>
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Needs a decision · {draft.exceptions.length}
+                {t("needsDecisionHeading", { count: draft.exceptions.length })}
               </h2>
               {draft.exceptions.map((ex) => {
                 const o = orderById.get(ex.orderId);
                 return (
                   <div key={ex.orderId} className="flex flex-col gap-2 rounded-lg border border-l-4 border-l-amber-500 bg-card p-3">
-                    <p className="text-sm font-medium">{o?.customer?.name ?? "Order"}</p>
+                    <p className="text-sm font-medium">{o?.customer?.name ?? t("orderFallback")}</p>
                     <p className="text-xs text-muted-foreground">{ex.detail}</p>
                     {(ex.kind === "no_covering_truck" || ex.kind === "all_trucks_full") && (
                       <select
@@ -244,7 +255,7 @@ export function PlanDeck({
                         }}
                       >
                         <option value="" disabled>
-                          Override onto…
+                          {t("overrideOnto")}
                         </option>
                         {boardTrucks
                           .filter((bt) => !bt.departed)
@@ -262,14 +273,14 @@ export function PlanDeck({
           ) : null}
 
           <h2 className="mt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Proposed · {draft.proposals.length}
+            {t("proposedHeading", { count: draft.proposals.length })}
           </h2>
           {draft.proposals.map((p) => {
             const o = orderById.get(p.orderId);
             return (
               <div key={p.orderId} className="rounded-lg border border-l-4 border-l-primary bg-card p-3">
                 <p className="text-sm font-medium">
-                  {o?.customer?.name ?? "Order"} → {truckById.get(p.truckId)?.name ?? "truck"}
+                  {o?.customer?.name ?? t("orderFallback")} → {truckById.get(p.truckId)?.name ?? t("truckFallback")}
                 </p>
                 <p className="text-xs text-muted-foreground">{p.reason}</p>
               </div>
@@ -278,12 +289,10 @@ export function PlanDeck({
           {draft.poolCount === 0 ? (
             <div className="rounded-lg border border-dashed p-3">
               <p className="text-sm font-medium">
-                {data.orders.length === 0 ? "No orders for this date" : "Every order has a truck"}
+                {data.orders.length === 0 ? t("emptyTitleNoOrders") : t("emptyTitleAllAssigned")}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
-                {data.orders.length === 0
-                  ? "Orders appear here once they are scheduled for delivery on this date."
-                  : "Nothing left to assign — check the Board or the Timeline."}
+                {data.orders.length === 0 ? t("emptyBodyNoOrders") : t("emptyBodyAllAssigned")}
               </p>
             </div>
           ) : null}
@@ -300,7 +309,7 @@ export function PlanDeck({
             />
           ))}
           {boardTrucks.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No active trucks in any bay.</p>
+            <p className="text-sm text-muted-foreground">{t("noActiveTrucks")}</p>
           ) : null}
         </div>
       </div>

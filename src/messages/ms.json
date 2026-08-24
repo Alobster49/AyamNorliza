@@ -1190,5 +1190,246 @@
         "reportedTitle": "Dilaporkan kepada pejabat"
       }
     }
+  },
+  "logistics": {
+    "error": "Ralat",
+    "actionFailed": "Tindakan gagal",
+    "delete": "Padam",
+    "dispatch": {
+      "title": "Penghantaran keluar",
+      "views": {
+        "plan": "Pelan",
+        "timeline": "Garis masa",
+        "board": "Papan",
+        "ariaLabel": "Paparan penghantaran keluar"
+      },
+      "pool": {
+        "title": "Kolam pesanan",
+        "empty": "Tiada pesanan belum ditugaskan untuk tarikh ini."
+      },
+      "bay": {
+        "empty": "Tiada trak di teluk ini."
+      },
+      "customerFallback": "Pelanggan",
+      "depart": "Berlepas",
+      "onRoadWithOrders": "{count, plural, other {di jalan dengan # pesanan}}",
+      "override": {
+        "title": "Ganti sela liputan?",
+        "body": "{truckName} tidak meliputi zon pesanan ini. Tugaskan juga?",
+        "confirm": "Ganti sela",
+        "fallbackTruckName": "trak ini"
+      },
+      "departConfirm": {
+        "title": "{count, plural, other {Berlepas tanpa # pesanan belum sedia?}}",
+        "body": "Pesanan yang belum sedia akan tertinggal dan kembali ke kolam untuk trip kemudian.",
+        "confirm": "Berlepas"
+      },
+      "ticket": {
+        "noPostcode": "tiada poskod",
+        "auto": "auto",
+        "manual": "manual"
+      },
+      "plan": {
+        "loadLabel": "Muatan {name}",
+        "loaded": "dimuatkan",
+        "more": "{count, plural, other {+# lagi}}",
+        "noOrdersYet": "Belum ada pesanan.",
+        "onRoad": "{count, plural, other {Di jalan dengan # pesanan}}",
+        "departLeaveBehind": "{count, plural, other {Berlepas, tinggalkan #}}",
+        "departButton": "Berlepas · {ready} daripada {load} sedia",
+        "weightFraction": "{kg} / {capacity} kg",
+        "weightOnly": "{kg} kg",
+        "orderCount": "{load, plural, other {#{capSuffix} pesanan}}",
+        "proposedSuffix": "{count, plural, other {+# dicadang}}",
+        "draftReady": "Draf pelan sedia — {placed} daripada {pool} pesanan ditempatkan",
+        "exceptionsNeedDecision": "{count, plural, other {# perlu keputusan di bawah.}}",
+        "allAssigned": "Semua dalam kolam sudah ada trak.",
+        "dismiss": "Ketepikan",
+        "accept": "{count, plural, other {Terima #}}",
+        "showDraftPlan": "{count, plural, other {Tunjuk draf pelan · #}}",
+        "needsDecisionHeading": "{count, plural, other {Perlu keputusan · #}}",
+        "proposedHeading": "{count, plural, other {Dicadang · #}}",
+        "overrideOnto": "Ganti sela kepada…",
+        "orderFallback": "Pesanan",
+        "truckFallback": "trak",
+        "emptyTitleNoOrders": "Tiada pesanan untuk tarikh ini",
+        "emptyTitleAllAssigned": "Setiap pesanan sudah ada trak",
+        "emptyBodyNoOrders": "Pesanan akan dipaparkan di sini apabila dijadualkan untuk penghantaran pada tarikh ini.",
+        "emptyBodyAllAssigned": "Tiada lagi untuk ditugaskan — semak Papan atau Garis Masa.",
+        "planFailedToast": "Pelan gagal",
+        "appliedPartialToast": "{applied} digunakan, {failed} gagal",
+        "assignedToast": "{count, plural, other {# pesanan ditugaskan}}",
+        "assignFailedToast": "Tugasan gagal",
+        "departFailedToast": "Berlepas gagal",
+        "noActiveTrucks": "Tiada trak aktif di mana-mana teluk."
+      },
+      "moveNotAllowed": "Pergerakan tidak dibenarkan"
+    },
+    "facility": {
+      "notConfigured": "Kilang belum dikonfigurasi.",
+      "saved": "Disimpan.",
+      "readOnlyNotice": "Hanya pemilik dan pentadbir organisasi boleh mengedit lokasi kilang.",
+      "fields": {
+        "name": "Nama",
+        "address": "Alamat",
+        "postcode": "Poskod",
+        "state": "Negeri"
+      },
+      "save": "Simpan kilang"
+    },
+    "bays": {
+      "newNameLabel": "Nama teluk baharu",
+      "newNamePlaceholder": "Teluk 3",
+      "add": "Tambah teluk",
+      "needFacility": "Konfigurasikan kilang dahulu.",
+      "truckAssignmentTitle": "Penugasan teluk trak",
+      "noBay": "Tiada teluk"
+    },
+    "postcodes": {
+      "overlapWarning": "Liputan bertindih: {list}. Padanan pertama mengikut nama zon menang.",
+      "zoneLabel": "Zon",
+      "from": "Dari",
+      "to": "Hingga",
+      "add": "Tambah julat",
+      "listAriaLabel": "Julat poskod zon",
+      "empty": "Belum ada julat poskod — pesanan akan jatuh ke kolam Belum Ditugaskan."
+    },
+    "setup": {
+      "entities": {
+        "zones": "Zon",
+        "trucks": "Trak",
+        "slots": "Slot",
+        "blocks": "Tarikh disekat",
+        "factory": "Kilang",
+        "bays": "Teluk",
+        "postcodes": "Poskod zon"
+      },
+      "entitiesSingular": {
+        "zones": "zon",
+        "trucks": "trak",
+        "slots": "slot",
+        "blocks": "tarikh disekat",
+        "factory": "kilang",
+        "bays": "teluk",
+        "postcodes": "poskod zon"
+      },
+      "addLabels": {
+        "zones": "Tambah zon",
+        "trucks": "Tambah trak",
+        "slots": "Tambah slot",
+        "blocks": "Sekat tarikh"
+      },
+      "emptyMessages": {
+        "zones": "Belum ada zon",
+        "trucks": "Belum ada trak",
+        "slots": "Belum ada slot",
+        "blocks": "Tiada tarikh disekat"
+      },
+      "allTrucks": "Semua trak",
+      "unknownTruck": "Trak tidak diketahui",
+      "unlimited": "tanpa had",
+      "noReasonGiven": "tiada sebab diberikan",
+      "badgeNeedsSetup": "perlu persediaan",
+      "sectionsAriaLabel": "Bahagian persediaan",
+      "issuesAriaLabel": "{count, plural, other {# isu}}",
+      "weekday": {
+        "sun": "Ahd",
+        "mon": "Isn",
+        "tue": "Sel",
+        "wed": "Rab",
+        "thu": "Kha",
+        "fri": "Jum",
+        "sat": "Sab"
+      },
+      "rows": {
+        "zoneDisplayOrder": "Susunan paparan {order}",
+        "slotSecondary": "{truck} · maks {max}",
+        "blockSecondary": "{truck} · {reason}"
+      },
+      "readiness": {
+        "readyTitle": "Persediaan penghantaran sudah sedia",
+        "readyBody": "Setiap zon ada poskod dan trak, dan setiap trak ada slot.",
+        "issuesToFix": "{count, plural, other {# isu untuk dibetulkan}}",
+        "blocksCustomerOrders": "{count, plural, other {# menyekat pesanan pelanggan}}",
+        "fix": "Betulkan",
+        "ariaLabel": "Kesediaan persediaan"
+      },
+      "archived": "Diarkibkan",
+      "pickRecordPrompt": "Pilih rekod di sebelah kiri, atau tambah rekod baharu.",
+      "addTruckFirst": "Tambah trak sebelum menetapkan slot.",
+      "newRecord": "{entity} baharu",
+      "archivedHiddenNotice": "Diarkibkan — disembunyikan daripada paparan langsung",
+      "restore": "Pulihkan",
+      "archive": "Arkibkan",
+      "moreActionsAriaLabel": "Tindakan lain",
+      "remove": "Buang",
+      "deletePermanently": "Padam kekal",
+      "saving": "Menyimpan…",
+      "searchPlaceholder": "Cari trak, zon, slot — atau taip poskod",
+      "searchAriaLabel": "Cari persediaan penghantaran",
+      "noSearchResults": "Tiada padanan untuk “{query}”.",
+      "showingTruckOnly": "Menunjukkan {truck} sahaja",
+      "showAll": "Tunjuk semua",
+      "fields": {
+        "name": "Nama",
+        "displayOrder": "Susunan paparan",
+        "active": "Aktif",
+        "code": "Kod",
+        "capacityKg": "Kapasiti kg (kosong = tidak direkod)",
+        "bay": "Teluk",
+        "unassigned": "Belum ditugaskan",
+        "truck": "Trak",
+        "weekday": "Hari",
+        "startTime": "Masa mula",
+        "endTime": "Masa tamat",
+        "maxOrders": "Maks pesanan (kosong = tanpa had)",
+        "date": "Tarikh",
+        "reason": "Sebab",
+        "reasonPlaceholder": "cth. Hari Raya Haji"
+      },
+      "toasts": {
+        "zoneUpdated": "Zon dikemas kini",
+        "zoneCreated": "Zon dicipta",
+        "truckUpdated": "Trak dikemas kini",
+        "truckCreated": "Trak dicipta",
+        "slotUpdated": "Slot dikemas kini",
+        "slotCreated": "Slot dicipta",
+        "blockAdded": "Tarikh disekat ditambah",
+        "archived": "Diarkibkan",
+        "restored": "Dipulihkan",
+        "archivedDescription": "Disembunyikan daripada paparan langsung. Tiada apa dipadam.",
+        "undo": "Buat asal",
+        "confirmDeleteZone": "Padam zon \"{name}\" secara kekal?",
+        "confirmDeleteTruck": "Padam trak \"{name}\" secara kekal?",
+        "confirmDeleteSlot": "Padam slot penghantaran ini secara kekal?",
+        "confirmRemoveBlock": "Buang tarikh disekat ini?",
+        "zoneDeleted": "Zon dipadam",
+        "truckDeleted": "Trak dipadam",
+        "slotDeleted": "Slot dipadam",
+        "blockRemoved": "Tarikh disekat dibuang"
+      },
+      "zonesServed": "Zon dilayan",
+      "savedAutomatically": "Disimpan secara automatik.",
+      "noZonesYet": "Belum ada zon."
+    },
+    "delivery": {
+      "title": "Persediaan Penghantaran",
+      "subtitle": "Zon, trak, slot mingguan, dan tarikh disekat untuk jadual penghantaran"
+    },
+    "manifest": {
+      "title": "Manifes — {truck}",
+      "truckFallback": "Trak",
+      "itemFallback": "Item",
+      "printButton": "Cetak manifes",
+      "headers": {
+        "index": "#",
+        "order": "Pesanan",
+        "customer": "Pelanggan",
+        "zone": "Zon",
+        "address": "Alamat",
+        "items": "Item",
+        "status": "Status"
+      }
+    }
   }
 }

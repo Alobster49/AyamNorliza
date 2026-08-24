@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, MoreHorizontal, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,14 +14,14 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { SetupEntity, SetupIssue, SetupSnapshot } from "../../lib/setup-model";
 import { findIssues, searchSetup } from "../../lib/setup-model";
-import { ENTITY_LABELS, ENTITY_ORDER, EntityRail } from "./entity-rail";
+import { ENTITY_ORDER, EntityRail } from "./entity-rail";
 import { ReadinessPanel } from "./readiness-panel";
 import { RecordList, type ListRow } from "./record-list";
 import {
   BlockFields,
   SlotFields,
   TruckFields,
-  WEEKDAY_LABELS,
+  WEEKDAY_KEYS,
   ZoneFields,
 } from "./detail-forms";
 
@@ -52,29 +53,13 @@ type Selection = {
   opened: boolean;
 };
 
-const ADD_LABELS: Record<SetupEntity, string> = {
-  zones: "Add zone",
-  trucks: "Add truck",
-  slots: "Add slot",
-  blocks: "Block a date",
-  factory: "",
-  bays: "",
-  postcodes: "",
-};
+/** Translator shape shared by the small helpers below — scoped to `logistics.setup`. */
+type SetupTranslator = ReturnType<typeof useTranslations<"logistics.setup">>;
+type WeekdayTranslator = ReturnType<typeof useTranslations<"logistics.setup.weekday">>;
 
-const EMPTY_MESSAGES: Record<SetupEntity, string> = {
-  zones: "No zones yet",
-  trucks: "No trucks yet",
-  slots: "No slots yet",
-  blocks: "No blocked dates",
-  factory: "",
-  bays: "",
-  postcodes: "",
-};
-
-function truckName(snapshot: SetupSnapshot, truckId: string | null): string {
-  if (truckId === null) return "All trucks";
-  return snapshot.trucks.find((t) => t.id === truckId)?.name ?? "Unknown truck";
+function truckName(snapshot: SetupSnapshot, truckId: string | null, t: SetupTranslator): string {
+  if (truckId === null) return t("allTrucks");
+  return snapshot.trucks.find((tr) => tr.id === truckId)?.name ?? t("unknownTruck");
 }
 
 function rowsFor(
@@ -82,29 +67,31 @@ function rowsFor(
   snapshot: SetupSnapshot,
   issues: SetupIssue[],
   truckFilter: string | null,
+  t: SetupTranslator,
+  tWeekday: WeekdayTranslator,
 ): ListRow[] {
   const flagged = new Set(
     issues.filter((i) => i.target.recordId !== null).map((i) => i.target.recordId),
   );
   const badge = (id: string) =>
-    flagged.has(id) ? ({ text: "needs setup", tone: "warning" } as const) : undefined;
+    flagged.has(id) ? ({ text: t("badgeNeedsSetup"), tone: "warning" } as const) : undefined;
 
   switch (entity) {
     case "zones":
       return snapshot.zones.map((z) => ({
         id: z.id,
         label: z.name,
-        secondary: `Display order ${z.display_order}`,
+        secondary: t("rows.zoneDisplayOrder", { order: z.display_order }),
         badge: badge(z.id),
         archived: !z.is_active,
       }));
     case "trucks":
-      return snapshot.trucks.map((t) => ({
-        id: t.id,
-        label: t.name,
-        secondary: t.capacity_kg === null ? t.code : `${t.code} · ${t.capacity_kg} kg`,
-        badge: badge(t.id),
-        archived: !t.is_active,
+      return snapshot.trucks.map((tr) => ({
+        id: tr.id,
+        label: tr.name,
+        secondary: tr.capacity_kg === null ? tr.code : `${tr.code} · ${tr.capacity_kg} kg`,
+        badge: badge(tr.id),
+        archived: !tr.is_active,
       }));
     case "slots":
       return snapshot.slots
@@ -112,15 +99,21 @@ function rowsFor(
         .sort((a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time))
         .map((s) => ({
           id: s.id,
-          label: `${WEEKDAY_LABELS[s.weekday]} ${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}`,
-          secondary: `${truckName(snapshot, s.truck_id)} · max ${s.max_orders ?? "unlimited"}`,
+          label: `${tWeekday(WEEKDAY_KEYS[s.weekday]!)} ${s.start_time.slice(0, 5)}–${s.end_time.slice(0, 5)}`,
+          secondary: t("rows.slotSecondary", {
+            truck: truckName(snapshot, s.truck_id, t),
+            max: s.max_orders ?? t("unlimited"),
+          }),
           archived: !s.is_active,
         }));
     case "blocks":
       return snapshot.blocks.map((b) => ({
         id: b.id,
         label: b.block_date,
-        secondary: `${truckName(snapshot, b.truck_id)} · ${b.reason ?? "no reason given"}`,
+        secondary: t("rows.blockSecondary", {
+          truck: truckName(snapshot, b.truck_id, t),
+          reason: b.reason ?? t("noReasonGiven"),
+        }),
       }));
     default:
       return [];
@@ -147,6 +140,11 @@ export function SetupConsole({
   const [query, setQuery] = useState("");
   const [truckFilter, setTruckFilter] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const t = useTranslations("logistics.setup");
+  const tEntities = useTranslations("logistics.setup.entities");
+  const tEntitiesSingular = useTranslations("logistics.setup.entitiesSingular");
+  const tWeekday = useTranslations("logistics.setup.weekday");
+  const tCommon = useTranslations("common");
 
   const issues = useMemo(() => findIssues(snapshot), [snapshot]);
   const hits = useMemo(() => searchSetup(snapshot, query), [snapshot, query]);
@@ -171,9 +169,27 @@ export function SetupConsole({
   }, [issues]);
 
   const activeZones = snapshot.zones.filter((z) => z.is_active);
-  const activeTrucks = snapshot.trucks.filter((t) => t.is_active);
-  const rows = rowsFor(selection.entity, snapshot, issues, truckFilter);
+  const activeTrucks = snapshot.trucks.filter((tr) => tr.is_active);
+  const rows = rowsFor(selection.entity, snapshot, issues, truckFilter, t, tWeekday);
   const detailOpen = selection.opened;
+  const ADD_LABELS: Record<SetupEntity, string> = {
+    zones: t("addLabels.zones"),
+    trucks: t("addLabels.trucks"),
+    slots: t("addLabels.slots"),
+    blocks: t("addLabels.blocks"),
+    factory: "",
+    bays: "",
+    postcodes: "",
+  };
+  const EMPTY_MESSAGES: Record<SetupEntity, string> = {
+    zones: t("emptyMessages.zones"),
+    trucks: t("emptyMessages.trucks"),
+    slots: t("emptyMessages.slots"),
+    blocks: t("emptyMessages.blocks"),
+    factory: "",
+    bays: "",
+    postcodes: "",
+  };
 
   function selectEntity(entity: SetupEntity) {
     setTruckFilter(null);
@@ -223,7 +239,7 @@ export function SetupConsole({
       : undefined;
   const selectedTruck =
     selection.entity === "trucks" && selection.recordId !== null
-      ? snapshot.trucks.find((t) => t.id === selection.recordId)
+      ? snapshot.trucks.find((tr) => tr.id === selection.recordId)
       : undefined;
   const selectedSlot =
     selection.entity === "slots" && selection.recordId !== null
@@ -271,16 +287,14 @@ export function SetupConsole({
     if (!detailOpen) {
       return (
         <div className="hidden h-full items-center justify-center p-8 text-center text-sm text-muted-foreground lg:flex">
-          Pick a record on the left, or add a new one.
+          {t("pickRecordPrompt")}
         </div>
       );
     }
 
     if (selection.entity === "slots" && activeTrucks.length === 0) {
       return (
-        <div className="p-6 text-sm text-muted-foreground">
-          Add a truck before configuring slots.
-        </div>
+        <div className="p-6 text-sm text-muted-foreground">{t("addTruckFirst")}</div>
       );
     }
 
@@ -295,11 +309,11 @@ export function SetupConsole({
 
           {selection.entity === "trucks" && selection.recordId !== null ? (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Zones served</p>
-              <p className="text-xs text-muted-foreground">Saved automatically.</p>
+              <p className="text-sm font-medium">{t("zonesServed")}</p>
+              <p className="text-xs text-muted-foreground">{t("savedAutomatically")}</p>
               <div className="flex flex-wrap gap-x-4 gap-y-1">
                 {activeZones.length === 0 ? (
-                  <span className="text-sm text-muted-foreground">No zones yet.</span>
+                  <span className="text-sm text-muted-foreground">{t("noZonesYet")}</span>
                 ) : (
                   activeZones.map((zone) => {
                     const checked = snapshot.truckZones.some(
@@ -338,9 +352,9 @@ export function SetupConsole({
           <div className="sticky bottom-0 flex flex-wrap items-center gap-2 border-t bg-background p-3">
             <span className="flex-1 text-xs text-muted-foreground">
               {selection.creating || selection.recordId === null
-                ? `New ${ENTITY_LABELS[selection.entity].toLowerCase().replace(/s$/, "")}`
+                ? t("newRecord", { entity: tEntitiesSingular(selection.entity) })
                 : archivedRecord
-                  ? "Archived — hidden from live views"
+                  ? t("archivedHiddenNotice")
                   : ""}
             </span>
             {canArchive ? (
@@ -358,7 +372,7 @@ export function SetupConsole({
                   );
                 }}
               >
-                {archivedRecord ? "Restore" : "Archive"}
+                {archivedRecord ? t("restore") : t("archive")}
               </Button>
             ) : null}
             {selection.recordId !== null ? (
@@ -369,7 +383,7 @@ export function SetupConsole({
                     variant="ghost"
                     size="sm"
                     className="min-h-11 lg:min-h-9"
-                    aria-label="More actions"
+                    aria-label={t("moreActionsAriaLabel")}
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
@@ -391,13 +405,13 @@ export function SetupConsole({
                         );
                     }}
                   >
-                    {selection.entity === "blocks" ? "Remove" : "Delete permanently"}
+                    {selection.entity === "blocks" ? t("remove") : t("deletePermanently")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : null}
             <Button type="submit" size="sm" className="min-h-11 lg:min-h-9" disabled={saving}>
-              {saving ? "Saving…" : "Save"}
+              {saving ? t("saving") : tCommon("save")}
             </Button>
           </div>
         ) : null}
@@ -414,9 +428,9 @@ export function SetupConsole({
         <Input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search trucks, zones, slots — or type a postcode"
+          placeholder={t("searchPlaceholder")}
           className="min-h-11 pl-9 lg:min-h-10"
-          aria-label="Search delivery setup"
+          aria-label={t("searchAriaLabel")}
         />
       </div>
 
@@ -424,7 +438,7 @@ export function SetupConsole({
         <div className="rounded-lg border">
           {hits.length === 0 ? (
             <p className="p-6 text-center text-sm text-muted-foreground">
-              Nothing matches “{query.trim()}”.
+              {t("noSearchResults", { query: query.trim() })}
             </p>
           ) : (
             <ul className="divide-y">
@@ -462,14 +476,14 @@ export function SetupConsole({
               {truckFilter !== null ? (
                 <div className="flex items-center justify-between gap-2 border-b px-4 py-2 text-xs">
                   <span className="text-muted-foreground">
-                    Showing {truckName(snapshot, truckFilter)} only
+                    {t("showingTruckOnly", { truck: truckName(snapshot, truckFilter, t) })}
                   </span>
                   <button
                     type="button"
                     className="font-medium text-primary"
                     onClick={() => setTruckFilter(null)}
                   >
-                    Show all
+                    {t("showAll")}
                   </button>
                 </div>
               ) : null}
@@ -520,7 +534,7 @@ export function SetupConsole({
                 }
               >
                 <ChevronLeft className="h-4 w-4" />
-                {ENTITY_LABELS[selection.entity]}
+                {tEntities(selection.entity)}
               </button>
             ) : null}
             {renderDetail()}

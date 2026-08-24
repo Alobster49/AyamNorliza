@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { useTranslations } from "next-intl";
 import type { BoardTruck } from "../lib/dispatch-board-model";
 import { TicketCard } from "./ticket-card";
 
@@ -21,11 +22,12 @@ export function TruckCard({
 }) {
   const { truck, tickets, load, cap, departed } = boardTruck;
   const { setNodeRef, isOver } = useDroppable({ id: `truck:${truck.id}`, disabled: departed });
+  const t = useTranslations("logistics.dispatch");
 
   if (departed && !departing) {
     return (
       <div className="rounded-lg border border-dashed bg-muted/40 p-3 text-sm text-muted-foreground">
-        <span className="font-medium">{truck.name}</span> — on the road with {load} order{load === 1 ? "" : "s"}
+        <span className="font-medium">{truck.name}</span> — {t("onRoadWithOrders", { count: load })}
       </div>
     );
   }

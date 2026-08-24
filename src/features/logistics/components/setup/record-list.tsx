@@ -1,6 +1,7 @@
 "use client";
 
 import { Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export type ListRow = {
@@ -29,6 +30,7 @@ export function RecordList({
   onSelect: (id: string) => void;
   onAdd: () => void;
 }) {
+  const t = useTranslations("logistics.setup");
   return (
     <div className="flex h-full flex-col">
       <ul className="flex-1 divide-y overflow-y-auto">
@@ -55,7 +57,7 @@ export function RecordList({
                 </span>
                 {row.archived ? (
                   <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                    Archived
+                    {t("archived")}
                   </span>
                 ) : null}
                 {row.badge ? (

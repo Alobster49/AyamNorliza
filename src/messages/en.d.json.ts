@@ -1193,6 +1193,247 @@ declare const messages: {
         "reportedTitle": "Reported to the office"
       }
     }
+  },
+  "logistics": {
+    "error": "Error",
+    "actionFailed": "Action failed",
+    "delete": "Delete",
+    "dispatch": {
+      "title": "Dispatch",
+      "views": {
+        "plan": "Plan",
+        "timeline": "Timeline",
+        "board": "Board",
+        "ariaLabel": "Dispatch view"
+      },
+      "pool": {
+        "title": "Order pool",
+        "empty": "No unassigned orders for this date."
+      },
+      "bay": {
+        "empty": "No trucks in this bay."
+      },
+      "customerFallback": "Customer",
+      "depart": "Depart",
+      "onRoadWithOrders": "{count, plural, one {on the road with # order} other {on the road with # orders}}",
+      "override": {
+        "title": "Override coverage?",
+        "body": "{truckName} does not cover this order's zone. Assign anyway?",
+        "confirm": "Override",
+        "fallbackTruckName": "this truck"
+      },
+      "departConfirm": {
+        "title": "{count, plural, one {Depart without # unready order?} other {Depart without # unready orders?}}",
+        "body": "Orders that are not ready stay behind and return to the pool for a later run.",
+        "confirm": "Depart"
+      },
+      "ticket": {
+        "noPostcode": "no postcode",
+        "auto": "auto",
+        "manual": "manual"
+      },
+      "plan": {
+        "loadLabel": "{name} load",
+        "loaded": "loaded",
+        "more": "{count, plural, one {+# more} other {+# more}}",
+        "noOrdersYet": "No orders yet.",
+        "onRoad": "{count, plural, one {On the road with # order} other {On the road with # orders}}",
+        "departLeaveBehind": "{count, plural, one {Depart, leave # behind} other {Depart, leave # behind}}",
+        "departButton": "Depart · {ready} of {load} ready",
+        "weightFraction": "{kg} / {capacity} kg",
+        "weightOnly": "{kg} kg",
+        "orderCount": "{load, plural, one {#{capSuffix} order} other {#{capSuffix} orders}}",
+        "proposedSuffix": "{count, plural, one {+# proposed} other {+# proposed}}",
+        "draftReady": "Draft plan ready — {placed} of {pool} orders placed",
+        "exceptionsNeedDecision": "{count, plural, one {# needs a decision below.} other {# need a decision below.}}",
+        "allAssigned": "Everything in the pool has a truck.",
+        "dismiss": "Dismiss",
+        "accept": "{count, plural, one {Accept #} other {Accept #}}",
+        "showDraftPlan": "{count, plural, one {Show draft plan · #} other {Show draft plan · #}}",
+        "needsDecisionHeading": "{count, plural, one {Needs a decision · #} other {Needs a decision · #}}",
+        "proposedHeading": "{count, plural, one {Proposed · #} other {Proposed · #}}",
+        "overrideOnto": "Override onto…",
+        "orderFallback": "Order",
+        "truckFallback": "truck",
+        "emptyTitleNoOrders": "No orders for this date",
+        "emptyTitleAllAssigned": "Every order has a truck",
+        "emptyBodyNoOrders": "Orders appear here once they are scheduled for delivery on this date.",
+        "emptyBodyAllAssigned": "Nothing left to assign — check the Board or the Timeline.",
+        "planFailedToast": "Plan failed",
+        "appliedPartialToast": "Applied {applied}, {failed} failed",
+        "assignedToast": "{count, plural, one {Assigned # order} other {Assigned # orders}}",
+        "assignFailedToast": "Assign failed",
+        "departFailedToast": "Depart failed",
+        "noActiveTrucks": "No active trucks in any bay."
+      },
+      "moveNotAllowed": "Move not allowed"
+    },
+    "facility": {
+      "notConfigured": "No facility configured yet.",
+      "saved": "Saved.",
+      "readOnlyNotice": "Only owners and admins can edit the factory location.",
+      "fields": {
+        "name": "Name",
+        "address": "Address",
+        "postcode": "Postcode",
+        "state": "State"
+      },
+      "save": "Save factory"
+    },
+    "bays": {
+      "newNameLabel": "New bay name",
+      "newNamePlaceholder": "Bay 3",
+      "add": "Add bay",
+      "needFacility": "Configure the factory first.",
+      "truckAssignmentTitle": "Truck bay assignment",
+      "noBay": "No bay"
+    },
+    "postcodes": {
+      "overlapWarning": "Overlapping coverage: {list}. First match by zone name wins.",
+      "zoneLabel": "Zone",
+      "from": "From",
+      "to": "To",
+      "add": "Add range",
+      "listAriaLabel": "Zone postcode ranges",
+      "empty": "No postcode ranges yet — orders will land in the Unassigned pool."
+    },
+    "setup": {
+      "entities": {
+        "zones": "Zones",
+        "trucks": "Trucks",
+        "slots": "Slots",
+        "blocks": "Blocked dates",
+        "factory": "Factory",
+        "bays": "Bays",
+        "postcodes": "Zone postcodes"
+      },
+      "entitiesSingular": {
+        "zones": "zone",
+        "trucks": "truck",
+        "slots": "slot",
+        "blocks": "blocked date",
+        "factory": "factory",
+        "bays": "bay",
+        "postcodes": "zone postcode"
+      },
+      "addLabels": {
+        "zones": "Add zone",
+        "trucks": "Add truck",
+        "slots": "Add slot",
+        "blocks": "Block a date"
+      },
+      "emptyMessages": {
+        "zones": "No zones yet",
+        "trucks": "No trucks yet",
+        "slots": "No slots yet",
+        "blocks": "No blocked dates"
+      },
+      "allTrucks": "All trucks",
+      "unknownTruck": "Unknown truck",
+      "unlimited": "unlimited",
+      "noReasonGiven": "no reason given",
+      "badgeNeedsSetup": "needs setup",
+      "sectionsAriaLabel": "Setup sections",
+      "issuesAriaLabel": "{count, plural, one {# issue} other {# issues}}",
+      "weekday": {
+        "sun": "Sun",
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat"
+      },
+      "rows": {
+        "zoneDisplayOrder": "Display order {order}",
+        "slotSecondary": "{truck} · max {max}",
+        "blockSecondary": "{truck} · {reason}"
+      },
+      "readiness": {
+        "readyTitle": "Delivery setup is ready",
+        "readyBody": "Every zone has postcodes and a truck, and every truck has slots.",
+        "issuesToFix": "{count, plural, one {# issue to fix} other {# issues to fix}}",
+        "blocksCustomerOrders": "{count, plural, one {# blocks customer orders} other {# block customer orders}}",
+        "fix": "Fix",
+        "ariaLabel": "Setup readiness"
+      },
+      "archived": "Archived",
+      "pickRecordPrompt": "Pick a record on the left, or add a new one.",
+      "addTruckFirst": "Add a truck before configuring slots.",
+      "newRecord": "New {entity}",
+      "archivedHiddenNotice": "Archived — hidden from live views",
+      "restore": "Restore",
+      "archive": "Archive",
+      "moreActionsAriaLabel": "More actions",
+      "remove": "Remove",
+      "deletePermanently": "Delete permanently",
+      "saving": "Saving…",
+      "searchPlaceholder": "Search trucks, zones, slots — or type a postcode",
+      "searchAriaLabel": "Search delivery setup",
+      "noSearchResults": "Nothing matches “{query}”.",
+      "showingTruckOnly": "Showing {truck} only",
+      "showAll": "Show all",
+      "fields": {
+        "name": "Name",
+        "displayOrder": "Display order",
+        "active": "Active",
+        "code": "Code",
+        "capacityKg": "Capacity kg (blank = not recorded)",
+        "bay": "Bay",
+        "unassigned": "Unassigned",
+        "truck": "Truck",
+        "weekday": "Weekday",
+        "startTime": "Start time",
+        "endTime": "End time",
+        "maxOrders": "Max orders (blank = unlimited)",
+        "date": "Date",
+        "reason": "Reason",
+        "reasonPlaceholder": "e.g. Hari Raya Haji"
+      },
+      "toasts": {
+        "zoneUpdated": "Zone updated",
+        "zoneCreated": "Zone created",
+        "truckUpdated": "Truck updated",
+        "truckCreated": "Truck created",
+        "slotUpdated": "Slot updated",
+        "slotCreated": "Slot created",
+        "blockAdded": "Blocked date added",
+        "archived": "Archived",
+        "restored": "Restored",
+        "archivedDescription": "Hidden from live views. Nothing was deleted.",
+        "undo": "Undo",
+        "confirmDeleteZone": "Delete zone \"{name}\" permanently?",
+        "confirmDeleteTruck": "Delete truck \"{name}\" permanently?",
+        "confirmDeleteSlot": "Delete this delivery slot permanently?",
+        "confirmRemoveBlock": "Remove this blocked date?",
+        "zoneDeleted": "Zone deleted",
+        "truckDeleted": "Truck deleted",
+        "slotDeleted": "Slot deleted",
+        "blockRemoved": "Blocked date removed"
+      },
+      "zonesServed": "Zones served",
+      "savedAutomatically": "Saved automatically.",
+      "noZonesYet": "No zones yet."
+    },
+    "delivery": {
+      "title": "Delivery Setup",
+      "subtitle": "Zones, trucks, weekly slots, and blocked dates for the delivery schedule"
+    },
+    "manifest": {
+      "title": "Manifest — {truck}",
+      "truckFallback": "Truck",
+      "itemFallback": "Item",
+      "printButton": "Print manifest",
+      "headers": {
+        "index": "#",
+        "order": "Order",
+        "customer": "Customer",
+        "zone": "Zone",
+        "address": "Address",
+        "items": "Items",
+        "status": "Status"
+      }
+    }
   }
 };
 export default messages;

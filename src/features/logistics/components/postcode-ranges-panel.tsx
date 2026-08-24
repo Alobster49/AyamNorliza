@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import type { DeliveryZone } from "@/features/orders/types";
 import type { ZonePostcodeRange } from "../types";
 import { addPostcodeRange, deletePostcodeRange } from "../server/facility-actions";
@@ -36,6 +37,8 @@ export function PostcodeRangesPanel({
   const [form, setForm] = useState({ zoneId: zones[0]?.id ?? "", postcodeStart: "", postcodeEnd: "" });
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const t = useTranslations("logistics.postcodes");
+  const tLogistics = useTranslations("logistics");
 
   const zoneName = (id: string) => zones.find((z) => z.id === id)?.name ?? "?";
   const overlaps = useMemo(() => findOverlaps(ranges), [ranges]);
@@ -44,15 +47,20 @@ export function PostcodeRangesPanel({
     <div className="flex flex-col gap-4">
       {overlaps.length > 0 ? (
         <div className="rounded border border-yellow-400 bg-yellow-50 p-2 text-xs text-yellow-900">
-          Overlapping coverage: {overlaps
-            .map(([a, b]) => `${zoneName(a.zone_id)} & ${zoneName(b.zone_id)} (${a.postcode_start}-${a.postcode_end} / ${b.postcode_start}-${b.postcode_end})`)
-            .join("; ")}. First match by zone name wins.
+          {t("overlapWarning", {
+            list: overlaps
+              .map(
+                ([a, b]) =>
+                  `${zoneName(a.zone_id)} & ${zoneName(b.zone_id)} (${a.postcode_start}-${a.postcode_end} / ${b.postcode_start}-${b.postcode_end})`,
+              )
+              .join("; "),
+          })}
         </div>
       ) : null}
 
       <div className="flex items-end gap-2">
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">Zone</span>
+          <span className="font-medium">{t("zoneLabel")}</span>
           <select
             value={form.zoneId}
             onChange={(e) => setForm((f) => ({ ...f, zoneId: e.target.value }))}
@@ -66,7 +74,7 @@ export function PostcodeRangesPanel({
           </select>
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">From</span>
+          <span className="font-medium">{t("from")}</span>
           <input
             value={form.postcodeStart}
             onChange={(e) => setForm((f) => ({ ...f, postcodeStart: e.target.value }))}
@@ -76,7 +84,7 @@ export function PostcodeRangesPanel({
           />
         </label>
         <label className="flex flex-col gap-1 text-sm">
-          <span className="font-medium">To</span>
+          <span className="font-medium">{t("to")}</span>
           <input
             value={form.postcodeEnd}
             onChange={(e) => setForm((f) => ({ ...f, postcodeEnd: e.target.value }))}
@@ -91,7 +99,7 @@ export function PostcodeRangesPanel({
           onClick={() => {
             startTransition(async () => {
               const result = await addPostcodeRange(organizationSlug, form);
-              setMessage(result.ok ? null : (result.message ?? "Action failed"));
+              setMessage(result.ok ? null : (result.message ?? tLogistics("actionFailed")));
               if (result.ok) {
                 onRangeAdded(result.data);
               }
@@ -99,11 +107,11 @@ export function PostcodeRangesPanel({
           }}
           className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground disabled:opacity-50"
         >
-          Add range
+          {t("add")}
         </button>
       </div>
 
-      <ul aria-label="Zone postcode ranges" className="flex flex-col gap-2">
+      <ul aria-label={t("listAriaLabel")} className="flex flex-col gap-2">
         {ranges.map((r) => (
           <li key={r.id} className="flex items-center justify-between rounded border p-2 text-sm">
             <span>
@@ -117,7 +125,7 @@ export function PostcodeRangesPanel({
                 const rangeId = r.id;
                 startTransition(async () => {
                   const result = await deletePostcodeRange(organizationSlug, rangeId);
-                  setMessage(result.ok ? null : (result.message ?? "Action failed"));
+                  setMessage(result.ok ? null : (result.message ?? tLogistics("actionFailed")));
                   if (result.ok) {
                     onRangeDeleted(rangeId);
                   }
@@ -125,12 +133,12 @@ export function PostcodeRangesPanel({
               }}
               className="text-xs text-destructive"
             >
-              Delete
+              {tLogistics("delete")}
             </button>
           </li>
         ))}
         {ranges.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No postcode ranges yet — orders will land in the Unassigned pool.</p>
+          <p className="text-sm text-muted-foreground">{t("empty")}</p>
         ) : null}
       </ul>
       {message ? <p className="text-sm text-destructive">{message}</p> : null}
