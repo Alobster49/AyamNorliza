@@ -318,8 +318,8 @@ export async function checkoutWithNewAddress(
   }
   // getByLabel("Address") also matches the saved-address radiogroup, whose
   // aria-label is "Alamat penghantaran" - go at the textbox by role.
-  await page.getByRole("textbox", { name: "Address" }).fill(addressLine);
-  await page.getByLabel("Postcode").fill(postcode);
+  await page.getByRole("textbox", { name: "Alamat", exact: true }).fill(addressLine);
+  await page.getByLabel("Poskod").fill(postcode);
 
   // RECONCILIATION: the single "Delivery slot" radiogroup was split into a
   // "Tarikh" (date) pill row and a "Masa" (time) radiogroup; the first date
@@ -408,7 +408,7 @@ export async function signInBuyer(page: Page, email: string, password: string) {
   await page.goto("/ms/buyer_portal/ayam-norliza-pilot/login");
   // RECONCILIATION: the buyer login page's submit button now reads "Log
   // masuk" (BM) — "login" is the default mode, so no mode-toggle click needed.
-  await page.getByLabel(/email/i).fill(email);
+  await page.getByLabel(/e-mel/i).fill(email);
   await page.getByLabel(/kata laluan/i).fill(password);
   await page.getByRole("button", { name: "Log masuk" }).click();
   await expect(page).toHaveURL(/\/ms\/buyer_portal\/ayam-norliza-pilot\/shop/, { timeout: 10_000 });

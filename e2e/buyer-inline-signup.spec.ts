@@ -59,15 +59,15 @@ test("first-time buyer orders end-to-end with inline account creation, never see
   const email = `e2e-inline-${Date.now()}@example.com`;
   await buyerPage.getByLabel("Nama").fill("E2E Pembeli Baru");
   await buyerPage.getByLabel("Nombor telefon").fill("012-345 6789");
-  await buyerPage.getByLabel("Email").fill(email);
+  await buyerPage.getByLabel("E-mel").fill(email);
   await buyerPage.getByLabel(/kata laluan/i).fill("passw0rd-e2e");
 
   // New address (postcode 50000 is covered by the seeded zone). AddressFields
   // itself is unchanged by the redesign — mirror e2e/_fixtures.ts'
   // checkoutWithNewAddress, which goes at the textbox by role (getByLabel
   // also matches the saved-address radiogroup's aria-label once one exists).
-  await buyerPage.getByRole("textbox", { name: "Address" }).fill("88 Jalan Inline");
-  await buyerPage.getByLabel("Postcode").fill("50000");
+  await buyerPage.getByRole("textbox", { name: "Alamat", exact: true }).fill("88 Jalan Inline");
+  await buyerPage.getByLabel("Poskod").fill("50000");
   // AddressFields auto-fills state/area from the postcode.
 
   // Zone chip confirms, then pick the first available slot.

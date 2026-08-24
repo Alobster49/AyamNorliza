@@ -41,7 +41,7 @@ test("buyer signup auto-links to the admin-created customer with the same phone"
   await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/login");
   await buyerPage.getByRole("radio", { name: "Daftar" }).click();
   await buyerPage.getByLabel("Nama").fill(buyerName);
-  await buyerPage.getByLabel("Email").fill(buyerEmail);
+  await buyerPage.getByLabel("E-mel").fill(buyerEmail);
   await buyerPage.getByLabel("Nombor telefon").fill(phone);
   await buyerPage.getByLabel("Kata laluan", { exact: true }).fill(buyerPassword);
   await buyerPage.getByLabel("Sahkan kata laluan").fill(buyerPassword);

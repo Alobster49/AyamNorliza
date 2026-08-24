@@ -43,7 +43,7 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   // reads "Daftar" (was "Create Account").
   await buyerPage.getByRole("radio", { name: "Daftar" }).click();
   await buyerPage.getByLabel("Nama").fill(buyerName);
-  await buyerPage.getByLabel("Email").fill(buyerEmail);
+  await buyerPage.getByLabel("E-mel").fill(buyerEmail);
   await buyerPage.getByLabel("Nombor telefon").fill("012-345 6789");
   await buyerPage.getByLabel("Kata laluan", { exact: true }).fill(buyerPassword);
   await buyerPage.getByLabel("Sahkan kata laluan").fill(buyerPassword);
@@ -96,17 +96,17 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   // it renders directly — no address radiogroup, no zone dropdown).
   await expect(buyerPage.getByText(/memuatkan alamat anda/i)).toHaveCount(0, { timeout: 20_000 });
   await expect(buyerPage.getByRole("radiogroup", { name: "Alamat penghantaran" })).toHaveCount(0);
-  await buyerPage.getByRole("textbox", { name: "Address" }).fill("12 Jalan E2E");
-  await buyerPage.getByLabel("Postcode").fill("50000");
+  await buyerPage.getByRole("textbox", { name: "Alamat", exact: true }).fill("12 Jalan E2E");
+  await buyerPage.getByLabel("Poskod").fill("50000");
 
   // Postcode lookup auto-fills State/Area client-side (dataset spelling:
   // state carries the "Wp" prefix, area does not). AddressFields itself is
   // unchanged by the buyer redesign.
-  await expect(buyerPage.getByRole("combobox", { name: "State" })).toContainText(
+  await expect(buyerPage.getByRole("combobox", { name: "Negeri" })).toContainText(
     "Wp Kuala Lumpur",
     { timeout: 20_000 },
   );
-  await expect(buyerPage.getByRole("combobox", { name: "Area" })).toContainText(
+  await expect(buyerPage.getByRole("combobox", { name: "Kawasan" })).toContainText(
     "Kuala Lumpur",
     { timeout: 20_000 },
   );
