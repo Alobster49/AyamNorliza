@@ -71,6 +71,14 @@
   --status-delivered-soft: color-mix(in oklch, var(--status-delivered) 12%, var(--background));
   --status-closed-soft: color-mix(in oklch, var(--status-closed) 14%, var(--background));
   --status-cancelled-soft: color-mix(in oklch, var(--status-cancelled) 12%, var(--background));
+  /* Text-purposed status colors — deeper than the hue tokens so text-xs badge
+     copy clears WCAG AA on the -soft backgrounds; .dark flips them light. */
+  --status-pending-text: oklch(0.42 0.16 250);
+  --status-confirmed-text: oklch(0.45 0.12 85);
+  --status-ready-text: oklch(0.42 0.14 145);
+  --status-delivered-text: oklch(0.42 0.17 300);
+  --status-closed-text: oklch(0.42 0.02 260);
+  --status-cancelled-text: oklch(0.45 0.19 25);
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -117,6 +125,12 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --status-pending-text: oklch(0.78 0.12 250);
+  --status-confirmed-text: oklch(0.82 0.12 85);
+  --status-ready-text: oklch(0.8 0.14 145);
+  --status-delivered-text: oklch(0.8 0.13 300);
+  --status-closed-text: oklch(0.78 0.02 260);
+  --status-cancelled-text: oklch(0.78 0.15 25);
 
   --color-bg: var(--background);
   --color-surface: var(--card);

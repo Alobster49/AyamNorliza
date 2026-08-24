@@ -21,12 +21,12 @@ export const ORDER_STATUSES = [
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
-  pending: "border-transparent bg-[var(--status-pending-soft)] text-[var(--status-pending)]",
-  confirmed: "border-transparent bg-[var(--status-confirmed-soft)] text-[var(--status-confirmed)]",
-  ready: "border-transparent bg-[var(--status-ready-soft)] text-[var(--status-ready)]",
-  delivered: "border-transparent bg-[var(--status-delivered-soft)] text-[var(--status-delivered)]",
-  closed: "border-transparent bg-[var(--status-closed-soft)] text-[var(--status-closed)]",
-  cancelled: "border-transparent bg-[var(--status-cancelled-soft)] text-[var(--status-cancelled)]",
+  pending: "border-transparent bg-[var(--status-pending-soft)] text-[var(--status-pending-text)]",
+  confirmed: "border-transparent bg-[var(--status-confirmed-soft)] text-[var(--status-confirmed-text)]",
+  ready: "border-transparent bg-[var(--status-ready-soft)] text-[var(--status-ready-text)]",
+  delivered: "border-transparent bg-[var(--status-delivered-soft)] text-[var(--status-delivered-text)]",
+  closed: "border-transparent bg-[var(--status-closed-soft)] text-[var(--status-closed-text)]",
+  cancelled: "border-transparent bg-[var(--status-cancelled-soft)] text-[var(--status-cancelled-text)]",
 };
 
 // ---------------------------------------------------------------------------
