@@ -552,6 +552,7 @@
       "system": "System"
     },
     "pages": {
+      "dashboard": "Dashboard",
       "products": "Products",
       "orders": "Orders",
       "customers": "Customers",
@@ -573,6 +574,93 @@
     "sidebar": {
       "regionFallback": "Operations workspace",
       "operatorProfile": "Operator profile"
+    }
+  },
+  "analytics": {
+    "title": "Dashboard",
+    "range": {
+      "today": "Today",
+      "7d": "7 days",
+      "30d": "30 days",
+      "90d": "90 days",
+      "custom": "Custom",
+      "from": "From",
+      "to": "To",
+      "apply": "Apply",
+      "vsPrevious": "vs previous period"
+    },
+    "kpi": {
+      "revenue": "Sales",
+      "orders": "Orders",
+      "kg": "Kg sold",
+      "aov": "Avg order value",
+      "rmPerKg": "Realized RM/kg"
+    },
+    "chart": { "title": "Sales trend" },
+    "funnel": { "title": "Order funnel", "cancellationRate": "Cancellation rate" },
+    "sectionError": "This section failed to load.",
+    "empty": "No data for this period yet.",
+    "today": {
+      "title": "Today's operations",
+      "runs": "Delivery runs",
+      "noRuns": "No runs scheduled today.",
+      "tasksPending": "Tasks pending",
+      "tasksDoneToday": "Tasks done today",
+      "failedStops": "{count} failed",
+      "alerts": {
+        "ordersWithoutRun": "{count} orders for today have no delivery run",
+        "marketStale": "Market prices have not synced for 3+ days"
+      }
+    },
+    "admin": {
+      "title": "Admin",
+      "activeMembers": "Active members",
+      "pendingInvitations": "Pending invitations",
+      "openAccessReviews": "Open access reviews",
+      "activeSupportSessions": "Active support sessions",
+      "priorities": "Needs attention",
+      "allClear": "Nothing needs attention."
+    },
+    "insights": {
+      "title": "How to improve",
+      "pricing": {
+        "title": "Price vs market",
+        "product": "Product",
+        "realized": "Realized RM/kg",
+        "market": "Market RM/kg",
+        "gap": "Gap",
+        "noMarket": "No market mapping"
+      },
+      "weight": {
+        "title": "Weight leakage",
+        "summary": "{diff} kg given away ({pct} of allocated weight)",
+        "none": "No leakage recorded in this period."
+      },
+      "retention": {
+        "title": "Customer retention",
+        "active": "Active customers",
+        "new": "New",
+        "returning": "Returning",
+        "silentTitle": "Silent 30+ days (win-back)",
+        "noneSilent": "No silent customers. Nice."
+      },
+      "delivery": {
+        "title": "Delivery quality",
+        "failureRate": "Failed stop rate",
+        "attempts": "{count} attempts",
+        "slotFill": "Slot fill",
+        "byZone": "Failures by zone"
+      }
+    },
+    "topLists": {
+      "title": "Top performers",
+      "products": "Products",
+      "customers": "Customers",
+      "zones": "Zones",
+      "name": "Name",
+      "revenue": "Revenue",
+      "orders": "Orders",
+      "kg": "Kg"
     }
   },
   "roles": {

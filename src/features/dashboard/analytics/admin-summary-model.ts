@@ -19,24 +19,7 @@ export type OperationsPriorityItem = {
   timestamp?: string;
 };
 
-export type OperationsSnapshot = {
-  readinessScore: number;
-  trend: Array<{
-    label: string;
-    livability: number;
-    feedIndex: number;
-    environment: number;
-  }>;
-  flockHighlights: Array<{
-    label: string;
-    value: string;
-    helper: string;
-    tone: "success" | "warning" | "danger" | "neutral";
-  }>;
-  priorityItems: OperationsPriorityItem[];
-};
-
-export type OverviewDashboardSummary = {
+export type AdminSummary = {
   identity: {
     activeMembers: number;
     suspendedMembers: number;
@@ -46,11 +29,10 @@ export type OverviewDashboardSummary = {
     activeSupportSessions: number;
     recentAuditEvents: number;
   };
-  operations: OperationsSnapshot;
   priorityItems: OperationsPriorityItem[];
 };
 
-export type OverviewDashboardRows = {
+export type AdminSummaryRows = {
   members: OrganizationMember[];
   invitations: Invitation[];
   accessReviews: AccessReview[];
@@ -58,50 +40,10 @@ export type OverviewDashboardRows = {
   auditLog: AuditLogEntry[];
 };
 
-export const operationsSnapshot: OperationsSnapshot = {
-  readinessScore: 86,
-  trend: [
-    { label: "Mon", livability: 97, feedIndex: 82, environment: 91 },
-    { label: "Tue", livability: 97.4, feedIndex: 84, environment: 93 },
-    { label: "Wed", livability: 97.1, feedIndex: 86, environment: 89 },
-    { label: "Thu", livability: 97.8, feedIndex: 88, environment: 92 },
-    { label: "Fri", livability: 98, feedIndex: 87, environment: 94 },
-    { label: "Sat", livability: 97.7, feedIndex: 90, environment: 92 },
-    { label: "Sun", livability: 98.2, feedIndex: 91, environment: 95 },
-  ],
-  flockHighlights: [
-    {
-      label: "Livability",
-      value: "98.2%",
-      helper: "+0.4% vs last week",
-      tone: "success",
-    },
-    {
-      label: "Feed reserve",
-      value: "6.8 days",
-      helper: "Pontian site average",
-      tone: "neutral",
-    },
-    {
-      label: "Environment",
-      value: "95%",
-      helper: "Time in target band",
-      tone: "success",
-    },
-    {
-      label: "Collection pace",
-      value: "92%",
-      helper: "Morning round complete",
-      tone: "warning",
-    },
-  ],
-  priorityItems: [],
-};
-
-export function buildOverviewDashboardSummary(
-  rows: OverviewDashboardRows,
+export function buildAdminSummary(
+  rows: AdminSummaryRows,
   now = new Date(),
-): OverviewDashboardSummary {
+): AdminSummary {
   const activeMembers = rows.members.filter((member) => member.status === "active").length;
   const suspendedMembers = rows.members.filter((member) => member.status === "suspended").length;
   const pendingInvitations = rows.invitations.filter((invite) =>
@@ -127,13 +69,11 @@ export function buildOverviewDashboardSummary(
       activeSupportSessions,
       recentAuditEvents: rows.auditLog.length,
     },
-    operations: operationsSnapshot,
     priorityItems: [
       ...buildAccessReviewPriorities(rows.accessReviews),
       ...buildSupportPriorities(rows.supportSessions),
       ...buildInvitationPriorities(rows.invitations, now),
       ...buildAuditPriorities(rows.auditLog),
-      ...operationsSnapshot.priorityItems,
     ],
   };
 }

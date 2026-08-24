@@ -62,10 +62,10 @@ beforeEach(() => {
 });
 
 describe("resolveLandingPathForSlug", () => {
-  it("sends staff to the org catalog", async () => {
+  it("sends managers to the dashboard", async () => {
     mockSupabase({ role: "seller" });
     await expect(resolveLandingPathForSlug(ORG.id, ORG.slug)).resolves.toBe(
-      "/ayam-norliza-pilot/products",
+      "/ayam-norliza-pilot/dashboard",
     );
   });
 
@@ -122,7 +122,7 @@ describe("resolveLandingPath", () => {
       ORG as never,
     ]);
     await expect(resolveLandingPath()).resolves.toBe(
-      "/ayam-norliza-pilot/products",
+      "/ayam-norliza-pilot/dashboard",
     );
   });
 

@@ -166,6 +166,7 @@ describe("dashboard shell model", () => {
     expect(groups).toHaveLength(2);
     const salesTitleKeys = groups[0]?.items.map((item) => item.titleKey);
     expect(salesTitleKeys).toEqual([
+      "pages.dashboard",
       "pages.products",
       "pages.orders",
       "pages.customers",

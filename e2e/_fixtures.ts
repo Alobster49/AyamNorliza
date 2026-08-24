@@ -16,10 +16,11 @@ export async function signIn(page: Page, email: string, password: string) {
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);
   await page.getByRole("button", { name: /sign in/i }).click();
-  // Landing depends on role: staff land on Products, drivers on the driver
-  // deck, everyone else on org settings (see server/landing.ts).
+  // Landing depends on role: managers land on the dashboard, warehouse staff
+  // land on Products, drivers on the driver deck, everyone else on org
+  // settings (see server/landing.ts).
   await expect(page).toHaveURL(
-    /\/(?:[^/]+\/products|[^/]+\/settings\/organization|drive\/[^/]+|signup)(?:[/?#]|$)/,
+    /\/(?:[^/]+\/dashboard|[^/]+\/products|[^/]+\/settings\/organization|drive\/[^/]+|signup)(?:[/?#]|$)/,
     { timeout: 10_000 },
   );
 }
