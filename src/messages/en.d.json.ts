@@ -56,7 +56,13 @@ declare const messages: {
       "notEnrolledRequired": "Add an authenticator app to protect your account.",
       "setup": "Set up authenticator app",
       "setupPending": "Starting...",
-      "skip": "Skip for now"
+      "skip": "Skip for now",
+      "removeConfirm": "Are you sure you want to remove two-factor authentication? Your account will be less secure.",
+      "statusEnabled": "Two-factor authentication is <strong>enabled</strong> using your authenticator app.",
+      "statusDisabled": "Two-factor authentication is currently <strong>disabled</strong>.",
+      "enableButton": "Enable two-factor authentication",
+      "removeButton": "Remove authenticator app",
+      "removing": "Removing..."
     },
     "invite": {
       "title": "Accept your invitation",

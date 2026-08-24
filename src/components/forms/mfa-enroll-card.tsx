@@ -66,7 +66,7 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
   }
 
   async function remove(factorId: string) {
-    if (!confirm("Are you sure you want to remove two-factor authentication? Your account will be less secure.")) {
+    if (!confirm(t("removeConfirm"))) {
       return;
     }
     setError(null);
@@ -161,6 +161,7 @@ export function MfaStatusCard({
   factors: { id: string; friendly_name: string | null; created_at: string }[];
   nextPath?: string;
 }) {
+  const t = useTranslations("auth.mfa");
   const tRoot = useTranslations();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -170,7 +171,7 @@ export function MfaStatusCard({
 
   async function remove() {
     if (!totp) return;
-    if (!confirm("Are you sure you want to remove two-factor authentication? Your account will be less secure.")) {
+    if (!confirm(t("removeConfirm"))) {
       return;
     }
     setError(null);
@@ -184,18 +185,20 @@ export function MfaStatusCard({
     setRemoved(true);
   }
 
+  const strong = (chunks: React.ReactNode) => <strong>{chunks}</strong>;
+
   if (removed) {
     return (
       <div className="mfa-status">
-        <h3>Two-factor authentication</h3>
+        <h3>{t("title")}</h3>
         <p className="mfa-status__off">
-          Two-factor authentication is currently <strong>disabled</strong>.
+          {t.rich("statusDisabled", { strong })}
         </p>
         <button
           type="button"
           onClick={() => router.push("/mfa")}
         >
-          Enable two-factor authentication
+          {t("enableButton")}
         </button>
       </div>
     );
@@ -203,26 +206,26 @@ export function MfaStatusCard({
 
   return (
     <div className="mfa-status">
-      <h3>Two-factor authentication</h3>
+      <h3>{t("title")}</h3>
       {totp ? (
         <>
           <p className="mfa-status__on">
-            Two-factor authentication is <strong>enabled</strong> using your authenticator app.
+            {t.rich("statusEnabled", { strong })}
           </p>
           <button type="button" onClick={remove} disabled={pending} className="btn-danger">
-            {pending ? "Removing..." : "Remove authenticator app"}
+            {pending ? t("removing") : t("removeButton")}
           </button>
         </>
       ) : (
         <>
           <p className="mfa-status__off">
-            Two-factor authentication is currently <strong>disabled</strong>.
+            {t.rich("statusDisabled", { strong })}
           </p>
           <button
             type="button"
             onClick={() => router.push(toLocaleAgnostic(nextPath) ?? "/mfa")}
           >
-            Enable two-factor authentication
+            {t("enableButton")}
           </button>
         </>
       )}

@@ -53,7 +53,13 @@
       "notEnrolledRequired": "Tambah aplikasi pengesah untuk melindungi akaun anda.",
       "setup": "Sediakan aplikasi pengesah",
       "setupPending": "Memulakan...",
-      "skip": "Langkau buat masa ini"
+      "skip": "Langkau buat masa ini",
+      "removeConfirm": "Adakah anda pasti mahu membuang pengesahan dua faktor? Akaun anda akan menjadi kurang selamat.",
+      "statusEnabled": "Pengesahan dua faktor <strong>diaktifkan</strong> menggunakan aplikasi pengesah anda.",
+      "statusDisabled": "Pengesahan dua faktor kini <strong>dimatikan</strong>.",
+      "enableButton": "Aktifkan pengesahan dua faktor",
+      "removeButton": "Buang aplikasi pengesah",
+      "removing": "Membuang..."
     },
     "invite": {
       "title": "Terima jemputan anda",
