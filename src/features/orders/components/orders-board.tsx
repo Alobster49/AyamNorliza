@@ -74,6 +74,20 @@ export function OrdersBoard({
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [refusedId, setRefusedId] = useState<string | null>(null);
+  const refuseFallbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function clearRefuseFallback() {
+    if (refuseFallbackTimeout.current) {
+      clearTimeout(refuseFallbackTimeout.current);
+      refuseFallbackTimeout.current = null;
+    }
+  }
+
+  function onRefuseEnd() {
+    clearRefuseFallback();
+    setRefusedId(null);
+  }
 
   function toggleSelected(id: string) {
     setSelected((prev) => {
@@ -226,6 +240,10 @@ export function OrdersBoard({
       case "noop":
         return;
       case "blocked":
+        clearRefuseFallback();
+        setRefusedId(order.id);
+        // Reduced-motion users get no animationend from the shake, so fall back to a timer.
+        refuseFallbackTimeout.current = setTimeout(onRefuseEnd, 400);
         toast({
           title: t("moveNotAllowedTitle"),
           description: tRoot(resolution.reasonKey as never),
@@ -285,6 +303,8 @@ export function OrdersBoard({
                 cardActions={cardActions}
                 dropTarget={dropTarget}
                 hintText={dropTarget?.hintKey ? tRoot(dropTarget.hintKey as never) : null}
+                refusedId={refusedId}
+                onRefuseEnd={onRefuseEnd}
                 headerExtra={
                   status === "pending" ? (
                     <Button
@@ -324,10 +344,10 @@ export function OrdersBoard({
             );
           })}
         </div>
-        <DragOverlay>
+        <DragOverlay dropAnimation={{ duration: 250, easing: "cubic-bezier(0.77, 0, 0.175, 1)" }}>
           {activeOrder ? (
             // Decorative drag preview — its links/buttons must not be reachable by AT or clicks.
-            <div className="pointer-events-none w-72 rotate-2 opacity-90" aria-hidden="true">
+            <div className="pointer-events-none w-72 rotate-2 scale-105 rounded-lg shadow-2xl" aria-hidden="true">
               <OrderCardContent order={activeOrder} risk={null} />
             </div>
           ) : null}
@@ -391,6 +411,8 @@ function BoardColumn({
   hintText,
   headerExtra,
   renderSelectableCard,
+  refusedId,
+  onRefuseEnd,
 }: {
   status: OrderStatus;
   orders: OrderListItem[];
@@ -403,6 +425,8 @@ function BoardColumn({
   hintText: string | null;
   headerExtra?: React.ReactNode;
   renderSelectableCard?: (order: OrderListItem) => React.ReactNode;
+  refusedId: string | null;
+  onRefuseEnd: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const t = useTranslations("orders.board");
@@ -430,7 +454,7 @@ function BoardColumn({
       <header className="flex items-center gap-2 px-3 py-2.5">
         <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
         <h3 className="text-sm font-semibold">{statusLabel}</h3>
-        <Badge variant="secondary" className="text-[10px]">
+        <Badge key={orders.length} variant="secondary" className="animate-count-pop text-[10px]">
           {orders.length}
         </Badge>
         {dropTarget?.mode === "decline" && hintText ? (
@@ -473,6 +497,8 @@ function BoardColumn({
                   ariaLabel={cardAriaLabel(order)}
                   risk={cardRisk(order)}
                   actions={cardActions(order)}
+                  refused={refusedId === order.id}
+                  onRefuseEnd={onRefuseEnd}
                 />
               </div>
             ),

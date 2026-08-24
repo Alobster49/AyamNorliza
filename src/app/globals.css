@@ -543,6 +543,48 @@ button[disabled] {
   }
 }
 
+@keyframes refuse-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-refuse-shake {
+  animation: refuse-shake 240ms var(--ease-move);
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-count-pop {
+  animation: count-pop 200ms var(--ease-enter);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-refuse-shake,
+  .animate-count-pop {
+    animation: none;
+  }
+}
+
 /* ---- Tables ---- */
 .data-table {
   width: 100%;

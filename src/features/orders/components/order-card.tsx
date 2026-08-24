@@ -111,12 +111,16 @@ export function OrderCard({
   ariaLabel,
   risk,
   actions,
+  refused,
+  onRefuseEnd,
 }: {
   order: OrderListItem;
   onOpen: () => void;
   ariaLabel: string;
   risk?: "overdue" | "dueToday" | null;
   actions?: React.ReactNode;
+  refused: boolean;
+  onRefuseEnd: () => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: order.id,
@@ -137,10 +141,17 @@ export function OrderCard({
           onOpen();
         }
       }}
+      onAnimationEnd={(e) => {
+        // animationend bubbles — only react to this card's own refuse-shake.
+        if (refused && e.animationName === "refuse-shake") onRefuseEnd();
+      }}
       aria-label={ariaLabel}
       className={
         "cursor-grab rounded-lg board-card-lift [touch-action:pan-y] active:scale-[0.98] active:cursor-grabbing " +
-        (isDragging ? "opacity-40" : "")
+        (isDragging
+          ? "scale-[0.98] opacity-50 grayscale outline-dashed outline-2 outline-muted-foreground/30 "
+          : "") +
+        (refused ? " animate-refuse-shake" : "")
       }
     >
       <OrderCardContent order={order} risk={risk} actions={actions} />
