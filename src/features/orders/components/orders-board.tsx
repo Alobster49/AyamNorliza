@@ -33,12 +33,12 @@ import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const STATUS_DOT: Record<OrderStatus, string> = {
-  pending: "bg-blue-500",
-  confirmed: "bg-yellow-500",
-  ready: "bg-green-500",
-  delivered: "bg-purple-500",
-  closed: "bg-gray-400",
-  cancelled: "bg-red-500",
+  pending: "bg-[var(--status-pending)]",
+  confirmed: "bg-[var(--status-confirmed)]",
+  ready: "bg-[var(--status-ready)]",
+  delivered: "bg-[var(--status-delivered)]",
+  closed: "bg-[var(--status-closed)]",
+  cancelled: "bg-[var(--status-cancelled)]",
 };
 
 type PendingWorkflow =

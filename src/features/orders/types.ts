@@ -21,12 +21,12 @@ export const ORDER_STATUSES = [
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
 export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
-  pending: "bg-blue-100 text-blue-800",
-  confirmed: "bg-yellow-100 text-yellow-800",
-  ready: "bg-green-100 text-green-800",
-  delivered: "bg-purple-100 text-purple-800",
-  closed: "bg-gray-100 text-gray-800",
-  cancelled: "bg-red-100 text-red-800",
+  pending: "border-transparent bg-[var(--status-pending-soft)] text-[var(--status-pending)]",
+  confirmed: "border-transparent bg-[var(--status-confirmed-soft)] text-[var(--status-confirmed)]",
+  ready: "border-transparent bg-[var(--status-ready-soft)] text-[var(--status-ready)]",
+  delivered: "border-transparent bg-[var(--status-delivered-soft)] text-[var(--status-delivered)]",
+  closed: "border-transparent bg-[var(--status-closed-soft)] text-[var(--status-closed)]",
+  cancelled: "border-transparent bg-[var(--status-cancelled-soft)] text-[var(--status-cancelled)]",
 };
 
 // ---------------------------------------------------------------------------
