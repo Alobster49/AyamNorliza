@@ -57,6 +57,30 @@
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-danger: var(--destructive);
+  /* Order status system — one hue per pipeline stage, oklch so the soft
+     badge backgrounds stay consistent across the palette. */
+  --status-pending: oklch(0.55 0.18 250);
+  --status-confirmed: oklch(0.68 0.14 85);
+  --status-ready: oklch(0.58 0.16 145);
+  --status-delivered: oklch(0.5 0.19 300);
+  --status-closed: oklch(0.55 0.02 260);
+  --status-cancelled: oklch(0.55 0.21 25);
+  --status-pending-soft: color-mix(in oklch, var(--status-pending) 12%, var(--background));
+  --status-confirmed-soft: color-mix(in oklch, var(--status-confirmed) 14%, var(--background));
+  --status-ready-soft: color-mix(in oklch, var(--status-ready) 12%, var(--background));
+  --status-delivered-soft: color-mix(in oklch, var(--status-delivered) 12%, var(--background));
+  --status-closed-soft: color-mix(in oklch, var(--status-closed) 14%, var(--background));
+  --status-cancelled-soft: color-mix(in oklch, var(--status-cancelled) 12%, var(--background));
+  /* Text-purposed status colors — deeper than the hue tokens so text-xs badge
+     copy clears WCAG AA on the -soft backgrounds; .dark flips them light. */
+  --status-pending-text: oklch(0.42 0.16 250);
+  --status-confirmed-text: oklch(0.45 0.12 85);
+  --status-ready-text: oklch(0.42 0.14 145);
+  --status-delivered-text: oklch(0.42 0.17 300);
+  --status-closed-text: oklch(0.42 0.02 260);
+  --status-cancelled-text: oklch(0.45 0.19 25);
+  --ease-enter: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -103,6 +127,12 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --status-pending-text: oklch(0.78 0.12 250);
+  --status-confirmed-text: oklch(0.82 0.12 85);
+  --status-ready-text: oklch(0.8 0.14 145);
+  --status-delivered-text: oklch(0.8 0.13 300);
+  --status-closed-text: oklch(0.78 0.02 260);
+  --status-cancelled-text: oklch(0.78 0.15 25);
 
   --color-bg: var(--background);
   --color-surface: var(--card);
@@ -393,6 +423,165 @@ button[disabled] {
   .animate-hen-zzz {
     animation: none;
     opacity: 0.85;
+  }
+}
+
+/* ---- Loading board progress ring ----
+   Registered properties so the conic sweep and its color interpolate;
+   `transition-[background]` on a gradient is a no-op. Browsers without
+   @property still paint the ring — it just snaps instead of sweeping. */
+@property --ring-deg {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@property --ring-color {
+  syntax: "<color>";
+  inherits: false;
+  initial-value: transparent;
+}
+
+.load-ring {
+  background: conic-gradient(var(--ring-color) var(--ring-deg), var(--muted) 0deg);
+  transition:
+    --ring-deg 500ms cubic-bezier(0.23, 1, 0.32, 1),
+    --ring-color 300ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .load-ring {
+    transition: none;
+  }
+}
+
+/* ---- Delivery runs board ---- */
+@property --dial-pct {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+.run-dial {
+  transition: --dial-pct 500ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.animate-panel-in {
+  animation: panel-in 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .run-dial {
+    transition: none;
+  }
+  .animate-panel-in {
+    animation: panel-fade 150ms ease-out both;
+  }
+}
+
+/* ---- Orders board ---- */
+@keyframes board-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-board-card-enter {
+  animation: board-card-enter 240ms var(--ease-enter) both;
+}
+
+.board-card-lift {
+  transition:
+    transform 150ms var(--ease-enter),
+    box-shadow 150ms var(--ease-enter);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-board-card-enter {
+    animation-duration: 1ms;
+  }
+  .board-card-lift {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .board-card-lift:hover {
+    transform: none;
+  }
+}
+
+@keyframes refuse-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20%,
+  60% {
+    transform: translateX(-4px);
+  }
+  40%,
+  80% {
+    transform: translateX(4px);
+  }
+}
+
+.animate-refuse-shake {
+  animation: refuse-shake 240ms var(--ease-move);
+}
+
+@keyframes count-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-count-pop {
+  animation: count-pop 200ms var(--ease-enter);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-refuse-shake,
+  .animate-count-pop {
+    animation: none;
   }
 }
 

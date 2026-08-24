@@ -452,7 +452,7 @@ describe("boardAlerts", () => {
     const order = makeOrder({ status: "ready" });
     const run = makeRun({ status: "departed" }, [{ ...order, attempts: [failedAttempt(order.id)] }]);
     const alert = boardAlerts([run]).find((a) => a.kind === "failed");
-    expect(alert?.message).toContain("1 stop");
+    expect(alert?.params.count).toBe(1);
   });
 
   it("raises an alert when a departed run still has undelivered stops after its window closed", () => {
@@ -470,7 +470,7 @@ describe("boardAlerts", () => {
     const run = makeRun({}, [makeOrder({ loaded_at: null }), makeOrder({ loaded_at: null })]);
     const unloaded = boardAlerts([run]).filter((a) => a.kind === "unloaded");
     expect(unloaded).toHaveLength(1);
-    expect(unloaded[0]!.message).toContain("2");
+    expect(unloaded[0]!.params.count).toBe(2);
   });
 });
 

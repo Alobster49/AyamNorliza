@@ -1332,7 +1332,9 @@
         "portal": "Portal",
         "manual": "Manual"
       },
-      "unweighed": "Belum ditimbang"
+      "unweighed": "Belum ditimbang",
+      "call": "Telefon {name}",
+      "whatsapp": "WhatsApp {name}"
     },
     "journey": {
       "ariaLabel": "Kemajuan pesanan: langkah {step} daripada {total}",
@@ -1378,6 +1380,7 @@
       "orderedKg": "{quantity} kg ditempah · saiz {min}–{max} kg",
       "orderedPieces": "{quantity, plural, other {# ekor}} ditempah · saiz {min}–{max} kg",
       "saveNext": "Simpan & seterusnya",
+      "undo": "Buat asal",
       "swipeHint": "Leret kiri untuk langkau · leret kanan untuk buat asal"
     },
     "sizeBand": {
@@ -1684,7 +1687,7 @@
       "moveNotAllowedTitle": "Pergerakan tidak dibenarkan",
       "blocked": {
         "ready": "Status Sedia ditetapkan oleh tugasan timbang di gudang.",
-        "delivered": "Status Sampai ditetapkan apabila trip penghantaran selesai.",
+        "delivered": "Status Dihantar ditetapkan apabila trip penghantaran selesai.",
         "pending": "Pesanan tidak boleh kembali ke status menunggu.",
         "confirmed": "Hanya pesanan yang menunggu boleh disahkan.",
         "cancelled": "Hanya pesanan menunggu atau disahkan boleh dibatalkan.",
@@ -1706,11 +1709,22 @@
         "over": "Di atas {column}",
         "dropped": "Dilepaskan di {column}",
         "cancelled": "Pergerakan dibatalkan"
+      },
+      "quickConfirm": {
+        "action": "Sahkan",
+        "busy": "Mengesahkan…",
+        "success": "Pesanan disahkan"
+      },
+      "bulk": {
+        "select": "Pilih",
+        "exit": "Selesai",
+        "confirmN": "Sahkan {count} pesanan",
+        "summary": "{confirmed} disahkan, {failed} gagal"
       }
     },
     "station": {
       "slotSuffix": " · slot {start}–{end}",
-      "autosaveHint": "Pesanan disimpan secara automatik selepas item terakhirnya. Papan kekunci turut berfungsi: digit, ⌫, Enter."
+      "autosaveHint": "Pesanan disimpan secara automatik selepas item terakhirnya. Papan kekunci turut berfungsi: digit, ⌫, Enter · P untuk ekor."
     }
   },
   "logistics": {
@@ -2083,7 +2097,8 @@
   },
   "tasks": {
     "saveFailedTitle": "Gagal simpan pesanan",
-    "completeTitle": "Pesanan selesai"
+    "completeTitle": "Pesanan selesai",
+    "completeBody": "Ditimbang dan disimpan untuk {customerName}."
   },
   "warehouse": {
     "empty": {
@@ -2114,7 +2129,14 @@
     },
     "needsHuman": {
       "ariaLabel": "Trip yang memerlukan perhatian manusia",
-      "heading": "Perlu perhatian manusia · {count}"
+      "heading": "Perlu perhatian manusia · {count}",
+      "messages": {
+        "unloaded": "{count, plural, other {# pesanan belum dimuatkan — trak belum boleh bertolak}}",
+        "unweighed": "{count, plural, other {# pesanan belum ditimbang}}",
+        "overloaded": "{weight} kg dimuatkan pada trak berkapasiti {capacity} kg",
+        "failed": "{count, plural, other {# perhentian tidak dihantar}}",
+        "overdue": "{count, plural, other {# perhentian masih di luar selepas slot masa {end}}}"
+      }
     },
     "rail": {
       "truckFallback": "Trak",
@@ -2189,8 +2211,9 @@
   },
   "loadingBoard": {
     "empty": {
-      "title": "Tiada lori di papan hari ini",
-      "titleDate": "Tiada lori di papan untuk tarikh ini",
+      "title": "Tiada trak di papan hari ini",
+      "titleDate": "Tiada trak di papan untuk tarikh ini",
+      "noLoadTitle": "Tiada muatan ditugaskan pada mana-mana trak lagi",
       "subtitle": "Ayam rehat sehingga muatan seterusnya."
     },
     "capacity": {
@@ -2211,7 +2234,10 @@
     "lane": {
       "ariaLabel": "{truck}, {done} daripada {total} dimuatkan",
       "departedNotice": "Trak ini sudah bertolak — muatan ditutup.",
-      "emptyNotice": "Tiada apa ditugaskan pada trak ini lagi."
+      "allLoaded": "Semua dimuatkan"
+    },
+    "idle": {
+      "title": "Trak tanpa muatan"
     },
     "toast": {
       "couldNotUpdateTitle": "Tidak dapat kemas kini",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyLens, classifyDropTarget, displayAmount, isAtRisk, matchesSearch } from "../../lib/board-view-model";
+import { applyLens, classifyDropTarget, displayAmount, isAtRisk, matchesSearch, waLink } from "../../lib/board-view-model";
 import type { OrderListItem } from "../../types";
 
 const listItem = (over: Partial<OrderListItem>): OrderListItem =>
@@ -101,5 +101,14 @@ describe("matchesSearch", () => {
   it("empty query matches everything; misses miss", () => {
     expect(matchesSearch(order, "  ")).toBe(true);
     expect(matchesSearch(order, "mak timah")).toBe(false);
+  });
+});
+
+describe("waLink", () => {
+  it("converts Malaysian local numbers to wa.me with country code", () => {
+    expect(waLink("012-345 6789")).toBe("https://wa.me/60123456789");
+  });
+  it("passes through numbers that already carry the country code", () => {
+    expect(waLink("+60 12-345 6789")).toBe("https://wa.me/60123456789");
   });
 });

@@ -322,7 +322,8 @@ export type BoardAlert = {
   runId: string;
   truckLabel: string;
   kind: AlertKind;
-  message: string;
+  /** ICU params for `deliveryRuns.needsHuman.messages.<kind>`. */
+  params: Record<string, string | number>;
 };
 
 export type AlertOptions = {
@@ -347,7 +348,7 @@ export function boardAlerts(runs: RunWithOrders[], options: AlertOptions = {}): 
         runId: run.id,
         truckLabel: label,
         kind: "unloaded",
-        message: `${gate.unloaded.length} order${gate.unloaded.length === 1 ? "" : "s"} not loaded yet — the truck cannot depart`,
+        params: { count: gate.unloaded.length },
       });
     }
 
@@ -356,7 +357,7 @@ export function boardAlerts(runs: RunWithOrders[], options: AlertOptions = {}): 
         runId: run.id,
         truckLabel: label,
         kind: "unweighed",
-        message: `${gate.unweighed.length} order${gate.unweighed.length === 1 ? "" : "s"} still unweighed`,
+        params: { count: gate.unweighed.length },
       });
     }
 
@@ -365,7 +366,7 @@ export function boardAlerts(runs: RunWithOrders[], options: AlertOptions = {}): 
         runId: run.id,
         truckLabel: label,
         kind: "overloaded",
-        message: `${vitals.weightKg} kg loaded against a ${vitals.capacityKg} kg truck`,
+        params: { weight: vitals.weightKg, capacity: vitals.capacityKg ?? 0 },
       });
     }
 
@@ -374,7 +375,7 @@ export function boardAlerts(runs: RunWithOrders[], options: AlertOptions = {}): 
         runId: run.id,
         truckLabel: label,
         kind: "failed",
-        message: `${vitals.failed} stop${vitals.failed === 1 ? "" : "s"} did not get delivered`,
+        params: { count: vitals.failed },
       });
     }
 
@@ -390,7 +391,7 @@ export function boardAlerts(runs: RunWithOrders[], options: AlertOptions = {}): 
         runId: run.id,
         truckLabel: label,
         kind: "overdue",
-        message: `${vitals.remaining} stop${vitals.remaining === 1 ? "" : "s"} still out past the ${vitals.window?.end} window`,
+        params: { count: vitals.remaining, end: vitals.window?.end ?? "" },
       });
     }
   }

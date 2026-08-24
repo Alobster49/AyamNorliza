@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "@/i18n/navigation";
 import {
   assignRunDriver,
@@ -56,7 +56,7 @@ function nowMinutes(): number {
 function Chip({ tone, children }: { tone: string; children: React.ReactNode }) {
   return (
     <span
-      className={`inline-flex shrink-0 items-center rounded-md px-2 py-0.5 text-[11px] font-medium ${TONE_CLASS[tone] ?? TONE_CLASS.muted}`}
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-medium ${TONE_CLASS[tone] ?? TONE_CLASS.muted}`}
     >
       {children}
     </span>
@@ -69,8 +69,13 @@ function Dial({ pct, label }: { pct: number | null; label: string }) {
   const tone = (pct ?? 0) > 100 ? "var(--destructive)" : (pct ?? 0) >= 90 ? "var(--color-warning)" : "var(--primary)";
   return (
     <div
-      className="grid size-11 shrink-0 place-items-center rounded-full text-[10px] font-semibold tabular-nums"
-      style={{ background: `conic-gradient(${tone} ${clamped}%, var(--muted) ${clamped}% 100%)` }}
+      className="run-dial grid size-11 shrink-0 place-items-center rounded-full text-[10px] font-semibold tabular-nums"
+      style={
+        {
+          "--dial-pct": `${clamped}%`,
+          background: `conic-gradient(${tone} var(--dial-pct), var(--muted) var(--dial-pct) 100%)`,
+        } as React.CSSProperties
+      }
       role="img"
       aria-label={label}
     >
@@ -84,7 +89,10 @@ function Dial({ pct, label }: { pct: number | null; label: string }) {
 function Bar({ pct, tone = "bg-primary" }: { pct: number; tone?: string }) {
   return (
     <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-      <div className={`h-full rounded-full ${tone}`} style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }} />
+      <div
+        className={`h-full rounded-full motion-safe:transition-[width] motion-safe:duration-500 motion-safe:ease-[cubic-bezier(0.23,1,0.32,1)] ${tone}`}
+        style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
+      />
     </div>
   );
 }
@@ -99,7 +107,7 @@ function AlertBlock({ alerts, onJump }: { alerts: BoardAlert[]; onJump: (runId: 
   return (
     <section
       aria-label={t("ariaLabel")}
-      className="rounded-lg border border-destructive/50 bg-destructive/5 p-3"
+      className="animate-panel-in rounded-lg border border-destructive/50 bg-destructive/5 p-3"
     >
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-destructive">
         {t("heading", { count: alerts.length })}
@@ -110,10 +118,13 @@ function AlertBlock({ alerts, onJump }: { alerts: BoardAlert[]; onJump: (runId: 
             <button
               type="button"
               onClick={() => onJump(alert.runId)}
-              className="w-full rounded-md px-1 py-0.5 text-left text-sm hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-destructive"
+              className="w-full rounded-md px-1 py-0.5 text-left text-sm transition-colors duration-150 hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-destructive"
             >
               <span className="font-medium">{alert.truckLabel}</span>
-              <span className="text-muted-foreground"> — {alert.message}</span>
+              <span className="text-muted-foreground">
+                {" "}
+                — {resolveMessageKey(t, `messages.${alert.kind}`, alert.params)}
+              </span>
             </button>
           </li>
         ))}
@@ -138,12 +149,24 @@ function RailCard({
   const vitals = runVitals(run);
   const t = useTranslations("deliveryRuns.rail");
   const tStatus = useTranslations("status.run");
+  const cardRef = useRef<HTMLButtonElement>(null);
+  // The alert banner can select a card that sits off-screen in the phone rail.
+  useEffect(() => {
+    if (!selected) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    cardRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: reduceMotion ? "auto" : "smooth",
+    });
+  }, [selected]);
   return (
     <button
+      ref={cardRef}
       type="button"
       onClick={onSelect}
       aria-current={selected ? "true" : undefined}
-      className={`flex w-56 shrink-0 flex-col gap-2 rounded-lg border p-3 text-left transition-colors lg:w-full ${
+      className={`flex w-56 shrink-0 snap-start flex-col gap-2 rounded-lg border p-3 text-left transition-[background-color,border-color,box-shadow,transform] duration-150 ease-out motion-safe:active:scale-[0.985] lg:w-full ${
         selected ? "border-primary bg-accent/40 ring-1 ring-primary" : "bg-card hover:bg-accent/30"
       }`}
     >
@@ -238,9 +261,9 @@ function StopTable({
                   event.preventDefault();
                   dropOn(index);
                 }}
-                className={`border-b last:border-0 ${canReorder ? "cursor-grab active:cursor-grabbing" : ""} ${
+                className={`border-b transition-[background-color,opacity] duration-150 last:border-0 ${canReorder ? "cursor-grab active:cursor-grabbing" : ""} ${
                   dragOver === index && dragFrom !== index ? "bg-accent/50" : ""
-                } ${dragFrom === index ? "opacity-50" : ""}`}
+                } ${dragFrom === index ? "opacity-40" : ""}`}
               >
                 <td className="px-3 py-2 text-xs tabular-nums text-muted-foreground">{row.sequence}</td>
                 {canReorder && (
@@ -251,7 +274,7 @@ function StopTable({
                         aria-label={t("moveEarlier", { name: row.customerName })}
                         disabled={index === 0}
                         onClick={() => onMove(index, index - 1)}
-                        className="rounded px-1 text-[10px] leading-3 text-muted-foreground hover:bg-accent disabled:opacity-30"
+                        className="flex h-5 w-7 items-center justify-center rounded text-[10px] leading-none text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
                       >
                         ▲
                       </button>
@@ -260,7 +283,7 @@ function StopTable({
                         aria-label={t("moveLater", { name: row.customerName })}
                         disabled={index === rows.length - 1}
                         onClick={() => onMove(index, index + 1)}
-                        className="rounded px-1 text-[10px] leading-3 text-muted-foreground hover:bg-accent disabled:opacity-30"
+                        className="flex h-5 w-7 items-center justify-center rounded text-[10px] leading-none text-muted-foreground transition-colors duration-150 hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
                       >
                         ▼
                       </button>
@@ -271,13 +294,13 @@ function StopTable({
                   <div className="font-medium">{row.customerName}</div>
                   <div className="max-w-xs truncate text-xs text-muted-foreground">{row.address}</div>
                 </td>
-                <td className="px-3 py-2 text-xs">{row.zoneName}</td>
-                <td className="px-3 py-2 text-xs tabular-nums">
+                <td className="whitespace-nowrap px-3 py-2 text-xs">{row.zoneName}</td>
+                <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums">
                   {row.weightKg > 0 ? `${row.weightKg} kg · ` : ""}
                   {t("itemCount", { count: row.itemCount })}
                 </td>
-                <td className="hidden px-3 py-2 text-xs tabular-nums lg:table-cell">{money(row.amount)}</td>
-                <td className="hidden px-3 py-2 text-xs tabular-nums lg:table-cell">
+                <td className="hidden whitespace-nowrap px-3 py-2 text-xs tabular-nums lg:table-cell">{money(row.amount)}</td>
+                <td className="hidden whitespace-nowrap px-3 py-2 text-xs tabular-nums lg:table-cell">
                   {row.window ? `${row.window.start}–${row.window.end}` : "—"}
                 </td>
                 <td className="px-3 py-2">
@@ -306,7 +329,7 @@ function StopTable({
                       aria-label={t("moveEarlier", { name: row.customerName })}
                       disabled={index === 0}
                       onClick={() => onMove(index, index - 1)}
-                      className="rounded border px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground disabled:opacity-30"
+                      className="rounded border px-1.5 py-1 text-[11px] leading-none text-muted-foreground transition-colors duration-150 active:bg-accent disabled:opacity-30"
                     >
                       ▲
                     </button>
@@ -315,7 +338,7 @@ function StopTable({
                       aria-label={t("moveLater", { name: row.customerName })}
                       disabled={index === rows.length - 1}
                       onClick={() => onMove(index, index + 1)}
-                      className="rounded border px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground disabled:opacity-30"
+                      className="rounded border px-1.5 py-1 text-[11px] leading-none text-muted-foreground transition-colors duration-150 active:bg-accent disabled:opacity-30"
                     >
                       ▼
                     </button>
@@ -391,7 +414,7 @@ function RunDetail({
   const blockers = [...gate.unloaded, ...gate.unweighed];
 
   return (
-    <div className="flex min-w-0 flex-col rounded-lg border bg-card">
+    <div className="animate-panel-in flex min-w-0 flex-col rounded-lg border bg-card">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold">{truckLabel(run)}</h2>
@@ -452,7 +475,7 @@ function RunDetail({
 
       {/* Departure gate: say what is missing, by name */}
       {run.status === "planned" && blockers.length > 0 && (
-        <div className="border-b bg-amber-50 px-4 py-2.5 text-sm dark:bg-amber-950/40">
+        <div className="animate-panel-in border-b bg-amber-50 px-4 py-2.5 text-sm dark:bg-amber-950/40">
           <p className="font-medium text-amber-900 dark:text-amber-200">
             {t("cannotDepart.title")}
           </p>
@@ -467,7 +490,7 @@ function RunDetail({
 
       {/* Confirm step, in the page, saying exactly what will happen */}
       {pending && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/50 px-4 py-3">
+        <div className="animate-panel-in flex flex-wrap items-center justify-between gap-3 border-b bg-muted/50 px-4 py-3">
           <div className="min-w-0 text-sm">
             {pending.status === "departed" ? (
               <>
@@ -518,15 +541,15 @@ function RunDetail({
         </div>
         <div>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("vitals.collected")}</p>
-          <p className="text-sm font-semibold tabular-nums">{money(vitals.cashCollected)}</p>
+          <p className="text-base font-semibold tabular-nums">{money(vitals.cashCollected)}</p>
         </div>
         <div>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("vitals.outstanding")}</p>
-          <p className="text-sm font-semibold tabular-nums">{money(vitals.cashOutstanding)}</p>
+          <p className="text-base font-semibold tabular-nums">{money(vitals.cashOutstanding)}</p>
         </div>
         <div>
           <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("vitals.loaded")}</p>
-          <p className="text-sm font-semibold tabular-nums">
+          <p className="text-base font-semibold tabular-nums">
             {vitals.loaded}/{vitals.total}
           </p>
         </div>
@@ -579,7 +602,14 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
     () => runs.find((run) => run.id === selectedId) ?? runs[0] ?? null,
     [runs, selectedId],
   );
-  const alerts = useMemo(() => boardAlerts(runs, { nowMinutes: nowMinutes() }), [runs]);
+  // Re-evaluate time-based alerts (overdue windows) while the page sits open
+  // on a depot screen, not only when the data reloads.
+  const [minuteNow, setMinuteNow] = useState(() => nowMinutes());
+  useEffect(() => {
+    const timer = setInterval(() => setMinuteNow(nowMinutes()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+  const alerts = useMemo(() => boardAlerts(runs, { nowMinutes: minuteNow }), [runs, minuteNow]);
 
   async function loadRuns(nextDate: string) {
     setLoading(true);
@@ -680,14 +710,25 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
 
       <AlertBlock alerts={alerts} onJump={setSelectedId} />
 
-      {loading ? (
-        <p className="text-muted-foreground">{t("loading")}</p>
-      ) : runs.length === 0 ? (
-        <HenEmptyState title={tEmpty("title")} subtitle={tEmpty("subtitle")} className="py-20" />
+      {runs.length === 0 ? (
+        loading ? (
+          <p role="status" className="text-muted-foreground">
+            {t("loading")}
+          </p>
+        ) : (
+          <HenEmptyState title={tEmpty("title")} subtitle={tEmpty("subtitle")} className="py-20" />
+        )
       ) : (
-        <div className="grid gap-4 lg:grid-cols-[264px_minmax(0,1fr)]">
+        // Keep the stale board visible and dimmed while the next date loads,
+        // so the layout never collapses to a one-line loading message.
+        <div
+          aria-busy={loading}
+          className={`grid gap-4 transition-opacity duration-200 lg:grid-cols-[264px_minmax(0,1fr)] ${
+            loading ? "pointer-events-none opacity-50" : ""
+          }`}
+        >
           <div
-            className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
+            className="-mx-1 flex snap-x snap-proximity gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
             role="tablist"
             aria-label={t("trucksRunningToday")}
           >
