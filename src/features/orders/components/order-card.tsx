@@ -71,7 +71,8 @@ export function OrderCard({
       onClick={onOpen}
       onKeyDown={(e) => {
         listeners?.onKeyDown?.(e);
-        if (e.key === "Enter") {
+        // Mid-keyboard-drag Enter must not navigate away — Space/Escape end the drag.
+        if (e.key === "Enter" && !isDragging) {
           e.preventDefault();
           onOpen();
         }
