@@ -1626,6 +1626,12 @@ declare const messages: {
         "action": "Confirm",
         "busy": "Confirming…",
         "success": "Order confirmed"
+      },
+      "bulk": {
+        "select": "Select",
+        "exit": "Done",
+        "confirmN": "Confirm {count, plural, one {# order} other {# orders}}",
+        "summary": "{confirmed} confirmed, {failed} failed"
       }
     },
     "station": {

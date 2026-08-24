@@ -71,6 +71,18 @@ export function OrdersBoard({
   const [activeOrder, setActiveOrder] = useState<OrderListItem | null>(null);
   const [workflow, setWorkflow] = useState<PendingWorkflow | null>(null);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+
+  function toggleSelected(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   const sensors = useSensors(
     // Mouse keeps the quick 6px pickup.
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
@@ -139,6 +151,37 @@ export function OrdersBoard({
       moveOrder(orderId, "confirmed");
     } finally {
       setConfirmingId(null);
+    }
+  }
+
+  async function bulkConfirm() {
+    setBulkBusy(true);
+    let confirmed = 0;
+    let failed = 0;
+    try {
+      for (const orderId of selected) {
+        const detail = await getOrderDetail(organizationSlug, orderId);
+        if (!detail.ok) {
+          failed += 1;
+          continue;
+        }
+        const result = await confirmOrder({
+          organizationSlug,
+          orderId,
+          decisions: detail.data.items.map((item) => ({ itemId: item.id, available: true })),
+        });
+        if (result.ok) confirmed += 1;
+        else failed += 1;
+      }
+      toast({
+        title: t("bulk.summary", { confirmed, failed }),
+        variant: failed > 0 ? "destructive" : undefined,
+      });
+    } finally {
+      setBulkBusy(false);
+      setSelectMode(false);
+      setSelected(new Set());
+      router.refresh();
     }
   }
 
@@ -236,6 +279,39 @@ export function OrdersBoard({
               cardAriaLabel={cardAriaLabel}
               cardRisk={cardRisk}
               cardActions={cardActions}
+              headerExtra={
+                status === "pending" ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => {
+                      setSelectMode((v) => !v);
+                      setSelected(new Set());
+                    }}
+                  >
+                    {selectMode ? t("bulk.exit") : t("bulk.select")}
+                  </Button>
+                ) : undefined
+              }
+              renderSelectableCard={
+                status === "pending" && selectMode
+                  ? (order) => (
+                      <label key={order.id} className="flex cursor-pointer items-start gap-2">
+                        <input
+                          type="checkbox"
+                          className="mt-3 h-4 w-4 accent-primary"
+                          checked={selected.has(order.id)}
+                          onChange={() => toggleSelected(order.id)}
+                          aria-label={order.customer?.name ?? tCard("unknownCustomer")}
+                        />
+                        <div className="flex-1">
+                          <OrderCardContent order={order} risk={cardRisk(order)} />
+                        </div>
+                      </label>
+                    )
+                  : undefined
+              }
             />
           ))}
         </div>
@@ -247,6 +323,14 @@ export function OrdersBoard({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      {selectMode && selected.size > 0 && (
+        <div className="sticky bottom-4 z-10 flex justify-center">
+          <Button disabled={bulkBusy} onClick={bulkConfirm} className="shadow-lg">
+            {t("bulk.confirmN", { count: selected.size })}
+          </Button>
+        </div>
+      )}
 
       <ConfirmOrderDialog
         open={workflow?.kind === "confirm"}
@@ -293,6 +377,8 @@ function BoardColumn({
   cardAriaLabel,
   cardRisk,
   cardActions,
+  headerExtra,
+  renderSelectableCard,
 }: {
   status: OrderStatus;
   orders: OrderListItem[];
@@ -301,6 +387,8 @@ function BoardColumn({
   cardAriaLabel: (order: OrderListItem) => string;
   cardRisk: (order: OrderListItem) => "overdue" | "dueToday" | null;
   cardActions: (order: OrderListItem) => React.ReactNode;
+  headerExtra?: React.ReactNode;
+  renderSelectableCard?: (order: OrderListItem) => React.ReactNode;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const t = useTranslations("orders.board");
@@ -322,6 +410,7 @@ function BoardColumn({
         <Badge variant="secondary" className="text-[10px]">
           {orders.length}
         </Badge>
+        {headerExtra}
         {status === "pending" && (
           <Button
             variant="ghost"
@@ -340,16 +429,20 @@ function BoardColumn({
             {t(`empty.${status}`)}
           </div>
         ) : (
-          orders.map((order) => (
-            <OrderCard
-              key={order.id}
-              order={order}
-              onOpen={() => onOpenOrder(order.id)}
-              ariaLabel={cardAriaLabel(order)}
-              risk={cardRisk(order)}
-              actions={cardActions(order)}
-            />
-          ))
+          orders.map((order) =>
+            renderSelectableCard ? (
+              renderSelectableCard(order)
+            ) : (
+              <OrderCard
+                key={order.id}
+                order={order}
+                onOpen={() => onOpenOrder(order.id)}
+                ariaLabel={cardAriaLabel(order)}
+                risk={cardRisk(order)}
+                actions={cardActions(order)}
+              />
+            ),
+          )
         )}
       </div>
       {status === "pending" && (
