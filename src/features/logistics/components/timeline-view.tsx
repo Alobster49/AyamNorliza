@@ -14,14 +14,6 @@ const BLOCK_CLASS: Record<BlockState, string> = {
   departed: "border-dashed border-border bg-muted/50 text-muted-foreground",
 };
 
-const STATE_LABEL: Record<BlockState, string> = {
-  ready: "Ready",
-  pending: "Not ready",
-  atRisk: "At risk",
-  late: "Late",
-  departed: "On the road",
-};
-
 function localTodayIso(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -41,8 +33,19 @@ function useNowMinutes(date: string): number | null {
 
 export function DayTimeline({ date, data }: { date: string; data: DispatchBoardData }) {
   const tEmpty = useTranslations("loadingBoard.empty");
+  const t = useTranslations("logistics.dispatch.timeline");
+  const tPlan = useTranslations("logistics.dispatch.plan");
+  const tStatusRun = useTranslations("status.run");
   const nowMinutes = useNowMinutes(date);
   const view = useMemo(() => buildTimeline(data, date, nowMinutes), [data, date, nowMinutes]);
+
+  const STATE_LABEL: Record<BlockState, string> = {
+    ready: t("state.ready"),
+    pending: t("state.pending"),
+    atRisk: t("state.atRisk"),
+    late: t("state.late"),
+    departed: tStatusRun("departed"),
+  };
 
   const atRiskCount = view.rows.flatMap((r) => r.blocks).filter((b) => b.state === "late" || b.state === "atRisk").length;
 
@@ -65,17 +68,17 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
         </span>
         {atRiskCount > 0 ? (
           <span className="rounded bg-red-100 px-1.5 py-0.5 text-red-800 dark:bg-red-950 dark:text-red-200">
-            {atRiskCount} at risk
+            {t("atRiskBadge", { count: atRiskCount })}
           </span>
         ) : null}
-        {view.poolCount > 0 ? <span>{view.poolCount} unassigned (not shown — see Plan)</span> : null}
+        {view.poolCount > 0 ? <span>{t("unassignedNotice", { count: view.poolCount })}</span> : null}
       </div>
 
       {/* Desktop / tablet: trucks × hours grid */}
       <div className="hidden overflow-x-auto rounded-lg border md:block">
         <div className="min-w-[720px]">
           <div className="grid border-b bg-muted/50" style={{ gridTemplateColumns: `140px repeat(${view.hours.length - 1}, 1fr)` }}>
-            <span className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Truck</span>
+            <span className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("truckHeader")}</span>
             {view.hours.slice(0, -1).map((h) => (
               <span key={h} className="border-l px-2 py-1.5 text-[10px] tabular-nums text-muted-foreground">
                 {String(h).padStart(2, "0")}:00
@@ -90,7 +93,7 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
                 <p className="text-[10px] tabular-nums text-muted-foreground">
                   {row.truck.code}
                   {row.loadKg > 0 ? ` · ${row.loadKg.toFixed(1)} kg` : ""}
-                  {row.departed ? " · on the road" : ""}
+                  {row.departed ? ` · ${tStatusRun("departed")}` : ""}
                 </p>
               </div>
               <div className="relative" style={{ height: `${row.laneCount * 44 + 16}px` }}>
@@ -112,9 +115,13 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
                       left: `${b.startPct}%`,
                       width: `${Math.min(Math.max(b.widthPct, 6), 100 - b.startPct)}%`,
                     }}
-                    title={`${b.ticket.customer?.name ?? "Order"} · ${fmt(b.startMin)} · ${STATE_LABEL[b.state]}`}
+                    title={t("blockTitle", {
+                      name: b.ticket.customer?.name ?? tPlan("orderFallback"),
+                      time: fmt(b.startMin),
+                      state: STATE_LABEL[b.state],
+                    })}
                   >
-                    <span className="truncate text-[11px] font-semibold">{b.ticket.customer?.name ?? "Order"}</span>
+                    <span className="truncate text-[11px] font-semibold">{b.ticket.customer?.name ?? tPlan("orderFallback")}</span>
                     <span className="truncate text-[10px] tabular-nums opacity-80">
                       {fmt(b.startMin)} · {STATE_LABEL[b.state]}
                     </span>
@@ -124,7 +131,7 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
                   <span
                     className="absolute inset-y-0 w-0.5 bg-primary"
                     style={{ left: `${view.nowPct}%` }}
-                    aria-label="Now"
+                    aria-label={t("now")}
                   />
                 ) : null}
               </div>
@@ -142,15 +149,15 @@ export function DayTimeline({ date, data }: { date: string; data: DispatchBoardD
           <div key={b.ticket.id} className={`flex items-center gap-3 rounded-lg border p-3 ${BLOCK_CLASS[b.state]}`}>
             <span className="w-12 shrink-0 text-sm font-semibold tabular-nums">{fmt(b.startMin)}</span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-medium">{b.ticket.customer?.name ?? "Order"}</p>
+              <p className="truncate text-sm font-medium">{b.ticket.customer?.name ?? tPlan("orderFallback")}</p>
               <p className="truncate text-xs opacity-80">
-                {b.truckName} · {STATE_LABEL[b.state]}
+                {t("agendaRow", { truck: b.truckName, state: STATE_LABEL[b.state] })}
               </p>
             </div>
           </div>
         ))}
         {agenda.length === 0 ? (
-          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">Nothing scheduled for this date.</p>
+          <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">{t("agendaEmpty")}</p>
         ) : null}
       </div>
     </div>

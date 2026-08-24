@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useMemo, useState, useTransition } from "react";
 import type { DispatchBoardData } from "../types";
 import { buildLoadBoard, type LoadJob, type LoadLane } from "../lib/loading-model";
 import { getDispatchBoard, setOrderLoaded } from "../server/dispatch-actions";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
@@ -36,6 +36,7 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
 
 /** Loaded weight, then the rest of the day's load, against truck capacity. */
 function CapacityBar({ lane }: { lane: LoadLane }) {
+  const t = useTranslations("loadingBoard.capacity");
   const hasCap = lane.capacityKg !== null && lane.capacityKg > 0;
   const loadedPct = hasCap
     ? (lane.loadedPct ?? 0)
@@ -63,15 +64,14 @@ function CapacityBar({ lane }: { lane: LoadLane }) {
         />
       </div>
       <p className="mt-1 text-xs tabular-nums text-muted-foreground">
-        {kg(lane.loadedKg)} / {kg(lane.totalKg)} kg on board
+        {t("onBoard", { loaded: kg(lane.loadedKg), total: kg(lane.totalKg) })}
         {lane.capacityKg !== null ? (
           lane.overCapacity ? (
             <span className="font-medium text-destructive">
-              {" · over capacity by "}
-              {kg(lane.totalKg - lane.capacityKg)} kg
+              {t("overCapacityBy", { kg: kg(lane.totalKg - lane.capacityKg) })}
             </span>
           ) : (
-            <span> · {kg(lane.freeKg ?? 0)} kg free of {kg(lane.capacityKg)}</span>
+            <span>{t("freeOf", { free: kg(lane.freeKg ?? 0), capacity: kg(lane.capacityKg) })}</span>
           )
         ) : null}
       </p>
@@ -92,7 +92,9 @@ function JobCard({
   organizationSlug: string;
   onToggle: (loaded: boolean) => void;
 }) {
-  const name = job.ticket.customer?.name ?? "Order";
+  const t = useTranslations("loadingBoard.job");
+  const tPlan = useTranslations("logistics.dispatch.plan");
+  const name = job.ticket.customer?.name ?? tPlan("orderFallback");
   const weighed = job.weightKg !== null;
 
   if (job.loaded) {
@@ -100,7 +102,7 @@ function JobCard({
       <button
         type="button"
         disabled={disabled}
-        aria-label={`Undo loading ${name}`}
+        aria-label={t("undoLoadingAria", { name })}
         onClick={() => onToggle(false)}
         className="flex w-full items-center gap-3 rounded-xl border border-dashed p-3 text-left opacity-60 transition-opacity hover:opacity-100 disabled:pointer-events-none motion-reduce:transition-none"
       >
@@ -111,7 +113,7 @@ function JobCard({
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
           {weighed ? `${kg(job.weightKg!)} kg` : "—"}
         </span>
-        <span className="shrink-0 text-xs text-muted-foreground">undo</span>
+        <span className="shrink-0 text-xs text-muted-foreground">{t("undo")}</span>
       </button>
     );
   }
@@ -126,7 +128,7 @@ function JobCard({
       <button
         type="button"
         disabled={disabled}
-        aria-label={`Mark ${name} loaded`}
+        aria-label={t("markLoadedAria", { name })}
         onClick={() => onToggle(true)}
         className="grid min-h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 rounded-xl p-3 text-left transition-transform active:scale-[0.985] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
       >
@@ -142,7 +144,7 @@ function JobCard({
           <span className="truncate text-[15px] font-semibold leading-tight">{name}</span>
           {isNext ? (
             <span className="shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
-              Next
+              {t("next")}
             </span>
           ) : null}
         </span>
@@ -153,7 +155,7 @@ function JobCard({
         <span className="truncate text-xs text-muted-foreground">
           {job.ticket.zone?.name ? `${job.ticket.zone.name} · ` : ""}
           {job.slotStart ? `${job.slotStart} · ` : ""}
-          drop {job.dropNumber} of {job.totalDrops}
+          {t("dropOf", { drop: job.dropNumber, total: job.totalDrops })}
         </span>
       </button>
 
@@ -162,9 +164,9 @@ function JobCard({
           href={`/${organizationSlug}/tasks?order=${job.ticket.id}`}
           className="mx-3 mb-3 flex min-h-11 items-center justify-between gap-2 rounded-lg bg-amber-100 px-3 text-[11px] font-semibold uppercase tracking-wide text-amber-800 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
         >
-          <span>Not weighed yet</span>
-          <span aria-hidden>Weigh now →</span>
-          <span className="sr-only">— open the weigh station for {name}</span>
+          <span>{t("notWeighedYet")}</span>
+          <span aria-hidden>{t("weighNow")}</span>
+          <span className="sr-only">{t("weighNowAria", { name })}</span>
         </Link>
       ) : null}
     </div>
@@ -182,10 +184,12 @@ function Lane({
   organizationSlug: string;
   onToggle: (orderId: string, loaded: boolean) => void;
 }) {
+  const t = useTranslations("loadingBoard.lane");
+  const tStatusRun = useTranslations("status.run");
   return (
     <section
       className="flex w-full shrink-0 snap-start flex-col rounded-2xl border bg-muted/30 md:w-auto md:flex-1 md:shrink"
-      aria-label={`${lane.truck.name}, ${lane.doneCount} of ${lane.totalCount} loaded`}
+      aria-label={t("ariaLabel", { truck: lane.truck.name, done: lane.doneCount, total: lane.totalCount })}
     >
       <header className="flex items-center gap-3 border-b p-3">
         <ProgressRing done={lane.doneCount} total={lane.totalCount} />
@@ -193,16 +197,16 @@ function Lane({
           <h2 className="truncate text-base font-semibold leading-tight">{lane.truck.name}</h2>
           <p className="truncate text-xs text-muted-foreground">
             {lane.truck.code} · {lane.bayName}
-            {lane.departed ? " · on the road" : ""}
+            {lane.departed ? ` · ${tStatusRun("departed")}` : ""}
           </p>
           <CapacityBar lane={lane} />
         </div>
       </header>
 
       {lane.departed ? (
-        <p className="p-4 text-sm text-muted-foreground">This truck has departed — loading is closed.</p>
+        <p className="p-4 text-sm text-muted-foreground">{t("departedNotice")}</p>
       ) : lane.jobs.length === 0 ? (
-        <p className="p-4 text-sm text-muted-foreground">Nothing assigned to this truck yet.</p>
+        <p className="p-4 text-sm text-muted-foreground">{t("emptyNotice")}</p>
       ) : (
         <div className="flex flex-col gap-2 p-2">
           {lane.jobs.map((job) => (
@@ -232,6 +236,12 @@ export function LoadingClient({
 }) {
   const date = initialDate; // loading is always today
   const tEmpty = useTranslations("loadingBoard.empty");
+  const tToast = useTranslations("loadingBoard.toast");
+  const tSummary = useTranslations("loadingBoard.summary");
+  const tLogistics = useTranslations("logistics");
+  const tPlan = useTranslations("logistics.dispatch.plan");
+  const tSetupToasts = useTranslations("logistics.setup.toasts");
+  const tDash = useTranslations("dashboard.pages");
   const [data, setData] = useState(initialData);
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
@@ -240,9 +250,9 @@ export function LoadingClient({
     startTransition(async () => {
       const result = await getDispatchBoard(organizationSlug, date);
       if (result.ok) setData(result.data);
-      else toast({ title: "Error", description: result.message, variant: "destructive" });
+      else toast({ title: tLogistics("error"), description: result.message, variant: "destructive" });
     });
-  }, [organizationSlug, date, toast]);
+  }, [organizationSlug, date, toast, tLogistics]);
 
   const lanes = useMemo(() => buildLoadBoard(data, date), [data, date]);
 
@@ -251,12 +261,12 @@ export function LoadingClient({
     async (orderId: string, loaded: boolean): Promise<boolean> => {
       const result = await setOrderLoaded(organizationSlug, { orderId, loaded });
       if (!result.ok) {
-        toast({ title: "Could not update", description: result.message, variant: "destructive" });
+        toast({ title: tToast("couldNotUpdateTitle"), description: result.message, variant: "destructive" });
       }
       refetch();
       return result.ok;
     },
-    [organizationSlug, refetch, toast],
+    [organizationSlug, refetch, toast, tToast],
   );
 
   const toggle = useCallback(
@@ -265,19 +275,19 @@ export function LoadingClient({
         const ok = await applyLoaded(orderId, loaded);
         if (!ok || !loaded) return;
         toast({
-          title: `${name ?? "Order"} loaded`,
+          title: tToast("loadedTitle", { name: name ?? tPlan("orderFallback") }),
           action: (
             <ToastAction
-              altText="Undo"
+              altText={tSetupToasts("undo")}
               onClick={() => startTransition(() => void applyLoaded(orderId, false))}
             >
-              Undo
+              {tSetupToasts("undo")}
             </ToastAction>
           ),
         });
       });
     },
-    [applyLoaded, toast],
+    [applyLoaded, toast, tToast, tPlan, tSetupToasts],
   );
 
   const totals = useMemo(
@@ -300,7 +310,7 @@ export function LoadingClient({
   if (lanes.length === 0) {
     return (
       <div className="flex w-full flex-1 flex-col">
-        <h1 className="text-lg font-semibold">Loading</h1>
+        <h1 className="text-lg font-semibold">{tDash("loading")}</h1>
         <HenEmptyState title={tEmpty("title")} subtitle={tEmpty("subtitle")} className="flex-1 py-20" />
       </div>
     );
@@ -309,10 +319,9 @@ export function LoadingClient({
   return (
     <div className="flex w-full flex-col gap-3">
       <div className="flex items-baseline gap-3">
-        <h1 className="text-lg font-semibold">Loading</h1>
+        <h1 className="text-lg font-semibold">{tDash("loading")}</h1>
         <p className="text-xs tabular-nums text-muted-foreground">
-          {totals.done} of {totals.total} loaded across {lanes.length}{" "}
-          {lanes.length === 1 ? "truck" : "trucks"}
+          {tSummary("loadedAcross", { done: totals.done, total: totals.total, count: lanes.length })}
         </p>
       </div>
 
@@ -329,7 +338,7 @@ export function LoadingClient({
       </div>
 
       {lanes.length > 1 ? (
-        <p className="text-center text-xs text-muted-foreground md:hidden">Swipe for the next truck</p>
+        <p className="text-center text-xs text-muted-foreground md:hidden">{tSummary("swipeHint")}</p>
       ) : null}
     </div>
   );

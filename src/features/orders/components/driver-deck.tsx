@@ -97,7 +97,7 @@ export function DriverDeck({
         title: t("toast.refreshFailedTitle"),
         // `messageKey` is a dynamic full path (e.g. "errors.drive.run.loadFailed");
         // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
-        description: tRoot(result.messageKey as never),
+        description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
         variant: "destructive",
       });
     }
@@ -120,7 +120,7 @@ export function DriverDeck({
       if (!result.ok) {
         toast({
           title: t("toast.arriveFailedTitle"),
-          description: tRoot(result.messageKey as never),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
           variant: "destructive",
         });
         return;
@@ -169,7 +169,7 @@ export function DriverDeck({
       if (!result.ok) {
         toast({
           title: t("toast.deliverFailedTitle"),
-          description: tRoot(result.messageKey as never),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
           variant: "destructive",
         });
         return;
@@ -187,7 +187,7 @@ export function DriverDeck({
       if (!result.ok) {
         toast({
           title: t("toast.failFailedTitle"),
-          description: tRoot(result.messageKey as never),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
           variant: "destructive",
         });
         return;

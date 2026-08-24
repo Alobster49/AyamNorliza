@@ -1473,6 +1473,21 @@
           "withoutSlot": "{zone} · least loaded"
         }
       },
+      "timeline": {
+        "truckHeader": "Truck",
+        "now": "Now",
+        "atRiskBadge": "{count, plural, one {# at risk} other {# at risk}}",
+        "unassignedNotice": "{count, plural, one {# unassigned (not shown — see Plan)} other {# unassigned (not shown — see Plan)}}",
+        "blockTitle": "{name} · {time} · {state}",
+        "agendaRow": "{truck} · {state}",
+        "agendaEmpty": "Nothing scheduled for this date.",
+        "state": {
+          "ready": "Ready",
+          "pending": "Not ready",
+          "atRisk": "At risk",
+          "late": "Late"
+        }
+      },
       "moveNotAllowed": "Move not allowed",
       "blocked": {
         "notDispatchable": "Only confirmed or ready orders can be dispatched.",
@@ -1838,6 +1853,34 @@
       "title": "No trucks on the board today",
       "titleDate": "No trucks on the board for this date",
       "subtitle": "Ayam resting until the next load."
+    },
+    "capacity": {
+      "onBoard": "{loaded} / {total} kg on board",
+      "overCapacityBy": " · over capacity by {kg} kg",
+      "freeOf": " · {free} kg free of {capacity}"
+    },
+    "job": {
+      "undoLoadingAria": "Undo loading {name}",
+      "undo": "undo",
+      "markLoadedAria": "Mark {name} loaded",
+      "next": "Next",
+      "dropOf": "drop {drop} of {total}",
+      "notWeighedYet": "Not weighed yet",
+      "weighNow": "Weigh now →",
+      "weighNowAria": "— open the weigh station for {name}"
+    },
+    "lane": {
+      "ariaLabel": "{truck}, {done} of {total} loaded",
+      "departedNotice": "This truck has departed — loading is closed.",
+      "emptyNotice": "Nothing assigned to this truck yet."
+    },
+    "toast": {
+      "couldNotUpdateTitle": "Could not update",
+      "loadedTitle": "{name} loaded"
+    },
+    "summary": {
+      "loadedAcross": "{done} of {total} loaded across {count, plural, one {# truck} other {# trucks}}",
+      "swipeHint": "Swipe for the next truck"
     }
   }
 }

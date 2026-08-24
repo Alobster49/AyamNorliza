@@ -171,7 +171,9 @@ export function PlanDeck({
             applied: result.data.applied,
             failed: result.data.failed.length,
           }),
-          description: result.data.failed[0]!.message,
+          description: result.data.failed[0]!.messageKey
+            ? tRoot(result.data.failed[0]!.messageKey as never)
+            : result.data.failed[0]!.message,
           variant: "destructive",
         });
       } else {

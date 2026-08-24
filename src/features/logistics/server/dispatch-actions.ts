@@ -346,7 +346,12 @@ const ApplyPlanSchema = z.object({
 export async function applyPlan(
   organizationSlug: string,
   rawInput: unknown,
-): Promise<ActionResult<{ applied: number; failed: { orderId: string; message: string }[] }>> {
+): Promise<
+  ActionResult<{
+    applied: number;
+    failed: { orderId: string; message: string; messageKey?: string }[];
+  }>
+> {
   const guard = await guardDispatch(organizationSlug);
   if (!guard.ok) return guard;
 
@@ -355,7 +360,7 @@ export async function applyPlan(
 
   const supabase = await createSupabaseServerClient();
   let applied = 0;
-  const failed: { orderId: string; message: string }[] = [];
+  const failed: { orderId: string; message: string; messageKey?: string }[] = [];
   // Sequential on purpose: dispatch_assign_order locks order + run rows;
   // firing 200 in parallel invites deadlocks the RPC then rejects.
   for (const a of parsed.data.assignments) {
@@ -365,8 +370,8 @@ export async function applyPlan(
       p_source: "auto",
     });
     if (error) {
-      const mapped = mapRpcError(error.message) as { ok: false; message: string };
-      failed.push({ orderId: a.orderId, message: mapped.message });
+      const mapped = mapRpcError(error.message) as { ok: false; message: string; messageKey?: string };
+      failed.push({ orderId: a.orderId, message: mapped.message, messageKey: mapped.messageKey });
     } else {
       applied += 1;
     }

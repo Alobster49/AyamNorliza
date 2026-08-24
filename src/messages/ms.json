@@ -549,7 +549,7 @@
       "customers": "Pelanggan",
       "marketPrices": "Harga Pasaran",
       "deliverySetup": "Persediaan Penghantaran",
-      "dispatch": "Penghantaran Keluar",
+      "dispatch": "Penghantaran keluar",
       "loading": "Muatan",
       "deliveryRuns": "Trip Penghantaran",
       "warehouseTasks": "Tugasan Gudang",
@@ -1473,6 +1473,21 @@
           "withoutSlot": "{zone} · muatan paling ringan"
         }
       },
+      "timeline": {
+        "truckHeader": "Trak",
+        "now": "Sekarang",
+        "atRiskBadge": "{count, plural, other {# berisiko}}",
+        "unassignedNotice": "{count, plural, other {# belum ditugaskan (tidak dipaparkan — lihat Pelan)}}",
+        "blockTitle": "{name} · {time} · {state}",
+        "agendaRow": "{truck} · {state}",
+        "agendaEmpty": "Tiada apa-apa dijadualkan untuk tarikh ini.",
+        "state": {
+          "ready": "Sedia",
+          "pending": "Belum sedia",
+          "atRisk": "Berisiko",
+          "late": "Lewat"
+        }
+      },
       "moveNotAllowed": "Pergerakan tidak dibenarkan",
       "blocked": {
         "notDispatchable": "Hanya order yang disahkan atau sedia boleh dihantar keluar.",
@@ -1838,6 +1853,34 @@
       "title": "Tiada lori di papan hari ini",
       "titleDate": "Tiada lori di papan untuk tarikh ini",
       "subtitle": "Ayam rehat sehingga muatan seterusnya."
+    },
+    "capacity": {
+      "onBoard": "{loaded} / {total} kg dimuatkan",
+      "overCapacityBy": " · melebihi kapasiti sebanyak {kg} kg",
+      "freeOf": " · {free} kg baki daripada {capacity}"
+    },
+    "job": {
+      "undoLoadingAria": "Buat asal muatan {name}",
+      "undo": "buat asal",
+      "markLoadedAria": "Tandakan {name} dimuatkan",
+      "next": "Seterusnya",
+      "dropOf": "penghantaran {drop} daripada {total}",
+      "notWeighedYet": "Belum ditimbang",
+      "weighNow": "Timbang sekarang →",
+      "weighNowAria": "— buka stesen timbang untuk {name}"
+    },
+    "lane": {
+      "ariaLabel": "{truck}, {done} daripada {total} dimuatkan",
+      "departedNotice": "Trak ini sudah bertolak — muatan ditutup.",
+      "emptyNotice": "Tiada apa ditugaskan pada trak ini lagi."
+    },
+    "toast": {
+      "couldNotUpdateTitle": "Tidak dapat kemas kini",
+      "loadedTitle": "{name} dimuatkan"
+    },
+    "summary": {
+      "loadedAcross": "{done} daripada {total} dimuatkan merentasi {count, plural, other {# trak}}",
+      "swipeHint": "Leret untuk trak seterusnya"
     }
   }
 }
