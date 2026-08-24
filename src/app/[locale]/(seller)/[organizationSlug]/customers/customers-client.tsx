@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { AddressFields } from "@/components/forms/address-fields";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { lookupPostcode } from "@/lib/malaysia-postcodes";
 import { parseCustomerAddress } from "@/features/seller/lib/customer-schema";
 import {
@@ -55,6 +56,10 @@ export function CustomersClient({
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<CustomerWithPortal | null>(null);
+  // Target and visibility are separate so the closing dialog keeps its text
+  // through the exit animation.
+  const [deleteTarget, setDeleteTarget] = useState<CustomerWithPortal | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -162,8 +167,7 @@ export function CustomersClient({
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t("deleteConfirm"))) return;
+  const performDelete = async (id: string) => {
     try {
       await deleteCustomer(id);
       setCustomers(customers.filter((c) => c.id !== id));
@@ -284,7 +288,10 @@ export function CustomersClient({
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleDelete(customer.id)}
+                        onClick={() => {
+                          setDeleteTarget(customer);
+                          setDeleteOpen(true);
+                        }}
                       >
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
@@ -370,6 +377,17 @@ export function CustomersClient({
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={deleteOpen}
+        onOpenChange={(next) => {
+          if (!next) setDeleteOpen(false);
+        }}
+        title={t("deleteTitle")}
+        description={t("deleteConfirm", { name: deleteTarget?.name ?? "" })}
+        confirmLabel={t("confirmDelete")}
+        onConfirm={() => (deleteTarget ? performDelete(deleteTarget.id) : undefined)}
+      />
     </div>
   );
 }

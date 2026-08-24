@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { startMfaEnrollAction, verifyMfaChallengeAction, unenrollMfaAction } from "@/features/identity-access/server/auth-actions";
 import { toLocaleAgnostic } from "@/lib/auth/next-path";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 
 export interface EnrolledFactor {
   factorId: string;
@@ -63,21 +64,6 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
   async function skip() {
     // See `verify()` above.
     router.push(toLocaleAgnostic(nextPath) ?? "/mfa");
-  }
-
-  async function remove(factorId: string) {
-    if (!confirm(t("removeConfirm"))) {
-      return;
-    }
-    setError(null);
-    setPending(true);
-    const result = await unenrollMfaAction({ factorId });
-    setPending(false);
-    if (!result.ok) {
-      setError(tRoot(result.messageKey as never));
-      return;
-    }
-    setEnrolled(null);
   }
 
   return (
@@ -166,14 +152,12 @@ export function MfaStatusCard({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [removed, setRemoved] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const totp = factors.find((f) => f.friendly_name);
   const router = useRouter();
 
-  async function remove() {
+  async function performRemove() {
     if (!totp) return;
-    if (!confirm(t("removeConfirm"))) {
-      return;
-    }
     setError(null);
     setPending(true);
     const result = await unenrollMfaAction({ factorId: totp.id });
@@ -212,9 +196,24 @@ export function MfaStatusCard({
           <p className="mfa-status__on">
             {t.rich("statusEnabled", { strong })}
           </p>
-          <button type="button" onClick={remove} disabled={pending} className="btn-danger">
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
+            disabled={pending}
+            className="btn-danger"
+          >
             {pending ? t("removing") : t("removeButton")}
           </button>
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={(next) => {
+              if (!next) setConfirmOpen(false);
+            }}
+            title={t("removeTitle")}
+            description={t("removeConfirm")}
+            confirmLabel={t("removeAction")}
+            onConfirm={performRemove}
+          />
         </>
       ) : (
         <>

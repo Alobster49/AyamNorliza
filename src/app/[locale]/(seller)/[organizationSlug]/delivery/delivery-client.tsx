@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   createBlock,
@@ -35,6 +35,7 @@ import {
   type ConsoleHandlers,
 } from "@/features/logistics/components/setup/setup-console";
 import { ToastAction } from "@/components/ui/toast";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 type DeliveryClientProps = {
@@ -62,6 +63,14 @@ export function DeliveryClient({
   const [facility, setFacility] = useState<Facility | null>(logisticsSetup.facility);
   const [bays, setBays] = useState<Bay[]>(logisticsSetup.bays);
   const [ranges, setRanges] = useState<ZonePostcodeRange[]>(logisticsSetup.ranges);
+  // Delete-confirm state: target and visibility kept separate so the closing
+  // dialog retains its text through the exit animation.
+  const [removeTarget, setRemoveTarget] = useState<{
+    entity: SetupEntity;
+    recordId: string;
+    name: string;
+  } | null>(null);
+  const [removeOpen, setRemoveOpen] = useState(false);
 
   const canEdit = role === "owner" || role === "org_admin";
 
@@ -229,39 +238,109 @@ export function DeliveryClient({
 
   // -- Permanent delete -----------------------------------------------
 
-  async function handleRemove(entity: SetupEntity, recordId: string) {
+  /**
+   * Opens the confirm dialog. The returned promise resolves only after the
+   * user confirms AND the delete succeeds — the setup console clears its
+   * editor selection on resolution, which must not happen on cancel or
+   * failure (the record still exists then).
+   */
+  const removeResolver = useRef<(() => void) | null>(null);
+  function handleRemove(entity: SetupEntity, recordId: string): Promise<void> {
     if (entity === "zones") {
       const zone = zones.find((z) => z.id === recordId);
-      if (!zone || !confirm(t("confirmDeleteZone", { name: zone.name }))) return;
-      const result = await deleteZone(organizationSlug, zone.id);
-      if (!result.ok) return fail(result.message);
-      setZones((prev) => prev.filter((z) => z.id !== zone.id));
-      setTruckZonesList((prev) => prev.filter((tz) => tz.zone_id !== zone.id));
-      toast({ title: t("zoneDeleted") });
+      if (!zone) return Promise.resolve();
+      setRemoveTarget({ entity, recordId, name: zone.name });
     } else if (entity === "trucks") {
       const truck = trucks.find((tr) => tr.id === recordId);
-      if (!truck || !confirm(t("confirmDeleteTruck", { name: truck.name }))) return;
-      const result = await deleteTruck(organizationSlug, truck.id);
-      if (!result.ok) return fail(result.message);
-      setTrucks((prev) => prev.filter((tr) => tr.id !== truck.id));
-      setTruckZonesList((prev) => prev.filter((tz) => tz.truck_id !== truck.id));
-      setSlots((prev) => prev.filter((s) => s.truck_id !== truck.id));
-      setBlocks((prev) => prev.filter((b) => b.truck_id !== truck.id));
+      if (!truck) return Promise.resolve();
+      setRemoveTarget({ entity, recordId, name: truck.name });
+    } else if (entity === "slots" || entity === "blocks") {
+      setRemoveTarget({ entity, recordId, name: "" });
+    } else {
+      return Promise.resolve();
+    }
+    setRemoveOpen(true);
+    return new Promise<void>((resolve) => {
+      removeResolver.current = resolve;
+    });
+  }
+
+  async function performRemove(entity: SetupEntity, recordId: string): Promise<boolean> {
+    if (entity === "zones") {
+      const result = await deleteZone(organizationSlug, recordId);
+      if (!result.ok) {
+        fail(result.message);
+        return false;
+      }
+      setZones((prev) => prev.filter((z) => z.id !== recordId));
+      setTruckZonesList((prev) => prev.filter((tz) => tz.zone_id !== recordId));
+      toast({ title: t("zoneDeleted") });
+    } else if (entity === "trucks") {
+      const result = await deleteTruck(organizationSlug, recordId);
+      if (!result.ok) {
+        fail(result.message);
+        return false;
+      }
+      setTrucks((prev) => prev.filter((tr) => tr.id !== recordId));
+      setTruckZonesList((prev) => prev.filter((tz) => tz.truck_id !== recordId));
+      setSlots((prev) => prev.filter((s) => s.truck_id !== recordId));
+      setBlocks((prev) => prev.filter((b) => b.truck_id !== recordId));
       toast({ title: t("truckDeleted") });
     } else if (entity === "slots") {
-      if (!confirm(t("confirmDeleteSlot"))) return;
       const result = await deleteSlot(organizationSlug, recordId);
-      if (!result.ok) return fail(result.message);
+      if (!result.ok) {
+        fail(result.message);
+        return false;
+      }
       setSlots((prev) => prev.filter((s) => s.id !== recordId));
       toast({ title: t("slotDeleted") });
     } else if (entity === "blocks") {
-      if (!confirm(t("confirmRemoveBlock"))) return;
       const result = await deleteBlock(organizationSlug, recordId);
-      if (!result.ok) return fail(result.message);
+      if (!result.ok) {
+        fail(result.message);
+        return false;
+      }
       setBlocks((prev) => prev.filter((b) => b.id !== recordId));
       toast({ title: t("blockRemoved") });
     }
+    return true;
   }
+
+  async function confirmRemove() {
+    if (!removeTarget) return;
+    const ok = await performRemove(removeTarget.entity, removeTarget.recordId);
+    if (ok) {
+      removeResolver.current?.();
+    }
+    removeResolver.current = null;
+  }
+
+  const removeContent =
+    removeTarget?.entity === "zones"
+      ? {
+          title: t("deleteZoneTitle"),
+          description: t("confirmDeleteZone", { name: removeTarget.name }),
+          confirmLabel: t("confirmDelete"),
+        }
+      : removeTarget?.entity === "trucks"
+        ? {
+            title: t("deleteTruckTitle"),
+            description: t("confirmDeleteTruck", { name: removeTarget.name }),
+            confirmLabel: t("confirmDelete"),
+          }
+        : removeTarget?.entity === "slots"
+          ? {
+              title: t("deleteSlotTitle"),
+              description: t("confirmDeleteSlot"),
+              confirmLabel: t("confirmDelete"),
+            }
+          : removeTarget?.entity === "blocks"
+            ? {
+                title: t("removeBlockTitle"),
+                description: t("confirmRemoveBlock"),
+                confirmLabel: t("confirmRemove"),
+              }
+            : null;
 
   async function handleToggleTruckZone(truckId: string, zoneId: string, checked: boolean) {
     const truck = trucks.find((t) => t.id === truckId);
@@ -378,6 +457,22 @@ export function DeliveryClient({
             />
           ),
         }}
+      />
+
+      <ConfirmDialog
+        open={removeOpen}
+        onOpenChange={(next) => {
+          if (!next) {
+            setRemoveOpen(false);
+            // Cancelled: leave the console's promise unresolved so its
+            // editor selection stays on the still-existing record.
+            removeResolver.current = null;
+          }
+        }}
+        title={removeContent?.title ?? ""}
+        description={removeContent?.description ?? ""}
+        confirmLabel={removeContent?.confirmLabel ?? ""}
+        onConfirm={confirmRemove}
       />
     </div>
   );
