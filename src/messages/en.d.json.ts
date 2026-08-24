@@ -608,6 +608,37 @@ declare const messages: {
       "activeSupportSessions": "Active support sessions",
       "priorities": "Needs attention",
       "allClear": "Nothing needs attention."
+    },
+    "insights": {
+      "title": "How to improve",
+      "pricing": {
+        "title": "Price vs market",
+        "product": "Product",
+        "realized": "Realized RM/kg",
+        "market": "Market RM/kg",
+        "gap": "Gap",
+        "noMarket": "No market mapping"
+      },
+      "weight": {
+        "title": "Weight leakage",
+        "summary": "{diff} kg given away ({pct} of allocated weight)",
+        "none": "No leakage recorded in this period."
+      },
+      "retention": {
+        "title": "Customer retention",
+        "active": "Active customers",
+        "new": "New",
+        "returning": "Returning",
+        "silentTitle": "Silent 30+ days (win-back)",
+        "noneSilent": "No silent customers. Nice."
+      },
+      "delivery": {
+        "title": "Delivery quality",
+        "failureRate": "Failed stop rate",
+        "attempts": "{count} attempts",
+        "slotFill": "Slot fill",
+        "byZone": "Failures by zone"
+      }
     }
   },
   "roles": {

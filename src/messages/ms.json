@@ -605,6 +605,37 @@
       "activeSupportSessions": "Sesi sokongan aktif",
       "priorities": "Perlu perhatian",
       "allClear": "Tiada apa yang perlu perhatian."
+    },
+    "insights": {
+      "title": "Cara nak improve",
+      "pricing": {
+        "title": "Harga vs pasaran",
+        "product": "Produk",
+        "realized": "RM/kg sebenar",
+        "market": "RM/kg pasaran",
+        "gap": "Beza",
+        "noMarket": "Tiada pemetaan pasaran"
+      },
+      "weight": {
+        "title": "Susut berat",
+        "summary": "{diff} kg terlebih bagi ({pct} daripada berat diperuntuk)",
+        "none": "Tiada susut berat dalam tempoh ini."
+      },
+      "retention": {
+        "title": "Pengekalan pelanggan",
+        "active": "Pelanggan aktif",
+        "new": "Baharu",
+        "returning": "Kembali",
+        "silentTitle": "Senyap 30+ hari (win-back)",
+        "noneSilent": "Tiada pelanggan senyap. Bagus."
+      },
+      "delivery": {
+        "title": "Kualiti penghantaran",
+        "failureRate": "Kadar stop gagal",
+        "attempts": "{count} percubaan",
+        "slotFill": "Kepenuhan slot",
+        "byZone": "Kegagalan ikut zon"
+      }
     }
   },
   "roles": {

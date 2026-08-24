@@ -2,7 +2,11 @@ import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { MANAGER_ROLES } from "@/features/orders/lib/roles";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
-import { getDashboardSales, getDashboardToday } from "@/features/dashboard/server/analytics-actions";
+import {
+  getDashboardInsights,
+  getDashboardSales,
+  getDashboardToday,
+} from "@/features/dashboard/server/analytics-actions";
 import { bucketForRange, resolveRange } from "@/features/dashboard/analytics/date-range";
 import { AnalyticsDashboard } from "@/features/dashboard/analytics/components/analytics-dashboard";
 import {
@@ -16,6 +20,7 @@ import {
   buildAdminSummary,
   type AdminSummary,
 } from "@/features/dashboard/analytics/admin-summary-model";
+import { getMarketSuggestions } from "@/features/market/server/actions";
 
 export default async function DashboardPage({
   params,
@@ -38,7 +43,7 @@ export default async function DashboardPage({
 
   const initialRange = resolveRange("30d", timeZone);
   const isAdmin = role === "owner" || role === "org_admin";
-  const [sales, today, adminSummary] = await Promise.all([
+  const [sales, today, insights, marketSuggestions, adminSummary] = await Promise.all([
     getDashboardSales(
       organizationSlug,
       initialRange.from,
@@ -46,6 +51,8 @@ export default async function DashboardPage({
       bucketForRange(initialRange.from, initialRange.to),
     ),
     getDashboardToday(organizationSlug),
+    getDashboardInsights(organizationSlug, initialRange.from, initialRange.to),
+    getMarketSuggestions(orgId).catch(() => []),
     isAdmin
       ? Promise.all([
           listMembers(orgId),
@@ -74,6 +81,8 @@ export default async function DashboardPage({
       initialRange={initialRange}
       initialSales={sales.ok ? sales.data : null}
       today={today.ok ? today.data : null}
+      initialInsights={insights.ok ? insights.data : null}
+      marketSuggestions={marketSuggestions}
       adminSummary={adminSummary}
     />
   );

@@ -2,9 +2,14 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { getDashboardSales } from "@/features/dashboard/server/analytics-actions";
+import {
+  getDashboardInsights,
+  getDashboardSales,
+} from "@/features/dashboard/server/analytics-actions";
+import type { MarketSuggestion } from "@/features/market/types";
 import { bucketForRange, resolveRange, type RangePreset } from "../date-range";
 import { buildSalesViewModel, type SalesPayload } from "../sales-model";
+import { buildInsightsViewModel, type InsightsPayload } from "../insights-model";
 import type { TodayPayload } from "../today-model";
 import type { AdminSummary } from "../admin-summary-model";
 import { KpiRow } from "./kpi-row";
@@ -12,6 +17,7 @@ import { RangePicker } from "./range-picker";
 import { SectionError } from "./section-error";
 import { RevenueChart } from "./revenue-chart";
 import { FunnelCard } from "./funnel-card";
+import { InsightsRow } from "./insights-row";
 import { TodayStrip } from "./today-strip";
 import { AdminPanel } from "./admin-panel";
 
@@ -21,6 +27,8 @@ type Props = {
   initialRange: { from: string; to: string };
   initialSales: SalesPayload | null;
   today: TodayPayload | null;
+  initialInsights: InsightsPayload | null;
+  marketSuggestions: MarketSuggestion[];
   adminSummary: AdminSummary | null;
 };
 
@@ -38,6 +46,8 @@ export function AnalyticsDashboard({
   initialRange,
   initialSales,
   today,
+  initialInsights,
+  marketSuggestions,
   adminSummary,
 }: Props) {
   const t = useTranslations("analytics");
@@ -54,6 +64,8 @@ export function AnalyticsDashboard({
       : null,
   );
   const [salesError, setSalesError] = useState(initialSales === null);
+  const [insightsState, setInsightsState] = useState<InsightsPayload | null>(initialInsights);
+  const [insightsError, setInsightsError] = useState(initialInsights === null);
   const [isPending, startTransition] = useTransition();
   const requestSeq = useRef(0);
 
@@ -65,18 +77,32 @@ export function AnalyticsDashboard({
     [salesState],
   );
 
+  const insightsVm = useMemo(
+    () => (insightsState ? buildInsightsViewModel(insightsState, marketSuggestions) : null),
+    [insightsState, marketSuggestions],
+  );
+
   function applyRange(next: { from: string; to: string }) {
     setRange(next);
     const bucket = bucketForRange(next.from, next.to);
     const seq = ++requestSeq.current;
     startTransition(async () => {
-      const result = await getDashboardSales(organizationSlug, next.from, next.to, bucket);
+      const [salesResult, insightsResult] = await Promise.all([
+        getDashboardSales(organizationSlug, next.from, next.to, bucket),
+        getDashboardInsights(organizationSlug, next.from, next.to),
+      ]);
       if (seq !== requestSeq.current) return; // superseded by a newer request
-      if (result.ok) {
-        setSalesState({ payload: result.data, from: next.from, to: next.to, bucket });
+      if (salesResult.ok) {
+        setSalesState({ payload: salesResult.data, from: next.from, to: next.to, bucket });
         setSalesError(false);
       } else {
         setSalesError(true);
+      }
+      if (insightsResult.ok) {
+        setInsightsState(insightsResult.data);
+        setInsightsError(false);
+      } else {
+        setInsightsError(true);
       }
     });
   }
@@ -103,6 +129,7 @@ export function AnalyticsDashboard({
           </div>
         </>
       )}
+      {insightsError || !insightsVm ? <SectionError /> : <InsightsRow vm={insightsVm} />}
       {today ? <TodayStrip payload={today} /> : <SectionError />}
       {adminSummary && <AdminPanel summary={adminSummary} organizationSlug={organizationSlug} />}
     </div>
