@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/i18n/navigation";
 import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem, OrderStatus } from "@/features/orders/types";
 import { ORDER_STATUSES, ORDER_STATUS_COLORS } from "@/features/orders/types";
@@ -178,8 +178,8 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
                         </TableCell>
                         <TableCell className="text-muted-foreground">{formatDate(order.delivery_date)}</TableCell>
                         <TableCell className="text-right font-medium">
-  {order.status === "closed" ? formatPrice(order.total_amount) : "—"}
-</TableCell>
+                          {order.status === "closed" ? formatPrice(order.total_amount) : "—"}
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
