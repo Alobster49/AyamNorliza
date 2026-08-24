@@ -71,3 +71,13 @@ export function isAtRisk(
   if (order.delivery_date === today) return "dueToday";
   return null;
 }
+
+export function matchesSearch(order: OrderListItem, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    (order.customer?.name ?? "").toLowerCase().includes(q) ||
+    (order.zone?.name ?? "").toLowerCase().includes(q) ||
+    order.id.toLowerCase().startsWith(q)
+  );
+}

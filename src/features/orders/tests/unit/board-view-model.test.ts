@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyLens, classifyDropTarget, displayAmount, isAtRisk } from "../../lib/board-view-model";
+import { applyLens, classifyDropTarget, displayAmount, isAtRisk, matchesSearch } from "../../lib/board-view-model";
 import type { OrderListItem } from "../../types";
 
 const listItem = (over: Partial<OrderListItem>): OrderListItem =>
@@ -82,5 +82,24 @@ describe("isAtRisk", () => {
   it("never flags ready/delivered/closed/cancelled or future dates", () => {
     expect(isAtRisk({ status: "ready", delivery_date: "2026-08-20" }, today)).toBeNull();
     expect(isAtRisk({ status: "pending", delivery_date: "2026-08-25" }, today)).toBeNull();
+  });
+});
+
+describe("matchesSearch", () => {
+  const order = listItem({
+    id: "1a1e6bcb-0000-0000-0000-000000000000",
+    customer: { name: "Restoran Nasi Ayam Hj Salleh" },
+    zone: { name: "Zone 1" },
+  });
+
+  it("matches customer name, zone, and id prefix, case-insensitively", () => {
+    expect(matchesSearch(order, "salleh")).toBe(true);
+    expect(matchesSearch(order, "zone 1")).toBe(true);
+    expect(matchesSearch(order, "1a1e6b")).toBe(true);
+  });
+
+  it("empty query matches everything; misses miss", () => {
+    expect(matchesSearch(order, "  ")).toBe(true);
+    expect(matchesSearch(order, "mak timah")).toBe(false);
   });
 });

@@ -1549,6 +1549,7 @@ declare const messages: {
       }
     },
     "client": {
+      "searchPlaceholder": "Search customer, zone, or order id…",
       "viewToggle": {
         "label": "Orders view",
         "board": "Board",

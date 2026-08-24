@@ -6,7 +6,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem, OrderStatus } from "@/features/orders/types";
 import { ORDER_STATUSES, ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
-import { applyLens, displayAmount, isAtRisk, type DateLens } from "@/features/orders/lib/board-view-model";
+import { applyLens, displayAmount, isAtRisk, matchesSearch, type DateLens } from "@/features/orders/lib/board-view-model";
 import {
   Table,
   TableBody,
@@ -18,7 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { LayoutGrid, Plus, Table2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { LayoutGrid, Plus, Search, Table2 } from "lucide-react";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { ViewToggle, ViewButton } from "@/components/shared/view-toggle";
 import { OrdersBoard } from "@/features/orders/components/orders-board";
@@ -46,6 +47,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
   const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [view, setView] = useState<ViewMode>("board");
   const [lens, setLens] = useState<DateLens>("all");
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     // router.refresh() after a workflow returns fresh server data — adopt it.
@@ -79,11 +81,14 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
     }
   }
 
-  const lensedOrders = useMemo(() => applyLens(orders, lens, today), [orders, lens, today]);
+  const visibleBase = useMemo(
+    () => applyLens(orders, lens, today).filter((o) => matchesSearch(o, search)),
+    [orders, lens, today, search],
+  );
 
   const counts = useMemo(() => {
     const base: Record<TabValue, number> = {
-      all: lensedOrders.length,
+      all: visibleBase.length,
       pending: 0,
       confirmed: 0,
       ready: 0,
@@ -91,14 +96,14 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
       closed: 0,
       cancelled: 0,
     };
-    for (const order of lensedOrders) {
+    for (const order of visibleBase) {
       base[order.status] += 1;
     }
     return base;
-  }, [lensedOrders]);
+  }, [visibleBase]);
 
   const visibleOrders =
-    activeTab === "all" ? lensedOrders : lensedOrders.filter((o) => o.status === activeTab);
+    activeTab === "all" ? visibleBase : visibleBase.filter((o) => o.status === activeTab);
 
   const formatDate = (date: string) =>
     format.dateTime(new Date(date), { day: "2-digit", month: "short", year: "numeric" });
@@ -108,6 +113,15 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3" data-testid="orders-toolbar">
+        <div className="relative w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={t("searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <div className="mr-auto">
           <ViewToggle label={t("lens.label")}>
             {(["today", "tomorrow", "all"] as const).map((value) => (
@@ -150,7 +164,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
       ) : view === "board" ? (
         <OrdersBoard
           organizationSlug={organizationSlug}
-          orders={lensedOrders}
+          orders={visibleBase}
           callerRole={callerRole}
           onOrdersChange={setOrders}
           today={today}
