@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { todayInTimeZone } from "@/lib/time/org-date";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
 import { DISPATCH_ROLES } from "@/features/logistics/lib/roles";
@@ -17,7 +18,7 @@ export default async function LoadingPage({
     ({ timeZone } = await requireOrgRole(organizationSlug, DISPATCH_ROLES));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
-      redirect(`/${organizationSlug}/tasks`);
+      redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });
     }
     throw error;
   }

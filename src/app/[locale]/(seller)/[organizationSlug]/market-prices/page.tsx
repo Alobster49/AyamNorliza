@@ -1,4 +1,6 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
 import { MANAGER_ROLES } from "@/features/orders/lib/roles";
 import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
@@ -21,7 +23,7 @@ export default async function MarketPricesPage({
       return await requireOrgRole(organizationSlug, MANAGER_ROLES);
     } catch (error) {
       if (error instanceof OrderPermissionError) {
-        redirect(`/${organizationSlug}/tasks`);
+        redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });
       }
       throw error;
     }

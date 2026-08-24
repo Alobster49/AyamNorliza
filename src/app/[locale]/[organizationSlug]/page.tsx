@@ -17,7 +17,9 @@
  * would inherit that group's role check, and case 2 would loop.
  */
 
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
 import {
@@ -39,5 +41,5 @@ export default async function OrganizationRootPage({
   // Not an active member of this org (or it is not theirs at all): fall back
   // to an org they do belong to, or /signup when they belong to none.
   const path = await resolveLandingPathForSlug(org.id, organizationSlug);
-  redirect(path ?? (await resolveLandingPath()));
+  redirect({ href: path ?? (await resolveLandingPath()), locale: await getLocale() });
 }

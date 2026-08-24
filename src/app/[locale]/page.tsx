@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { resolveLandingPath } from "@/features/identity-access/server/landing";
 
@@ -7,5 +8,5 @@ export default async function HomePage() {
   // Signed in but with no memberships this resolves to /signup. That is a
   // neutral landing page rather than the signup flow proper - existing users
   // should contact their org owner for an invite.
-  redirect(await resolveLandingPath());
+  redirect({ href: await resolveLandingPath(), locale: await getLocale() });
 }

@@ -296,6 +296,9 @@ export function searchSetup(snapshot: SetupSnapshot, query: string): SearchHit[]
       hits.push({
         entity: "postcodes",
         recordId: zone.id,
+        // Dead for rendering — `labelKey` below always wins in the
+        // consumer (setup-console.tsx) — but `label` is a required field
+        // on `SearchHit`, so a real fallback string still has to live here.
         label: `${q} — ${zone.name}`,
         labelKey: "postcodeMatch",
         labelValues: { postcode: q, zone: zone.name },

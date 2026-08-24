@@ -1,4 +1,6 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { DRIVER_AND_MANAGER_ROLES } from "@/features/orders/lib/roles";
@@ -34,7 +36,7 @@ export default async function DriveLayout({
     .maybeSingle();
 
   if (!member || !DRIVER_AND_MANAGER_ROLES.includes(member.role as never)) {
-    redirect("/");
+    redirect({ href: "/", locale: await getLocale() });
   }
 
   return (

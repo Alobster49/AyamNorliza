@@ -1,9 +1,9 @@
 /**
  * Unit tests for `requireBuyerOrRedirect`.
  *
- * The behaviour under test: an unauthenticated buyer must land on the portal
- * login page - `/buyer_portal/{slug}/login` - and not on `/{slug}/login`,
- * which is not a route and used to render a 404.
+ * The behaviour under test: an unauthenticated buyer must land on the
+ * locale-prefixed portal login page - `/en/buyer_portal/{slug}/login` - and
+ * not on `/{slug}/login`, which is not a route and used to render a 404.
  */
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,6 +16,9 @@ vi.mock("next/navigation", () => ({
   redirect: vi.fn((url: string) => {
     throw new Error(`REDIRECT:${url}`);
   }),
+}));
+vi.mock("next-intl/server", () => ({
+  getLocale: vi.fn().mockResolvedValue("en"),
 }));
 
 import { headers } from "next/headers";
@@ -86,14 +89,14 @@ describe("requireBuyerOrRedirect", () => {
   it("redirects to the portal login page, not the non-existent /{slug}/login", async () => {
     mockRequest({ pathname: null });
     const target = await redirectTarget();
-    expect(target).toBe(`/buyer_portal/${SLUG}/login`);
+    expect(target).toBe(`/en/buyer_portal/${SLUG}/login`);
     expect(target).not.toBe(`/${SLUG}/login`);
   });
 
   it("carries the page the buyer was on", async () => {
     mockRequest({ pathname: `/buyer_portal/${SLUG}/orders/order-9` });
     await expect(redirectTarget()).resolves.toBe(
-      `/buyer_portal/${SLUG}/login?next=%2Fbuyer_portal%2F${SLUG}%2Forders%2Forder-9`,
+      `/en/buyer_portal/${SLUG}/login?next=%2Fbuyer_portal%2F${SLUG}%2Forders%2Forder-9`,
     );
   });
 
@@ -105,35 +108,35 @@ describe("requireBuyerOrRedirect", () => {
     // dropped.
     mockRequest({ pathname: `/ms/buyer_portal/${SLUG}/orders/order-9` });
     await expect(redirectTarget()).resolves.toBe(
-      `/buyer_portal/${SLUG}/login?next=%2Fbuyer_portal%2F${SLUG}%2Forders%2Forder-9`,
+      `/en/buyer_portal/${SLUG}/login?next=%2Fbuyer_portal%2F${SLUG}%2Forders%2Forder-9`,
     );
   });
 
   it("redirects a signed-in non-buyer to the portal login too", async () => {
     mockRequest({ userId: "user-1", buyerId: null, pathname: null });
     await expect(redirectTarget()).resolves.toBe(
-      `/buyer_portal/${SLUG}/login`,
+      `/en/buyer_portal/${SLUG}/login`,
     );
   });
 
   it("refuses a return path from another organization's portal", async () => {
     mockRequest({ pathname: "/buyer_portal/other-org/orders" });
     await expect(redirectTarget()).resolves.toBe(
-      `/buyer_portal/${SLUG}/login`,
+      `/en/buyer_portal/${SLUG}/login`,
     );
   });
 
   it("refuses a return path outside the buyer portal", async () => {
     mockRequest({ pathname: `/${SLUG}/settings/users` });
     await expect(redirectTarget()).resolves.toBe(
-      `/buyer_portal/${SLUG}/login`,
+      `/en/buyer_portal/${SLUG}/login`,
     );
   });
 
   it("does not return the buyer to the login page itself", async () => {
     mockRequest({ pathname: `/buyer_portal/${SLUG}/login` });
     await expect(redirectTarget()).resolves.toBe(
-      `/buyer_portal/${SLUG}/login`,
+      `/en/buyer_portal/${SLUG}/login`,
     );
   });
 });

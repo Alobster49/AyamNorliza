@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation";
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
 import { MANAGER_ROLES } from "@/features/orders/lib/roles";
 import { getDeliverySetup } from "@/features/orders/server/schedule-actions";
@@ -17,7 +18,7 @@ export default async function DeliveryPage({
       return await requireOrgRole(organizationSlug, MANAGER_ROLES);
     } catch (error) {
       if (error instanceof OrderPermissionError) {
-        redirect(`/${organizationSlug}/tasks`);
+        redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });
       }
       throw error;
     }

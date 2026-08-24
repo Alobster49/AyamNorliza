@@ -436,7 +436,7 @@ export function DriverDeck({
 
               <div className="mt-1 flex gap-2">
                 <Button variant="outline" className="h-11 flex-1" onClick={resetSheet} disabled={busy}>
-                  {t("back")}
+                  {tRoot("common.back")}
                 </Button>
                 <Button
                   className="h-11 flex-[2] bg-emerald-600 hover:bg-emerald-700"
@@ -505,7 +505,7 @@ export function DriverDeck({
 
               <div className="mt-1 flex gap-2">
                 <Button variant="outline" className="h-11 flex-1" onClick={resetSheet} disabled={busy}>
-                  {t("back")}
+                  {tRoot("common.back")}
                 </Button>
                 <Button
                   className="h-11 flex-[2]"

@@ -6,6 +6,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PATHNAME_HEADER, toLocaleAgnostic } from "./next-path";
 
@@ -102,7 +103,15 @@ export async function requireBuyerOrRedirect(organizationSlug: string) {
     if (err instanceof NotABuyerError) {
       const returnPath = await buyerReturnPath(organizationSlug);
       const qs = returnPath ? `?next=${encodeURIComponent(returnPath)}` : "";
-      redirect(`${buyerLoginPath(organizationSlug)}${qs}`);
+      // Locale-prefixed explicitly (same pattern as `requireUserOrRedirect`):
+      // a bare path bounces through the middleware's 307 and drops the
+      // locale. Stays on `next/navigation`'s `redirect()` via a targeted
+      // eslint exemption rather than `@/i18n/navigation` - this module is
+      // reachable from `buyer-auth.test.ts`, and `@/i18n/navigation`'s
+      // client-navigation build fails to resolve under Vitest's node
+      // environment.
+      const locale = await getLocale();
+      redirect(`/${locale}${buyerLoginPath(organizationSlug)}${qs}`);
     }
     throw err;
   }

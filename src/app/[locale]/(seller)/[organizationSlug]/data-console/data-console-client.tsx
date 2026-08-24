@@ -33,6 +33,7 @@ type DataConsoleClientProps = {
 
 export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) {
   const t = useTranslations("dataConsole");
+  const tCommon = useTranslations("common");
   const CONFIRM_PHRASE = t("clearCard.confirmPhrase");
   const [confirmText, setConfirmText] = useState("");
   const [message, setMessage] = useState<string | null>(null);
@@ -169,7 +170,7 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
                 </DialogHeader>
                 <DialogFooter>
                   <DialogClose asChild>
-                    <Button variant="outline">{t("seedCard.cancel")}</Button>
+                    <Button variant="outline">{tCommon("cancel")}</Button>
                   </DialogClose>
                   <DialogClose asChild>
                     <Button disabled={busy} onClick={runSeed}>

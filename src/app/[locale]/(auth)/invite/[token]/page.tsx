@@ -20,6 +20,10 @@ export default async function InviteAcceptPage({
 }) {
   const { token } = await params;
   const locale = await getLocale();
+  // Locale-prefixed explicitly (same pattern as `requireUserOrRedirect`):
+  // this file keeps `next/navigation`'s `redirect()` via a targeted eslint
+  // exemption (see eslint.config.mjs) since it already builds `/${locale}`
+  // itself - `@/i18n/navigation`'s redirect would double-prefix it.
   if (!token) redirect(`/${locale}/login`);
 
   // The server action invokes the Edge Function. Show a small

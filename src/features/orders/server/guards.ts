@@ -11,6 +11,7 @@
 import "server-only";
 
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export class OrderPermissionError extends Error {
@@ -96,7 +97,14 @@ export async function requireRoleOrRedirect(
     return await requireOrgRole(organizationSlug, roles);
   } catch (e) {
     if (e instanceof OrderPermissionError) {
-      redirect(`/${organizationSlug}`);
+      // Locale-prefixed explicitly (same pattern as `requireUserOrRedirect`):
+      // a bare path bounces through the middleware's 307 and drops the
+      // locale. Stays on `next/navigation`'s `redirect()` via a targeted
+      // eslint exemption rather than `@/i18n/navigation` - this module is
+      // reachable from `dispatch-actions.test.ts`/`facility-actions.test.ts`,
+      // and `@/i18n/navigation`'s client-navigation build fails to resolve
+      // under Vitest's node environment.
+      redirect(`/${await getLocale()}/${organizationSlug}`);
     }
     throw e;
   }
