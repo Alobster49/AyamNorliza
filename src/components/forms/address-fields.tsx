@@ -7,6 +7,7 @@
  * state via the vendored postcode dataset.
  */
 
+import { useTranslations } from "next-intl";
 import {
   areasForState,
   lookupPostcode,
@@ -56,6 +57,7 @@ export function AddressFields({
   idPrefix = "address",
   required = true,
 }: AddressFieldsProps) {
+  const t = useTranslations("addressFields");
   const ids = {
     line: `${idPrefix}-line`,
     postcode: `${idPrefix}-postcode`,
@@ -87,10 +89,10 @@ export function AddressFields({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor={ids.line}>Address</Label>
+        <Label htmlFor={ids.line}>{t("address")}</Label>
         <Textarea
           id={ids.line}
-          placeholder="House no, street, taman/apartment"
+          placeholder={t("addressPlaceholder")}
           value={value.addressLine}
           onChange={(e) => onChange({ ...value, addressLine: e.target.value })}
           rows={3}
@@ -102,10 +104,10 @@ export function AddressFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor={ids.postcode}>Postcode</Label>
+          <Label htmlFor={ids.postcode}>{t("postcode")}</Label>
           <Input
             id={ids.postcode}
-            placeholder="e.g. 80000"
+            placeholder={t("postcodePlaceholder")}
             value={value.postcode}
             onChange={(e) => handlePostcode(e.target.value)}
             inputMode="numeric"
@@ -116,7 +118,7 @@ export function AddressFields({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor={ids.state}>State</Label>
+          <Label htmlFor={ids.state}>{t("state")}</Label>
           <Select
             value={value.state}
             onValueChange={(state) => {
@@ -129,7 +131,7 @@ export function AddressFields({
             disabled={disabled}
           >
             <SelectTrigger id={ids.state} className="w-full">
-              <SelectValue placeholder="Select state" />
+              <SelectValue placeholder={t("selectState")} />
             </SelectTrigger>
             <SelectContent>
               {statesList().map((state) => (
@@ -143,7 +145,7 @@ export function AddressFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor={ids.area}>Area</Label>
+        <Label htmlFor={ids.area}>{t("area")}</Label>
         <Select
           value={value.area}
           onValueChange={(area) => {
@@ -160,7 +162,7 @@ export function AddressFields({
         >
           <SelectTrigger id={ids.area} className="w-full">
             <SelectValue
-              placeholder={value.state ? "Select area" : "Pick a state first"}
+              placeholder={value.state ? t("selectArea") : t("pickStateFirst")}
             />
           </SelectTrigger>
           <SelectContent>

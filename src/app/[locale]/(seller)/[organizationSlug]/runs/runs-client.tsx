@@ -24,6 +24,7 @@ import {
 } from "@/features/orders/lib/run-board-model";
 import { shiftIsoDate, todayInTimeZone } from "@/lib/time/org-date";
 import { useTranslations } from "next-intl";
+import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -189,6 +190,7 @@ function StopTable({
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const t = useTranslations("deliveryRuns.table");
+  const tRoot = useTranslations();
 
   function dropOn(index: number) {
     if (dragFrom !== null && dragFrom !== index) onMove(dragFrom, index);
@@ -279,7 +281,7 @@ function StopTable({
                   {row.window ? `${row.window.start}–${row.window.end}` : "—"}
                 </td>
                 <td className="px-3 py-2">
-                  <Chip tone={row.state.tone}>{row.state.label}</Chip>
+                  <Chip tone={row.state.tone}>{resolveMessageKey(tRoot, row.state.labelKey)}</Chip>
                 </td>
               </tr>
             ))}
@@ -319,7 +321,7 @@ function StopTable({
                     </button>
                   </span>
                 )}
-                <Chip tone={row.state.tone}>{row.state.label}</Chip>
+                <Chip tone={row.state.tone}>{resolveMessageKey(tRoot, row.state.labelKey)}</Chip>
               </div>
             </div>
             <p className="text-xs text-muted-foreground">{row.address}</p>

@@ -15,7 +15,12 @@ test("orders page defaults to a kanban board with all six status columns", async
   await signIn(page, OWNER.email, OWNER.password);
   await page.goto("/ayam-norliza-pilot/orders");
 
-  await expect(page.getByRole("button", { name: "New Order", exact: true })).toBeVisible({ timeout: 10_000 });
+  // Scoped to the page toolbar: the Pending column's own "New order" footer
+  // button uses the same visible text, so a bare role+name lookup would be
+  // ambiguous once both are on screen.
+  await expect(
+    page.getByTestId("orders-toolbar").getByRole("button", { name: "New order", exact: true }),
+  ).toBeVisible({ timeout: 10_000 });
   for (const label of COLUMNS) {
     // Each column is a <section aria-label={status label}>.
     await expect(page.getByRole("region", { name: label })).toBeVisible();

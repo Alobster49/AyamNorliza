@@ -12,7 +12,7 @@
  */
 
 import type { DeliveryAttempt, OrderWithItems, RunStatus, RunWithOrders } from "../types";
-import { DELIVERY_FAILURE_LABELS } from "../types";
+import { DELIVERY_FAILURE_REASON_KEY } from "../types";
 
 // ---------------------------------------------------------------------------
 // Shared helpers
@@ -211,14 +211,15 @@ export function completionImpact(run: RunWithOrders): { markedDelivered: number 
 
 export type StopStateKind = "dropped" | "failed" | "on_truck" | "not_loaded" | "waiting";
 
-export type StopState = { kind: StopStateKind; label: string; tone: "ok" | "hot" | "warn" | "accent" | "muted" };
+export type StopState = { kind: StopStateKind; labelKey: string; tone: "ok" | "hot" | "warn" | "accent" | "muted" };
 
+/** `labelKey` is a full message-catalog path, resolved via `resolveMessageKey`. */
 const STOP_STATE: Record<StopStateKind, Omit<StopState, "kind">> = {
-  dropped: { label: "Dropped", tone: "ok" },
-  failed: { label: "Failed", tone: "hot" },
-  on_truck: { label: "On the truck", tone: "accent" },
-  not_loaded: { label: "Not loaded", tone: "warn" },
-  waiting: { label: "Waiting", tone: "muted" },
+  dropped: { labelKey: "deliveryRuns.table.stopState.dropped", tone: "ok" },
+  failed: { labelKey: "deliveryRuns.table.stopState.failed", tone: "hot" },
+  on_truck: { labelKey: "deliveryRuns.table.stopState.onTruck", tone: "accent" },
+  not_loaded: { labelKey: "deliveryRuns.table.stopState.notLoaded", tone: "warn" },
+  waiting: { labelKey: "deliveryRuns.table.stopState.waiting", tone: "muted" },
 };
 
 export function stopState(order: OrderWithItems, runStatus: RunStatus): StopState {
@@ -238,7 +239,9 @@ export function stopState(order: OrderWithItems, runStatus: RunStatus): StopStat
   return {
     kind,
     ...STOP_STATE[kind],
-    ...(reason ? { label: DELIVERY_FAILURE_LABELS[reason] } : {}),
+    ...(reason
+      ? { labelKey: `status.delivery.failureReason.${DELIVERY_FAILURE_REASON_KEY[reason]}` }
+      : {}),
   };
 }
 

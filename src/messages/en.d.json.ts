@@ -18,10 +18,13 @@ declare const messages: {
     "userMenu": "User menu",
     "sidebarLabel": "Sidebar",
     "sidebarDescription": "Displays the mobile sidebar.",
-    "toggleSidebar": "Toggle Sidebar"
+    "toggleSidebar": "Toggle Sidebar",
+    "close": "Close",
+    "appDescription": "Chicken-coop operations platform (MOD-01 phase)."
   },
   "auth": {
     "login": {
+      "pageTitle": "Sign in - AyamNorliza",
       "title": "Sign in to your account",
       "subtitle": "Enter your credentials to access AyamNorliza operations.",
       "emailLabel": "Email",
@@ -34,6 +37,7 @@ declare const messages: {
       "mfaHint": "Two-factor authentication can be enabled from security settings after sign in."
     },
     "signup": {
+      "pageTitle": "Sign up - AyamNorliza",
       "title": "Create account",
       "subtitle": "New accounts are invite-only. Contact your organization owner if you need access.",
       "emailLabel": "Email",
@@ -47,6 +51,7 @@ declare const messages: {
       "checkEmailBody": "We sent a confirmation link to {email}. Click it to finish setting up your account."
     },
     "mfa": {
+      "pageTitle": "Two-factor authentication - AyamNorliza",
       "title": "Two-factor authentication",
       "subtitle": "Enter the 6-digit code from your authenticator app.",
       "codeLabel": "Code",
@@ -801,6 +806,14 @@ declare const messages: {
           "label": "Membership",
           "description": "Inviting users, changing roles, scopes, and access lifecycle."
         },
+        "catalog": {
+          "label": "Catalog",
+          "description": "Manage products, categories, and pricing."
+        },
+        "sales": {
+          "label": "Sales",
+          "description": "Manage orders and customers."
+        },
         "access_review": {
           "label": "Access reviews",
           "description": "Periodic attestations that confirm membership and roles."
@@ -817,6 +830,100 @@ declare const messages: {
           "label": "Audit & security",
           "description": "Read access to immutable history and security events."
         }
+      },
+      "capabilities": {
+        "organizationManage": {
+          "label": "Manage organization",
+          "description": "Create, archive, and bind to billing."
+        },
+        "organizationSettingsUpdate": {
+          "label": "Update organization settings",
+          "description": "Identity, locale, time zone, region."
+        },
+        "membershipInvite": {
+          "label": "Invite users",
+          "description": "Send invitations and create pending memberships."
+        },
+        "membershipRoleChange": {
+          "label": "Change member role",
+          "description": "Promote, demote, or transfer members between roles."
+        },
+        "membershipScopeChange": {
+          "label": "Change member scope",
+          "description": "Limit a member to specific sites, zones, or houses."
+        },
+        "membershipDeactivate": {
+          "label": "Deactivate members",
+          "description": "Suspend or transfer ownership on deactivation."
+        },
+        "accessReviewRun": {
+          "label": "Run access reviews",
+          "description": "Start quarterly or one-off attestation campaigns."
+        },
+        "accessReviewDecide": {
+          "label": "Decide review items",
+          "description": "Keep, modify, or revoke each member in a review."
+        },
+        "supportSessionOpen": {
+          "label": "Open support sessions",
+          "description": "Grant time-bound access to a technician."
+        },
+        "supportSessionEnd": {
+          "label": "End support sessions",
+          "description": "Revoke active sessions and optionally the membership."
+        },
+        "breakGlassOpen": {
+          "label": "Open break-glass",
+          "description": "Trigger an audited emergency override."
+        },
+        "breakGlassFinalize": {
+          "label": "Finalize break-glass review",
+          "description": "Close out a break-glass event with a post-use review."
+        },
+        "auditRead": {
+          "label": "Read audit log",
+          "description": "Inspect the immutable history of mutations."
+        },
+        "auditLogRead": {
+          "label": "Read audit log (raw)",
+          "description": "Inspect the underlying audit_log table."
+        },
+        "authSecurityRead": {
+          "label": "Read security events",
+          "description": "Inspect login, MFA, and session lifecycle events."
+        },
+        "stepUpReauth": {
+          "label": "Step-up re-authentication (locked)",
+          "description": "Required to confirm sensitive mutations. Always preserved for roles that need it; cannot be removed."
+        },
+        "catalogManage": {
+          "label": "Manage catalog",
+          "description": "Create and edit categories, products, and variants."
+        },
+        "ordersManage": {
+          "label": "Manage orders",
+          "description": "Create, view, and update order statuses."
+        },
+        "customersManage": {
+          "label": "Manage customers",
+          "description": "Add and edit customer records."
+        }
+      },
+      "roleDescription": {
+        "owner": "Full control. Receives every capability by structure and cannot be edited.",
+        "org_admin": "Configures the organization and manages membership.",
+        "seller": "Manages products, orders, and customer relationships.",
+        "driver": "Delivers one run at a time. Sees only the stops on the run they are assigned.",
+        "farm_manager": "Operational leadership over sites and assignments.",
+        "supervisor": "Front-line oversight with read-only access to history.",
+        "caretaker": "Hands-on worker. No administrative privileges by default.",
+        "veterinarian": "Animal-health specialist, scoped per site.",
+        "biosecurity_qa": "Compliance and traceability reviews.",
+        "maintenance": "Repairs and equipment cycles.",
+        "inventory": "Stock and feed management.",
+        "logistics": "Inbound and outbound shipments.",
+        "auditor": "Read-only access to audit and security events.",
+        "support": "Time-bound access granted via support session."
       },
       "grantTitle": "Grant capability",
       "revokeTitle": "Revoke capability",
@@ -842,7 +949,17 @@ declare const messages: {
       "description": "Each row is a role, ordered by privilege from top to bottom. Each column is a capability, grouped by category. A filled marker means the role holds that capability; an open marker means it does not.",
       "caption": "Capability matrix for this organization, ordered by role rank.",
       "roleColumnHeader": "Role",
-      "cellAriaLabel": "{role} {hasCapability, select, true {has} other {does not have}} capability {capability}"
+      "cellAriaLabel": "{role} {hasCapability, select, true {has} other {does not have}} capability {capability}",
+      "groups": {
+        "organization": { "label": "Organization" },
+        "membership": { "label": "Membership" },
+        "catalog": { "label": "Catalog" },
+        "sales": { "label": "Sales" },
+        "access_review": { "label": "Access review" },
+        "support": { "label": "Support" },
+        "break_glass": { "label": "Break-glass" },
+        "audit_auth": { "label": "Audit & auth" }
+      }
     },
     "invitationsQueue": {
       "heading": "The invitations queue",
@@ -1437,7 +1554,7 @@ declare const messages: {
         "board": "Board",
         "table": "Table"
       },
-      "newOrder": "New Order",
+      "newOrder": "New order",
       "tabs": {
         "all": "All"
       },
@@ -1921,7 +2038,14 @@ declare const messages: {
       },
       "itemCount": "{count, plural, one {# item} other {# items}}",
       "moveEarlier": "Move {name} earlier",
-      "moveLater": "Move {name} later"
+      "moveLater": "Move {name} later",
+      "stopState": {
+        "dropped": "Dropped",
+        "failed": "Failed",
+        "onTruck": "On the truck",
+        "notLoaded": "Not loaded",
+        "waiting": "Waiting"
+      }
     },
     "detail": {
       "driverLabel": "Driver",
@@ -1955,6 +2079,17 @@ declare const messages: {
         "loaded": "Loaded"
       }
     }
+  },
+  "addressFields": {
+    "address": "Address",
+    "addressPlaceholder": "House no, street, taman/apartment",
+    "postcode": "Postcode",
+    "postcodePlaceholder": "e.g. 80000",
+    "state": "State",
+    "selectState": "Select state",
+    "area": "Area",
+    "selectArea": "Select area",
+    "pickStateFirst": "Pick a state first"
   },
   "loadingBoard": {
     "empty": {

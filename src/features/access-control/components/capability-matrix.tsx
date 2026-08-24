@@ -67,7 +67,7 @@ export async function CapabilityMatrix({ data }: { data: CapabilityMatrixData })
                   colSpan={group.capabilities.length}
                   className="border-b border-foreground/20 px-1 pb-3 text-center align-bottom text-xs uppercase tracking-[0.18em] text-muted-foreground"
                 >
-                  <span className="block leading-tight">{group.label}</span>
+                  <span className="block leading-tight">{t(`groups.${group.id}.label` as never)}</span>
                 </th>
               ))}
             </tr>

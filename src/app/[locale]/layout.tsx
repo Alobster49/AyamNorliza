@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 import { hasLocale, NextIntlClientProvider } from "next-intl";
-import { setRequestLocale } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,13 +12,21 @@ import "../globals.css";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
-export const metadata: Metadata = {
-  title: "AyamNorliza Ops",
-  description: "Chicken-coop operations platform (MOD-01 phase).",
-  icons: {
-    icon: "/logo-nb-poultry.webp",
-  },
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "common" });
+  return {
+    title: t("appName"),
+    description: t("appDescription"),
+    icons: {
+      icon: "/logo-nb-poultry.webp",
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#f60505",

@@ -57,6 +57,7 @@ import {
   type Role,
 } from "@/lib/auth/permissions";
 import {
+  CAPABILITY_MESSAGE_KEY,
   type CapabilityArea,
   type RoleCapabilityCell,
   type RoleView,
@@ -71,9 +72,11 @@ import {
 // source of truth for which capability belongs to which area; the client
 // just needs an ordered list of ids — labels/descriptions are resolved via
 // `identity.rolesPage.areas.<id>.{label,description}` at render time.
-const CAPABILITY_AREA_GROUPS: ReadonlyArray<{ id: CapabilityArea }> = [
+export const CAPABILITY_AREA_GROUPS: ReadonlyArray<{ id: CapabilityArea }> = [
   { id: "organization" },
   { id: "membership" },
+  { id: "catalog" },
+  { id: "sales" },
   { id: "access_review" },
   { id: "support" },
   { id: "break_glass" },
@@ -141,6 +144,10 @@ function CapabilityToggle(props: {
 }) {
   const { role, cell, canEdit, onToggle, pending } = props;
   const t = useTranslations("identity.rolesPage");
+  const tRoles = useTranslations("roles");
+  const capabilityKey = CAPABILITY_MESSAGE_KEY[cell.capability];
+  const capabilityLabel = t(`capabilities.${capabilityKey}.label` as never);
+  const capabilityDescription = t(`capabilities.${capabilityKey}.description` as never);
 
   const lockedReason = !cell.isEditableRole
     ? role === "owner"
@@ -166,7 +173,7 @@ function CapabilityToggle(props: {
     >
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-medium leading-none">{cell.label}</span>
+          <span className="font-medium leading-none">{capabilityLabel}</span>
           <code className="rounded bg-muted px-1.5 py-0.5 text-[11px] text-muted-foreground">
             {cell.capability}
           </code>
@@ -191,7 +198,7 @@ function CapabilityToggle(props: {
           ) : null}
         </div>
         <p className="text-xs text-muted-foreground">
-          {lockedReason ?? cell.description}
+          {lockedReason ?? capabilityDescription}
         </p>
       </div>
       <div className="flex items-center gap-3">
@@ -205,7 +212,7 @@ function CapabilityToggle(props: {
           granted={cell.granted}
           disabled={disabled}
           onToggle={() => onToggle(role, cell.capability, !cell.granted)}
-          label={t("toggleAriaLabel", { label: cell.label, role })}
+          label={t("toggleAriaLabel", { label: capabilityLabel, role: tRoles(roleLabelKey(role)) })}
         />
       </div>
     </div>
@@ -226,6 +233,7 @@ function RoleColumn(props: {
 }) {
   const { role, view, canEdit, pendingOverrides, onToggle, onReset } = props;
   const t = useTranslations("identity.rolesPage");
+  const tRoles = useTranslations("roles");
   const grantCount = useMemo(
     () => view.cells.filter((c) => c.granted).length,
     [view.cells],
@@ -255,7 +263,7 @@ function RoleColumn(props: {
             ) : (
               <ShieldAlert className="size-5 text-muted-foreground" aria-hidden />
             )}
-            <h2 className="text-xl font-semibold tracking-tight">{view.label}</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{tRoles(roleLabelKey(role))}</h2>
             <Badge variant="outline" className="uppercase">
               {t("rank", { rank: view.rank })}
             </Badge>
@@ -270,7 +278,7 @@ function RoleColumn(props: {
               </Badge>
             ) : null}
           </div>
-          <p className="max-w-2xl text-sm text-muted-foreground">{view.description}</p>
+          <p className="max-w-2xl text-sm text-muted-foreground">{t(`roleDescription.${role}` as never)}</p>
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline">
@@ -337,6 +345,7 @@ export function RolesPageClient(props: {
 }) {
   const router = useRouter();
   const t = useTranslations("identity.rolesPage");
+  const tRoles = useTranslations("roles");
   const tRoot = useTranslations();
   const format = useFormatter();
   const [view, setView] = useState<RolesViewModel>(props.view);
@@ -538,7 +547,7 @@ export function RolesPageClient(props: {
                         {role.role === "owner" ? (
                           <Crown className="size-3.5 text-amber-500" aria-hidden />
                         ) : null}
-                        <span className="truncate">{role.label}</span>
+                        <span className="truncate">{tRoles(roleLabelKey(role.role))}</span>
                       </span>
                       {overrideCount > 0 ? (
                         <Badge variant="outline" className="ml-auto text-[10px]">

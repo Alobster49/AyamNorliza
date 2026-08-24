@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { toLocaleAgnostic } from "@/lib/auth/next-path";
 import { syncLocaleCookieFromAccount } from "@/lib/i18n/actions";
@@ -30,5 +31,6 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${destination}`);
     }
   }
-  return NextResponse.redirect(`${origin}/login?error=callback_failed`);
+  const locale = await getLocale();
+  return NextResponse.redirect(`${origin}/${locale}/login?error=callback_failed`);
 }

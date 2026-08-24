@@ -15,10 +15,13 @@
     "userMenu": "Menu pengguna",
     "sidebarLabel": "Bar Sisi",
     "sidebarDescription": "Memaparkan bar sisi mudah alih.",
-    "toggleSidebar": "Togol bar sisi"
+    "toggleSidebar": "Togol bar sisi",
+    "close": "Tutup",
+    "appDescription": "Platform operasi reban ayam (fasa MOD-01)."
   },
   "auth": {
     "login": {
+      "pageTitle": "Log masuk - AyamNorliza",
       "title": "Log masuk ke akaun anda",
       "subtitle": "Masukkan kelayakan anda untuk mengakses operasi AyamNorliza.",
       "emailLabel": "Emel",
@@ -31,6 +34,7 @@
       "mfaHint": "Pengesahan dua faktor boleh diaktifkan daripada tetapan keselamatan selepas log masuk."
     },
     "signup": {
+      "pageTitle": "Daftar - AyamNorliza",
       "title": "Daftar akaun",
       "subtitle": "Akaun baharu adalah atas jemputan sahaja. Hubungi pemilik organisasi anda jika anda memerlukan akses.",
       "emailLabel": "Emel",
@@ -44,6 +48,7 @@
       "checkEmailBody": "Kami telah menghantar pautan pengesahan ke {email}. Klik pautan itu untuk selesaikan persediaan akaun anda."
     },
     "mfa": {
+      "pageTitle": "Pengesahan dua faktor - AyamNorliza",
       "title": "Pengesahan dua faktor",
       "subtitle": "Masukkan kod 6 digit dari aplikasi pengesah anda.",
       "codeLabel": "Kod",
@@ -798,6 +803,14 @@
           "label": "Keahlian",
           "description": "Menjemput pengguna, menukar peranan, skop, dan kitaran hayat akses."
         },
+        "catalog": {
+          "label": "Katalog",
+          "description": "Urus produk, kategori, dan penetapan harga."
+        },
+        "sales": {
+          "label": "Jualan",
+          "description": "Urus pesanan dan pelanggan."
+        },
         "access_review": {
           "label": "Semakan akses",
           "description": "Pengesahan berkala yang mengesahkan keahlian dan peranan."
@@ -814,6 +827,100 @@
           "label": "Audit & keselamatan",
           "description": "Akses baca kepada sejarah tidak boleh ubah dan peristiwa keselamatan."
         }
+      },
+      "capabilities": {
+        "organizationManage": {
+          "label": "Urus organisasi",
+          "description": "Cipta, arkibkan, dan pautkan kepada pengebilan."
+        },
+        "organizationSettingsUpdate": {
+          "label": "Kemas kini tetapan organisasi",
+          "description": "Identiti, lokal, zon waktu, wilayah."
+        },
+        "membershipInvite": {
+          "label": "Jemput pengguna",
+          "description": "Hantar jemputan dan cipta keahlian belum sah."
+        },
+        "membershipRoleChange": {
+          "label": "Tukar peranan ahli",
+          "description": "Naikkan, turunkan, atau pindahkan ahli antara peranan."
+        },
+        "membershipScopeChange": {
+          "label": "Tukar skop ahli",
+          "description": "Hadkan ahli kepada tapak, zon, atau reban tertentu."
+        },
+        "membershipDeactivate": {
+          "label": "Nyahaktifkan ahli",
+          "description": "Gantung atau pindahkan pemilikan semasa penyahaktifan."
+        },
+        "accessReviewRun": {
+          "label": "Jalankan semakan akses",
+          "description": "Mulakan kempen pengesahan suku tahunan atau sekali sahaja."
+        },
+        "accessReviewDecide": {
+          "label": "Putuskan item semakan",
+          "description": "Kekalkan, ubah suai, atau batalkan setiap ahli dalam semakan."
+        },
+        "supportSessionOpen": {
+          "label": "Buka sesi sokongan",
+          "description": "Beri akses bertempoh kepada juruteknik."
+        },
+        "supportSessionEnd": {
+          "label": "Tamatkan sesi sokongan",
+          "description": "Batalkan sesi aktif dan pilihan keahlian."
+        },
+        "breakGlassOpen": {
+          "label": "Buka break-glass",
+          "description": "Cetuskan pengatasan kecemasan yang diaudit."
+        },
+        "breakGlassFinalize": {
+          "label": "Selesaikan semakan break-glass",
+          "description": "Tutup peristiwa break-glass dengan semakan selepas guna."
+        },
+        "auditRead": {
+          "label": "Baca log audit",
+          "description": "Semak sejarah mutasi yang tidak boleh diubah."
+        },
+        "auditLogRead": {
+          "label": "Baca log audit (mentah)",
+          "description": "Semak jadual audit_log yang mendasari."
+        },
+        "authSecurityRead": {
+          "label": "Baca peristiwa keselamatan",
+          "description": "Semak peristiwa log masuk, MFA, dan kitaran hayat sesi."
+        },
+        "stepUpReauth": {
+          "label": "Pengesahan semula tahap tinggi (dikunci)",
+          "description": "Diperlukan untuk mengesahkan mutasi sensitif. Sentiasa dikekalkan untuk peranan yang memerlukannya; tidak boleh dialih keluar."
+        },
+        "catalogManage": {
+          "label": "Urus katalog",
+          "description": "Cipta dan edit kategori, produk, dan varian."
+        },
+        "ordersManage": {
+          "label": "Urus pesanan",
+          "description": "Cipta, lihat, dan kemas kini status pesanan."
+        },
+        "customersManage": {
+          "label": "Urus pelanggan",
+          "description": "Tambah dan edit rekod pelanggan."
+        }
+      },
+      "roleDescription": {
+        "owner": "Kawalan penuh. Menerima setiap keupayaan mengikut struktur dan tidak boleh diedit.",
+        "org_admin": "Mengkonfigurasi organisasi dan menguruskan keahlian.",
+        "seller": "Menguruskan produk, pesanan, dan hubungan pelanggan.",
+        "driver": "Menghantar satu trip pada satu masa. Hanya melihat perhentian pada trip yang ditugaskan.",
+        "farm_manager": "Kepimpinan operasi ke atas tapak dan tugasan.",
+        "supervisor": "Pengawasan barisan hadapan dengan akses baca sahaja kepada sejarah.",
+        "caretaker": "Pekerja langsung. Tiada keistimewaan pentadbiran secara lalai.",
+        "veterinarian": "Pakar kesihatan haiwan, skop mengikut tapak.",
+        "biosecurity_qa": "Semakan pematuhan dan kebolehkesanan.",
+        "maintenance": "Pembaikan dan kitaran peralatan.",
+        "inventory": "Pengurusan stok dan makanan ternakan.",
+        "logistics": "Penghantaran masuk dan keluar.",
+        "auditor": "Akses baca sahaja kepada peristiwa audit dan keselamatan.",
+        "support": "Akses bertempoh diberikan melalui sesi sokongan."
       },
       "grantTitle": "Beri kebolehan",
       "revokeTitle": "Batalkan kebolehan",
@@ -839,7 +946,17 @@
       "description": "Setiap baris ialah satu peranan, disusun mengikut keutamaan dari atas ke bawah. Setiap lajur ialah satu keupayaan, dikumpulkan mengikut kategori. Penanda berisi bermaksud peranan itu memiliki keupayaan tersebut; penanda kosong bermaksud tidak.",
       "caption": "Matriks keupayaan bagi organisasi ini, disusun mengikut kedudukan peranan.",
       "roleColumnHeader": "Peranan",
-      "cellAriaLabel": "{role} {hasCapability, select, true {mempunyai} other {tidak mempunyai}} keupayaan {capability}"
+      "cellAriaLabel": "{role} {hasCapability, select, true {mempunyai} other {tidak mempunyai}} keupayaan {capability}",
+      "groups": {
+        "organization": { "label": "Organisasi" },
+        "membership": { "label": "Keahlian" },
+        "catalog": { "label": "Katalog" },
+        "sales": { "label": "Jualan" },
+        "access_review": { "label": "Semakan akses" },
+        "support": { "label": "Sokongan" },
+        "break_glass": { "label": "Break-glass" },
+        "audit_auth": { "label": "Audit & pengesahan" }
+      }
     },
     "invitationsQueue": {
       "heading": "Baris gilir jemputan",
@@ -1127,7 +1244,7 @@
         "portal": "Portal",
         "manual": "Manual"
       },
-      "unweighed": "Belum timbang"
+      "unweighed": "Belum ditimbang"
     },
     "journey": {
       "ariaLabel": "Kemajuan pesanan: langkah {step} daripada {total}",
@@ -1918,7 +2035,14 @@
       },
       "itemCount": "{count, plural, other {# item}}",
       "moveEarlier": "Alih {name} lebih awal",
-      "moveLater": "Alih {name} lebih lewat"
+      "moveLater": "Alih {name} lebih lewat",
+      "stopState": {
+        "dropped": "Dihantar",
+        "failed": "Gagal",
+        "onTruck": "Di atas trak",
+        "notLoaded": "Belum dimuatkan",
+        "waiting": "Menunggu"
+      }
     },
     "detail": {
       "driverLabel": "Pemandu",
@@ -1952,6 +2076,17 @@
         "loaded": "Dimuatkan"
       }
     }
+  },
+  "addressFields": {
+    "address": "Alamat",
+    "addressPlaceholder": "No. rumah, jalan, taman/apartmen",
+    "postcode": "Poskod",
+    "postcodePlaceholder": "cth. 80000",
+    "state": "Negeri",
+    "selectState": "Pilih negeri",
+    "area": "Kawasan",
+    "selectArea": "Pilih kawasan",
+    "pickStateFirst": "Pilih negeri dahulu"
   },
   "loadingBoard": {
     "empty": {

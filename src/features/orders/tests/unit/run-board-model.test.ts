@@ -405,7 +405,7 @@ describe("stopState", () => {
     const order = makeOrder({ status: "ready" });
     const state = stopState({ ...order, attempts: [failedAttempt(order.id)] }, "departed");
     expect(state.kind).toBe("failed");
-    expect(state.label).toBe("Shop closed");
+    expect(state.labelKey).toBe("status.delivery.failureReason.shopClosed");
   });
 
   it("still reads dropped when a later delivery followed a failed attempt", () => {

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { sanitizeNextPath } from "@/lib/auth/next-path";
 
@@ -15,12 +16,14 @@ export async function GET(request: NextRequest) {
   const next = sanitizeNextPath(searchParams.get("next")) ?? "/";
 
   if (!tokenHash) {
-    return NextResponse.redirect(`${origin}/login?error=missing_token`);
+    const locale = await getLocale();
+    return NextResponse.redirect(`${origin}/${locale}/login?error=missing_token`);
   }
   const supabase = await createSupabaseServerClient();
   const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as "magiclink" });
   if (error) {
-    return NextResponse.redirect(`${origin}/login?error=verify_failed`);
+    const locale = await getLocale();
+    return NextResponse.redirect(`${origin}/${locale}/login?error=verify_failed`);
   }
   return NextResponse.redirect(`${origin}${next}`);
 }

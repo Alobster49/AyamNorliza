@@ -222,12 +222,13 @@ export const DELIVERY_FAILURE_REASONS = [
 ] as const;
 export type DeliveryFailureReason = (typeof DELIVERY_FAILURE_REASONS)[number];
 
-export const DELIVERY_FAILURE_LABELS: Record<DeliveryFailureReason, string> = {
-  shop_closed: "Shop closed",
-  rejected: "Customer rejected the goods",
-  no_cash: "No cash on hand",
-  wrong_address: "Wrong address",
-  other: "Something else",
+/** `status.delivery.failureReason` sub-keys, keyed by the snake_case reason values. */
+export const DELIVERY_FAILURE_REASON_KEY: Record<DeliveryFailureReason, string> = {
+  shop_closed: "shopClosed",
+  rejected: "rejected",
+  no_cash: "noCash",
+  wrong_address: "wrongAddress",
+  other: "other",
 };
 
 export const DELIVERY_NEXT_ACTIONS = ["retry_today", "move_tomorrow", "return_to_yard"] as const;

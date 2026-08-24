@@ -43,6 +43,36 @@ import { recordAudit } from "@/lib/audit/events";
 
 export type CapabilityArea = "organization" | "membership" | "audit" | "support" | "access_review" | "break_glass" | "catalog" | "sales";
 
+/**
+ * `Capability` ids are dotted (e.g. "organization.settings.update"), which
+ * cannot be used verbatim as a `next-intl` key segment — the client resolves
+ * copy via `identity.rolesPage.capabilities.<key>.{label,description}`, so
+ * this maps each capability to a flat, dot-free key. Exported so
+ * `roles-page-client.tsx` (the only consumer) stays in sync with this list
+ * by construction rather than by a second hand-maintained copy.
+ */
+export const CAPABILITY_MESSAGE_KEY: Record<Capability, string> = {
+  "organization.manage": "organizationManage",
+  "organization.settings.update": "organizationSettingsUpdate",
+  "membership.invite": "membershipInvite",
+  "membership.role.change": "membershipRoleChange",
+  "membership.scope.change": "membershipScopeChange",
+  "membership.deactivate": "membershipDeactivate",
+  "access_review.run": "accessReviewRun",
+  "access_review.decide": "accessReviewDecide",
+  "support_session.open": "supportSessionOpen",
+  "support_session.end": "supportSessionEnd",
+  "break_glass.open": "breakGlassOpen",
+  "break_glass.finalize": "breakGlassFinalize",
+  "audit.read": "auditRead",
+  "audit_log.read": "auditLogRead",
+  "auth_security.read": "authSecurityRead",
+  "step_up.reauth": "stepUpReauth",
+  "catalog.manage": "catalogManage",
+  "orders.manage": "ordersManage",
+  "customers.manage": "customersManage",
+};
+
 export const CAPABILITY_AREAS: ReadonlyArray<{
   id: CapabilityArea;
   label: string;

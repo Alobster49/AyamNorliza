@@ -10,6 +10,7 @@ import {
   getDriverRun,
 } from "@/features/orders/server/driver-actions";
 import {
+  DELIVERY_FAILURE_REASON_KEY,
   DELIVERY_FAILURE_REASONS,
   DELIVERY_NEXT_ACTIONS,
   type DeliveryFailureReason,
@@ -23,15 +24,6 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 type Sheet = "none" | "deliver" | "fail";
-
-/** `status.delivery.failureReason` sub-keys, keyed by the snake_case reason values. */
-const FAILURE_REASON_KEY: Record<DeliveryFailureReason, string> = {
-  shop_closed: "shopClosed",
-  rejected: "rejected",
-  no_cash: "noCash",
-  wrong_address: "wrongAddress",
-  other: "other",
-};
 
 /** `status.delivery.nextAction` sub-keys, keyed by the snake_case action values. */
 const NEXT_ACTION_KEY: Record<DeliveryNextAction, string> = {
@@ -248,7 +240,7 @@ export function DriverDeck({
                 {stop.outcome === "failed" && stop.lastFailureReason && (
                   <span className="rounded-md bg-red-100 px-2 py-0.5 text-[11px] font-medium text-red-800 dark:bg-red-950 dark:text-red-300">
                     {t("retryLabel", {
-                      reason: tStatus(`failureReason.${FAILURE_REASON_KEY[stop.lastFailureReason]}` as never),
+                      reason: tStatus(`failureReason.${DELIVERY_FAILURE_REASON_KEY[stop.lastFailureReason]}` as never),
                     })}
                   </span>
                 )}
@@ -471,7 +463,7 @@ export function DriverDeck({
                     reason === value ? "border-destructive bg-destructive/10" : "bg-card"
                   }`}
                 >
-                  {tStatus(`failureReason.${FAILURE_REASON_KEY[value]}` as never)}
+                  {tStatus(`failureReason.${DELIVERY_FAILURE_REASON_KEY[value]}` as never)}
                 </button>
               ))}
 

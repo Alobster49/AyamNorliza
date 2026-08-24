@@ -6,6 +6,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem, OrderStatus } from "@/features/orders/types";
 import { ORDER_STATUSES, ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
+import { displayAmount } from "@/features/orders/lib/board-view-model";
 import {
   Table,
   TableBody,
@@ -101,7 +102,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3" data-testid="orders-toolbar">
         <ViewToggle label={t("viewToggle.label")}>
           <ViewButton
             active={view === "board"}
@@ -185,7 +186,12 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
                         </TableCell>
                         <TableCell className="text-muted-foreground">{formatDate(order.delivery_date)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {order.status === "closed" ? formatPrice(order.total_amount) : "—"}
+                          {(() => {
+                            const amount = displayAmount(order);
+                            if (amount.kind === "total") return formatPrice(amount.amount);
+                            if (amount.kind === "unweighed") return tCard("unweighed");
+                            return "—";
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))
