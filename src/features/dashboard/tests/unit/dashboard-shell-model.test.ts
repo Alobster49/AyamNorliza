@@ -22,7 +22,11 @@ describe("dashboard shell model", () => {
       pathname: "/en/ayam-norliza-pilot/settings/organization",
     });
 
-    expect(groups[1]).toMatchObject({ title: "Access control", isActive: true });
+    expect(groups[1]).toMatchObject({
+      title: "Access control",
+      sectionKey: "sections.accessControl",
+      isActive: true,
+    });
     const orgItem = groups[1]?.items.find((item) => item.title === "Organization");
     expect(orgItem?.isActive).toBe(true);
   });
@@ -35,11 +39,13 @@ describe("dashboard shell model", () => {
 
     expect(groups[1]).toMatchObject({
       title: "Access control",
+      sectionKey: "sections.accessControl",
       isActive: true,
     });
     const orgItem = groups[1]?.items.find((item) => item.title === "Organization");
     expect(orgItem).toMatchObject({
       title: "Organization",
+      titleKey: "pages.organization",
       href: "/ayam-norliza-pilot/settings/organization",
       isActive: true,
     });
@@ -51,7 +57,11 @@ describe("dashboard shell model", () => {
       pathname: "/ayam-norliza-pilot/settings/users",
     });
 
-    expect(groups[1]).toMatchObject({ title: "Access control", isActive: true });
+    expect(groups[1]).toMatchObject({
+      title: "Access control",
+      sectionKey: "sections.accessControl",
+      isActive: true,
+    });
   });
 
   it("returns page context for nested access control routes", () => {
@@ -61,8 +71,8 @@ describe("dashboard shell model", () => {
         pathname: "/ayam-norliza-pilot/settings/support-sessions/active",
       }),
     ).toEqual({
-      section: "Access control",
-      title: "Support sessions",
+      section: "sections.accessControl",
+      title: "pages.supportSessions",
     });
   });
 
@@ -73,8 +83,8 @@ describe("dashboard shell model", () => {
         pathname: "/ayam-norliza-pilot/data-console",
       }),
     ).toEqual({
-      section: "System",
-      title: "Data console",
+      section: "sections.system",
+      title: "pages.dataConsole",
     });
   });
 
@@ -85,8 +95,8 @@ describe("dashboard shell model", () => {
         pathname: "/ayam-norliza-pilot/unknown",
       }),
     ).toEqual({
-      section: "Access control",
-      title: "Organization",
+      section: "sections.accessControl",
+      title: "pages.organization",
     });
   });
 
@@ -103,10 +113,15 @@ describe("dashboard shell model", () => {
     });
 
     expect(groups).toHaveLength(1);
-    expect(groups[0]).toMatchObject({ title: "Warehouse", isActive: true });
+    expect(groups[0]).toMatchObject({
+      title: "Warehouse",
+      sectionKey: "sections.warehouse",
+      isActive: true,
+    });
     expect(groups[0]?.items).toEqual([
       {
         title: "Warehouse tasks",
+        titleKey: "pages.warehouseTasks",
         href: "/ayam-norliza-pilot/tasks",
         isActive: true,
       },
@@ -122,20 +137,24 @@ describe("dashboard shell model", () => {
 
     expect(groups).toHaveLength(1);
     expect(groups[0]?.title).toBe("Warehouse");
+    expect(groups[0]?.sectionKey).toBe("sections.warehouse");
     expect(groups[0]?.items[0]).toMatchObject({ isActive: false });
     expect(groups[0]?.items).toEqual([
       {
         title: "Warehouse tasks",
+        titleKey: "pages.warehouseTasks",
         href: "/ayam-norliza-pilot/tasks",
         isActive: false,
       },
       {
         title: "Dispatch",
+        titleKey: "pages.dispatch",
         href: "/ayam-norliza-pilot/dispatch",
         isActive: false,
       },
       {
         title: "Loading",
+        titleKey: "pages.loading",
         href: "/ayam-norliza-pilot/loading",
         isActive: false,
       },
@@ -164,6 +183,7 @@ describe("dashboard shell model", () => {
     ]);
     const deliverySetup = groups[0]?.items.find((item) => item.title === "Delivery setup");
     expect(deliverySetup).toMatchObject({
+      titleKey: "pages.deliverySetup",
       href: "/ayam-norliza-pilot/delivery",
       isActive: true,
     });
@@ -178,6 +198,7 @@ describe("dashboard shell model", () => {
     expect(groups).toHaveLength(2);
     const runsItem = groups[0]?.items.find((item) => item.title === "Delivery runs");
     expect(runsItem).toMatchObject({
+      titleKey: "pages.deliveryRuns",
       href: "/ayam-norliza-pilot/runs",
       isActive: true,
     });
@@ -190,8 +211,14 @@ describe("dashboard shell model", () => {
       role: "owner",
     });
     const system = ownerGroups.find((g) => g.title === "System");
+    expect(system?.sectionKey).toBe("sections.system");
     expect(system?.items).toEqual([
-      { title: "Data console", href: "/org/data-console", isActive: true },
+      {
+        title: "Data console",
+        titleKey: "pages.dataConsole",
+        href: "/org/data-console",
+        isActive: true,
+      },
     ]);
 
     for (const role of ["seller", "org_admin", undefined]) {

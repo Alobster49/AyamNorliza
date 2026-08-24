@@ -18,8 +18,10 @@ export function DashboardShellHeader({
   organizationSlug,
 }: DashboardShellHeaderProps) {
   const t = useTranslations("common");
+  const tDashboard = useTranslations("dashboard");
   const pathname = usePathname();
   const context = getDashboardPageContext({ organizationSlug, pathname });
+  const sectionLabel = tDashboard(context.section);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 print:hidden">
@@ -31,10 +33,10 @@ export function DashboardShellHeader({
             {organizationName}
           </span>
           <span className="hidden text-muted-foreground md:inline">/</span>
-          <span className="truncate font-medium">{context.title}</span>
+          <span className="truncate font-medium">{tDashboard(context.title)}</span>
         </div>
         <p className="hidden truncate text-xs text-muted-foreground sm:block">
-          {t("workspaceSuffix", { section: context.section })}
+          {t("workspaceSuffix", { section: sectionLabel })}
         </p>
       </div>
       <LocaleSwitcher />

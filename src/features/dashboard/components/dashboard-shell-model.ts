@@ -2,12 +2,16 @@ import { isRouteActive } from "@/lib/i18n/route-active";
 
 export type DashboardRoute = {
   title: string;
+  /** Message key (scoped to the `dashboard` namespace) for `title`. */
+  titleKey: string;
   href: string;
   isActive: boolean;
 };
 
 export type DashboardRouteGroup = {
   title: string;
+  /** Message key (scoped to the `dashboard` namespace) for `title`. */
+  sectionKey: string;
   isActive: boolean;
   items: DashboardRoute[];
 };
@@ -21,27 +25,37 @@ type DashboardPathInput = {
 const routeGroups = [
   {
     title: "Sales",
+    sectionKey: "sections.sales",
     items: [
-      { title: "Products", segment: "products" },
-      { title: "Orders", segment: "orders" },
-      { title: "Customers", segment: "customers" },
-      { title: "Market Prices", segment: "market-prices" },
-      { title: "Delivery setup", segment: "delivery" },
-      { title: "Dispatch", segment: "dispatch" },
-      { title: "Loading", segment: "loading" },
-      { title: "Delivery runs", segment: "runs" },
-      { title: "Warehouse tasks", segment: "tasks" },
+      { title: "Products", titleKey: "pages.products", segment: "products" },
+      { title: "Orders", titleKey: "pages.orders", segment: "orders" },
+      { title: "Customers", titleKey: "pages.customers", segment: "customers" },
+      { title: "Market Prices", titleKey: "pages.marketPrices", segment: "market-prices" },
+      { title: "Delivery setup", titleKey: "pages.deliverySetup", segment: "delivery" },
+      { title: "Dispatch", titleKey: "pages.dispatch", segment: "dispatch" },
+      { title: "Loading", titleKey: "pages.loading", segment: "loading" },
+      { title: "Delivery runs", titleKey: "pages.deliveryRuns", segment: "runs" },
+      { title: "Warehouse tasks", titleKey: "pages.warehouseTasks", segment: "tasks" },
     ],
   },
   {
     title: "Access control",
+    sectionKey: "sections.accessControl",
     items: [
-      { title: "Organization", segment: "settings/organization" },
-      { title: "Users", segment: "settings/users" },
-      { title: "Roles", segment: "settings/roles" },
-      { title: "Access reviews", segment: "settings/access-reviews" },
-      { title: "Support sessions", segment: "settings/support-sessions" },
-      { title: "Audit log", segment: "settings/audit-log" },
+      { title: "Organization", titleKey: "pages.organization", segment: "settings/organization" },
+      { title: "Users", titleKey: "pages.users", segment: "settings/users" },
+      { title: "Roles", titleKey: "pages.roles", segment: "settings/roles" },
+      {
+        title: "Access reviews",
+        titleKey: "pages.accessReviews",
+        segment: "settings/access-reviews",
+      },
+      {
+        title: "Support sessions",
+        titleKey: "pages.supportSessions",
+        segment: "settings/support-sessions",
+      },
+      { title: "Audit log", titleKey: "pages.auditLog", segment: "settings/audit-log" },
     ],
   },
 ] as const;
@@ -58,16 +72,38 @@ export function getDashboardSidebarGroups({
 }: DashboardPathInput): DashboardRouteGroup[] {
   if (role && (STAFF_ONLY_ROLES as readonly string[]).includes(role)) {
     const tasksHref = `/${organizationSlug}/tasks`;
-    const items = [
-      { title: "Warehouse tasks", href: tasksHref, isActive: isRouteActive(pathname, tasksHref) },
+    const items: DashboardRoute[] = [
+      {
+        title: "Warehouse tasks",
+        titleKey: "pages.warehouseTasks",
+        href: tasksHref,
+        isActive: isRouteActive(pathname, tasksHref),
+      },
     ];
     if (role === "logistics") {
       const dispatchHref = `/${organizationSlug}/dispatch`;
-      items.push({ title: "Dispatch", href: dispatchHref, isActive: isRouteActive(pathname, dispatchHref) });
+      items.push({
+        title: "Dispatch",
+        titleKey: "pages.dispatch",
+        href: dispatchHref,
+        isActive: isRouteActive(pathname, dispatchHref),
+      });
       const loadingHref = `/${organizationSlug}/loading`;
-      items.push({ title: "Loading", href: loadingHref, isActive: isRouteActive(pathname, loadingHref) });
+      items.push({
+        title: "Loading",
+        titleKey: "pages.loading",
+        href: loadingHref,
+        isActive: isRouteActive(pathname, loadingHref),
+      });
     }
-    return [{ title: "Warehouse", isActive: items.some((item) => item.isActive), items }];
+    return [
+      {
+        title: "Warehouse",
+        sectionKey: "sections.warehouse",
+        isActive: items.some((item) => item.isActive),
+        items,
+      },
+    ];
   }
 
   const groups: DashboardRouteGroup[] = routeGroups.map((group) => {
@@ -75,6 +111,7 @@ export function getDashboardSidebarGroups({
       const href = `/${organizationSlug}/${item.segment}`;
       return {
         title: item.title,
+        titleKey: item.titleKey,
         href,
         isActive: isRouteActive(pathname, href),
       };
@@ -82,6 +119,7 @@ export function getDashboardSidebarGroups({
 
     return {
       title: group.title,
+      sectionKey: group.sectionKey,
       isActive: items.some((item) => item.isActive),
       items,
     };
@@ -91,10 +129,12 @@ export function getDashboardSidebarGroups({
     const consoleHref = `/${organizationSlug}/data-console`;
     groups.push({
       title: "System",
+      sectionKey: "sections.system",
       isActive: isRouteActive(pathname, consoleHref),
       items: [
         {
           title: "Data console",
+          titleKey: "pages.dataConsole",
           href: consoleHref,
           isActive: isRouteActive(pathname, consoleHref),
         },
@@ -117,9 +157,11 @@ export function getDashboardPageContext({
   const activeGroup = groups.find((group) => group.isActive);
   const activeItem = activeGroup?.items.find((item) => item.isActive);
 
+  // `section`/`title` are message keys scoped to the `dashboard` namespace
+  // (e.g. resolve with `useTranslations("dashboard")`), not display text.
   return {
-    section: activeGroup?.title ?? "Access control",
-    title: activeItem?.title ?? "Organization",
+    section: activeGroup?.sectionKey ?? "sections.accessControl",
+    title: activeItem?.titleKey ?? "pages.organization",
   };
 }
 

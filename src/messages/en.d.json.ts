@@ -80,6 +80,11 @@ declare const messages: {
       "delivered": "Delivered",
       "closed": "Closed",
       "cancelled": "Cancelled"
+    },
+    "run": {
+      "planned": "In the yard",
+      "departed": "On the road",
+      "completed": "Back in"
     }
   },
   "buyer": {
@@ -362,6 +367,40 @@ declare const messages: {
         "internal": "Something went wrong. Please try again."
       }
     }
+  },
+  "dashboard": {
+    "sections": {
+      "sales": "Sales",
+      "accessControl": "Access control",
+      "warehouse": "Warehouse",
+      "system": "System"
+    },
+    "pages": {
+      "products": "Products",
+      "orders": "Orders",
+      "customers": "Customers",
+      "marketPrices": "Market Prices",
+      "deliverySetup": "Delivery setup",
+      "dispatch": "Dispatch",
+      "loading": "Loading",
+      "deliveryRuns": "Delivery runs",
+      "warehouseTasks": "Warehouse tasks",
+      "organization": "Organization",
+      "users": "Users",
+      "roles": "Roles",
+      "accessReviews": "Access reviews",
+      "supportSessions": "Support sessions",
+      "auditLog": "Audit log",
+      "dataConsole": "Data console"
+    }
+  },
+  "roles": {
+    "owner": "Owner",
+    "org_admin": "Org Admin",
+    "seller": "Seller",
+    "driver": "Driver",
+    "inventory": "Inventory",
+    "logistics": "Logistics"
   }
 };
 export default messages;

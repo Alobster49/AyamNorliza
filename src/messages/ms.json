@@ -77,6 +77,11 @@
       "delivered": "Dihantar",
       "closed": "Selesai",
       "cancelled": "Dibatalkan"
+    },
+    "run": {
+      "planned": "Belum bertolak",
+      "departed": "Dalam perjalanan",
+      "completed": "Sudah kembali"
     }
   },
   "buyer": {
@@ -359,5 +364,39 @@
         "internal": "Ada masalah berlaku. Sila cuba lagi."
       }
     }
+  },
+  "dashboard": {
+    "sections": {
+      "sales": "Jualan",
+      "accessControl": "Kawalan akses",
+      "warehouse": "Gudang",
+      "system": "Sistem"
+    },
+    "pages": {
+      "products": "Produk",
+      "orders": "Pesanan",
+      "customers": "Pelanggan",
+      "marketPrices": "Harga Pasaran",
+      "deliverySetup": "Persediaan Penghantaran",
+      "dispatch": "Penghantaran Keluar",
+      "loading": "Muatan",
+      "deliveryRuns": "Trip Penghantaran",
+      "warehouseTasks": "Tugasan Gudang",
+      "organization": "Organisasi",
+      "users": "Pengguna",
+      "roles": "Peranan",
+      "accessReviews": "Semakan Akses",
+      "supportSessions": "Sesi Sokongan",
+      "auditLog": "Log Audit",
+      "dataConsole": "Konsol Data"
+    }
+  },
+  "roles": {
+    "owner": "Pemilik",
+    "org_admin": "Admin Organisasi",
+    "seller": "Penjual",
+    "driver": "Pemandu",
+    "inventory": "Inventori",
+    "logistics": "Logistik"
   }
 }
