@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(5);
+select plan(8);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as postgres, bypasses RLS)
@@ -75,6 +75,19 @@ values ('d1000000-0000-0000-0000-000000000020', 'd1000000-0000-0000-0000-0000000
         'd1000000-0000-0000-0000-000000000006', 'kg', 5, 1.0, 2.0, 'mix', 5.000, 20.00)
 on conflict (id) do nothing;
 
+insert into public.delivery_runs (id, organization_id, truck_id, run_date, status)
+values ('d1000000-0000-0000-0000-000000000030', 'd1000000-0000-0000-0000-00000000000a',
+        'd1000000-0000-0000-0000-000000000008', (now() at time zone 'Asia/Kuala_Lumpur')::date, 'planned')
+on conflict (id) do nothing;
+
+update public.orders set run_id = 'd1000000-0000-0000-0000-000000000030'
+where id = 'd1000000-0000-0000-0000-000000000010';
+
+insert into public.order_tasks (id, organization_id, order_id, status)
+values ('d1000000-0000-0000-0000-000000000040', 'd1000000-0000-0000-0000-00000000000a',
+        'd1000000-0000-0000-0000-000000000011', 'pending')
+on conflict (id) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- anon: no execute grant
 -- ---------------------------------------------------------------------------
@@ -118,6 +131,23 @@ select is(
      (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date) -> 'funnel' ->> 'pending')::integer,
   1,
   'funnel counts the pending order created today');
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'd1000000-0000-0000-0000-000000000001';
+
+select ok(
+  (select public.get_dashboard_today('d1000000-0000-0000-0000-00000000000a'))
+    ?& array['date','runs','tasksPending','tasksDoneToday','ordersWithoutRun','marketPriceDate','marketStale'],
+  'today payload has all keys');
+
+select is(
+  (select public.get_dashboard_today('d1000000-0000-0000-0000-00000000000a') ->> 'tasksPending')::integer,
+  1, 'one pending warehouse task');
+
+select is(
+  jsonb_array_length(
+    (select public.get_dashboard_today('d1000000-0000-0000-0000-00000000000a') -> 'runs')),
+  1, 'one run today');
 
 select * from finish();
 rollback;

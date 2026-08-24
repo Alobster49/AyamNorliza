@@ -2034,6 +2034,10 @@ export type Database = {
         }
         Returns: Json
       }
+      get_dashboard_today: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       get_delivery_options: {
         Args: { p_org: string; p_zone: string }
         Returns: {
