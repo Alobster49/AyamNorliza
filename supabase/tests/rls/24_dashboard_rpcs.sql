@@ -8,8 +8,8 @@ select plan(5);
 -- ---------------------------------------------------------------------------
 -- Fixtures (as postgres, bypasses RLS)
 -- ---------------------------------------------------------------------------
-insert into public.organizations (id, slug, name)
-values ('d1000000-0000-0000-0000-00000000000a', 'dash-rpc-test-org', 'Dash RPC Test Org')
+insert into public.organizations (id, slug, name, default_time_zone)
+values ('d1000000-0000-0000-0000-00000000000a', 'dash-rpc-test-org', 'Dash RPC Test Org', 'Asia/Kuala_Lumpur')
 on conflict (id) do nothing;
 
 insert into auth.users (id) values
