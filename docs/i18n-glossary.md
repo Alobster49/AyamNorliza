@@ -21,6 +21,7 @@ nobody uses makes the interface harder to read, not easier.
 | Delivery | Penghantaran | |
 | Dispatch | Penghantaran keluar | Distinct from Delivery; confirm with staff. |
 | Run | Trip | Staff say "trip"; "larian" reads as a running race. Exception (user-confirmed 2026-08-24): the *departed* run status stays "Dalam perjalanan" — en-route sense, not the Trip object. |
+| Truck | Trak | ms.json already used "trak" ~50 places vs 3 "lori"; standardized to "trak" 2026-08-24. Confirm with staff — floor may say "lori". |
 | Zone | Zon | |
 | Batch | Kelompok | |
 | Coop | Reban | |
