@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { getDashboardSales } from "@/features/dashboard/server/analytics-actions";
 import { bucketForRange, resolveRange, type RangePreset } from "../date-range";
@@ -16,28 +16,49 @@ type Props = {
   initialSales: SalesPayload | null;
 };
 
+/** Sales payload bound to the exact range/bucket it was fetched for, so a stale render can never mix old data with a new range. */
+type SalesState = {
+  payload: SalesPayload;
+  from: string;
+  to: string;
+  bucket: "day" | "week";
+};
+
 export function AnalyticsDashboard({ organizationSlug, timeZone, initialRange, initialSales }: Props) {
   const t = useTranslations("analytics");
   const [preset, setPreset] = useState<RangePreset | "custom">("30d");
   const [range, setRange] = useState(initialRange);
-  const [sales, setSales] = useState<SalesPayload | null>(initialSales);
+  const [salesState, setSalesState] = useState<SalesState | null>(
+    initialSales
+      ? {
+          payload: initialSales,
+          from: initialRange.from,
+          to: initialRange.to,
+          bucket: bucketForRange(initialRange.from, initialRange.to),
+        }
+      : null,
+  );
   const [salesError, setSalesError] = useState(initialSales === null);
   const [isPending, startTransition] = useTransition();
+  const requestSeq = useRef(0);
 
-  const bucket = bucketForRange(range.from, range.to);
   const salesVm = useMemo(
-    () => (sales ? buildSalesViewModel(sales, range.from, range.to, bucket) : null),
-    [sales, range, bucket],
+    () =>
+      salesState
+        ? buildSalesViewModel(salesState.payload, salesState.from, salesState.to, salesState.bucket)
+        : null,
+    [salesState],
   );
 
   function applyRange(next: { from: string; to: string }) {
     setRange(next);
+    const bucket = bucketForRange(next.from, next.to);
+    const seq = ++requestSeq.current;
     startTransition(async () => {
-      const result = await getDashboardSales(
-        organizationSlug, next.from, next.to, bucketForRange(next.from, next.to),
-      );
+      const result = await getDashboardSales(organizationSlug, next.from, next.to, bucket);
+      if (seq !== requestSeq.current) return; // superseded by a newer request
       if (result.ok) {
-        setSales(result.data);
+        setSalesState({ payload: result.data, from: next.from, to: next.to, bucket });
         setSalesError(false);
       } else {
         setSalesError(true);
@@ -56,7 +77,7 @@ export function AnalyticsDashboard({ organizationSlug, timeZone, initialRange, i
         <h1 className="text-xl font-semibold">{t("title")}</h1>
         <RangePicker active={preset} onSelect={onPreset} disabled={isPending} />
       </div>
-      {salesVm ? <KpiRow vm={salesVm} /> : <SectionError />}
+      {salesError || !salesVm ? <SectionError /> : <KpiRow vm={salesVm} />}
     </div>
   );
 }

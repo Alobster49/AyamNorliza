@@ -24,7 +24,10 @@ async function callDashboardRpc<T>(
     p_organization_id: orgId,
     ...args,
   });
-  if (error) return { ok: false, message: error.message };
+  // Non-permission RPC failures are not shown verbatim — mirrors the
+  // catch-all convention in driver-actions.ts's `guard()`, which never
+  // surfaces raw Supabase/Postgres error text to the client.
+  if (error) return { ok: false, message: "Something went wrong. Please try again." };
   return { ok: true, data: data as T };
 }
 
