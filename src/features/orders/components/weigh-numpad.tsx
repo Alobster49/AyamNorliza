@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Delete } from "lucide-react";
 import type { EntryTarget } from "../lib/weigh-model";
@@ -26,7 +27,7 @@ export function WeighNumpad({
   variant,
   entryTarget,
   nextDisabled,
-  nextLabel = "Next item →",
+  nextLabel,
   onDigit,
   onDot,
   onBackspace,
@@ -34,6 +35,8 @@ export function WeighNumpad({
   onNext,
   onSkip,
 }: WeighNumpadProps) {
+  const t = useTranslations("orders.numpad");
+  const resolvedNextLabel = nextLabel ?? t("nextDefault");
   const kiosk = variant === "kiosk";
   const keyBase = cn(
     "select-none rounded-xl border border-border bg-secondary font-mono transition-transform duration-100 motion-reduce:transition-none active:scale-95",
@@ -67,7 +70,7 @@ export function WeighNumpad({
         onClick={onToggleTarget}
         aria-pressed={entryTarget === "pieces"}
       >
-        Pieces
+        {t("pieces")}
       </button>
       {/* row 2 */}
       {["4", "5", "6"].map(digit)}
@@ -75,7 +78,7 @@ export function WeighNumpad({
         type="button"
         className={cn(keyBase, "flex items-center justify-center")}
         onClick={onBackspace}
-        aria-label="Backspace"
+        aria-label={t("backspace")}
       >
         <Delete className="size-5" aria-hidden />
       </button>
@@ -86,7 +89,7 @@ export function WeighNumpad({
         className={cn(actionBase, "border border-border bg-secondary text-muted-foreground")}
         onClick={onSkip}
       >
-        Skip
+        {t("skip")}
       </button>
       {/* row 4 */}
       {digit("0")}
@@ -107,7 +110,7 @@ export function WeighNumpad({
         onClick={onNext}
         disabled={nextDisabled}
       >
-        {nextLabel}
+        {resolvedNextLabel}
       </button>
     </div>
   );

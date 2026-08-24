@@ -51,7 +51,18 @@ export function computeOrderTotal(
 // Weight sanity warnings
 // ---------------------------------------------------------------------------
 
-export type WeightWarning = { itemId: string; kind: "deviation" | "size_range"; message: string };
+/**
+ * `messageKey` is relative to the `orders.detail.delivered.warnings`
+ * namespace; `values` carries the ICU params. Kept key-based (rather than a
+ * resolved string) so this pure model stays translatable without importing
+ * next-intl here — the one consumer (order-detail-client.tsx) resolves it.
+ */
+export type WeightWarning = {
+  itemId: string;
+  kind: "deviation" | "size_range";
+  messageKey: string;
+  values: Record<string, string | number>;
+};
 
 export function weightWarnings(
   item: Pick<
@@ -76,7 +87,8 @@ export function weightWarnings(
       warnings.push({
         itemId: item.id,
         kind: "deviation",
-        message: `Final weight deviates ${(deviation * 100).toFixed(0)}% from the warehouse weight`,
+        messageKey: "deviation",
+        values: { percent: (deviation * 100).toFixed(0) },
       });
     }
   }
@@ -89,7 +101,12 @@ export function weightWarnings(
       warnings.push({
         itemId: item.id,
         kind: "size_range",
-        message: `Average bird weight ${avgKg.toFixed(2)} kg is outside the ordered size range (${item.size_min_kg}–${item.size_max_kg} kg)`,
+        messageKey: "sizeRange",
+        values: {
+          avgKg: avgKg.toFixed(2),
+          min: item.size_min_kg,
+          max: item.size_max_kg,
+        },
       });
     }
   }

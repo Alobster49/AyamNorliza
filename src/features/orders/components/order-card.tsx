@@ -1,24 +1,27 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
+import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
 import { Badge } from "@/components/ui/badge";
 
-const formatDate = (date: string) =>
-  new Date(date).toLocaleDateString("en-MY", { day: "2-digit", month: "short", year: "numeric" });
-
 /** Presentational card body — shared by the board card and the DragOverlay preview. */
 export function OrderCardContent({ order }: { order: OrderListItem }) {
+  const t = useTranslations("orders.card");
+  const format = useFormatter();
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), { day: "2-digit", month: "short", year: "numeric" });
+
   return (
     <div className="space-y-2 rounded-lg border bg-card p-3 shadow-sm">
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs text-muted-foreground">{order.id.slice(0, 8)}</span>
         <Badge variant="outline" className="text-[10px] capitalize">
-          {order.source}
+          {t(`source.${order.source}`)}
         </Badge>
       </div>
-      <div className="text-sm font-medium leading-snug">{order.customer?.name ?? "Unknown"}</div>
+      <div className="text-sm font-medium leading-snug">{order.customer?.name ?? t("unknownCustomer")}</div>
       {order.notes && (
         <p className="line-clamp-2 text-xs text-muted-foreground">{order.notes}</p>
       )}

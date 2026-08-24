@@ -27,8 +27,8 @@ describe("journeyBanner", () => {
         expect(banner).toBeNull();
       } else {
         expect(banner).not.toBeNull();
-        expect(banner!.title.length).toBeGreaterThan(0);
-        expect(banner!.body.length).toBeGreaterThan(0);
+        expect(banner!.titleKey.length).toBeGreaterThan(0);
+        expect(banner!.bodyKey.length).toBeGreaterThan(0);
       }
     }
   });
@@ -41,8 +41,9 @@ describe("journeyBanner", () => {
     expect(journeyBanner("closed", 3)!.tone).toBe("done");
   });
 
-  it("pluralizes the pending item count", () => {
-    expect(journeyBanner("pending", 1)!.title).toBe("Check stock for 1 item");
-    expect(journeyBanner("pending", 4)!.title).toBe("Check stock for 4 items");
+  it("carries the pending item count as ICU plural values", () => {
+    expect(journeyBanner("pending", 1)!.titleKey).toBe("pending.title");
+    expect(journeyBanner("pending", 1)!.titleValues).toEqual({ count: 1 });
+    expect(journeyBanner("pending", 4)!.titleValues).toEqual({ count: 4 });
   });
 });

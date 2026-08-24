@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   averageBirdKg,
@@ -19,6 +20,7 @@ type SizeBandGaugeProps = {
  * delta between entered total and ordered kg.
  */
 export function SizeBandGauge({ line, draft, compact = false }: SizeBandGaugeProps) {
+  const t = useTranslations("orders.sizeBand");
   const status = bandStatus(line, draft);
   const avg = averageBirdKg(line, draft);
 
@@ -27,7 +29,7 @@ export function SizeBandGauge({ line, draft, compact = false }: SizeBandGaugePro
     const sign = delta >= 0 ? "+" : "";
     return (
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">vs {line.orderedQuantity} kg ordered</span>
+        <span className="text-muted-foreground">{t("vsOrdered", { quantity: line.orderedQuantity })}</span>
         <span
           className={cn(
             "font-mono tabular-nums",
@@ -64,11 +66,9 @@ export function SizeBandGauge({ line, draft, compact = false }: SizeBandGaugePro
         )}
       </div>
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>
-          {line.sizeMinKg}–{line.sizeMaxKg} kg / bird
-        </span>
+        <span>{t("band", { min: line.sizeMinKg, max: line.sizeMaxKg })}</span>
         {status === "empty" ? (
-          <span>waiting for weight</span>
+          <span>{t("waitingForWeight")}</span>
         ) : (
           <span
             className={cn(
@@ -76,8 +76,8 @@ export function SizeBandGauge({ line, draft, compact = false }: SizeBandGaugePro
               status === "in_band" ? "text-emerald-500" : "text-amber-500",
             )}
           >
-            {avg !== null && `avg ${avg.toFixed(2)} kg · `}
-            {status === "in_band" ? "in band" : "out of band"}
+            {avg !== null && t("avgPrefix", { avg: avg.toFixed(2) })}
+            {status === "in_band" ? t("inBand") : t("outOfBand")}
           </span>
         )}
       </div>

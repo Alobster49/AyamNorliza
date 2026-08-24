@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Loader2 } from "lucide-react";
 import { groupQueueByTask, type WeighLine } from "../lib/weigh-model";
@@ -17,6 +18,7 @@ type QueueRailProps = {
  * and the current line highlighted. Clicking a row jumps the station there.
  */
 export function QueueRail({ queue, confirmed, cursor, syncingTaskIds, onSelect }: QueueRailProps) {
+  const t = useTranslations("orders.queue");
   const groups = groupQueueByTask(queue);
   const currentLine = queue[cursor];
   const remaining = groups.filter((g) => !g.lines.every((l) => confirmed[l.itemId])).length;
@@ -25,7 +27,7 @@ export function QueueRail({ queue, confirmed, cursor, syncingTaskIds, onSelect }
     <aside className="flex w-60 shrink-0 flex-col overflow-y-auto border-r">
       <div className="sticky top-0 z-10 border-b bg-background/95 px-4 py-3 backdrop-blur">
         <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Queue · {remaining} left
+          {t("left", { count: remaining })}
         </div>
       </div>
       {groups.map((group) => {
@@ -48,13 +50,15 @@ export function QueueRail({ queue, confirmed, cursor, syncingTaskIds, onSelect }
           >
             <span className="flex items-center justify-between gap-2 text-sm font-medium">
               <span className="truncate">{group.customerName}</span>
-              {syncing && <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-label="Saving" />}
+              {syncing && (
+                <Loader2 className="size-3.5 shrink-0 animate-spin text-muted-foreground" aria-label={t("saving")} />
+              )}
             </span>
             <span className="text-xs text-muted-foreground">
               {group.truckCode} ·{" "}
               {isCurrent && currentLine
-                ? `item ${currentLine.indexInTask} of ${currentLine.totalInTask}`
-                : `${doneCount} / ${group.lines.length} weighed`}
+                ? t("itemProgress", { index: currentLine.indexInTask, total: currentLine.totalInTask })
+                : t("weighedProgress", { done: doneCount, total: group.lines.length })}
             </span>
           </button>
         );

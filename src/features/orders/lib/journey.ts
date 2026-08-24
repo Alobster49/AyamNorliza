@@ -5,7 +5,7 @@
 
 import type { OrderStatus } from "../types";
 
-export const JOURNEY_STEPS = ["Placed", "Confirm", "Warehouse", "Deliver", "Settle"] as const;
+export const JOURNEY_STEPS = ["placed", "confirm", "warehouse", "deliver", "settle"] as const;
 
 /**
  * Index into JOURNEY_STEPS of the step the order is currently waiting on.
@@ -31,10 +31,16 @@ export function journeyCurrentStep(status: OrderStatus): number | null {
 
 export type JourneyBannerTone = "action" | "waiting" | "done";
 
+/**
+ * Message keys are relative to the `orders.journey.banner` namespace so the
+ * component can resolve them with a single `useTranslations("orders.journey.banner")`
+ * call. `titleValues` carries the ICU params for the pending count.
+ */
 export type JourneyBanner = {
   tone: JourneyBannerTone;
-  title: string;
-  body: string;
+  titleKey: string;
+  titleValues?: Record<string, number>;
+  bodyKey: string;
 };
 
 /** One-sentence guidance per state: what this screen wants and what happens next. */
@@ -43,32 +49,33 @@ export function journeyBanner(status: OrderStatus, itemCount: number): JourneyBa
     case "pending":
       return {
         tone: "action",
-        title: `Check stock for ${itemCount} ${itemCount === 1 ? "item" : "items"}`,
-        body: "Mark each line Available or Not available, then confirm. Confirming creates the warehouse task.",
+        titleKey: "pending.title",
+        titleValues: { count: itemCount },
+        bodyKey: "pending.body",
       };
     case "confirmed":
       return {
         tone: "waiting",
-        title: "Waiting for warehouse",
-        body: "Warehouse allocates and weighs this order next. Nothing to do on this screen yet.",
+        titleKey: "confirmed.title",
+        bodyKey: "confirmed.body",
       };
     case "ready":
       return {
         tone: "waiting",
-        title: "Weighed and ready to load",
-        body: "Waiting for loading and the delivery run. It becomes Delivered after the driver drops it off.",
+        titleKey: "ready.title",
+        bodyKey: "ready.body",
       };
     case "delivered":
       return {
         tone: "action",
-        title: "Enter final weight & price",
-        body: "Fill in every line, then close the order to lock the bill.",
+        titleKey: "delivered.title",
+        bodyKey: "delivered.body",
       };
     case "closed":
       return {
         tone: "done",
-        title: "Order closed and billed",
-        body: "The bill is locked. An admin can reopen it if settlement must be redone.",
+        titleKey: "closed.title",
+        bodyKey: "closed.body",
       };
     case "cancelled":
       return null;

@@ -854,6 +854,252 @@ declare const messages: {
     "shell": {
       "title": "Seller Dashboard"
     }
+  },
+  "orders": {
+    "error": "Error",
+    "fallback": {
+      "cancel": "Cancel my order",
+      "mix": "Mix sizes",
+      "upsize": "Bigger is ok",
+      "downsize": "Smaller is ok"
+    },
+    "units": {
+      "pieces": "{count, plural, one {# pc} other {# pcs}}"
+    },
+    "card": {
+      "unknownCustomer": "Unknown",
+      "source": {
+        "portal": "Portal",
+        "manual": "Manual"
+      }
+    },
+    "journey": {
+      "ariaLabel": "Order progress: step {step} of {total}",
+      "stepLinePrefix": "Step {step} of {total} —",
+      "steps": {
+        "placed": "Placed",
+        "confirm": "Confirm",
+        "warehouse": "Warehouse",
+        "deliver": "Deliver",
+        "settle": "Settle"
+      },
+      "banner": {
+        "pending": {
+          "title": "{count, plural, one {Check stock for # item} other {Check stock for # items}}",
+          "body": "Mark each line Available or Not available, then confirm. Confirming creates the warehouse task."
+        },
+        "confirmed": {
+          "title": "Waiting for warehouse",
+          "body": "Warehouse allocates and weighs this order next. Nothing to do on this screen yet."
+        },
+        "ready": {
+          "title": "Weighed and ready to load",
+          "body": "Waiting for loading and the delivery run. It becomes Delivered after the driver drops it off."
+        },
+        "delivered": {
+          "title": "Enter final weight & price",
+          "body": "Fill in every line, then close the order to lock the bill."
+        },
+        "closed": {
+          "title": "Order closed and billed",
+          "body": "The bill is locked. An admin can reopen it if settlement must be redone."
+        }
+      }
+    },
+    "queue": {
+      "left": "Queue · {count, plural, one {# left} other {# left}}",
+      "saving": "Saving",
+      "itemProgress": "item {index} of {total}",
+      "weighedProgress": "{done} / {total} weighed"
+    },
+    "swipeCard": {
+      "orderedKg": "{quantity} kg ordered · size {min}–{max} kg",
+      "orderedPieces": "{quantity, plural, one {# pc} other {# pcs}} ordered · size {min}–{max} kg",
+      "saveNext": "Save & next",
+      "swipeHint": "Swipe left to skip · swipe right to undo"
+    },
+    "sizeBand": {
+      "vsOrdered": "vs {quantity} kg ordered",
+      "band": "{min}–{max} kg / bird",
+      "waitingForWeight": "waiting for weight",
+      "avgPrefix": "avg {avg} kg · ",
+      "inBand": "in band",
+      "outOfBand": "out of band"
+    },
+    "numpad": {
+      "pieces": "Pieces",
+      "backspace": "Backspace",
+      "skip": "Skip",
+      "nextDefault": "Next item →"
+    },
+    "weightReadout": {
+      "unitKg": "kg",
+      "unitPieces": "{count, plural, one {pc} other {pcs}}"
+    },
+    "dialogs": {
+      "confirm": {
+        "title": "Confirm order {id}",
+        "description": "Mark each line available or not before confirming.",
+        "confirming": "Confirming…",
+        "confirm": "Confirm order",
+        "savedToast": "Decisions saved"
+      },
+      "cancel": {
+        "trigger": "Cancel order",
+        "title": "Cancel order",
+        "description": "This cannot be undone. Let the team know why.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Reason for cancelling",
+        "cancelling": "Cancelling…",
+        "confirmCancel": "Confirm cancel",
+        "cancelledToast": "Order cancelled"
+      },
+      "reopen": {
+        "title": "Reopen order",
+        "description": "This reverts the order to delivered so settlement can be redone. The action is audit-logged.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why are you reopening this order?",
+        "reopening": "Reopening…",
+        "reopen": "Reopen",
+        "reopenedToast": "Order reopened"
+      }
+    },
+    "detail": {
+      "notFound": "Order not found",
+      "backToOrders": "Back to orders",
+      "heading": "Order {id}",
+      "unknownCustomer": "Unknown customer",
+      "deliverySummary": "Delivery details — {zone}{truck} · {date}",
+      "notes": "Notes",
+      "cancelledNotice": "This order was cancelled.",
+      "meta": {
+        "zone": "Zone",
+        "deliveryDate": "Delivery date",
+        "truck": "Truck",
+        "address": "Address"
+      },
+      "pending": {
+        "unknownProduct": "Unknown product",
+        "unavailableNote": "If unavailable: {fallback}",
+        "available": "Available",
+        "notAvailable": "Not available",
+        "resultingFallback": "Resulting fallback: {fallback}",
+        "confirming": "Confirming…",
+        "confirmOrder": "Confirm order",
+        "confirmedToast": "Order confirmed"
+      },
+      "confirmedReady": {
+        "orderLines": "Order lines",
+        "item": "Item",
+        "cancelled": "Cancelled",
+        "asOrdered": "As ordered",
+        "warehouseTask": "Warehouse task",
+        "noTaskYet": "No task recorded yet.",
+        "allocateWeigh": "Allocate & weigh",
+        "done": "Done",
+        "pendingTask": "Pending"
+      },
+      "delivered": {
+        "unknownProduct": "Unknown product",
+        "warehouse": "Warehouse: {weight}",
+        "finalWeight": "Final weight (kg)",
+        "fromWarehouse": "from warehouse",
+        "finalPieces": "Final pieces",
+        "optional": "optional",
+        "pricePerKg": "Price / kg (RM)",
+        "marketToday": "Market today: {price}",
+        "runningTotal": "Running total",
+        "closing": "Closing…",
+        "closeOrder": "Close order",
+        "enterToClose": "Enter a weight and price on every line to close.",
+        "missingFields": "Enter a final weight and price per kg for {product}.",
+        "everyLine": "every line",
+        "closedTitle": "Order closed",
+        "closedTotal": "Total: {total}",
+        "warnings": {
+          "deviation": "Final weight deviates {percent}% from the warehouse weight",
+          "sizeRange": "Average bird weight {avgKg} kg is outside the ordered size range ({min}–{max} kg)"
+        }
+      },
+      "closed": {
+        "settlementSummary": "Settlement summary",
+        "item": "Item",
+        "total": "Total",
+        "weightLog": "Weight log",
+        "colKind": "Kind",
+        "colWeight": "Weight",
+        "colPieces": "Pieces",
+        "colRecordedAt": "Recorded at",
+        "noWeightLog": "No weight log entries",
+        "reopenTrigger": "Reopen order",
+        "weightLogKind": {
+          "warehouse": "Warehouse",
+          "final": "Final"
+        }
+      }
+    },
+    "new": {
+      "heading": "New order",
+      "subheading": "Create a manual order for a customer",
+      "lines": {
+        "title": "Order lines",
+        "addLine": "Add line",
+        "product": "Product",
+        "selectProduct": "Select product",
+        "mode": "Mode",
+        "piece": "Piece",
+        "kg": "Kg",
+        "quantity": "Quantity",
+        "sizeMin": "Size min (kg)",
+        "sizeMax": "Size max (kg)",
+        "ifUnavailable": "If size unavailable"
+      },
+      "delivery": {
+        "title": "Delivery",
+        "zone": "Zone",
+        "selectZone": "Select zone",
+        "dateSlot": "Delivery date & slot",
+        "noSlots": "No slots available",
+        "selectDateSlot": "Select a date and slot",
+        "remaining": "{count, plural, one {# left} other {# left}}",
+        "address": "Delivery address",
+        "addressPlaceholder": "Street address",
+        "postcode": "Postcode (optional)",
+        "postcodePlaceholder": "5-digit postcode",
+        "notes": "Notes",
+        "notesPlaceholder": "Order notes..."
+      },
+      "customer": {
+        "title": "Customer",
+        "searchPlaceholder": "Search by name or phone...",
+        "newCustomer": "New customer",
+        "name": "Name *",
+        "phone": "Phone *",
+        "notes": "Notes",
+        "saveCustomer": "Save customer"
+      },
+      "submit": {
+        "creating": "Creating…",
+        "createOrder": "Create order"
+      },
+      "toasts": {
+        "noPostcodeTitle": "No postcode on file for this customer",
+        "noPostcodeDescription": "Pick a delivery zone manually.",
+        "coverageErrorTitle": "Could not check delivery coverage",
+        "noZoneCoverageTitle": "No delivery zone covers {postcode}",
+        "noZoneCoverageDescription": "Pick a zone manually.",
+        "nameRequired": "Name and phone are required",
+        "customerCreated": "Customer created",
+        "selectCustomer": "Please select a customer",
+        "selectZoneSlot": "Please pick a delivery zone and slot",
+        "enterAddress": "Please enter a delivery address",
+        "selectProductEveryLine": "Please select a product for every line",
+        "invalidQuantity": "Enter a valid quantity for every line.",
+        "wholeNumberPieces": "Piece quantities must be whole numbers.",
+        "invalidSizeRange": "Enter a valid size range for every line.",
+        "orderCreated": "Order created"
+      }
+    }
   }
 };
 export default messages;

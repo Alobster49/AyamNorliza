@@ -851,5 +851,251 @@
     "shell": {
       "title": "Papan Pemuka Penjual"
     }
+  },
+  "orders": {
+    "error": "Ralat",
+    "fallback": {
+      "cancel": "Batalkan pesanan saya",
+      "mix": "Campurkan saiz",
+      "upsize": "Lebih besar tidak mengapa",
+      "downsize": "Lebih kecil tidak mengapa"
+    },
+    "units": {
+      "pieces": "{count, plural, other {# ekor}}"
+    },
+    "card": {
+      "unknownCustomer": "Tidak diketahui",
+      "source": {
+        "portal": "Portal",
+        "manual": "Manual"
+      }
+    },
+    "journey": {
+      "ariaLabel": "Kemajuan pesanan: langkah {step} daripada {total}",
+      "stepLinePrefix": "Langkah {step} daripada {total} —",
+      "steps": {
+        "placed": "Dibuat",
+        "confirm": "Sahkan",
+        "warehouse": "Gudang",
+        "deliver": "Hantar",
+        "settle": "Selesaikan"
+      },
+      "banner": {
+        "pending": {
+          "title": "{count, plural, other {Semak stok untuk # item}}",
+          "body": "Tandakan setiap baris Ada atau Tiada, kemudian sahkan. Mengesahkan akan mencipta tugas gudang."
+        },
+        "confirmed": {
+          "title": "Menunggu gudang",
+          "body": "Gudang akan mengagihkan dan menimbang pesanan ini seterusnya. Tiada tindakan diperlukan di skrin ini buat masa ini."
+        },
+        "ready": {
+          "title": "Sudah ditimbang dan sedia dimuatkan",
+          "body": "Menunggu pemuatan dan trip penghantaran. Ia menjadi Dihantar selepas pemandu menghantarnya."
+        },
+        "delivered": {
+          "title": "Masukkan berat & harga akhir",
+          "body": "Isikan setiap baris, kemudian tutup pesanan untuk mengunci bil."
+        },
+        "closed": {
+          "title": "Pesanan ditutup dan dibilkan",
+          "body": "Bil telah dikunci. Admin boleh membuka semula jika penyelesaian perlu dibuat semula."
+        }
+      }
+    },
+    "queue": {
+      "left": "Baris gilir · {count, plural, other {# baki}}",
+      "saving": "Menyimpan",
+      "itemProgress": "item {index} daripada {total}",
+      "weighedProgress": "{done} / {total} ditimbang"
+    },
+    "swipeCard": {
+      "orderedKg": "{quantity} kg ditempah · saiz {min}–{max} kg",
+      "orderedPieces": "{quantity, plural, other {# ekor}} ditempah · saiz {min}–{max} kg",
+      "saveNext": "Simpan & seterusnya",
+      "swipeHint": "Leret kiri untuk langkau · leret kanan untuk buat asal"
+    },
+    "sizeBand": {
+      "vsOrdered": "berbanding {quantity} kg ditempah",
+      "band": "{min}–{max} kg / ekor",
+      "waitingForWeight": "menunggu berat",
+      "avgPrefix": "purata {avg} kg · ",
+      "inBand": "dalam julat",
+      "outOfBand": "luar julat"
+    },
+    "numpad": {
+      "pieces": "Ekor",
+      "backspace": "Padam",
+      "skip": "Langkau",
+      "nextDefault": "Item seterusnya →"
+    },
+    "weightReadout": {
+      "unitKg": "kg",
+      "unitPieces": "{count, plural, other {ekor}}"
+    },
+    "dialogs": {
+      "confirm": {
+        "title": "Sahkan pesanan {id}",
+        "description": "Tandakan setiap baris ada atau tiada sebelum mengesahkan.",
+        "confirming": "Mengesahkan…",
+        "confirm": "Sahkan pesanan",
+        "savedToast": "Keputusan disimpan"
+      },
+      "cancel": {
+        "trigger": "Batalkan pesanan",
+        "title": "Batalkan pesanan",
+        "description": "Tindakan ini tidak boleh dibuat asal. Beritahu pasukan sebabnya.",
+        "reasonLabel": "Sebab",
+        "reasonPlaceholder": "Sebab pembatalan",
+        "cancelling": "Membatalkan…",
+        "confirmCancel": "Sahkan pembatalan",
+        "cancelledToast": "Pesanan dibatalkan"
+      },
+      "reopen": {
+        "title": "Buka semula pesanan",
+        "description": "Ini mengembalikan pesanan ke status dihantar supaya penyelesaian boleh dibuat semula. Tindakan ini direkodkan dalam log audit.",
+        "reasonLabel": "Sebab",
+        "reasonPlaceholder": "Kenapa anda membuka semula pesanan ini?",
+        "reopening": "Membuka semula…",
+        "reopen": "Buka semula",
+        "reopenedToast": "Pesanan dibuka semula"
+      }
+    },
+    "detail": {
+      "notFound": "Pesanan tidak dijumpai",
+      "backToOrders": "Kembali ke pesanan",
+      "heading": "Pesanan {id}",
+      "unknownCustomer": "Pelanggan tidak diketahui",
+      "deliverySummary": "Butiran penghantaran — {zone}{truck} · {date}",
+      "notes": "Nota",
+      "cancelledNotice": "Pesanan ini telah dibatalkan.",
+      "meta": {
+        "zone": "Zon",
+        "deliveryDate": "Tarikh penghantaran",
+        "truck": "Trak",
+        "address": "Alamat"
+      },
+      "pending": {
+        "unknownProduct": "Produk tidak diketahui",
+        "unavailableNote": "Jika tiada stok: {fallback}",
+        "available": "Ada",
+        "notAvailable": "Tiada",
+        "resultingFallback": "Tindakan gantian: {fallback}",
+        "confirming": "Mengesahkan…",
+        "confirmOrder": "Sahkan pesanan",
+        "confirmedToast": "Pesanan disahkan"
+      },
+      "confirmedReady": {
+        "orderLines": "Baris pesanan",
+        "item": "Item",
+        "cancelled": "Dibatalkan",
+        "asOrdered": "Seperti ditempah",
+        "warehouseTask": "Tugas gudang",
+        "noTaskYet": "Belum ada tugas direkodkan.",
+        "allocateWeigh": "Agih & timbang",
+        "done": "Selesai",
+        "pendingTask": "Belum selesai"
+      },
+      "delivered": {
+        "unknownProduct": "Produk tidak diketahui",
+        "warehouse": "Gudang: {weight}",
+        "finalWeight": "Berat akhir (kg)",
+        "fromWarehouse": "dari gudang",
+        "finalPieces": "Bilangan akhir",
+        "optional": "pilihan",
+        "pricePerKg": "Harga / kg (RM)",
+        "marketToday": "Harga pasaran hari ini: {price}",
+        "runningTotal": "Jumlah setakat ini",
+        "closing": "Menutup…",
+        "closeOrder": "Tutup pesanan",
+        "enterToClose": "Masukkan berat dan harga pada setiap baris untuk menutup.",
+        "missingFields": "Masukkan berat akhir dan harga sekilo untuk {product}.",
+        "everyLine": "setiap baris",
+        "closedTitle": "Pesanan ditutup",
+        "closedTotal": "Jumlah: {total}",
+        "warnings": {
+          "deviation": "Berat akhir menyimpang {percent}% daripada berat gudang",
+          "sizeRange": "Purata berat seekor {avgKg} kg adalah di luar julat saiz ditempah ({min}–{max} kg)"
+        }
+      },
+      "closed": {
+        "settlementSummary": "Ringkasan penyelesaian",
+        "item": "Item",
+        "total": "Jumlah",
+        "weightLog": "Log berat",
+        "colKind": "Jenis",
+        "colWeight": "Berat",
+        "colPieces": "Bilangan",
+        "colRecordedAt": "Direkod pada",
+        "noWeightLog": "Tiada entri log berat",
+        "reopenTrigger": "Buka semula pesanan",
+        "weightLogKind": {
+          "warehouse": "Gudang",
+          "final": "Akhir"
+        }
+      }
+    },
+    "new": {
+      "heading": "Pesanan baharu",
+      "subheading": "Buat pesanan manual untuk pelanggan",
+      "lines": {
+        "title": "Baris pesanan",
+        "addLine": "Tambah baris",
+        "product": "Produk",
+        "selectProduct": "Pilih produk",
+        "mode": "Mod",
+        "piece": "Ekor",
+        "kg": "Kg",
+        "quantity": "Kuantiti",
+        "sizeMin": "Saiz min (kg)",
+        "sizeMax": "Saiz maks (kg)",
+        "ifUnavailable": "Jika saiz tiada stok"
+      },
+      "delivery": {
+        "title": "Penghantaran",
+        "zone": "Zon",
+        "selectZone": "Pilih zon",
+        "dateSlot": "Tarikh & slot penghantaran",
+        "noSlots": "Tiada slot tersedia",
+        "selectDateSlot": "Pilih tarikh dan slot",
+        "remaining": "{count, plural, other {# baki}}",
+        "address": "Alamat penghantaran",
+        "addressPlaceholder": "Alamat jalan",
+        "postcode": "Poskod (pilihan)",
+        "postcodePlaceholder": "Poskod 5 digit",
+        "notes": "Nota",
+        "notesPlaceholder": "Nota pesanan..."
+      },
+      "customer": {
+        "title": "Pelanggan",
+        "searchPlaceholder": "Cari mengikut nama atau telefon...",
+        "newCustomer": "Pelanggan baharu",
+        "name": "Nama *",
+        "phone": "Telefon *",
+        "notes": "Nota",
+        "saveCustomer": "Simpan pelanggan"
+      },
+      "submit": {
+        "creating": "Mencipta…",
+        "createOrder": "Cipta pesanan"
+      },
+      "toasts": {
+        "noPostcodeTitle": "Tiada poskod direkodkan untuk pelanggan ini",
+        "noPostcodeDescription": "Pilih zon penghantaran secara manual.",
+        "coverageErrorTitle": "Tidak dapat menyemak liputan penghantaran",
+        "noZoneCoverageTitle": "Tiada zon penghantaran meliputi {postcode}",
+        "noZoneCoverageDescription": "Pilih zon secara manual.",
+        "nameRequired": "Nama dan telefon diperlukan",
+        "customerCreated": "Pelanggan dicipta",
+        "selectCustomer": "Sila pilih pelanggan",
+        "selectZoneSlot": "Sila pilih zon dan slot penghantaran",
+        "enterAddress": "Sila masukkan alamat penghantaran",
+        "selectProductEveryLine": "Sila pilih produk untuk setiap baris",
+        "invalidQuantity": "Masukkan kuantiti yang sah untuk setiap baris.",
+        "wholeNumberPieces": "Kuantiti ekor mesti nombor bulat.",
+        "invalidSizeRange": "Masukkan julat saiz yang sah untuk setiap baris.",
+        "orderCreated": "Pesanan dicipta"
+      }
+    }
   }
 }

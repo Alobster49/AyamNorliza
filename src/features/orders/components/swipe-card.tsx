@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef } from "react";
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { isLineReady, type EntryTarget, type LineDraft, type WeighLine } from "../lib/weigh-model";
@@ -26,6 +27,8 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(function Swi
   { line, draft, entryTarget, interactive, onDispatchNumpad, onSave, onSkip },
   ref,
 ) {
+  const t = useTranslations("orders.swipeCard");
+  const tQueue = useTranslations("orders.queue");
   return (
     <div
       ref={ref}
@@ -36,7 +39,7 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(function Swi
     >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate text-xs text-muted-foreground">
-          {line.customerName} · item {line.indexInTask} of {line.totalInTask}
+          {line.customerName} · {tQueue("itemProgress", { index: line.indexInTask, total: line.totalInTask })}
         </span>
         <Badge variant="secondary">{line.truckCode}</Badge>
       </div>
@@ -45,8 +48,9 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(function Swi
         <div>
           <div className="text-xl font-semibold">{line.productName}</div>
           <div className="text-xs text-muted-foreground">
-            {line.orderedQuantity} {line.mode === "kg" ? "kg" : "pcs"} ordered · size{" "}
-            {line.sizeMinKg}–{line.sizeMaxKg} kg
+            {line.mode === "kg"
+              ? t("orderedKg", { quantity: line.orderedQuantity, min: line.sizeMinKg, max: line.sizeMaxKg })
+              : t("orderedPieces", { quantity: line.orderedQuantity, min: line.sizeMinKg, max: line.sizeMaxKg })}
           </div>
         </div>
 
@@ -65,7 +69,7 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(function Swi
           variant="thumb"
           entryTarget={entryTarget}
           nextDisabled={!isLineReady(line, { [line.itemId]: draft })}
-          nextLabel="Save & next"
+          nextLabel={t("saveNext")}
           onDigit={(digit) => onDispatchNumpad("digit", digit)}
           onDot={() => onDispatchNumpad("dot")}
           onBackspace={() => onDispatchNumpad("backspace")}
@@ -76,7 +80,7 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(function Swi
       </div>
 
       <p className="text-center text-[11px] text-muted-foreground">
-        Swipe left to skip · swipe right to undo
+        {t("swipeHint")}
       </p>
     </div>
   );

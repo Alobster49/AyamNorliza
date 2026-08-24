@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { confirmOrder, cancelOrder, reopenOrder } from "@/features/orders/server/order-actions";
 import type { OrderWithItems } from "@/features/orders/types";
-import { FALLBACK_LABELS } from "@/features/orders/types";
-import { formatWeight, describeFallback } from "@/features/orders/lib/order-model";
+import { formatWeight } from "@/features/orders/lib/order-model";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -34,6 +34,12 @@ export function ConfirmOrderDialog({
   onDone,
 }: BaseProps & { order: OrderWithItems | null }) {
   const { toast } = useToast();
+  const t = useTranslations("orders.dialogs.confirm");
+  const tFallback = useTranslations("orders.fallback");
+  const tUnits = useTranslations("orders.units");
+  const tPending = useTranslations("orders.detail.pending");
+  const tError = useTranslations("orders");
+  const tCommon = useTranslations("common");
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -59,10 +65,10 @@ export function ConfirmOrderDialog({
     });
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: "Error", description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Decisions saved" });
+    toast({ title: t("savedToast") });
     onOpenChange(false);
     onDone();
   }
@@ -71,8 +77,8 @@ export function ConfirmOrderDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Confirm order {order.id.slice(0, 8).toUpperCase()}</DialogTitle>
-          <DialogDescription>Mark each line available or not before confirming.</DialogDescription>
+          <DialogTitle>{t("title", { id: order.id.slice(0, 8).toUpperCase() })}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           {order.items.map((item) => {
@@ -81,13 +87,13 @@ export function ConfirmOrderDialog({
               <div key={item.id} className="rounded-lg border p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <div className="text-sm font-medium">{item.product?.name ?? "Unknown product"}</div>
+                    <div className="text-sm font-medium">{item.product?.name ?? tPending("unknownProduct")}</div>
                     <div className="text-xs text-muted-foreground">
-                      {item.mode === "kg" ? formatWeight(item.quantity) : `${item.quantity} pcs`} · size{" "}
-                      {item.size_min_kg}–{item.size_max_kg} kg
+                      {item.mode === "kg" ? formatWeight(item.quantity) : tUnits("pieces", { count: item.quantity })} ·
+                      size {item.size_min_kg}–{item.size_max_kg} kg
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      If unavailable: {FALLBACK_LABELS[item.fallback]}
+                      {tPending("unavailableNote", { fallback: tFallback(item.fallback) })}
                     </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-1.5">
@@ -97,7 +103,7 @@ export function ConfirmOrderDialog({
                       variant={available ? "default" : "outline"}
                       onClick={() => setAvailability((prev) => ({ ...prev, [item.id]: true }))}
                     >
-                      Available
+                      {tPending("available")}
                     </Button>
                     <Button
                       type="button"
@@ -105,13 +111,13 @@ export function ConfirmOrderDialog({
                       variant={!available ? "destructive" : "outline"}
                       onClick={() => setAvailability((prev) => ({ ...prev, [item.id]: false }))}
                     >
-                      Not available
+                      {tPending("notAvailable")}
                     </Button>
                   </div>
                 </div>
                 {!available && (
                   <Badge className="mt-2" variant={item.fallback === "cancel" ? "destructive" : "secondary"}>
-                    Resulting fallback: {describeFallback(item.fallback)}
+                    {tPending("resultingFallback", { fallback: tFallback(item.fallback) })}
                   </Badge>
                 )}
               </div>
@@ -120,10 +126,10 @@ export function ConfirmOrderDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Back
+            {tCommon("back")}
           </Button>
           <Button disabled={submitting} onClick={handleConfirm}>
-            {submitting ? "Confirming…" : "Confirm order"}
+            {submitting ? t("confirming") : t("confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -139,6 +145,9 @@ export function CancelOrderBoardDialog({
   onDone,
 }: BaseProps & { orderId: string }) {
   const { toast } = useToast();
+  const t = useTranslations("orders.dialogs.cancel");
+  const tError = useTranslations("orders");
+  const tCommon = useTranslations("common");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -154,10 +163,10 @@ export function CancelOrderBoardDialog({
     const result = await cancelOrder(organizationSlug, orderId, reason);
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: "Error", description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Order cancelled" });
+    toast({ title: t("cancelledToast") });
     setReason("");
     onOpenChange(false);
     onDone();
@@ -167,23 +176,23 @@ export function CancelOrderBoardDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Cancel order</DialogTitle>
-          <DialogDescription>This cannot be undone. Let the team know why.</DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label>Reason</Label>
+          <Label>{t("reasonLabel")}</Label>
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Reason for cancelling"
+            placeholder={t("reasonPlaceholder")}
           />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Back
+            {tCommon("back")}
           </Button>
           <Button variant="destructive" disabled={submitting} onClick={handleCancel}>
-            {submitting ? "Cancelling…" : "Confirm cancel"}
+            {submitting ? t("cancelling") : t("confirmCancel")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -199,6 +208,9 @@ export function ReopenOrderBoardDialog({
   onDone,
 }: BaseProps & { orderId: string }) {
   const { toast } = useToast();
+  const t = useTranslations("orders.dialogs.reopen");
+  const tError = useTranslations("orders");
+  const tCommon = useTranslations("common");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -214,10 +226,10 @@ export function ReopenOrderBoardDialog({
     const result = await reopenOrder(organizationSlug, orderId, reason);
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: "Error", description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.message, variant: "destructive" });
       return;
     }
-    toast({ title: "Order reopened" });
+    toast({ title: t("reopenedToast") });
     setReason("");
     onOpenChange(false);
     onDone();
@@ -227,25 +239,23 @@ export function ReopenOrderBoardDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Reopen order</DialogTitle>
-          <DialogDescription>
-            This reverts the order to delivered so settlement can be redone. The action is audit-logged.
-          </DialogDescription>
+          <DialogTitle>{t("title")}</DialogTitle>
+          <DialogDescription>{t("description")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <Label>Reason</Label>
+          <Label>{t("reasonLabel")}</Label>
           <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="Why are you reopening this order?"
+            placeholder={t("reasonPlaceholder")}
           />
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
+            {tCommon("cancel")}
           </Button>
           <Button disabled={submitting} onClick={handleReopen}>
-            {submitting ? "Reopening…" : "Reopen"}
+            {submitting ? t("reopening") : t("reopen")}
           </Button>
         </DialogFooter>
       </DialogContent>

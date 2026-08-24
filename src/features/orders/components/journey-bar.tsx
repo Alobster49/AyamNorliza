@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { CheckCircle2, ClipboardList, Clock } from "lucide-react";
 import type { OrderStatus } from "../types";
 import {
@@ -14,6 +15,7 @@ import {
  * Labels show from `sm:` up; phones get a compact "Step N of 5" line.
  */
 export function JourneyBar({ status }: { status: OrderStatus }) {
+  const t = useTranslations("orders.journey");
   const current = journeyCurrentStep(status);
   if (current == null) return null;
 
@@ -26,25 +28,32 @@ export function JourneyBar({ status }: { status: OrderStatus }) {
         ? "font-medium text-amber-600 dark:text-amber-400"
         : "text-muted-foreground";
 
+  const stepLabel = (i: number) => t(`steps.${JOURNEY_STEPS[i]}`);
+
   return (
-    <div aria-label={`Order progress: step ${Math.min(current + 1, JOURNEY_STEPS.length)} of ${JOURNEY_STEPS.length}`}>
+    <div
+      aria-label={t("ariaLabel", {
+        step: Math.min(current + 1, JOURNEY_STEPS.length),
+        total: JOURNEY_STEPS.length,
+      })}
+    >
       <div className="flex gap-1.5">
-        {JOURNEY_STEPS.map((label, i) => (
-          <div key={label} className={`h-1.5 flex-1 rounded-full ${segmentClass(i)}`} />
+        {JOURNEY_STEPS.map((step, i) => (
+          <div key={step} className={`h-1.5 flex-1 rounded-full ${segmentClass(i)}`} />
         ))}
       </div>
       <div className="mt-1.5 hidden gap-1.5 sm:flex">
-        {JOURNEY_STEPS.map((label, i) => (
-          <div key={label} className={`flex-1 text-[11px] ${labelClass(i)}`}>
-            {label}
+        {JOURNEY_STEPS.map((step, i) => (
+          <div key={step} className={`flex-1 text-[11px] ${labelClass(i)}`}>
+            {stepLabel(i)}
           </div>
         ))}
       </div>
       {current < JOURNEY_STEPS.length && (
         <p className="mt-1.5 text-xs text-muted-foreground sm:hidden">
-          Step {current + 1} of {JOURNEY_STEPS.length} —{" "}
+          {t("stepLinePrefix", { step: current + 1, total: JOURNEY_STEPS.length })}{" "}
           <span className="font-medium text-amber-600 dark:text-amber-400">
-            {JOURNEY_STEPS[current]}
+            {stepLabel(current)}
           </span>
         </p>
       )}
@@ -75,6 +84,7 @@ const TONE_ICONS: Record<JourneyBannerTone, typeof ClipboardList> = {
 
 /** One-sentence "what does this screen want from me" card under the bar. */
 export function NextActionBanner({ status, itemCount }: { status: OrderStatus; itemCount: number }) {
+  const t = useTranslations("orders.journey.banner");
   const banner = journeyBanner(status, itemCount);
   if (!banner) return null;
 
@@ -85,8 +95,8 @@ export function NextActionBanner({ status, itemCount }: { status: OrderStatus; i
     <div className={`flex items-start gap-3 rounded-lg border p-4 ${tone.wrap}`}>
       <Icon className={`mt-0.5 h-4 w-4 shrink-0 ${tone.title}`} aria-hidden />
       <div>
-        <p className={`text-sm font-semibold ${tone.title}`}>{banner.title}</p>
-        <p className="text-sm text-muted-foreground">{banner.body}</p>
+        <p className={`text-sm font-semibold ${tone.title}`}>{t(banner.titleKey, banner.titleValues)}</p>
+        <p className="text-sm text-muted-foreground">{t(banner.bodyKey)}</p>
       </div>
     </div>
   );

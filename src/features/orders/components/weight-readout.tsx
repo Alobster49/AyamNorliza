@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { EntryTarget } from "../lib/weigh-model";
 
@@ -13,11 +14,16 @@ type WeightReadoutProps = {
  * (weight or pieces) is emphasized; the other shown small beside it.
  */
 export function WeightReadout({ weightKg, pieces, entryTarget, size }: WeightReadoutProps) {
+  const t = useTranslations("orders.weightReadout");
   const weightActive = entryTarget === "weight";
   const primary = weightActive ? weightKg : pieces;
-  const primaryUnit = weightActive ? "kg" : "pcs";
   const secondary = weightActive ? pieces : weightKg;
-  const secondaryUnit = weightActive ? "pcs" : "kg";
+
+  const unitLabel = (value: string, isPieces: boolean) =>
+    isPieces ? t("unitPieces", { count: Number(value) || 0 }) : t("unitKg");
+
+  const primaryUnit = unitLabel(primary, !weightActive);
+  const secondaryUnit = unitLabel(secondary, weightActive);
 
   return (
     <div className={cn("flex flex-wrap items-baseline", size === "kiosk" ? "gap-3" : "gap-2")}>
