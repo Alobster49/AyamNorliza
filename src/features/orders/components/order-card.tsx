@@ -70,6 +70,7 @@ export function OrderCard({
       {...listeners}
       onClick={onOpen}
       onKeyDown={(e) => {
+        listeners?.onKeyDown?.(e);
         if (e.key === "Enter") {
           e.preventDefault();
           onOpen();
