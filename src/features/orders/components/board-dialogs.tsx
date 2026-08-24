@@ -39,6 +39,7 @@ export function ConfirmOrderDialog({
   const tUnits = useTranslations("orders.units");
   const tPending = useTranslations("orders.detail.pending");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const tCommon = useTranslations("common");
   const [availability, setAvailability] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +66,7 @@ export function ConfirmOrderDialog({
     });
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     toast({ title: t("savedToast") });
@@ -147,6 +148,7 @@ export function CancelOrderBoardDialog({
   const { toast } = useToast();
   const t = useTranslations("orders.dialogs.cancel");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const tCommon = useTranslations("common");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -163,7 +165,7 @@ export function CancelOrderBoardDialog({
     const result = await cancelOrder(organizationSlug, orderId, reason);
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     toast({ title: t("cancelledToast") });
@@ -210,6 +212,7 @@ export function ReopenOrderBoardDialog({
   const { toast } = useToast();
   const t = useTranslations("orders.dialogs.reopen");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const tCommon = useTranslations("common");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -226,7 +229,7 @@ export function ReopenOrderBoardDialog({
     const result = await reopenOrder(organizationSlug, orderId, reason);
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     toast({ title: t("reopenedToast") });

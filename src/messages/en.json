@@ -461,6 +461,60 @@
         "invalidAmount": "Cash collected cannot be negative.",
         "internal": "Something went wrong. Please try again."
       }
+    },
+    "orders": {
+      "permission": {
+        "unauthenticated": "Not authenticated",
+        "orgNotFound": "Organization not found",
+        "forbidden": "You do not have access to this feature"
+      },
+      "detail": {
+        "notFound": "Order not found"
+      },
+      "create": {
+        "invalidInput": "Invalid order input",
+        "customerRequired": "customerId is required for manual orders",
+        "zoneNotFound": "That delivery zone was not found.",
+        "slotNotFound": "That delivery slot is no longer available.",
+        "dateOutOfWindow": "Pick a delivery date within the next 14 days.",
+        "weekdayMismatch": "That date does not match the slot's day of the week.",
+        "dateBlocked": "Deliveries are blocked on that date. Pick another.",
+        "slotFull": "That delivery slot just filled up — pick another.",
+        "invalidItems": "One or more items in this order are invalid.",
+        "forbidden": "You do not have permission to do that.",
+        "internal": "Something went wrong. Please try again."
+      },
+      "confirm": {
+        "invalidInput": "Invalid confirmation input",
+        "invalidStatus": "This order is not in the right status for that action.",
+        "forbidden": "You do not have permission to do that.",
+        "decisionsIncomplete": "Every line needs a stock decision before you can confirm.",
+        "internal": "Something went wrong. Please try again."
+      },
+      "cancel": {
+        "invalidStatus": "This order is not in the right status for that action.",
+        "forbidden": "You do not have permission to do that.",
+        "internal": "Something went wrong. Please try again."
+      },
+      "close": {
+        "invalidInput": "Invalid settlement input",
+        "invalidStatus": "This order is not in the right status for that action.",
+        "forbidden": "You do not have permission to do that.",
+        "linesIncomplete": "Every line needs a final weight and price before you can close this order.",
+        "invalidWeight": "Weight must be greater than zero.",
+        "invalidPrice": "Price per kg cannot be negative.",
+        "internal": "Something went wrong. Please try again."
+      },
+      "reopen": {
+        "invalidStatus": "This order is not in the right status for that action.",
+        "forbidden": "You do not have permission to do that.",
+        "internal": "Something went wrong. Please try again."
+      },
+      "delivery": {
+        "optionsLoadFailed": "Failed to load delivery options",
+        "invalidPostcode": "Enter a 5-digit postcode",
+        "coverageCheckFailed": "Failed to check delivery coverage"
+      }
     }
   },
   "dashboard": {

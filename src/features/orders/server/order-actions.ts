@@ -32,12 +32,33 @@ function err<T = never>(
   code: OrderErrorCode,
   message: string,
   fieldErrors?: Record<string, string[]>,
+  messageKey?: string,
 ): ActionResult<T> {
-  return { ok: false, code, message, ...(fieldErrors ? { fieldErrors } : {}) };
+  return {
+    ok: false,
+    code,
+    message,
+    ...(fieldErrors ? { fieldErrors } : {}),
+    ...(messageKey ? { messageKey } : {}),
+  };
 }
 
 function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };
+}
+
+/**
+ * `OrderPermissionError.message` is prose from `guards.ts`, shared with
+ * every order/logistics/driver action (driver-actions.ts has its own
+ * `errors.drive.run.*` variant of this same mapping). Only the seller
+ * order-pipeline screens converted so far (order-detail-client,
+ * new-order-client, board-dialogs — Phase 3 Task 6) read `messageKey`;
+ * every other caller of `guardRoles` keeps reading `message`.
+ */
+function permissionMessageKey(message: string): string {
+  if (message === "Not authenticated") return "errors.orders.permission.unauthenticated";
+  if (message === "Organization not found") return "errors.orders.permission.orgNotFound";
+  return "errors.orders.permission.forbidden";
 }
 
 async function guardRoles(
@@ -45,14 +66,19 @@ async function guardRoles(
   roles: readonly string[],
 ): Promise<
   | { ok: true; orgId: string; userId: string; role: string; timeZone: string }
-  | { ok: false; code: "forbidden"; message: string }
+  | { ok: false; code: "forbidden"; message: string; messageKey: string }
 > {
   try {
     const ctx = await requireOrgRole(organizationSlug, roles);
     return { ok: true, ...ctx };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
-      return { ok: false, code: "forbidden", message: e.message };
+      return {
+        ok: false,
+        code: "forbidden",
+        message: e.message,
+        messageKey: permissionMessageKey(e.message),
+      };
     }
     throw e;
   }
@@ -114,7 +140,7 @@ export async function getOrderDetail(
     .single();
 
   if (error || !order) {
-    return err("not_found", "Order not found");
+    return err("not_found", "Order not found", undefined, "errors.orders.detail.notFound");
   }
 
   const { data: items } = await supabase
@@ -147,17 +173,57 @@ export async function getOrderDetail(
   });
 }
 
+/**
+ * `mapRpcError` is shared across every order-pipeline action and reuses the
+ * same raw codes for unrelated RPCs, so the `errors.orders.create.*`
+ * messageKey is derived here, from the raw `place_order` RPC message, rather
+ * than added to the shared mapper (mirrors driver-actions.ts's
+ * `stopMessageKey`).
+ */
+function createMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.orders.create.forbidden";
+    case "zone_not_found":
+      return "errors.orders.create.zoneNotFound";
+    case "slot_not_found":
+      return "errors.orders.create.slotNotFound";
+    case "date_out_of_window":
+      return "errors.orders.create.dateOutOfWindow";
+    case "weekday_mismatch":
+      return "errors.orders.create.weekdayMismatch";
+    case "date_blocked":
+      return "errors.orders.create.dateBlocked";
+    case "slot_full":
+      return "errors.orders.create.slotFull";
+    case "invalid_items":
+      return "errors.orders.create.invalidItems";
+    default:
+      return "errors.orders.create.internal";
+  }
+}
+
 export async function createManualOrder(
   rawInput: unknown,
 ): Promise<ActionResult<{ orderId: string }>> {
   const parsed = PlaceOrderSchema.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid order input", parsed.error.flatten().fieldErrors);
+    return err(
+      "validation",
+      "Invalid order input",
+      parsed.error.flatten().fieldErrors,
+      "errors.orders.create.invalidInput",
+    );
   }
   const input = parsed.data;
 
   if (!input.customerId) {
-    return err("validation", "customerId is required for manual orders");
+    return err(
+      "validation",
+      "customerId is required for manual orders",
+      undefined,
+      "errors.orders.create.customerRequired",
+    );
   }
 
   const guard = await guardRoles(input.organizationSlug, MANAGER_ROLES);
@@ -191,7 +257,7 @@ export async function createManualOrder(
 
   if (error) {
     const mapped = mapRpcError(error.message);
-    return err(mapped.code as OrderErrorCode, mapped.message);
+    return err(mapped.code as OrderErrorCode, mapped.message, undefined, createMessageKey(error.message));
   }
 
   const orderId = data as string;
@@ -200,10 +266,29 @@ export async function createManualOrder(
   return ok({ orderId });
 }
 
+/** See `createMessageKey` — same rationale, `confirm_order`'s own codes. */
+function confirmMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.orders.confirm.forbidden";
+    case "invalid_status":
+      return "errors.orders.confirm.invalidStatus";
+    case "decisions_incomplete":
+      return "errors.orders.confirm.decisionsIncomplete";
+    default:
+      return "errors.orders.confirm.internal";
+  }
+}
+
 export async function confirmOrder(rawInput: unknown): Promise<ActionResult> {
   const parsed = ConfirmOrderSchema.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid confirmation input", parsed.error.flatten().fieldErrors);
+    return err(
+      "validation",
+      "Invalid confirmation input",
+      parsed.error.flatten().fieldErrors,
+      "errors.orders.confirm.invalidInput",
+    );
   }
   const input = parsed.data;
 
@@ -222,7 +307,7 @@ export async function confirmOrder(rawInput: unknown): Promise<ActionResult> {
 
   if (error) {
     const mapped = mapRpcError(error.message);
-    return err(mapped.code as OrderErrorCode, mapped.message);
+    return err(mapped.code as OrderErrorCode, mapped.message, undefined, confirmMessageKey(error.message));
   }
 
   // Fire-and-forget suggestion: a failed auto-assign must never fail the
@@ -236,6 +321,18 @@ export async function confirmOrder(rawInput: unknown): Promise<ActionResult> {
   revalidatePath(`/${input.organizationSlug}/orders`);
   revalidatePath(`/${input.organizationSlug}/orders/${input.orderId}`);
   return ok(undefined);
+}
+
+/** See `createMessageKey` — same rationale, `cancel_order`'s own codes. */
+function cancelMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.orders.cancel.forbidden";
+    case "invalid_status":
+      return "errors.orders.cancel.invalidStatus";
+    default:
+      return "errors.orders.cancel.internal";
+  }
 }
 
 export async function cancelOrder(
@@ -254,7 +351,7 @@ export async function cancelOrder(
 
   if (error) {
     const mapped = mapRpcError(error.message);
-    return err(mapped.code as OrderErrorCode, mapped.message);
+    return err(mapped.code as OrderErrorCode, mapped.message, undefined, cancelMessageKey(error.message));
   }
 
   revalidatePath(`/${organizationSlug}/orders`);
@@ -617,12 +714,35 @@ export async function getPriceHints(
   return ok(data ?? []);
 }
 
+/** See `createMessageKey` — same rationale, `close_order`'s own codes. */
+function closeMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.orders.close.forbidden";
+    case "invalid_status":
+      return "errors.orders.close.invalidStatus";
+    case "lines_incomplete":
+      return "errors.orders.close.linesIncomplete";
+    case "invalid_weight":
+      return "errors.orders.close.invalidWeight";
+    case "invalid_price":
+      return "errors.orders.close.invalidPrice";
+    default:
+      return "errors.orders.close.internal";
+  }
+}
+
 export async function closeOrder(
   rawInput: unknown,
 ): Promise<ActionResult<{ total: number }>> {
   const parsed = CloseOrderSchema.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid settlement input", parsed.error.flatten().fieldErrors);
+    return err(
+      "validation",
+      "Invalid settlement input",
+      parsed.error.flatten().fieldErrors,
+      "errors.orders.close.invalidInput",
+    );
   }
   const input = parsed.data;
 
@@ -646,12 +766,24 @@ export async function closeOrder(
 
   if (error) {
     const mapped = mapRpcError(error.message);
-    return err(mapped.code as OrderErrorCode, mapped.message);
+    return err(mapped.code as OrderErrorCode, mapped.message, undefined, closeMessageKey(error.message));
   }
 
   revalidatePath(`/${input.organizationSlug}/orders`);
   revalidatePath(`/${input.organizationSlug}/orders/${input.orderId}`);
   return ok({ total: Number(data) });
+}
+
+/** See `createMessageKey` — same rationale, `reopen_order`'s own codes. */
+function reopenMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.orders.reopen.forbidden";
+    case "invalid_status":
+      return "errors.orders.reopen.invalidStatus";
+    default:
+      return "errors.orders.reopen.internal";
+  }
 }
 
 export async function reopenOrder(
@@ -670,7 +802,7 @@ export async function reopenOrder(
 
   if (error) {
     const mapped = mapRpcError(error.message);
-    return err(mapped.code as OrderErrorCode, mapped.message);
+    return err(mapped.code as OrderErrorCode, mapped.message, undefined, reopenMessageKey(error.message));
   }
 
   revalidatePath(`/${organizationSlug}/orders`);
@@ -699,7 +831,7 @@ export async function getDeliveryOptionsForOrg(
   });
 
   if (error) {
-    return err("internal", "Failed to load delivery options");
+    return err("internal", "Failed to load delivery options", undefined, "errors.orders.delivery.optionsLoadFailed");
   }
 
   const options = (data ?? []) as Array<{
@@ -738,7 +870,7 @@ export async function resolveDeliveryZone(
   if (!guard.ok) return guard;
 
   if (!/^[0-9]{5}$/.test(postcode)) {
-    return err("validation", "Enter a 5-digit postcode");
+    return err("validation", "Enter a 5-digit postcode", undefined, "errors.orders.delivery.invalidPostcode");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -747,7 +879,12 @@ export async function resolveDeliveryZone(
     p_postcode: postcode,
   });
   if (error) {
-    return err("internal", "Failed to check delivery coverage");
+    return err(
+      "internal",
+      "Failed to check delivery coverage",
+      undefined,
+      "errors.orders.delivery.coverageCheckFailed",
+    );
   }
   return ok({ zoneId: (data as string | null) ?? null });
 }

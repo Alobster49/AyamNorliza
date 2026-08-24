@@ -58,9 +58,22 @@ const eslintConfig = [
     // matched nothing, not just the files it happened to list: the rule was
     // vacuous for every path, not only the ones its comment described.
     files: [
-      "src/app/\\[locale\\]/(seller)/**/*.{ts,tsx}",
-      "src/features/orders/components/**/*.{ts,tsx}",
-      "src/features/logistics/components/**/*.{ts,tsx}",
+      // Phase 3 seller clean-file batch (Task 6): the broad `(seller)/**`,
+      // `orders/components/**`, and `logistics/components/**` globs above
+      // were narrowed to this explicit list of the DEFERRED-DIRTY files
+      // (see .superpowers/sdd/task-6-brief.md) once every other file under
+      // those trees was converted to `@/i18n/navigation` - a broad glob
+      // only ever flags files already known to be clean, so it can't catch
+      // a regression in a converted file the way an explicit list can.
+      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/customers/customers-client.tsx",
+      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/orders/orders-client.tsx",
+      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/products/products-client.tsx",
+      "src/app/\\[locale\\]/(seller)/\\[organizationSlug\\]/runs/runs-client.tsx",
+      "src/features/orders/components/orders-board.tsx",
+      "src/features/orders/components/swipe-deck.tsx",
+      "src/features/orders/components/weigh-station.tsx",
+      "src/features/logistics/components/loading-client.tsx",
+      "src/features/logistics/components/timeline-view.tsx",
       "src/features/overview/components/**/*.{ts,tsx}",
     ],
     rules: {

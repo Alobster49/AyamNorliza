@@ -461,6 +461,60 @@
         "invalidAmount": "Wang tunai yang dikutip tidak boleh negatif.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi."
       }
+    },
+    "orders": {
+      "permission": {
+        "unauthenticated": "Belum disahkan",
+        "orgNotFound": "Organisasi tidak dijumpai",
+        "forbidden": "Anda tidak mempunyai akses kepada ciri ini"
+      },
+      "detail": {
+        "notFound": "Pesanan tidak dijumpai"
+      },
+      "create": {
+        "invalidInput": "Input pesanan tidak sah",
+        "customerRequired": "customerId diperlukan untuk pesanan manual",
+        "zoneNotFound": "Zon penghantaran itu tidak dijumpai.",
+        "slotNotFound": "Slot penghantaran itu tidak lagi tersedia.",
+        "dateOutOfWindow": "Pilih tarikh penghantaran dalam tempoh 14 hari akan datang.",
+        "weekdayMismatch": "Tarikh itu tidak sepadan dengan hari dalam minggu untuk slot tersebut.",
+        "dateBlocked": "Penghantaran disekat pada tarikh itu. Sila pilih tarikh lain.",
+        "slotFull": "Slot penghantaran itu baru sahaja penuh — sila pilih slot lain.",
+        "invalidItems": "Satu atau lebih item dalam pesanan ini tidak sah.",
+        "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      },
+      "confirm": {
+        "invalidInput": "Input pengesahan tidak sah",
+        "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
+        "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+        "decisionsIncomplete": "Setiap baris memerlukan keputusan stok sebelum anda boleh sahkan.",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      },
+      "cancel": {
+        "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
+        "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      },
+      "close": {
+        "invalidInput": "Input penyelesaian tidak sah",
+        "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
+        "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+        "linesIncomplete": "Setiap baris memerlukan berat akhir dan harga sebelum anda boleh tutup pesanan ini.",
+        "invalidWeight": "Berat mesti lebih daripada sifar.",
+        "invalidPrice": "Harga sekilo tidak boleh negatif.",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      },
+      "reopen": {
+        "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
+        "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      },
+      "delivery": {
+        "optionsLoadFailed": "Gagal memuatkan pilihan penghantaran",
+        "invalidPostcode": "Masukkan poskod 5 digit",
+        "coverageCheckFailed": "Gagal menyemak liputan penghantaran"
+      }
     }
   },
   "dashboard": {

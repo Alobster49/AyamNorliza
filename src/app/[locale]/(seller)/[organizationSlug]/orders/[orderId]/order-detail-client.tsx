@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations, useFormatter } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import {
   getOrderDetail,
   getPriceHints,
@@ -64,6 +64,7 @@ export function OrderDetailClient({ organizationSlug, callerRole, initialOrder }
   const t = useTranslations("orders.detail");
   const tStatus = useTranslations("status.order");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const format = useFormatter();
   const [order, setOrder] = useState(initialOrder);
 
@@ -71,7 +72,7 @@ export function OrderDetailClient({ organizationSlug, callerRole, initialOrder }
     if (!order) return;
     const result = await getOrderDetail(organizationSlug, order.id);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     setOrder(result.data);
@@ -224,6 +225,7 @@ function CancelOrderDialog({
   const { toast } = useToast();
   const t = useTranslations("orders.dialogs.cancel");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const tCommon = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -234,7 +236,7 @@ function CancelOrderDialog({
     const result = await cancelOrder(organizationSlug, orderId, reason);
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     toast({ title: t("cancelledToast") });
@@ -283,6 +285,7 @@ function PendingPanel({
   const tFallback = useTranslations("orders.fallback");
   const tUnits = useTranslations("orders.units");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const [availability, setAvailability] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(order.items.map((item) => [item.id, true])),
   );
@@ -300,7 +303,7 @@ function PendingPanel({
     });
     setConfirming(false);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     toast({ title: t("confirmedToast") });
@@ -438,6 +441,7 @@ function DeliveredPanel({
   const tWarnings = useTranslations("orders.detail.delivered.warnings");
   const tUnits = useTranslations("orders.units");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const nonCancelled = order.items.filter((item) => !item.is_cancelled);
   const [hints, setHints] = useState<MarketSuggestion[]>([]);
   const [drafts, setDrafts] = useState<Record<string, SettlementDraft>>(() =>
@@ -529,7 +533,7 @@ function DeliveredPanel({
     setClosing(false);
 
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
 
@@ -655,6 +659,7 @@ function ClosedPanel({
   const t = useTranslations("orders.detail.closed");
   const tReopen = useTranslations("orders.dialogs.reopen");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const tCommon = useTranslations("common");
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reason, setReason] = useState("");
@@ -668,7 +673,7 @@ function ClosedPanel({
     const result = await reopenOrder(organizationSlug, order.id, reason);
     setSubmitting(false);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     toast({ title: tReopen("reopenedToast") });

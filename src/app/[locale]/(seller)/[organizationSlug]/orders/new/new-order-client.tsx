@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { createCustomer, searchCustomers, getCatalogForOrdering } from "@/features/seller/server/actions";
 import type { Customer } from "@/features/seller/types";
 import { getActiveZones } from "@/features/orders/server/portal-actions";
@@ -68,6 +68,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
   const t = useTranslations("orders.new");
   const tFallback = useTranslations("orders.fallback");
   const tError = useTranslations("orders");
+  const tRoot = useTranslations();
   const tCommon = useTranslations("common");
 
   const [products, setProducts] = useState<ProductOption[]>([]);
@@ -173,7 +174,11 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     if (customerSeqRef.current !== seq) return;
 
     if (!result.ok) {
-      toast({ title: t("toasts.coverageErrorTitle"), description: result.message, variant: "destructive" });
+      toast({
+        title: t("toasts.coverageErrorTitle"),
+        description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -231,7 +236,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     if (!nextZoneId) return;
     const result = await getDeliveryOptionsForOrg(organizationSlug, nextZoneId);
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
     setDeliveryOptions(result.data);
@@ -305,7 +310,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     setSubmitting(false);
 
     if (!result.ok) {
-      toast({ title: tError("error"), description: result.message, variant: "destructive" });
+      toast({ title: tError("error"), description: result.messageKey ? tRoot(result.messageKey as never) : result.message, variant: "destructive" });
       return;
     }
 

@@ -108,7 +108,12 @@ describe("getTodayTasks", () => {
 
     const result = await getTodayTasks("ayam-norliza-pilot");
 
-    expect(result).toEqual({ ok: false, code: "forbidden", message: expect.any(String) });
+    expect(result).toEqual({
+      ok: false,
+      code: "forbidden",
+      message: expect.any(String),
+      messageKey: "errors.orders.permission.forbidden",
+    });
   });
 });
 
