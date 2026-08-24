@@ -18,6 +18,15 @@ import { resolveDispatchDrop, type DispatchDropTarget } from "../lib/dispatch-ru
 import { assignOrder, departTruck, unassignOrder } from "../server/dispatch-actions";
 import { TicketCard } from "./ticket-card";
 import { TruckCard } from "./truck-card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
 function PoolColumn({ tickets }: { tickets: DispatchTicket[] }) {
@@ -26,7 +35,9 @@ function PoolColumn({ tickets }: { tickets: DispatchTicket[] }) {
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-72 shrink-0 flex-col gap-2 rounded-lg border p-3 ${isOver ? "bg-accent" : "bg-muted/30"}`}
+      className={`flex w-72 shrink-0 flex-col gap-2 rounded-lg border p-3 transition-colors duration-150 motion-reduce:transition-none ${
+        isOver ? "border-primary/50 bg-accent" : "bg-muted/30"
+      }`}
     >
       <h2 className="text-sm font-semibold">{t("pool.title")}</h2>
       {tickets.map((ticket) => (
@@ -201,57 +212,58 @@ export function DispatchBoard({
             </div>
           ))}
         </div>
-        <DragOverlay>{activeTicket ? <TicketCard ticket={activeTicket} overlay /> : null}</DragOverlay>
+        <DragOverlay>
+          {activeTicket ? (
+            <div className="rotate-2 opacity-90">
+              <TicketCard ticket={activeTicket} overlay />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
 
-      {override ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-96 rounded-lg bg-background p-4 shadow-xl">
-            <h3 className="font-semibold">{t("override.title")}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {t("override.body", { truckName: override.truckName })}
-            </p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="rounded border px-3 py-1.5 text-sm" onClick={() => setOverride(null)}>
-                {tCommon("cancel")}
-              </button>
-              <button
-                type="button"
-                className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
-                onClick={() => {
-                  runAction(assignOrder(organizationSlug, { orderId: override.orderId, truckId: override.truckId }));
-                  setOverride(null);
-                }}
-              >
-                {t("override.confirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <Dialog open={override !== null} onOpenChange={(open) => !open && setOverride(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("override.title")}</DialogTitle>
+            <DialogDescription>
+              {override ? t("override.body", { truckName: override.truckName }) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOverride(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              onClick={() => {
+                if (!override) return;
+                runAction(assignOrder(organizationSlug, { orderId: override.orderId, truckId: override.truckId }));
+                setOverride(null);
+              }}
+            >
+              {t("override.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {departConfirm ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="w-96 rounded-lg bg-background p-4 shadow-xl">
-            <h3 className="font-semibold">
-              {t("departConfirm.title", { count: departConfirm.notReady })}
-            </h3>
-            <p className="mt-2 text-sm text-muted-foreground">{t("departConfirm.body")}</p>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className="rounded border px-3 py-1.5 text-sm" onClick={() => setDepartConfirm(null)}>
-                {tCommon("cancel")}
-              </button>
-              <button
-                type="button"
-                className="rounded bg-primary px-3 py-1.5 text-sm text-primary-foreground"
-                onClick={() => doDepart(departConfirm.truckId)}
-              >
-                {t("departConfirm.confirm")}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <Dialog open={departConfirm !== null} onOpenChange={(open) => !open && setDepartConfirm(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {departConfirm ? t("departConfirm.title", { count: departConfirm.notReady }) : null}
+            </DialogTitle>
+            <DialogDescription>{t("departConfirm.body")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDepartConfirm(null)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button onClick={() => departConfirm && doDepart(departConfirm.truckId)}>
+              {t("departConfirm.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -1,20 +1,28 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import type { DispatchBoardData } from "../types";
 import { buildBoardView, type BoardTruck } from "../lib/dispatch-board-model";
 import { draftPlan, orderWeightKg, totalWeightKg, type PlanDraft } from "../lib/plan-model";
 import { applyPlan, assignOrder, departTruck } from "../server/dispatch-actions";
+import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
+/** Load against truck capacity. Same animated dial as the runs board. */
 function Dial({ pct, label }: { pct: number; label: string }) {
   const clamped = Math.min(Math.max(pct, 0), 100);
-  const tone = clamped >= 95 ? "var(--destructive)" : "var(--primary)";
+  const tone = pct > 100 ? "var(--destructive)" : pct >= 90 ? "var(--color-warning)" : "var(--primary)";
   return (
     <div
-      className="grid size-12 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular-nums"
-      style={{ background: `conic-gradient(${tone} ${clamped}%, var(--muted) ${clamped}% 100%)` }}
+      className="run-dial grid size-12 shrink-0 place-items-center rounded-full text-[11px] font-semibold tabular-nums"
+      style={
+        {
+          "--dial-pct": `${clamped}%`,
+          background: `conic-gradient(${tone} var(--dial-pct), var(--muted) var(--dial-pct) 100%)`,
+        } as CSSProperties
+      }
       role="img"
       aria-label={label}
     >
@@ -48,7 +56,11 @@ function TruckPlanCard({
         : 0;
 
   return (
-    <article className="flex flex-col gap-3 rounded-lg border bg-card p-3">
+    <article
+      className={`flex h-full flex-col gap-3 rounded-lg border bg-card p-3 transition-opacity duration-300 motion-reduce:transition-none ${
+        bt.departed ? "border-dashed opacity-70" : ""
+      }`}
+    >
       <div className="flex items-center gap-3">
         <Dial pct={pct} label={t("loadLabel", { name: bt.truck.name })} />
         <div className="min-w-0">
@@ -69,10 +81,12 @@ function TruckPlanCard({
 
       <ul className="flex flex-col gap-1">
         {bt.tickets.slice(0, 5).map((tk) => (
-          <li key={tk.id} className="flex items-center gap-2 rounded bg-muted/50 px-2 py-1 text-xs">
-            <span className="truncate">{tk.customer?.name ?? t("orderFallback")}</span>
-            {tk.loaded_at ? <span className="text-green-700 dark:text-green-400">{t("loaded")}</span> : null}
-            <span className="ml-auto tabular-nums text-muted-foreground">
+          <li key={tk.id} className="flex items-center gap-2 rounded-md bg-muted/50 px-2 py-1 text-xs">
+            <span className="min-w-0 truncate">{tk.customer?.name ?? t("orderFallback")}</span>
+            {tk.loaded_at ? (
+              <span className="shrink-0 text-green-700 dark:text-green-400">{t("loaded")}</span>
+            ) : null}
+            <span className="ml-auto shrink-0 whitespace-nowrap tabular-nums text-muted-foreground">
               {orderWeightKg(tk) !== null ? `${orderWeightKg(tk)!.toFixed(1)} kg` : "—"}
             </span>
           </li>
@@ -83,40 +97,38 @@ function TruckPlanCard({
         {bt.tickets.length === 0 ? <li className="px-2 text-xs text-muted-foreground">{t("noOrdersYet")}</li> : null}
       </ul>
 
-      {bt.departed ? (
-        <p className="rounded border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
-          {t("onRoad", { count: bt.load })}
-        </p>
-      ) : confirming ? (
-        <div className="flex gap-2">
-          <button
-            type="button"
-            className="min-h-9 flex-1 rounded border px-2 text-xs"
-            onClick={() => setConfirming(false)}
+      {/* mt-auto pins the footer so Depart buttons line up across the row
+          even when a neighbouring card lists more orders. */}
+      <div className="mt-auto">
+        {bt.departed ? (
+          <p className="rounded-md border border-dashed px-2 py-1.5 text-xs text-muted-foreground">
+            {t("onRoad", { count: bt.load })}
+          </p>
+        ) : confirming ? (
+          <div className="animate-panel-in flex gap-2">
+            <Button variant="outline" className="flex-1 text-xs" onClick={() => setConfirming(false)}>
+              {tCommon("cancel")}
+            </Button>
+            <Button
+              className="flex-1 text-xs"
+              onClick={() => {
+                setConfirming(false);
+                onDepart();
+              }}
+            >
+              {t("departLeaveBehind", { count: notReady })}
+            </Button>
+          </div>
+        ) : (
+          <Button
+            disabled={departPending || readyCount === 0}
+            className="w-full"
+            onClick={() => (notReady > 0 ? setConfirming(true) : onDepart())}
           >
-            {tCommon("cancel")}
-          </button>
-          <button
-            type="button"
-            className="min-h-9 flex-1 rounded bg-primary px-2 text-xs text-primary-foreground"
-            onClick={() => {
-              setConfirming(false);
-              onDepart();
-            }}
-          >
-            {t("departLeaveBehind", { count: notReady })}
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          disabled={departPending || readyCount === 0}
-          className="min-h-9 rounded bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-40"
-          onClick={() => (notReady > 0 ? setConfirming(true) : onDepart())}
-        >
-          {t("departButton", { ready: readyCount, load: bt.load })}
-        </button>
-      )}
+            {t("departButton", { ready: readyCount, load: bt.load })}
+          </Button>
+        )}
+      </div>
     </article>
   );
 }
@@ -206,6 +218,8 @@ export function PlanDeck({
           description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
           variant: "destructive",
         });
+      } else {
+        toast({ title: t("departedToast", { name: truckById.get(truckId)?.name ?? t("truckFallback") }) });
       }
       refetch();
     });
@@ -214,7 +228,7 @@ export function PlanDeck({
   return (
     <div className="flex flex-col gap-4">
       {draft.proposals.length > 0 && !dismissed ? (
-        <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-accent/60 p-3">
+        <div className="animate-panel-in flex flex-wrap items-center gap-3 rounded-lg border bg-accent/60 p-3">
           <div className="min-w-0">
             <p className="text-sm font-semibold">
               {t("draftReady", { placed: draft.proposals.length, pool: draft.poolCount })}
@@ -226,17 +240,13 @@ export function PlanDeck({
             </p>
           </div>
           <div className="ml-auto flex gap-2">
-            <button type="button" className="min-h-9 rounded border px-3 text-sm" onClick={() => setDismissedFor(date)}>
+            <Button variant="outline" onClick={() => setDismissedFor(date)}>
               {t("dismiss")}
-            </button>
-            <button
-              type="button"
-              disabled={isPending}
-              className="min-h-9 rounded bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
-              onClick={acceptAll}
-            >
+            </Button>
+            <Button disabled={isPending} onClick={acceptAll}>
+              {isPending && <Loader2 className="animate-spin" />}
               {t("accept", { count: draft.proposals.length })}
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}
@@ -244,13 +254,13 @@ export function PlanDeck({
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         <aside className="flex flex-col gap-2">
           {draft.proposals.length > 0 && dismissed ? (
-            <button
-              type="button"
-              className="min-h-9 rounded-lg border border-dashed px-3 text-sm text-muted-foreground hover:text-foreground"
+            <Button
+              variant="outline"
+              className="animate-panel-in w-full border-dashed text-muted-foreground hover:text-foreground"
               onClick={() => setDismissedFor(null)}
             >
               {t("showDraftPlan", { count: draft.proposals.length })}
-            </button>
+            </Button>
           ) : null}
 
           {draft.exceptions.length > 0 ? (
@@ -266,7 +276,7 @@ export function PlanDeck({
                     <p className="text-xs text-muted-foreground">{t(ex.detailKey)}</p>
                     {(ex.kind === "no_covering_truck" || ex.kind === "all_trucks_full") && (
                       <select
-                        className="min-h-9 rounded border bg-background px-2 text-xs"
+                        className="min-h-8 rounded-md border bg-background px-2 text-xs transition-[color,box-shadow] duration-200 outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50"
                         defaultValue=""
                         disabled={isPending}
                         onChange={(e) => {
