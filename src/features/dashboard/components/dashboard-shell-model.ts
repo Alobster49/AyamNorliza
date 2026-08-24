@@ -1,8 +1,7 @@
 import { isRouteActive } from "@/lib/i18n/route-active";
 
 export type DashboardRoute = {
-  title: string;
-  /** Message key (scoped to the `dashboard` namespace) for `title`. */
+  /** Message key (scoped to the `dashboard` namespace) for the display label. */
   titleKey: string;
   href: string;
   isActive: boolean;
@@ -27,35 +26,27 @@ const routeGroups = [
     title: "Sales",
     sectionKey: "sections.sales",
     items: [
-      { title: "Products", titleKey: "pages.products", segment: "products" },
-      { title: "Orders", titleKey: "pages.orders", segment: "orders" },
-      { title: "Customers", titleKey: "pages.customers", segment: "customers" },
-      { title: "Market Prices", titleKey: "pages.marketPrices", segment: "market-prices" },
-      { title: "Delivery setup", titleKey: "pages.deliverySetup", segment: "delivery" },
-      { title: "Dispatch", titleKey: "pages.dispatch", segment: "dispatch" },
-      { title: "Loading", titleKey: "pages.loading", segment: "loading" },
-      { title: "Delivery runs", titleKey: "pages.deliveryRuns", segment: "runs" },
-      { title: "Warehouse tasks", titleKey: "pages.warehouseTasks", segment: "tasks" },
+      { titleKey: "pages.products", segment: "products" },
+      { titleKey: "pages.orders", segment: "orders" },
+      { titleKey: "pages.customers", segment: "customers" },
+      { titleKey: "pages.marketPrices", segment: "market-prices" },
+      { titleKey: "pages.deliverySetup", segment: "delivery" },
+      { titleKey: "pages.dispatch", segment: "dispatch" },
+      { titleKey: "pages.loading", segment: "loading" },
+      { titleKey: "pages.deliveryRuns", segment: "runs" },
+      { titleKey: "pages.warehouseTasks", segment: "tasks" },
     ],
   },
   {
     title: "Access control",
     sectionKey: "sections.accessControl",
     items: [
-      { title: "Organization", titleKey: "pages.organization", segment: "settings/organization" },
-      { title: "Users", titleKey: "pages.users", segment: "settings/users" },
-      { title: "Roles", titleKey: "pages.roles", segment: "settings/roles" },
-      {
-        title: "Access reviews",
-        titleKey: "pages.accessReviews",
-        segment: "settings/access-reviews",
-      },
-      {
-        title: "Support sessions",
-        titleKey: "pages.supportSessions",
-        segment: "settings/support-sessions",
-      },
-      { title: "Audit log", titleKey: "pages.auditLog", segment: "settings/audit-log" },
+      { titleKey: "pages.organization", segment: "settings/organization" },
+      { titleKey: "pages.users", segment: "settings/users" },
+      { titleKey: "pages.roles", segment: "settings/roles" },
+      { titleKey: "pages.accessReviews", segment: "settings/access-reviews" },
+      { titleKey: "pages.supportSessions", segment: "settings/support-sessions" },
+      { titleKey: "pages.auditLog", segment: "settings/audit-log" },
     ],
   },
 ] as const;
@@ -74,7 +65,6 @@ export function getDashboardSidebarGroups({
     const tasksHref = `/${organizationSlug}/tasks`;
     const items: DashboardRoute[] = [
       {
-        title: "Warehouse tasks",
         titleKey: "pages.warehouseTasks",
         href: tasksHref,
         isActive: isRouteActive(pathname, tasksHref),
@@ -83,14 +73,12 @@ export function getDashboardSidebarGroups({
     if (role === "logistics") {
       const dispatchHref = `/${organizationSlug}/dispatch`;
       items.push({
-        title: "Dispatch",
         titleKey: "pages.dispatch",
         href: dispatchHref,
         isActive: isRouteActive(pathname, dispatchHref),
       });
       const loadingHref = `/${organizationSlug}/loading`;
       items.push({
-        title: "Loading",
         titleKey: "pages.loading",
         href: loadingHref,
         isActive: isRouteActive(pathname, loadingHref),
@@ -110,7 +98,6 @@ export function getDashboardSidebarGroups({
     const items = group.items.map((item) => {
       const href = `/${organizationSlug}/${item.segment}`;
       return {
-        title: item.title,
         titleKey: item.titleKey,
         href,
         isActive: isRouteActive(pathname, href),
@@ -133,7 +120,6 @@ export function getDashboardSidebarGroups({
       isActive: isRouteActive(pathname, consoleHref),
       items: [
         {
-          title: "Data console",
           titleKey: "pages.dataConsole",
           href: consoleHref,
           isActive: isRouteActive(pathname, consoleHref),
@@ -163,11 +149,6 @@ export function getDashboardPageContext({
     section: activeGroup?.sectionKey ?? "sections.accessControl",
     title: activeItem?.titleKey ?? "pages.organization",
   };
-}
-
-export function getDefaultPageContext(section: string): string {
-  if (section === "Sales") return "Products";
-  return "Organization";
 }
 
 export function getUserInitials(name: string, email: string): string {

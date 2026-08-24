@@ -4,11 +4,14 @@ import { OWNER, signIn } from "./_fixtures";
 test("owner signs in and sees the dashboard", async ({ page }) => {
   await signIn(page, OWNER.email, OWNER.password);
   // Signing in lands staff on the products catalog; the standalone
-  // overview/"command center" page no longer exists.
+  // overview/"command center" page no longer exists. The products page has
+  // no heading of its own (i18n phase 3 dropped the old "Products & Catalog"
+  // copy) — assert the sidebar nav marks Products active instead.
   await expect(page).toHaveURL(/\/[^/]+\/products$/);
-  await expect(page.getByRole("heading", { name: /products & catalog/i })).toBeVisible({
-    timeout: 10_000,
-  });
+  await expect(page.getByRole("link", { name: /^products$/i })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
   // The authenticated dashboard shell is present around it.
   await expect(page.locator('[data-slot="sidebar"]')).toBeVisible();
 });

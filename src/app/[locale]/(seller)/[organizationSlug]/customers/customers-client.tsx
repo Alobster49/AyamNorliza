@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { createCustomer, updateCustomer, deleteCustomer } from "@/features/seller/server/actions";
 import type { CustomerWithPortal } from "@/features/seller/types";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +49,8 @@ export function CustomersClient({
   initialCustomers,
 }: CustomersClientProps) {
   const { toast } = useToast();
+  const t = useTranslations("seller.customers");
+  const tCommon = useTranslations("common");
   const [customers, setCustomers] = useState(initialCustomers);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -116,7 +119,7 @@ export function CustomersClient({
       parseCustomerAddress(formData);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      toast({ title: "Error", description: message, variant: "destructive" });
+      toast({ title: t("error"), description: message, variant: "destructive" });
       return;
     }
     try {
@@ -138,7 +141,7 @@ export function CustomersClient({
               : c
           )
         );
-        toast({ title: "Customer updated" });
+        toast({ title: t("customerUpdated") });
       } else {
         const newCustomer = await createCustomer(organizationId, {
           name: formData.name,
@@ -151,22 +154,22 @@ export function CustomersClient({
           notes: formData.notes || null,
         });
         setCustomers([...customers, { ...newCustomer, has_portal_account: false }]);
-        toast({ title: "Customer created" });
+        toast({ title: t("customerCreated") });
       }
       setDialogOpen(false);
     } catch (error) {
-      toast({ title: "Error", description: String(error), variant: "destructive" });
+      toast({ title: t("error"), description: String(error), variant: "destructive" });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this customer?")) return;
+    if (!confirm(t("deleteConfirm"))) return;
     try {
       await deleteCustomer(id);
       setCustomers(customers.filter((c) => c.id !== id));
-      toast({ title: "Customer deleted" });
+      toast({ title: t("customerDeleted") });
     } catch (error) {
-      toast({ title: "Error", description: String(error), variant: "destructive" });
+      toast({ title: t("error"), description: String(error), variant: "destructive" });
     }
   };
 
@@ -182,12 +185,12 @@ export function CustomersClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Customers</h1>
-          <p className="text-muted-foreground">Manage your customer database</p>
+          <h1 className="text-2xl font-bold">{t("heading")}</h1>
+          <p className="text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Button onClick={openCreateDialog}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Customer
+          {t("addCustomer")}
         </Button>
       </div>
 
@@ -195,7 +198,7 @@ export function CustomersClient({
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search by name, phone, or email..."
+          placeholder={t("searchPlaceholder")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"
@@ -207,19 +210,19 @@ export function CustomersClient({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Address</TableHead>
-              <TableHead>Notes</TableHead>
-              <TableHead>Added</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
+              <TableHead>{t("table.name")}</TableHead>
+              <TableHead>{t("table.phone")}</TableHead>
+              <TableHead>{t("table.address")}</TableHead>
+              <TableHead>{t("table.notes")}</TableHead>
+              <TableHead>{t("table.added")}</TableHead>
+              <TableHead className="w-24">{t("table.actions")}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCustomers.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  {search ? "No customers match your search" : "No customers yet"}
+                  {search ? t("emptySearch") : t("emptyNone")}
                 </TableCell>
               </TableRow>
             ) : (
@@ -229,7 +232,7 @@ export function CustomersClient({
                     <div className="flex items-center gap-2">
                       <span>{customer.name}</span>
                       {customer.has_portal_account && (
-                        <Badge variant="secondary">Portal</Badge>
+                        <Badge variant="secondary">{t("portalBadge")}</Badge>
                       )}
                     </div>
                     {customer.email && (
@@ -299,12 +302,12 @@ export function CustomersClient({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingCustomer ? "Edit Customer" : "Add Customer"}
+              {editingCustomer ? t("editTitle") : t("addCustomer")}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Name *</Label>
+              <Label htmlFor="name">{t("nameLabel")}</Label>
               <Input
                 id="name"
                 value={formData.name}
@@ -313,7 +316,7 @@ export function CustomersClient({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone *</Label>
+              <Label htmlFor="phone">{t("phoneLabel")}</Label>
               <Input
                 id="phone"
                 value={formData.phone}
@@ -322,7 +325,7 @@ export function CustomersClient({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t("emailLabel")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -349,7 +352,7 @@ export function CustomersClient({
               required={false}
             />
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (e.g., &ldquo;prefers breast cuts&rdquo;)</Label>
+              <Label htmlFor="notes">{t("notesLabel")}</Label>
               <Textarea
                 id="notes"
                 value={formData.notes}
@@ -358,10 +361,10 @@ export function CustomersClient({
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                Cancel
+                {tCommon("cancel")}
               </Button>
               <Button type="submit">
-                {editingCustomer ? "Save Changes" : "Create"}
+                {editingCustomer ? t("saveChanges") : t("create")}
               </Button>
             </div>
           </form>

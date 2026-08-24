@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import type { Category, ProductVariant } from "@/features/seller/types";
 import {
   ARCHIVED_VIEW,
@@ -53,6 +54,8 @@ export function ProductCatalog({
   onDeleteVariant,
   onToggleVariant,
 }: ProductCatalogProps) {
+  const t = useTranslations("seller.products.catalog");
+  const tToolbar = useTranslations("seller.products.toolbar");
   const sorted = sortCategories(categories);
   const counts = countByCategory(products);
   const archivedCount = countArchived(products);
@@ -76,18 +79,17 @@ export function ProductCatalog({
       <div className="min-w-0 flex-1 space-y-3">
         {viewingArchive && visible.length > 0 && (
           <p className="rounded-lg border border-dashed bg-muted/40 px-4 py-2.5 text-sm text-muted-foreground">
-            Archived products are hidden from the buyer portal, but their past orders stay intact.
-            Restore one to put it back on sale.
+            {t("archivedNotice")}
           </p>
         )}
 
         {visible.length === 0 ? (
           <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
             {viewingArchive
-              ? "Nothing archived."
+              ? t("emptyArchived")
               : categories.length === 0
-                ? "Create your first category, then add products to it."
-                : "No products in this category yet. Click “Add Product” to create one."}
+                ? t("emptyNoCategories")
+                : t("emptyNoProducts", { addProduct: tToolbar("addProduct") })}
           </div>
         ) : view === "cards" ? (
           <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">

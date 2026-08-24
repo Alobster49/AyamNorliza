@@ -12,7 +12,10 @@
     "toggleTheme": "Tukar tema warna",
     "openMenu": "Buka menu",
     "closeMenu": "Tutup menu",
-    "userMenu": "Menu pengguna"
+    "userMenu": "Menu pengguna",
+    "sidebarLabel": "Bar Sisi",
+    "sidebarDescription": "Memaparkan bar sisi mudah alih.",
+    "toggleSidebar": "Togol bar sisi"
   },
   "auth": {
     "login": {
@@ -561,7 +564,11 @@
       "auditLog": "Log Audit",
       "dataConsole": "Konsol Data"
     },
-    "fallbackUserName": "Ahli pasukan"
+    "fallbackUserName": "Ahli pasukan",
+    "sidebar": {
+      "regionFallback": "Ruang kerja operasi",
+      "operatorProfile": "Profil operator"
+    }
   },
   "roles": {
     "owner": "Pemilik",
@@ -1038,7 +1045,69 @@
         "statusAriaLabel": "{label}: {status}",
         "available": "tersedia",
         "soldOut": "habis dijual"
+      },
+      "toolbar": {
+        "viewAriaLabel": "Paparan katalog",
+        "cardsView": "Kad",
+        "ledgerView": "Lejar",
+        "addProduct": "Tambah Produk"
+      },
+      "catalog": {
+        "archivedNotice": "Produk yang diarkibkan disembunyikan daripada portal pembeli, tetapi pesanan lampau kekal utuh. Kembalikan satu untuk menjualnya semula.",
+        "emptyArchived": "Tiada apa yang diarkibkan.",
+        "emptyNoCategories": "Cipta kategori pertama anda, kemudian tambah produk ke dalamnya.",
+        "emptyNoProducts": "Belum ada produk dalam kategori ini. Klik “{addProduct}” untuk mencipta satu."
+      },
+      "card": {
+        "noSizes": "Belum ada saiz/harga."
+      },
+      "client": {
+        "deleteCategoryConfirm": "Padam kategori \"{name}\"?",
+        "categoryDeleted": "Kategori dipadam",
+        "error": "Ralat",
+        "productArchived": "Produk diarkibkan",
+        "productRestored": "Produk dikembalikan",
+        "productArchivedDescription": "{name} disembunyikan daripada kedai. Pesanan lampau tidak terjejas.",
+        "productRestoredDescription": "{name} kembali dijual.",
+        "cannotDeleteTitle": "Tidak boleh dipadam — produk ini mempunyai sejarah pesanan",
+        "cannotDeleteDescription": "{name} muncul pada {count, plural, other {# baris pesanan lampau}}. Arkibkan sebagai gantinya: ia akan hilang daripada kedai dan pesanan kekal utuh.",
+        "deleteProductConfirm": "Padam \"{name}\" dan saiznya secara kekal? Ia tidak pernah ditempah, jadi tiada apa lain yang terjejas.",
+        "productDeleted": "Produk dipadam",
+        "markedAvailable": "Ditandakan tersedia",
+        "markedSoldOut": "Ditandakan habis dijual",
+        "variantToggleDescription": "{product} — {variant}",
+        "deleteVariantConfirm": "Padam \"{variant}\" daripada {product}?",
+        "variantDeleted": "Saiz/pilihan dipadam"
       }
+    },
+    "customers": {
+      "heading": "Pelanggan",
+      "subtitle": "Urus pangkalan data pelanggan anda",
+      "addCustomer": "Tambah Pelanggan",
+      "searchPlaceholder": "Cari mengikut nama, telefon, atau e-mel...",
+      "table": {
+        "name": "Nama",
+        "phone": "Telefon",
+        "address": "Alamat",
+        "notes": "Nota",
+        "added": "Ditambah",
+        "actions": "Tindakan"
+      },
+      "emptySearch": "Tiada pelanggan sepadan dengan carian anda",
+      "emptyNone": "Belum ada pelanggan",
+      "portalBadge": "Portal",
+      "editTitle": "Sunting Pelanggan",
+      "nameLabel": "Nama *",
+      "phoneLabel": "Telefon *",
+      "emailLabel": "E-mel",
+      "notesLabel": "Nota (cth., “suka bahagian dada”)",
+      "saveChanges": "Simpan Perubahan",
+      "create": "Cipta",
+      "customerUpdated": "Pelanggan dikemas kini",
+      "customerCreated": "Pelanggan dicipta",
+      "customerDeleted": "Pelanggan dipadam",
+      "deleteConfirm": "Adakah anda pasti mahu memadam pelanggan ini?",
+      "error": "Ralat"
     }
   },
   "orders": {

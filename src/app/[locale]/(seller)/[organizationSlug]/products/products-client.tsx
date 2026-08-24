@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { LayoutGrid, Plus, Rows3 } from "lucide-react";
 import {
   countProductOrderItems,
@@ -49,6 +50,8 @@ export function ProductsClient({
   initialProducts,
 }: ProductsClientProps) {
   const { toast } = useToast();
+  const t = useTranslations("seller.products.client");
+  const tToolbar = useTranslations("seller.products.toolbar");
   const [categories, setCategories] = useState(initialCategories);
   const [products, setProducts] = useState(initialProducts);
   const [selectedCategoryId, setSelectedCategoryId] = useState<CatalogFilter>(null);
@@ -107,15 +110,15 @@ export function ProductsClient({
   };
 
   const handleDeleteCategory = async (category: Category) => {
-    if (!confirm(`Delete category "${category.name}"?`)) return;
+    if (!confirm(t("deleteCategoryConfirm", { name: category.name }))) return;
     try {
       await deleteCategory(category.id, organizationSlug);
       setCategories((prev) => prev.filter((c) => c.id !== category.id));
       if (selectedCategoryId === category.id) setSelectedCategoryId(null);
-      toast({ title: "Category deleted" });
+      toast({ title: t("categoryDeleted") });
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -127,14 +130,14 @@ export function ProductsClient({
       const saved = await setProductArchived(product.id, archived, organizationSlug);
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, ...saved } : p)));
       toast({
-        title: archived ? "Product archived" : "Product restored",
+        title: archived ? t("productArchived") : t("productRestored"),
         description: archived
-          ? `${product.name} is hidden from the shop. Past orders are untouched.`
-          : `${product.name} is back on sale.`,
+          ? t("productArchivedDescription", { name: product.name })
+          : t("productRestoredDescription", { name: product.name }),
       });
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -151,27 +154,21 @@ export function ProductsClient({
       const orderCount = await countProductOrderItems(product.id);
       if (orderCount > 0) {
         toast({
-          title: "Cannot delete — this product has order history",
-          description: `${product.name} appears on ${orderCount} past order ${
-            orderCount === 1 ? "line" : "lines"
-          }. Archive it instead: it disappears from the shop and the orders stay intact.`,
+          title: t("cannotDeleteTitle"),
+          description: t("cannotDeleteDescription", { name: product.name, count: orderCount }),
           variant: "destructive",
         });
         return;
       }
-      if (
-        !confirm(
-          `Permanently delete "${product.name}" and its sizes? It has never been ordered, so nothing else is affected.`,
-        )
-      ) {
+      if (!confirm(t("deleteProductConfirm", { name: product.name }))) {
         return;
       }
       await deleteProduct(product.id, organizationSlug);
       setProducts((prev) => prev.filter((p) => p.id !== product.id));
-      toast({ title: "Product deleted" });
+      toast({ title: t("productDeleted") });
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -200,13 +197,13 @@ export function ProductsClient({
     try {
       await updateVariant(variant.id, { is_available: next }, organizationSlug);
       toast({
-        title: next ? "Marked available" : "Marked sold out",
-        description: `${product.name} — ${variant.name}`,
+        title: next ? t("markedAvailable") : t("markedSoldOut"),
+        description: t("variantToggleDescription", { product: product.name, variant: variant.name }),
       });
     } catch (error) {
       setVariantAvailability(variant.id, product.id, !next);
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -214,7 +211,8 @@ export function ProductsClient({
   };
 
   const handleDeleteVariant = async (product: CatalogProduct, variant: ProductVariant) => {
-    if (!confirm(`Delete "${variant.name}" from ${product.name}?`)) return;
+    if (!confirm(t("deleteVariantConfirm", { variant: variant.name, product: product.name })))
+      return;
     try {
       await deleteVariant(variant.id, organizationSlug);
       setProducts((prev) =>
@@ -224,10 +222,10 @@ export function ProductsClient({
             : p,
         ),
       );
-      toast({ title: "Size/option deleted" });
+      toast({ title: t("variantDeleted") });
     } catch (error) {
       toast({
-        title: "Error",
+        title: t("error"),
         description: error instanceof Error ? error.message : String(error),
         variant: "destructive",
       });
@@ -243,20 +241,20 @@ export function ProductsClient({
       <div className="flex flex-wrap items-center justify-end gap-3">
         <div
           role="group"
-          aria-label="Catalog view"
+          aria-label={tToolbar("viewAriaLabel")}
           className="inline-flex gap-0.5 rounded-lg border bg-muted p-0.5"
         >
           <ViewButton
             active={view === "cards"}
             onClick={() => changeView("cards")}
             icon={<LayoutGrid className="h-3.5 w-3.5" />}
-            label="Cards"
+            label={tToolbar("cardsView")}
           />
           <ViewButton
             active={view === "ledger"}
             onClick={() => changeView("ledger")}
             icon={<Rows3 className="h-3.5 w-3.5" />}
-            label="Ledger"
+            label={tToolbar("ledgerView")}
           />
         </div>
         <Button
@@ -266,7 +264,7 @@ export function ProductsClient({
           disabled={categories.length === 0}
         >
           <Plus className="mr-2 h-4 w-4" />
-          Add Product
+          {tToolbar("addProduct")}
         </Button>
       </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import type { ProductVariant, UnitType } from "@/features/seller/types";
 import type { CatalogProduct } from "@/features/seller/lib/catalog-model";
@@ -31,6 +32,10 @@ export function SellerProductCard({
   onDeleteVariant,
   onToggleVariant,
 }: SellerProductCardProps) {
+  const tLedger = useTranslations("seller.products.ledger");
+  const tActionsMenu = useTranslations("seller.products.actionsMenu");
+  const tCard = useTranslations("seller.products.card");
+
   return (
     <article
       className={`group flex flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-shadow hover:shadow-md ${
@@ -56,14 +61,14 @@ export function SellerProductCard({
         )}
         {!product.is_active && (
           <span className="absolute left-2 top-8 rounded-full bg-stone-900/85 px-2 py-0.5 text-xs font-medium text-white">
-            Archived
+            {tLedger("archived")}
           </span>
         )}
         <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100 data-[open=true]:opacity-100">
           <button
             type="button"
             onClick={onEdit}
-            aria-label={`Edit ${product.name}`}
+            aria-label={tLedger("editAriaLabel", { name: product.name })}
             className="grid h-8 w-8 place-items-center rounded-lg bg-white/85 text-stone-900 shadow backdrop-blur-sm hover:bg-white"
           >
             <Pencil className="h-3.5 w-3.5" />
@@ -86,7 +91,7 @@ export function SellerProductCard({
       {/* Variant rail */}
       <div className="flex flex-1 flex-col">
         {product.variants.length === 0 ? (
-          <p className="px-4 py-3 text-sm text-muted-foreground">No sizes/prices yet.</p>
+          <p className="px-4 py-3 text-sm text-muted-foreground">{tCard("noSizes")}</p>
         ) : (
           product.variants.map((variant) => (
             <div
@@ -122,7 +127,7 @@ export function SellerProductCard({
               <button
                 type="button"
                 onClick={() => onDeleteVariant(variant)}
-                aria-label={`Delete ${variant.name}`}
+                aria-label={tLedger("deleteAriaLabel", { name: variant.name })}
                 className="hidden rounded p-1 text-muted-foreground hover:text-destructive group-hover:block"
               >
                 <Trash2 className="h-3 w-3" />
@@ -136,7 +141,7 @@ export function SellerProductCard({
           className="mt-auto flex items-center justify-center gap-1 border-t border-dashed px-4 py-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
         >
           <Plus className="h-3.5 w-3.5" />
-          Add size
+          {tActionsMenu("addSize")}
         </button>
       </div>
     </article>

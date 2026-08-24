@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { usePathname } from "@/i18n/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
@@ -80,6 +81,7 @@ export function AppSidebar({
   userEmail,
   role,
 }: AppSidebarProps) {
+  const t = useTranslations("dashboard");
   const pathname = usePathname();
   const groups = getDashboardSidebarGroups({ organizationSlug, pathname, role });
 
@@ -109,11 +111,11 @@ export function AppSidebar({
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         isActive={group.isActive}
-                        tooltip={group.title}
+                        tooltip={t(group.sectionKey)}
                         className="h-9 rounded-lg font-medium"
                       >
                         <GroupIcon />
-                        <span>{group.title}</span>
+                        <span>{t(group.sectionKey)}</span>
                         <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
@@ -132,7 +134,7 @@ export function AppSidebar({
                             href={item.href}
                             aria-current={item.isActive ? "page" : undefined}
                           >
-                            <span>{item.title}</span>
+                            <span>{t(item.titleKey)}</span>
                           </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
@@ -165,6 +167,8 @@ function OrganizationSwitcher({
   organizationRegion: string | null;
 }) {
   const { isMobile } = useSidebar();
+  const t = useTranslations("dashboard");
+  const tSettings = useTranslations("settings.organization");
 
   return (
     <SidebarMenu>
@@ -188,7 +192,7 @@ function OrganizationSwitcher({
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{organizationName}</span>
                 <span className="truncate text-xs text-sidebar-foreground/70">
-                  {organizationRegion ?? "Operations workspace"}
+                  {organizationRegion ?? t("sidebar.regionFallback")}
                 </span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
@@ -200,11 +204,11 @@ function OrganizationSwitcher({
             sideOffset={4}
             className="min-w-56 rounded-lg"
           >
-            <DropdownMenuLabel>Organization</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("pages.organization")}</DropdownMenuLabel>
             <DropdownMenuItem asChild>
               <Link href={`/${organizationSlug}/settings/organization`}>
                 <Building2 />
-                Organization settings
+                {tSettings("title")}
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -226,6 +230,10 @@ function NavUser({
   const { isMobile } = useSidebar();
   const router = useRouter();
   const initials = getUserInitials(userName, userEmail);
+  const t = useTranslations("dashboard");
+  const tCommon = useTranslations("common");
+  const tSettings = useTranslations("settings.organization");
+  const tSecurity = useTranslations("settings.security");
 
   async function handleSignOut() {
     await signOutAction();
@@ -273,18 +281,18 @@ function NavUser({
               <DropdownMenuItem asChild>
                 <Link href={`/${organizationSlug}/profile/security`}>
                   <BadgeCheck />
-                  My security
+                  {tSecurity("title")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/${organizationSlug}/settings/organization`}>
                   <Settings />
-                  Organization settings
+                  {tSettings("title")}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem disabled>
                 <UserRound />
-                Operator profile
+                {t("sidebar.operatorProfile")}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -295,7 +303,7 @@ function NavUser({
               }}
             >
               <LogOut />
-              Sign out
+              {tCommon("signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
