@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { InviteUserDialog } from "@/components/forms/invite-user-dialog";
 import {
   resendInvitationAction,
@@ -10,6 +11,7 @@ import {
   deactivateUserAction,
 } from "@/features/identity-access/server/actions";
 import { ROLES } from "@/lib/auth/permissions";
+import { roleLabelKey } from "@/features/access-control/components/role-label";
 import type { Invitation, MemberScope, OrganizationMember } from "../types";
 import { ReauthDialog } from "@/components/forms/reauth-dialog";
 
@@ -21,6 +23,10 @@ export function UsersPageClient(props: {
   scopes: MemberScope[];
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.usersPage");
+  const tRoles = useTranslations("roles");
+  const tStatus = useTranslations("identity.memberStatus");
+  const tInvitationStatus = useTranslations("identity.invitationStatus");
   const [inviteOpen, setInviteOpen] = useState(false);
   const [reauthOpen, setReauthOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | (() => Promise<{ ok: boolean; code?: string; message?: string }>)>(null);
@@ -36,12 +42,12 @@ export function UsersPageClient(props: {
     const result = await changeMemberRoleAction({
       memberId,
       newRole: newRole as (typeof ROLES)[number],
-      reason: `Role change via users page`,
+      reason: t("defaultRoleChangeReason"),
     });
     if (!result.ok) {
       if (result.code === "reauth_required") {
         await reauthThen(() =>
-          changeMemberRoleAction({ memberId, newRole: newRole as (typeof ROLES)[number], reason: "Role change via users page" }),
+          changeMemberRoleAction({ memberId, newRole: newRole as (typeof ROLES)[number], reason: t("defaultRoleChangeReason") }),
         );
         return;
       }
@@ -53,10 +59,10 @@ export function UsersPageClient(props: {
 
   async function deactivate(memberId: string) {
     setError(null);
-    const result = await deactivateUserAction({ memberId, reason: "Deactivated from users page" });
+    const result = await deactivateUserAction({ memberId, reason: t("defaultDeactivateReason") });
     if (!result.ok) {
       if (result.code === "reauth_required") {
-        await reauthThen(() => deactivateUserAction({ memberId, reason: "Deactivated from users page" }));
+        await reauthThen(() => deactivateUserAction({ memberId, reason: t("defaultDeactivateReason") }));
         return;
       }
       setError(result.message);
@@ -83,20 +89,20 @@ export function UsersPageClient(props: {
     <div>
       <div className="page-actions">
         <button type="button" onClick={() => setInviteOpen(true)}>
-          Invite user
+          {t("inviteUser")}
         </button>
       </div>
       {error ? <p role="alert">{error}</p> : null}
 
-      <h2>Members ({props.members.length})</h2>
+      <h2>{t("membersHeading", { count: props.members.length })}</h2>
       <table className="data-table">
         <thead>
           <tr>
-            <th>User</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Scopes</th>
-            <th>Actions</th>
+            <th>{t("colUser")}</th>
+            <th>{t("colRole")}</th>
+            <th>{t("colStatus")}</th>
+            <th>{t("colScopes")}</th>
+            <th>{t("colActions")}</th>
           </tr>
         </thead>
         <tbody>
@@ -107,19 +113,19 @@ export function UsersPageClient(props: {
                 <select defaultValue={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
                   {ROLES.map((r) => (
                     <option key={r} value={r}>
-                      {r}
+                      {tRoles(roleLabelKey(r))}
                     </option>
                   ))}
                 </select>
               </td>
-              <td>{m.status}</td>
+              <td>{tStatus(m.status)}</td>
               <td>
                 {props.scopes.filter((s) => s.organizationMemberId === m.id).length}
               </td>
               <td>
                 {m.status === "active" ? (
                   <button type="button" onClick={() => deactivate(m.id)}>
-                    Deactivate
+                    {t("deactivate")}
                   </button>
                 ) : null}
               </td>
@@ -128,35 +134,35 @@ export function UsersPageClient(props: {
         </tbody>
       </table>
 
-      <h2>Invitations ({props.invitations.length})</h2>
+      <h2>{t("invitationsHeading", { count: props.invitations.length })}</h2>
       <table className="data-table">
         <thead>
           <tr>
-            <th>Email</th>
-            <th>Role</th>
-            <th>Status</th>
-            <th>Actions</th>
+            <th>{t("colEmail")}</th>
+            <th>{t("colRole")}</th>
+            <th>{t("colStatus")}</th>
+            <th>{t("colActions")}</th>
           </tr>
         </thead>
         <tbody>
           {props.invitations.map((inv) => (
             <tr key={inv.id}>
               <td>{inv.email}</td>
-              <td>{inv.role}</td>
+              <td>{tRoles(roleLabelKey(inv.role))}</td>
               <td>
                 {inv.acceptedAt
-                  ? "accepted"
+                  ? tInvitationStatus("accepted")
                   : inv.revokedAt
-                    ? "revoked"
+                    ? tInvitationStatus("revoked")
                     : new Date(inv.expiresAt) < new Date()
-                      ? "expired"
-                      : "pending"}
+                      ? tInvitationStatus("expired")
+                      : tInvitationStatus("pending")}
               </td>
               <td>
                 {!inv.acceptedAt && !inv.revokedAt ? (
                   <>
-                    <button type="button" onClick={() => resend(inv.id)}>Resend</button>
-                    <button type="button" onClick={() => revoke(inv.id)}>Revoke</button>
+                    <button type="button" onClick={() => resend(inv.id)}>{t("resend")}</button>
+                    <button type="button" onClick={() => revoke(inv.id)}>{t("revoke")}</button>
                   </>
                 ) : null}
               </td>

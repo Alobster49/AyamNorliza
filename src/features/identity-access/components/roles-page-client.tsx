@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations, useFormatter } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import {
   AlertTriangle,
   Check,
@@ -49,6 +50,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ReauthDialog } from "@/components/forms/reauth-dialog";
+import { roleLabelKey } from "@/features/access-control/components/role-label";
 import {
   type Capability,
   type Role,
@@ -66,42 +68,15 @@ import {
 
 // Capability area metadata used by the section layout. Server-side is the
 // source of truth for which capability belongs to which area; the client
-// just needs labels for layout.
-const CAPABILITY_AREA_GROUPS: ReadonlyArray<{
-  id: CapabilityArea;
-  label: string;
-  description: string;
-}> = [
-  {
-    id: "organization",
-    label: "Organization",
-    description: "Settings that govern the organization as a whole.",
-  },
-  {
-    id: "membership",
-    label: "Membership",
-    description: "Inviting users, changing roles, scopes, and access lifecycle.",
-  },
-  {
-    id: "access_review",
-    label: "Access reviews",
-    description: "Periodic attestations that confirm membership and roles.",
-  },
-  {
-    id: "support",
-    label: "Support sessions",
-    description: "Time-bound elevated access for technicians.",
-  },
-  {
-    id: "break_glass",
-    label: "Break-glass",
-    description: "Emergency override events recorded to the audit log.",
-  },
-  {
-    id: "audit",
-    label: "Audit & security",
-    description: "Read access to immutable history and security events.",
-  },
+// just needs an ordered list of ids — labels/descriptions are resolved via
+// `identity.rolesPage.areas.<id>.{label,description}` at render time.
+const CAPABILITY_AREA_GROUPS: ReadonlyArray<{ id: CapabilityArea }> = [
+  { id: "organization" },
+  { id: "membership" },
+  { id: "access_review" },
+  { id: "support" },
+  { id: "break_glass" },
+  { id: "audit" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -117,6 +92,7 @@ function TogglePill(props: {
   label: string;
 }) {
   const { granted, disabled, onToggle, label } = props;
+  const t = useTranslations("identity.rolesPage");
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -142,7 +118,10 @@ function TogglePill(props: {
         </button>
       </TooltipTrigger>
       <TooltipContent>
-        {granted ? "Enabled" : "Disabled"} — click to {granted ? "revoke" : "grant"}
+        {t("toggleTooltip", {
+          state: granted ? t("tooltipEnabled") : t("tooltipDisabled"),
+          action: granted ? t("actionRevoke") : t("actionGrant"),
+        })}
       </TooltipContent>
     </Tooltip>
   );
@@ -160,13 +139,14 @@ function CapabilityToggle(props: {
   pending: boolean;
 }) {
   const { role, cell, canEdit, onToggle, pending } = props;
+  const t = useTranslations("identity.rolesPage");
 
   const lockedReason = !cell.isEditableRole
     ? role === "owner"
-      ? "Owner receives every capability by structure. Cannot be edited."
-      : "This role is locked."
+      ? t("lockedReasonOwner")
+      : t("lockedReasonRoleLocked")
     : !cell.isOverridable
-      ? "This capability is preserved on every role that needs it. It cannot be removed."
+      ? t("lockedReasonNotOverridable")
       : null;
   const disabled = !canEdit || Boolean(lockedReason) || pending;
 
@@ -174,8 +154,8 @@ function CapabilityToggle(props: {
   const DeltaIcon: LucideIcon = cell.granted ? Sparkles : TriangleAlert;
   const deltaLabel = delta
     ? cell.granted
-      ? "Granted by override"
-      : "Revoked by override"
+      ? t("grantedByOverride")
+      : t("revokedByOverride")
     : null;
 
   return (
@@ -191,12 +171,12 @@ function CapabilityToggle(props: {
           </code>
           {!cell.isOverridable ? (
             <Badge variant="outline" className="gap-1 text-muted-foreground">
-              <Lock className="size-3" aria-hidden /> Locked
+              <Lock className="size-3" aria-hidden /> {t("legendLockedBadge")}
             </Badge>
           ) : null}
           {!cell.isEditableRole && role !== "owner" ? (
             <Badge variant="secondary" className="gap-1">
-              Role locked
+              {t("roleLocked")}
             </Badge>
           ) : null}
           {delta ? (
@@ -218,13 +198,13 @@ function CapabilityToggle(props: {
           aria-hidden
           className="text-xs font-medium uppercase tracking-wide text-muted-foreground"
         >
-          {cell.granted ? "On" : "Off"}
+          {cell.granted ? t("toggleOn") : t("toggleOff")}
         </span>
         <TogglePill
           granted={cell.granted}
           disabled={disabled}
           onToggle={() => onToggle(role, cell.capability, !cell.granted)}
-          label={`Toggle ${cell.label} for ${role}`}
+          label={t("toggleAriaLabel", { label: cell.label, role })}
         />
       </div>
     </div>
@@ -244,6 +224,7 @@ function RoleColumn(props: {
   onReset: (role: Role) => void;
 }) {
   const { role, view, canEdit, pendingOverrides, onToggle, onReset } = props;
+  const t = useTranslations("identity.rolesPage");
   const grantCount = useMemo(
     () => view.cells.filter((c) => c.granted).length,
     [view.cells],
@@ -275,17 +256,16 @@ function RoleColumn(props: {
             )}
             <h2 className="text-xl font-semibold tracking-tight">{view.label}</h2>
             <Badge variant="outline" className="uppercase">
-              rank {view.rank}
+              {t("rank", { rank: view.rank })}
             </Badge>
             {view.isOwnerLocked ? (
               <Badge variant="secondary" className="gap-1">
-                <Lock className="size-3" aria-hidden /> Owner locked
+                <Lock className="size-3" aria-hidden /> {t("ownerLocked")}
               </Badge>
             ) : null}
             {overrideCount > 0 ? (
               <Badge className="gap-1">
-                <Sparkles className="size-3" aria-hidden /> {overrideCount} override
-                {overrideCount === 1 ? "" : "s"}
+                <Sparkles className="size-3" aria-hidden /> {t("overridesBadge", { count: overrideCount })}
               </Badge>
             ) : null}
           </div>
@@ -293,11 +273,11 @@ function RoleColumn(props: {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="outline">
-            {grantCount} / {view.cells.length} capabilities enabled
+            {t("capabilitiesEnabled", { granted: grantCount, total: view.cells.length })}
           </Badge>
           {canEdit && !view.isOwnerLocked && overrideCount > 0 ? (
             <Button type="button" variant="outline" size="sm" onClick={() => onReset(role)}>
-              <RotateCcw className="size-3.5" aria-hidden /> Reset to defaults
+              <RotateCcw className="size-3.5" aria-hidden /> {t("resetToDefaults")}
             </Button>
           ) : null}
         </div>
@@ -315,9 +295,9 @@ function RoleColumn(props: {
               <div className="flex items-baseline justify-between gap-2">
                 <div>
                   <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                    {area.label}
+                    {t(`areas.${area.id}.label`)}
                   </h3>
-                  <p className="text-xs text-muted-foreground">{area.description}</p>
+                  <p className="text-xs text-muted-foreground">{t(`areas.${area.id}.description`)}</p>
                 </div>
                 <Badge variant="outline" className="text-xs">
                   {enabledInArea}/{cells.length}
@@ -355,6 +335,8 @@ export function RolesPageClient(props: {
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.rolesPage");
+  const format = useFormatter();
   const [view, setView] = useState<RolesViewModel>(props.view);
   const [pendingOverrides, setPendingOverrides] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -422,11 +404,11 @@ export function RolesPageClient(props: {
         return;
       }
       setView((prev) => withCell(prev, role, capability, next));
-      setSavedFlash("Saved");
+      setSavedFlash(t("saved"));
       setTimeout(() => setSavedFlash(null), 1500);
       refresh();
     },
-    [view.organizationId, refresh],
+    [view.organizationId, refresh, t],
   );
 
   const applyReset = useCallback(
@@ -454,11 +436,11 @@ export function RolesPageClient(props: {
         setError(result.message);
         return;
       }
-      setSavedFlash("Saved");
+      setSavedFlash(t("saved"));
       setTimeout(() => setSavedFlash(null), 1500);
       refresh();
     },
-    [view.organizationId, refresh],
+    [view.organizationId, refresh, t],
   );
 
   const roles = view.roles;
@@ -472,15 +454,15 @@ export function RolesPageClient(props: {
             <div className="flex items-center gap-2">
               <ShieldAlert className="size-5 text-muted-foreground" aria-hidden />
               <h1 className="text-2xl font-semibold tracking-tight">
-                Roles &amp; permissions
+                {t("title")}
               </h1>
               {view.isOwner ? (
                 <Badge className="gap-1">
-                  <Crown className="size-3" aria-hidden /> Editing as owner
+                  <Crown className="size-3" aria-hidden /> {t("editingAsOwner")}
                 </Badge>
               ) : (
                 <Badge variant="secondary" className="gap-1">
-                  <Lock className="size-3" aria-hidden /> Read only
+                  <Lock className="size-3" aria-hidden /> {t("readOnly")}
                 </Badge>
               )}
               {savedFlash ? (
@@ -490,21 +472,22 @@ export function RolesPageClient(props: {
               ) : null}
               {isRefreshing ? (
                 <Badge variant="outline" className="gap-1 text-muted-foreground">
-                  <Loader2 className="size-3 animate-spin" aria-hidden /> Syncing
+                  <Loader2 className="size-3 animate-spin" aria-hidden /> {t("syncing")}
                 </Badge>
               ) : null}
             </div>
             <p className="max-w-2xl text-sm text-muted-foreground">
-              Decide what each role can do in this organization. Owners can override any
-              capability on any non-owner role. Overrides are recorded in the audit log.
+              {t("description")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{view.totals.roles} roles</Badge>
-            <Badge variant="outline">{view.totals.capabilities} capabilities</Badge>
+            <Badge variant="outline">{t("statsRoles", { count: view.totals.roles })}</Badge>
+            <Badge variant="outline">{t("statsCapabilities", { count: view.totals.capabilities })}</Badge>
             <Badge variant="outline">
-              {view.totals.overrides} overrides
-              {view.lastEditedAt ? ` · last ${formatRelative(view.lastEditedAt)}` : ""}
+              {t("statsOverrides", { count: view.totals.overrides })}
+              {view.lastEditedAt
+                ? t("statsLastEdited", { time: format.relativeTime(new Date(view.lastEditedAt)) })
+                : ""}
             </Badge>
           </div>
         </div>
@@ -515,7 +498,7 @@ export function RolesPageClient(props: {
           >
             <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden />
             <div className="space-y-0.5">
-              <p className="font-medium">Couldn&apos;t apply changes</p>
+              <p className="font-medium">{t("errorTitle")}</p>
               <p className="text-destructive/90">{error}</p>
             </div>
           </div>
@@ -526,9 +509,9 @@ export function RolesPageClient(props: {
         <aside className="lg:w-64 lg:shrink-0">
           <Card>
             <CardHeader>
-              <CardTitle>Roles</CardTitle>
+              <CardTitle>{t("rolesCardTitle")}</CardTitle>
               <CardDescription>
-                Pick a role to inspect its capability set.
+                {t("rolesCardDesc")}
               </CardDescription>
             </CardHeader>
             <CardContent className="p-2">
@@ -557,7 +540,7 @@ export function RolesPageClient(props: {
                         </Badge>
                       ) : (
                         <span className="ml-auto text-[10px] text-muted-foreground">
-                          {grantedCount} on
+                          {t("grantedOn", { count: grantedCount })}
                         </span>
                       )}
                     </TabsTrigger>
@@ -569,25 +552,25 @@ export function RolesPageClient(props: {
 
           <Card className="mt-4">
             <CardHeader>
-              <CardTitle>Legend</CardTitle>
+              <CardTitle>{t("legendTitle")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="flex flex-col gap-2 text-xs text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <span className="inline-flex size-2.5 rounded-full bg-foreground" />
-                  On (matches the canonical matrix)
+                  {t("legendOn")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="inline-flex size-2.5 rounded-full bg-amber-500" />
-                  Override (changed by an owner, recorded in audit)
+                  {t("legendOverride")}
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="inline-flex size-2.5 rounded-full bg-muted-foreground/30" />
-                  Off (default or overridden)
+                  {t("legendOff")}
                 </li>
                 <li className="flex items-center gap-2">
                   <Lock className="size-3.5" aria-hidden />
-                  Locked (cannot be removed)
+                  {t("legendLocked")}
                 </li>
               </ul>
             </CardContent>
@@ -650,44 +633,44 @@ function ConfirmationDialog(props: {
   onConfirm: (reason: string) => Promise<void>;
 }) {
   const { confirm, onCancel, onConfirm } = props;
+  const t = useTranslations("identity.rolesPage");
+  const tRoles = useTranslations("roles");
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
 
   if (!confirm) return null;
   const valid = reason.trim().length >= 10;
-  const isOverride = confirm.next
-    ? "Granting this capability adds it on top of the default matrix."
-    : "Removing this capability overrides the default for this role.";
+  const isOverride = confirm.next ? t("dialogDescGrant") : t("dialogDescRevoke");
 
   return (
     <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {confirm.next ? "Grant capability" : "Revoke capability"}
+            {confirm.next ? t("grantTitle") : t("revokeTitle")}
           </DialogTitle>
           <DialogDescription>
             <code className="rounded bg-muted px-1.5 py-0.5">{confirm.capability}</code>{" "}
-            on role <strong>{confirm.role}</strong>. {isOverride}
+            {t("onRole", { role: tRoles(roleLabelKey(confirm.role)) })} {isOverride}
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="override-reason">Reason (required, audit-visible)</Label>
+          <Label htmlFor="override-reason">{t("reasonLabel")}</Label>
           <Input
             id="override-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g. Vet assistants need read access to run reports"
+            placeholder={t("reasonPlaceholder")}
             autoFocus
           />
           <p className="text-xs text-muted-foreground">
-            Min 10 characters. This reason is recorded in the audit log alongside the change.
+            {t("reasonHint")}
           </p>
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={pending}>
-              Cancel
+              {t("cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -703,7 +686,7 @@ function ConfirmationDialog(props: {
             }}
           >
             {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            {confirm.next ? "Grant" : "Revoke"}
+            {confirm.next ? t("grant") : t("revoke")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -721,6 +704,8 @@ function ResetDialog(props: {
   onConfirm: (reason: string) => Promise<void>;
 }) {
   const { role, onCancel, onConfirm } = props;
+  const t = useTranslations("identity.rolesPage");
+  const tRoles = useTranslations("roles");
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
 
@@ -731,35 +716,33 @@ function ResetDialog(props: {
     <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Reset role to defaults</DialogTitle>
+          <DialogTitle>{t("resetTitle")}</DialogTitle>
           <DialogDescription>
-            All overrides for <strong>{role}</strong> will be removed and the role will
-            inherit the canonical capability matrix again.
+            {t("resetDescription", { role: tRoles(roleLabelKey(role)) })}
           </DialogDescription>
         </DialogHeader>
         <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400">
           <div className="flex items-start gap-2">
             <Info className="mt-0.5 size-4 shrink-0" aria-hidden />
             <p>
-              Each removal is recorded individually in the audit log so you can recover
-              the previous state if needed.
+              {t("resetInfo")}
             </p>
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="reset-reason">Reason (required)</Label>
+          <Label htmlFor="reset-reason">{t("resetReasonLabel")}</Label>
           <Input
             id="reset-reason"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
-            placeholder="e.g. Reverting to baseline for Q3 audit"
+            placeholder={t("resetReasonPlaceholder")}
             autoFocus
           />
         </div>
         <DialogFooter>
           <DialogClose asChild>
             <Button type="button" variant="outline" disabled={pending}>
-              Cancel
+              {t("cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -776,7 +759,7 @@ function ResetDialog(props: {
             }}
           >
             {pending ? <Loader2 className="animate-spin" aria-hidden /> : null}
-            Reset
+            {t("resetButton")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -853,18 +836,6 @@ function withResetRole(view: RolesViewModel, role: Role): RolesViewModel {
     return { ...rv, cells };
   });
   return { ...view, roles };
-}
-
-function formatRelative(iso: string): string {
-  const then = new Date(iso).getTime();
-  const diffMs = Date.now() - then;
-  const min = 60_000;
-  const hr = 60 * min;
-  const day = 24 * hr;
-  if (diffMs < min) return "just now";
-  if (diffMs < hr) return `${Math.floor(diffMs / min)} min ago`;
-  if (diffMs < day) return `${Math.floor(diffMs / hr)} h ago`;
-  return `${Math.floor(diffMs / day)} d ago`;
 }
 
 // Public re-export so downstream consumers can pin the area type.

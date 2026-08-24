@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations, useFormatter } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { openSupportSessionAction, endSupportSessionAction } from "@/features/identity-access/server/actions";
 import type { OrganizationMember, SupportSession } from "../types";
+
+const STATUS_KEYS = {
+  scheduled: "scheduled",
+  active: "active",
+  ended: "ended",
+  revoked: "revoked",
+} as const;
 
 export function SupportSessionsClient(props: {
   organizationId: string;
@@ -11,12 +19,14 @@ export function SupportSessionsClient(props: {
   members: OrganizationMember[];
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.supportSessions");
+  const format = useFormatter();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   return (
     <div>
-      <button type="button" onClick={() => setOpen(true)}>Open support session</button>
+      <button type="button" onClick={() => setOpen(true)}>{t("openButton")}</button>
       {error ? <p role="alert">{error}</p> : null}
       {open ? <OpenDialog
         organizationId={props.organizationId}
@@ -26,15 +36,20 @@ export function SupportSessionsClient(props: {
       /> : null}
       <table className="data-table">
         <thead>
-          <tr><th>Purpose</th><th>Technician</th><th>Window</th><th>Status</th><th>Actions</th></tr>
+          <tr><th>{t("colPurpose")}</th><th>{t("colTechnician")}</th><th>{t("colWindow")}</th><th>{t("colStatus")}</th><th>{t("colActions")}</th></tr>
         </thead>
         <tbody>
           {props.sessions.map((s) => (
             <tr key={s.id}>
               <td>{s.purpose}</td>
               <td><code>{s.technicianId}</code></td>
-              <td>{new Date(s.startsAt).toLocaleString()} → {new Date(s.endsAt).toLocaleString()}</td>
-              <td>{s.status}</td>
+              <td>
+                {t("window", {
+                  start: format.dateTime(new Date(s.startsAt), { dateStyle: "medium", timeStyle: "short" }),
+                  end: format.dateTime(new Date(s.endsAt), { dateStyle: "medium", timeStyle: "short" }),
+                })}
+              </td>
+              <td>{t(`status.${STATUS_KEYS[s.status]}`)}</td>
               <td>
                 {s.status === "active" || s.status === "scheduled" ? (
                   <EndButton sessionId={s.id} onDone={() => router.refresh()} onError={setError} />
@@ -49,6 +64,7 @@ export function SupportSessionsClient(props: {
 }
 
 function EndButton({ sessionId, onDone, onError }: { sessionId: string; onDone: () => void; onError: (m: string) => void }) {
+  const t = useTranslations("identity.supportSessions");
   return (
     <button
       type="button"
@@ -58,7 +74,7 @@ function EndButton({ sessionId, onDone, onError }: { sessionId: string; onDone: 
         else onDone();
       }}
     >
-      End
+      {t("end")}
     </button>
   );
 }
@@ -74,6 +90,7 @@ function OpenDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("identity.supportSessions");
   const [sponsorId, setSponsorId] = useState(members[0]?.userId ?? "");
   const [technicianId, setTechnicianId] = useState("");
   const [purpose, setPurpose] = useState("");
@@ -107,25 +124,25 @@ function OpenDialog({
   return (
     <div className="dialog-backdrop">
       <form onSubmit={onSubmit} className="dialog">
-        <h2>Open support session</h2>
-        <label>Sponsor
+        <h2>{t("dialogTitle")}</h2>
+        <label>{t("sponsorLabel")}
           <select value={sponsorId} onChange={(e) => setSponsorId(e.target.value)}>
             {members.map((m) => <option key={m.id} value={m.userId}>{m.userId} ({m.role})</option>)}
           </select>
         </label>
-        <label>Technician user id
+        <label>{t("technicianLabel")}
           <input value={technicianId} onChange={(e) => setTechnicianId(e.target.value)} required />
         </label>
-        <label>Purpose
+        <label>{t("purposeLabel")}
           <textarea required minLength={5} maxLength={500} value={purpose} onChange={(e) => setPurpose(e.target.value)} />
         </label>
-        <label>Duration (hours, max 24)
+        <label>{t("durationLabel")}
           <input type="number" min={1} max={24} value={durationHours} onChange={(e) => setDurationHours(Number(e.target.value))} />
         </label>
         {error ? <p role="alert">{error}</p> : null}
         <div className="dialog__actions">
-          <button type="button" onClick={onClose}>Cancel</button>
-          <button type="submit" disabled={pending}>{pending ? "Opening..." : "Open"}</button>
+          <button type="button" onClick={onClose}>{t("cancel")}</button>
+          <button type="submit" disabled={pending}>{pending ? t("opening") : t("open")}</button>
         </div>
       </form>
     </div>

@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState, useTransition } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTranslations, useFormatter } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   Activity,
   ChevronRight,
@@ -48,26 +50,26 @@ type Bucket = { key: string; label: string; rows: AuditLogEntry[] };
 const ANY = "__any__";
 
 function classify(eventType: string): {
-  label: string;
+  labelKey: "removal" | "anomaly" | "privileged" | "change" | "auth" | "event";
   tone: "neutral" | "danger" | "warn" | "ok" | "info";
 } {
   const e = eventType.toLowerCase();
   if (e.includes("delete") || e.includes("deactiv") || e.includes("revoke"))
-    return { label: "Removal", tone: "danger" };
+    return { labelKey: "removal", tone: "danger" };
   if (e.includes("suspicious") || e.includes("failure"))
-    return { label: "Anomaly", tone: "danger" };
+    return { labelKey: "anomaly", tone: "danger" };
   if (e.includes("break_glass") || e.includes("support"))
-    return { label: "Privileged", tone: "warn" };
+    return { labelKey: "privileged", tone: "warn" };
   if (
     e.includes("role_changed") ||
     e.includes("scope_changed") ||
     e.includes("invited") ||
     e.includes("access_review")
   )
-    return { label: "Change", tone: "info" };
+    return { labelKey: "change", tone: "info" };
   if (e.includes("login") || e.includes("session"))
-    return { label: "Auth", tone: "neutral" };
-  return { label: "Event", tone: "neutral" };
+    return { labelKey: "auth", tone: "neutral" };
+  return { labelKey: "event", tone: "neutral" };
 }
 
 function toneClasses(tone: ReturnType<typeof classify>["tone"]) {
@@ -85,62 +87,27 @@ function toneClasses(tone: ReturnType<typeof classify>["tone"]) {
   }
 }
 
-function formatBucketLabel(date: Date): string {
-  const today = new Date();
-  const isSameDay =
-    date.getFullYear() === today.getFullYear() &&
-    date.getMonth() === today.getMonth() &&
-    date.getDate() === today.getDate();
-  const yesterday = new Date(today);
-  yesterday.setDate(today.getDate() - 1);
-  const isYesterday =
-    date.getFullYear() === yesterday.getFullYear() &&
-    date.getMonth() === yesterday.getMonth() &&
-    date.getDate() === yesterday.getDate();
-  if (isSameDay) return "Today";
-  if (isYesterday) return "Yesterday";
-  return date.toLocaleDateString(undefined, {
-    weekday: "short",
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
 function bucketize(rows: AuditLogEntry[]): Bucket[] {
-  const groups = new Map<string, Bucket>();
+  const groups = new Map<string, { day: Date; rows: AuditLogEntry[] }>();
   for (const r of rows) {
     const d = new Date(r.occurredAt);
     const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
     const key = day.toISOString();
     if (!groups.has(key)) {
-      groups.set(key, { key, label: formatBucketLabel(day), rows: [] });
+      groups.set(key, { day, rows: [] });
     }
     groups.get(key)!.rows.push(r);
   }
-  return Array.from(groups.values()).sort((a, b) =>
-    a.key < b.key ? 1 : -1,
-  );
+  return Array.from(groups.entries())
+    .sort(([a], [b]) => (a < b ? 1 : -1))
+    .map(([key, value]) => ({ key, label: key, rows: value.rows }));
 }
 
-function timeOf(iso: string): string {
-  return new Date(iso).toLocaleTimeString(undefined, {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+function bucketDay(key: string): Date {
+  return new Date(key);
 }
 
-function relOf(iso: string, now: number): string {
-  const diff = now - new Date(iso).getTime();
-  if (diff < 60_000) return "just now";
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
-  return `${Math.floor(diff / 86_400_000)}d ago`;
-}
-
-function Copyable({ value }: { value: string }) {
+function Copyable({ value, copiedLabel }: { value: string; copiedLabel: string }) {
   const [copied, setCopied] = useState(false);
   const onCopy = useCallback(() => {
     if (typeof navigator === "undefined" || !navigator.clipboard) return;
@@ -163,7 +130,7 @@ function Copyable({ value }: { value: string }) {
       title={value}
       className="cursor-pointer rounded px-1 font-mono text-[11px] text-muted-foreground transition hover:bg-muted hover:text-foreground"
     >
-      {copied ? "copied" : `${value.slice(0, 8)}…`}
+      {copied ? copiedLabel : `${value.slice(0, 8)}…`}
     </span>
   );
 }
@@ -172,6 +139,8 @@ export function AuditLogClient({ rows, filters, active }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const t = useTranslations("identity.auditLog");
+  const format = useFormatter();
   const [, startTransition] = useTransition();
 
   const [now] = useState(() => Date.now());
@@ -245,7 +214,7 @@ export function AuditLogClient({ rows, filters, active }: Props) {
           <div className="flex items-center gap-2 pr-2 text-muted-foreground">
             <Filter className="size-4" aria-hidden />
             <span className="text-xs font-medium uppercase tracking-wide">
-              Filters
+              {t("filtersLabel")}
             </span>
           </div>
 
@@ -254,10 +223,10 @@ export function AuditLogClient({ rows, filters, active }: Props) {
             onValueChange={(v) => updateParam("eventType", v === ANY ? null : v)}
           >
             <SelectTrigger size="sm" className="min-w-[160px]">
-              <SelectValue placeholder="Event type" />
+              <SelectValue placeholder={t("eventTypePlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ANY}>All events</SelectItem>
+              <SelectItem value={ANY}>{t("allEvents")}</SelectItem>
               {filters.eventTypes.map((e) => (
                 <SelectItem key={e} value={e}>
                   {e}
@@ -273,10 +242,10 @@ export function AuditLogClient({ rows, filters, active }: Props) {
             }
           >
             <SelectTrigger size="sm" className="min-w-[140px]">
-              <SelectValue placeholder="Entity" />
+              <SelectValue placeholder={t("entityPlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ANY}>All entities</SelectItem>
+              <SelectItem value={ANY}>{t("allEntities")}</SelectItem>
               {filters.entityTypes.map((e) => (
                 <SelectItem key={e} value={e}>
                   {e}
@@ -290,10 +259,10 @@ export function AuditLogClient({ rows, filters, active }: Props) {
             onValueChange={(v) => updateParam("source", v === ANY ? null : v)}
           >
             <SelectTrigger size="sm" className="min-w-[110px]">
-              <SelectValue placeholder="Source" />
+              <SelectValue placeholder={t("sourcePlaceholder")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value={ANY}>Any source</SelectItem>
+              <SelectItem value={ANY}>{t("anySource")}</SelectItem>
               {filters.sources.map((s) => (
                 <SelectItem key={s} value={s}>
                   {s}
@@ -310,7 +279,7 @@ export function AuditLogClient({ rows, filters, active }: Props) {
             <Input
               value={active.query}
               onChange={(e) => updateParam("query", e.target.value || null)}
-              placeholder="Search actor, reason, id…"
+              placeholder={t("searchPlaceholder")}
               className="h-8 pl-7 text-xs"
               spellCheck={false}
             />
@@ -325,18 +294,17 @@ export function AuditLogClient({ rows, filters, active }: Props) {
               className="h-7 gap-1 px-2 text-xs text-muted-foreground"
             >
               <X className="size-3" />
-              Clear ({activeCount})
+              {t("clear", { count: activeCount })}
             </Button>
           ) : null}
         </div>
 
         <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
           <div>
-            Showing <span className="font-medium text-foreground">{filtered.length}</span>{" "}
-            of {rows.length} events
+            {t("showing", { shown: filtered.length, total: rows.length })}
           </div>
           <div className="hidden sm:block">
-            Append-only · tamper-evident · most recent first
+            {t("appendOnlyNote")}
           </div>
         </div>
       </div>
@@ -349,11 +317,10 @@ export function AuditLogClient({ rows, filters, active }: Props) {
             <li key={bucket.key}>
               <div className="sticky top-0 z-10 -mx-4 mb-3 flex items-baseline gap-3 bg-background/85 px-4 py-1 backdrop-blur supports-[backdrop-filter]:bg-background/65">
                 <h2 className="text-sm font-semibold tracking-tight">
-                  {bucket.label}
+                  <BucketLabel day={bucketDay(bucket.key)} />
                 </h2>
                 <span className="font-mono text-xs text-muted-foreground tabular-nums">
-                  {bucket.rows.length} event
-                  {bucket.rows.length === 1 ? "" : "s"}
+                  {t("eventCount", { count: bucket.rows.length })}
                 </span>
               </div>
               <ul className="relative ml-3 border-l border-border/70">
@@ -385,9 +352,9 @@ export function AuditLogClient({ rows, filters, active }: Props) {
                         }`}
                       >
                         <div className="w-20 shrink-0 font-mono text-xs leading-tight text-muted-foreground tabular-nums">
-                          <div>{timeOf(row.occurredAt)}</div>
+                          <div>{format.dateTime(new Date(row.occurredAt), { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}</div>
                           <div className="text-[10px] text-muted-foreground/70">
-                            {relOf(row.occurredAt, now)}
+                            {format.relativeTime(new Date(row.occurredAt), now)}
                           </div>
                         </div>
 
@@ -396,7 +363,7 @@ export function AuditLogClient({ rows, filters, active }: Props) {
                             <span
                               className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${toneClasses(cls.tone)}`}
                             >
-                              {cls.label}
+                              {t(`classify.${cls.labelKey}`)}
                             </span>
                             <code className="truncate font-mono text-xs">
                               {row.eventType}
@@ -409,16 +376,16 @@ export function AuditLogClient({ rows, filters, active }: Props) {
                               {row.entityId ? (
                                 <>
                                   {" "}
-                                  <Copyable value={row.entityId} />
+                                  <Copyable value={row.entityId} copiedLabel={t("copied")} />
                                 </>
                               ) : null}
                             </span>
                             <span className="inline-flex items-center gap-1">
                               <UserIcon className="size-3" aria-hidden />
                               {row.actorUserId ? (
-                                <Copyable value={row.actorUserId} />
+                                <Copyable value={row.actorUserId} copiedLabel={t("copied")} />
                               ) : (
-                                <span>system</span>
+                                <span>{t("systemActor")}</span>
                               )}
                               {row.actorRole ? (
                                 <Badge
@@ -462,22 +429,51 @@ export function AuditLogClient({ rows, filters, active }: Props) {
           className="flex w-full flex-col gap-0 sm:max-w-xl"
         >
           {selected ? <DetailPanel row={selected} onClose={closeRow} /> : null}
-          <SheetTitle className="sr-only">Audit log entry</SheetTitle>
+          <SheetTitle className="sr-only">{t("entryTitleSr")}</SheetTitle>
         </SheetContent>
       </Sheet>
     </div>
   );
 }
 
+function BucketLabel({ day }: { day: Date }) {
+  const t = useTranslations("identity.auditLog");
+  const format = useFormatter();
+  const today = new Date();
+  const isSameDay =
+    day.getFullYear() === today.getFullYear() &&
+    day.getMonth() === today.getMonth() &&
+    day.getDate() === today.getDate();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  const isYesterday =
+    day.getFullYear() === yesterday.getFullYear() &&
+    day.getMonth() === yesterday.getMonth() &&
+    day.getDate() === yesterday.getDate();
+  if (isSameDay) return <>{t("today")}</>;
+  if (isYesterday) return <>{t("yesterday")}</>;
+  return (
+    <>
+      {format.dateTime(day, {
+        weekday: "short",
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })}
+    </>
+  );
+}
+
 function EmptyState() {
+  const t = useTranslations("identity.auditLog");
   return (
     <div className="rounded-xl border border-dashed bg-card/50 px-6 py-16 text-center">
       <div className="mx-auto flex size-10 items-center justify-center rounded-full bg-muted text-muted-foreground">
         <ShieldAlert className="size-5" />
       </div>
-      <h3 className="mt-3 text-sm font-semibold">No audit events match</h3>
+      <h3 className="mt-3 text-sm font-semibold">{t("emptyTitle")}</h3>
       <p className="mt-1 text-xs text-muted-foreground">
-        Try clearing filters or widening the search query.
+        {t("emptyBody")}
       </p>
     </div>
   );
@@ -490,6 +486,8 @@ function DetailPanel({
   row: AuditLogEntry;
   onClose: () => void;
 }) {
+  const t = useTranslations("identity.auditLog");
+  const format = useFormatter();
   const cls = classify(row.eventType);
   return (
     <div className="flex h-full flex-col">
@@ -499,10 +497,10 @@ function DetailPanel({
             <span
               className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${toneClasses(cls.tone)}`}
             >
-              {cls.label}
+              {t(`classify.${cls.labelKey}`)}
             </span>
             <span className="text-xs text-muted-foreground">
-              {new Date(row.occurredAt).toLocaleString()}
+              {format.dateTime(new Date(row.occurredAt), { dateStyle: "medium", timeStyle: "medium" })}
             </span>
           </div>
           <h2 className="truncate font-mono text-sm">{row.eventType}</h2>
@@ -512,18 +510,18 @@ function DetailPanel({
           variant="ghost"
           size="icon-sm"
           onClick={onClose}
-          aria-label="Close detail"
+          aria-label={t("closeDetailAria")}
         >
           <X className="size-4" />
         </Button>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
-        <Field label="Event ID">
+        <Field label={t("detailEventId")}>
           <code className="break-all font-mono text-xs">{row.id}</code>
         </Field>
         <div className="grid grid-cols-2 gap-4">
-          <Field label="Entity">
+          <Field label={t("detailEntity")}>
             <div className="text-sm">{row.entityType}</div>
             {row.entityId ? (
               <code className="break-all font-mono text-[11px] text-muted-foreground">
@@ -531,36 +529,36 @@ function DetailPanel({
               </code>
             ) : null}
           </Field>
-          <Field label="Source">
+          <Field label={t("detailSource")}>
             <Badge variant="outline">{row.source}</Badge>
           </Field>
-          <Field label="Actor">
+          <Field label={t("detailActor")}>
             <div className="font-mono text-xs">
-              {row.actorUserId ?? "system"}
+              {row.actorUserId ?? t("systemActor")}
             </div>
             {row.actorRole ? (
               <div className="text-[11px] text-muted-foreground">
-                role: {row.actorRole}
+                {t("detailActorRole", { role: row.actorRole })}
               </div>
             ) : null}
           </Field>
           {row.correlationId ? (
-            <Field label="Correlation">
+            <Field label={t("detailCorrelation")}>
               <code className="break-all font-mono text-[11px]">
                 {row.correlationId}
               </code>
             </Field>
           ) : (
-            <Field label="Reason">
+            <Field label={t("detailReason")}>
               <div className="text-xs italic text-muted-foreground">
-                {row.reason ?? "—"}
+                {row.reason ?? t("noValue")}
               </div>
             </Field>
           )}
         </div>
 
         {row.correlationId && row.reason ? (
-          <Field label="Reason">
+          <Field label={t("detailReason")}>
             <div className="text-xs italic text-muted-foreground">
               {row.reason}
             </div>
@@ -569,10 +567,10 @@ function DetailPanel({
 
         {(row.before !== null && row.before !== undefined) ||
         (row.after !== null && row.after !== undefined) ? (
-          <Field label="Changes">
+          <Field label={t("detailChanges")}>
             <div className="grid grid-cols-1 gap-2">
-              <DiffBlock label="Before" value={row.before} />
-              <DiffBlock label="After" value={row.after} />
+              <DiffBlock label={t("before")} value={row.before} noValue={t("noValue")} />
+              <DiffBlock label={t("after")} value={row.after} noValue={t("noValue")} />
             </div>
           </Field>
         ) : null}
@@ -580,7 +578,7 @@ function DetailPanel({
 
       <div className="border-t bg-muted/30 px-5 py-3 text-[11px] text-muted-foreground">
         <Activity className="mr-1 inline-block size-3 align-text-bottom" />
-        This event is append-only. It cannot be edited or deleted from the UI.
+        {t("appendOnlyFooter")}
       </div>
     </div>
   );
@@ -603,7 +601,7 @@ function Field({
   );
 }
 
-function DiffBlock({ label, value }: { label: string; value: unknown }) {
+function DiffBlock({ label, value, noValue }: { label: string; value: unknown; noValue: string }) {
   return (
     <div className="overflow-hidden rounded-md border bg-muted/40">
       <div className="border-b bg-background/60 px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -611,7 +609,7 @@ function DiffBlock({ label, value }: { label: string; value: unknown }) {
       </div>
       <pre className="max-h-64 overflow-auto px-2 py-2 font-mono text-[11px] leading-relaxed">
         {value === null || value === undefined
-          ? "—"
+          ? noValue
           : JSON.stringify(value, null, 2)}
       </pre>
     </div>

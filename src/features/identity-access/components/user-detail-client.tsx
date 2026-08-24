@@ -1,11 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { changeMemberRoleAction, changeMemberScopeAction, deactivateUserAction } from "@/features/identity-access/server/actions";
 import { ROLES } from "@/lib/auth/permissions";
+import { roleLabelKey } from "@/features/access-control/components/role-label";
 import { ReauthDialog } from "@/components/forms/reauth-dialog";
 import type { MemberScope, OrganizationMember } from "../types";
+
+const MEMBER_STATUS_KEYS = {
+  invited: "invited",
+  active: "active",
+  suspended: "suspended",
+  expired: "expired",
+} as const;
 
 export function UserDetailClient(props: {
   organizationId: string;
@@ -13,6 +22,9 @@ export function UserDetailClient(props: {
   scopes: MemberScope[];
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.userDetail");
+  const tRoles = useTranslations("roles");
+  const tStatus = useTranslations("identity.memberStatus");
   const [role, setRole] = useState(props.member.role);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -31,13 +43,13 @@ export function UserDetailClient(props: {
     const result = await changeMemberRoleAction({
       memberId: props.member.id,
       newRole: role as (typeof ROLES)[number],
-      reason: reason || "Updated via member detail",
+      reason: reason || t("defaultReason"),
     });
     setPending(false);
     if (!result.ok) {
       if (result.code === "reauth_required") {
         await reauthThen(() =>
-          changeMemberRoleAction({ memberId: props.member.id, newRole: role as (typeof ROLES)[number], reason: reason || "Updated via member detail" }),
+          changeMemberRoleAction({ memberId: props.member.id, newRole: role as (typeof ROLES)[number], reason: reason || t("defaultReason") }),
         );
         return;
       }
@@ -50,12 +62,12 @@ export function UserDetailClient(props: {
   async function deactivate() {
     setError(null);
     setPending(true);
-    const result = await deactivateUserAction({ memberId: props.member.id, reason: reason || "Deactivated from member detail" });
+    const result = await deactivateUserAction({ memberId: props.member.id, reason: reason || t("defaultDeactivateReason") });
     setPending(false);
     if (!result.ok) {
       if (result.code === "reauth_required") {
         await reauthThen(() =>
-          deactivateUserAction({ memberId: props.member.id, reason: reason || "Deactivated from member detail" }),
+          deactivateUserAction({ memberId: props.member.id, reason: reason || t("defaultDeactivateReason") }),
         );
         return;
       }
@@ -67,39 +79,45 @@ export function UserDetailClient(props: {
 
   return (
     <div>
-      <p>User id: <code>{props.member.userId}</code></p>
-      <p>Status: {props.member.status}</p>
+      <p>{t("userIdLabel")} <code>{props.member.userId}</code></p>
+      <p>{t("statusLabel")} {tStatus(MEMBER_STATUS_KEYS[props.member.status])}</p>
       <label>
-        Role
+        {t("roleLabel")}
         <select value={role} onChange={(e) => setRole(e.target.value)}>
           {ROLES.map((r) => (
             <option key={r} value={r}>
-              {r}
+              {tRoles(roleLabelKey(r))}
             </option>
           ))}
         </select>
       </label>
       <label>
-        Reason
+        {t("reasonLabel")}
         <input value={reason} onChange={(e) => setReason(e.target.value)} minLength={10} maxLength={1000} required />
       </label>
       {error ? <p role="alert">{error}</p> : null}
       <div className="page-actions">
         <button type="button" disabled={pending} onClick={saveRole}>
-          Save role
+          {t("saveRole")}
         </button>
         {props.member.status === "active" ? (
           <button type="button" disabled={pending} onClick={deactivate}>
-            Deactivate
+            {t("deactivate")}
           </button>
         ) : null}
       </div>
-      <h2>Scopes ({props.scopes.length})</h2>
+      <h2>{t("scopesHeading", { count: props.scopes.length })}</h2>
       <ul>
         {props.scopes.map((s) => (
           <li key={s.id}>
-            {s.siteId ? `site ${s.siteId}` : s.zoneId ? `zone ${s.zoneId}` : s.houseId ? `house ${s.houseId}` : "org-wide"}
-            {s.permission ? ` - ${s.permission}` : ""}
+            {s.siteId
+              ? t("scopeSite", { id: s.siteId })
+              : s.zoneId
+                ? t("scopeZone", { id: s.zoneId })
+                : s.houseId
+                  ? t("scopeHouse", { id: s.houseId })
+                  : t("scopeOrgWide")}
+            {s.permission ? t("scopePermissionSuffix", { permission: s.permission }) : ""}
           </li>
         ))}
       </ul>

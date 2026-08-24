@@ -20,8 +20,16 @@ const ROLE_LABEL_KEYS: Record<string, string> = {
   org_admin: "org_admin",
   seller: "seller",
   driver: "driver",
+  farm_manager: "farm_manager",
+  supervisor: "supervisor",
+  caretaker: "caretaker",
+  veterinarian: "veterinarian",
+  biosecurity_qa: "biosecurity_qa",
+  maintenance: "maintenance",
   inventory: "inventory",
   logistics: "logistics",
+  auditor: "auditor",
+  support: "support",
 };
 
 export function roleLabelKey(role: string): string {

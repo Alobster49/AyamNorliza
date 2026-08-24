@@ -60,7 +60,6 @@ const eslintConfig = [
     files: [
       "src/app/\\[locale\\]/(seller)/**/*.{ts,tsx}",
       "src/features/orders/components/**/*.{ts,tsx}",
-      "src/features/identity-access/components/**/*.{ts,tsx}",
       "src/features/logistics/components/**/*.{ts,tsx}",
       "src/features/overview/components/**/*.{ts,tsx}",
       // Individually listed, not the `src/components/forms/**` directory -

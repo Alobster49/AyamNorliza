@@ -1,9 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useTranslations, useFormatter } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { startAccessReviewAction, decideReviewItemAction } from "@/features/identity-access/server/actions";
 import type { AccessReview, AccessReviewItem, OrganizationMember } from "../types";
+
+const DECISION_KEYS = {
+  keep: "keep",
+  modify: "modify",
+  revoke: "revoke",
+  pending: "pending",
+} as const;
 
 export function AccessReviewsClient(props: {
   organizationId: string;
@@ -12,6 +20,8 @@ export function AccessReviewsClient(props: {
   itemsByReview: Record<string, AccessReviewItem[]>;
 }) {
   const router = useRouter();
+  const t = useTranslations("identity.accessReviews");
+  const format = useFormatter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -46,22 +56,22 @@ export function AccessReviewsClient(props: {
   return (
     <div>
       <button type="button" onClick={start} disabled={pending}>
-        {pending ? "Starting..." : "Start quarterly review"}
+        {pending ? t("starting") : t("startReview")}
       </button>
       {error ? <p role="alert">{error}</p> : null}
       {props.reviews.map((r) => (
         <article key={r.id} className="review">
           <h2>
-            Review {r.id.slice(0, 8)} - {r.status}
+            {t("reviewHeading", { id: r.id.slice(0, 8), status: r.status })}
           </h2>
-          <p>Due: {new Date(r.dueAt).toLocaleString()}</p>
+          <p>{t("due", { date: format.dateTime(new Date(r.dueAt), { dateStyle: "medium", timeStyle: "short" }) })}</p>
           <table className="data-table">
             <thead>
               <tr>
-                <th>Member</th>
-                <th>Decision</th>
-                <th>Decided at</th>
-                <th>Actions</th>
+                <th>{t("colMember")}</th>
+                <th>{t("colDecision")}</th>
+                <th>{t("colDecidedAt")}</th>
+                <th>{t("colActions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -70,12 +80,16 @@ export function AccessReviewsClient(props: {
                 return (
                   <tr key={item.id}>
                     <td><code>{member?.userId ?? item.organizationMemberId}</code></td>
-                    <td>{item.decision}</td>
-                    <td>{item.decidedAt ? new Date(item.decidedAt).toLocaleString() : "-"}</td>
+                    <td>{t(`decision.${DECISION_KEYS[item.decision]}`)}</td>
                     <td>
-                      <button type="button" onClick={() => decide(item.id, "keep")}>Keep</button>
-                      <button type="button" onClick={() => decide(item.id, "modify")}>Modify</button>
-                      <button type="button" onClick={() => decide(item.id, "revoke")}>Revoke</button>
+                      {item.decidedAt
+                        ? format.dateTime(new Date(item.decidedAt), { dateStyle: "medium", timeStyle: "short" })
+                        : t("notDecided")}
+                    </td>
+                    <td>
+                      <button type="button" onClick={() => decide(item.id, "keep")}>{t("decision.keep")}</button>
+                      <button type="button" onClick={() => decide(item.id, "modify")}>{t("decision.modify")}</button>
+                      <button type="button" onClick={() => decide(item.id, "revoke")}>{t("decision.revoke")}</button>
                     </td>
                   </tr>
                 );

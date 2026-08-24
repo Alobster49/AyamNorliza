@@ -398,7 +398,15 @@
     "seller": "Seller",
     "driver": "Driver",
     "inventory": "Inventory",
-    "logistics": "Logistics"
+    "logistics": "Logistics",
+    "farm_manager": "Farm Manager",
+    "supervisor": "Supervisor",
+    "caretaker": "Caretaker",
+    "veterinarian": "Veterinarian",
+    "biosecurity_qa": "Biosecurity QA",
+    "maintenance": "Maintenance",
+    "auditor": "Auditor",
+    "support": "Support"
   },
   "settings": {
     "organization": {
@@ -430,6 +438,222 @@
     },
     "security": {
       "title": "My security"
+    }
+  },
+  "identity": {
+    "memberStatus": {
+      "invited": "Invited",
+      "active": "Active",
+      "suspended": "Suspended",
+      "expired": "Expired"
+    },
+    "invitationStatus": {
+      "accepted": "accepted",
+      "revoked": "revoked",
+      "expired": "expired",
+      "pending": "pending"
+    },
+    "securityPanel": {
+      "signedInAs": "Signed in as {name}"
+    },
+    "accessReviews": {
+      "startReview": "Start quarterly review",
+      "starting": "Starting...",
+      "reviewHeading": "Review {id} - {status}",
+      "due": "Due: {date}",
+      "colMember": "Member",
+      "colDecision": "Decision",
+      "colDecidedAt": "Decided at",
+      "colActions": "Actions",
+      "notDecided": "-",
+      "decision": {
+        "keep": "Keep",
+        "modify": "Modify",
+        "revoke": "Revoke",
+        "pending": "pending"
+      }
+    },
+    "supportSessions": {
+      "openButton": "Open support session",
+      "colPurpose": "Purpose",
+      "colTechnician": "Technician",
+      "colWindow": "Window",
+      "colStatus": "Status",
+      "colActions": "Actions",
+      "window": "{start} → {end}",
+      "end": "End",
+      "dialogTitle": "Open support session",
+      "sponsorLabel": "Sponsor",
+      "technicianLabel": "Technician user id",
+      "purposeLabel": "Purpose",
+      "durationLabel": "Duration (hours, max 24)",
+      "cancel": "Cancel",
+      "opening": "Opening...",
+      "open": "Open",
+      "status": {
+        "scheduled": "scheduled",
+        "active": "active",
+        "ended": "ended",
+        "revoked": "revoked"
+      }
+    },
+    "userDetail": {
+      "userIdLabel": "User id:",
+      "statusLabel": "Status:",
+      "roleLabel": "Role",
+      "reasonLabel": "Reason",
+      "saveRole": "Save role",
+      "deactivate": "Deactivate",
+      "scopesHeading": "Scopes ({count})",
+      "scopeSite": "site {id}",
+      "scopeZone": "zone {id}",
+      "scopeHouse": "house {id}",
+      "scopeOrgWide": "org-wide",
+      "scopePermissionSuffix": " - {permission}",
+      "defaultReason": "Updated via member detail",
+      "defaultDeactivateReason": "Deactivated from member detail"
+    },
+    "usersPage": {
+      "inviteUser": "Invite user",
+      "membersHeading": "Members ({count})",
+      "colUser": "User",
+      "colRole": "Role",
+      "colStatus": "Status",
+      "colScopes": "Scopes",
+      "colActions": "Actions",
+      "deactivate": "Deactivate",
+      "invitationsHeading": "Invitations ({count})",
+      "colEmail": "Email",
+      "resend": "Resend",
+      "revoke": "Revoke",
+      "defaultRoleChangeReason": "Role change via users page",
+      "defaultDeactivateReason": "Deactivated from users page"
+    },
+    "auditLog": {
+      "filtersLabel": "Filters",
+      "eventTypePlaceholder": "Event type",
+      "allEvents": "All events",
+      "entityPlaceholder": "Entity",
+      "allEntities": "All entities",
+      "sourcePlaceholder": "Source",
+      "anySource": "Any source",
+      "searchPlaceholder": "Search actor, reason, id…",
+      "clear": "Clear ({count})",
+      "showing": "Showing {shown} of {total} events",
+      "appendOnlyNote": "Append-only · tamper-evident · most recent first",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "eventCount": "{count, plural, one {# event} other {# events}}",
+      "emptyTitle": "No audit events match",
+      "emptyBody": "Try clearing filters or widening the search query.",
+      "copied": "copied",
+      "systemActor": "system",
+      "detailEventId": "Event ID",
+      "detailEntity": "Entity",
+      "detailSource": "Source",
+      "detailActor": "Actor",
+      "detailActorRole": "role: {role}",
+      "detailCorrelation": "Correlation",
+      "detailReason": "Reason",
+      "detailChanges": "Changes",
+      "before": "Before",
+      "after": "After",
+      "noValue": "—",
+      "appendOnlyFooter": "This event is append-only. It cannot be edited or deleted from the UI.",
+      "closeDetailAria": "Close detail",
+      "entryTitleSr": "Audit log entry",
+      "classify": {
+        "removal": "Removal",
+        "anomaly": "Anomaly",
+        "privileged": "Privileged",
+        "change": "Change",
+        "auth": "Auth",
+        "event": "Event"
+      }
+    },
+    "rolesPage": {
+      "title": "Roles & permissions",
+      "editingAsOwner": "Editing as owner",
+      "readOnly": "Read only",
+      "saved": "Saved",
+      "syncing": "Syncing",
+      "description": "Decide what each role can do in this organization. Owners can override any capability on any non-owner role. Overrides are recorded in the audit log.",
+      "statsRoles": "{count, plural, one {# role} other {# roles}}",
+      "statsCapabilities": "{count, plural, one {# capability} other {# capabilities}}",
+      "statsOverrides": "{count, plural, one {# override} other {# overrides}}",
+      "statsLastEdited": " · last {time}",
+      "errorTitle": "Couldn't apply changes",
+      "rolesCardTitle": "Roles",
+      "rolesCardDesc": "Pick a role to inspect its capability set.",
+      "grantedOn": "{count} on",
+      "legendTitle": "Legend",
+      "legendOn": "On (matches the canonical matrix)",
+      "legendOverride": "Override (changed by an owner, recorded in audit)",
+      "legendOff": "Off (default or overridden)",
+      "legendLocked": "Locked (cannot be removed)",
+      "legendLockedBadge": "Locked",
+      "capabilitiesEnabled": "{granted} / {total} capabilities enabled",
+      "resetToDefaults": "Reset to defaults",
+      "ownerLocked": "Owner locked",
+      "overridesBadge": "{count, plural, one {# override} other {# overrides}}",
+      "roleLocked": "Role locked",
+      "grantedByOverride": "Granted by override",
+      "revokedByOverride": "Revoked by override",
+      "toggleOn": "On",
+      "toggleOff": "Off",
+      "tooltipEnabled": "Enabled",
+      "tooltipDisabled": "Disabled",
+      "actionGrant": "grant",
+      "actionRevoke": "revoke",
+      "toggleTooltip": "{state} — click to {action}",
+      "toggleAriaLabel": "Toggle {label} for {role}",
+      "lockedReasonOwner": "Owner receives every capability by structure. Cannot be edited.",
+      "lockedReasonRoleLocked": "This role is locked.",
+      "lockedReasonNotOverridable": "This capability is preserved on every role that needs it. It cannot be removed.",
+      "rank": "rank {rank}",
+      "areas": {
+        "organization": {
+          "label": "Organization",
+          "description": "Settings that govern the organization as a whole."
+        },
+        "membership": {
+          "label": "Membership",
+          "description": "Inviting users, changing roles, scopes, and access lifecycle."
+        },
+        "access_review": {
+          "label": "Access reviews",
+          "description": "Periodic attestations that confirm membership and roles."
+        },
+        "support": {
+          "label": "Support sessions",
+          "description": "Time-bound elevated access for technicians."
+        },
+        "break_glass": {
+          "label": "Break-glass",
+          "description": "Emergency override events recorded to the audit log."
+        },
+        "audit": {
+          "label": "Audit & security",
+          "description": "Read access to immutable history and security events."
+        }
+      },
+      "grantTitle": "Grant capability",
+      "revokeTitle": "Revoke capability",
+      "dialogDescGrant": "Granting this capability adds it on top of the default matrix.",
+      "dialogDescRevoke": "Removing this capability overrides the default for this role.",
+      "onRole": "on role {role}.",
+      "reasonLabel": "Reason (required, audit-visible)",
+      "reasonPlaceholder": "e.g. Vet assistants need read access to run reports",
+      "reasonHint": "Min 10 characters. This reason is recorded in the audit log alongside the change.",
+      "cancel": "Cancel",
+      "grant": "Grant",
+      "revoke": "Revoke",
+      "resetTitle": "Reset role to defaults",
+      "resetDescription": "All overrides for {role} will be removed and the role will inherit the canonical capability matrix again.",
+      "resetInfo": "Each removal is recorded individually in the audit log so you can recover the previous state if needed.",
+      "resetReasonLabel": "Reason (required)",
+      "resetReasonPlaceholder": "e.g. Reverting to baseline for Q3 audit",
+      "resetButton": "Reset"
     }
   }
 }

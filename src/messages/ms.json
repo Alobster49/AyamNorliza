@@ -398,7 +398,15 @@
     "seller": "Penjual",
     "driver": "Pemandu",
     "inventory": "Inventori",
-    "logistics": "Logistik"
+    "logistics": "Logistik",
+    "farm_manager": "Pengurus Ladang",
+    "supervisor": "Penyelia",
+    "caretaker": "Penjaga",
+    "veterinarian": "Doktor Veterinar",
+    "biosecurity_qa": "QA Biosekuriti",
+    "maintenance": "Penyelenggaraan",
+    "auditor": "Juruaudit",
+    "support": "Sokongan"
   },
   "settings": {
     "organization": {
@@ -430,6 +438,222 @@
     },
     "security": {
       "title": "Keselamatan saya"
+    }
+  },
+  "identity": {
+    "memberStatus": {
+      "invited": "Dijemput",
+      "active": "Aktif",
+      "suspended": "Digantung",
+      "expired": "Luput"
+    },
+    "invitationStatus": {
+      "accepted": "diterima",
+      "revoked": "dibatalkan",
+      "expired": "luput",
+      "pending": "menunggu"
+    },
+    "securityPanel": {
+      "signedInAs": "Log masuk sebagai {name}"
+    },
+    "accessReviews": {
+      "startReview": "Mula semakan suku tahunan",
+      "starting": "Memulakan...",
+      "reviewHeading": "Semakan {id} - {status}",
+      "due": "Tarikh akhir: {date}",
+      "colMember": "Ahli",
+      "colDecision": "Keputusan",
+      "colDecidedAt": "Diputuskan pada",
+      "colActions": "Tindakan",
+      "notDecided": "-",
+      "decision": {
+        "keep": "Kekalkan",
+        "modify": "Ubah suai",
+        "revoke": "Batalkan",
+        "pending": "menunggu"
+      }
+    },
+    "supportSessions": {
+      "openButton": "Buka sesi sokongan",
+      "colPurpose": "Tujuan",
+      "colTechnician": "Juruteknik",
+      "colWindow": "Tempoh",
+      "colStatus": "Status",
+      "colActions": "Tindakan",
+      "window": "{start} → {end}",
+      "end": "Tamatkan",
+      "dialogTitle": "Buka sesi sokongan",
+      "sponsorLabel": "Penaja",
+      "technicianLabel": "ID pengguna juruteknik",
+      "purposeLabel": "Tujuan",
+      "durationLabel": "Tempoh (jam, maksimum 24)",
+      "cancel": "Batal",
+      "opening": "Membuka...",
+      "open": "Buka",
+      "status": {
+        "scheduled": "dijadualkan",
+        "active": "aktif",
+        "ended": "tamat",
+        "revoked": "dibatalkan"
+      }
+    },
+    "userDetail": {
+      "userIdLabel": "ID pengguna:",
+      "statusLabel": "Status:",
+      "roleLabel": "Peranan",
+      "reasonLabel": "Sebab",
+      "saveRole": "Simpan peranan",
+      "deactivate": "Nyahaktifkan",
+      "scopesHeading": "Skop ({count})",
+      "scopeSite": "tapak {id}",
+      "scopeZone": "zon {id}",
+      "scopeHouse": "reban {id}",
+      "scopeOrgWide": "seluruh organisasi",
+      "scopePermissionSuffix": " - {permission}",
+      "defaultReason": "Dikemas kini melalui butiran ahli",
+      "defaultDeactivateReason": "Dinyahaktifkan daripada butiran ahli"
+    },
+    "usersPage": {
+      "inviteUser": "Jemput pengguna",
+      "membersHeading": "Ahli ({count})",
+      "colUser": "Pengguna",
+      "colRole": "Peranan",
+      "colStatus": "Status",
+      "colScopes": "Skop",
+      "colActions": "Tindakan",
+      "deactivate": "Nyahaktifkan",
+      "invitationsHeading": "Jemputan ({count})",
+      "colEmail": "E-mel",
+      "resend": "Hantar semula",
+      "revoke": "Batalkan",
+      "defaultRoleChangeReason": "Perubahan peranan melalui halaman pengguna",
+      "defaultDeactivateReason": "Dinyahaktifkan daripada halaman pengguna"
+    },
+    "auditLog": {
+      "filtersLabel": "Penapis",
+      "eventTypePlaceholder": "Jenis peristiwa",
+      "allEvents": "Semua peristiwa",
+      "entityPlaceholder": "Entiti",
+      "allEntities": "Semua entiti",
+      "sourcePlaceholder": "Sumber",
+      "anySource": "Sebarang sumber",
+      "searchPlaceholder": "Cari pelaku, sebab, id…",
+      "clear": "Kosongkan ({count})",
+      "showing": "Memaparkan {shown} daripada {total} peristiwa",
+      "appendOnlyNote": "Tambah sahaja · tidak boleh diubah · terkini dahulu",
+      "today": "Hari ini",
+      "yesterday": "Semalam",
+      "eventCount": "{count, plural, other {# peristiwa}}",
+      "emptyTitle": "Tiada peristiwa audit sepadan",
+      "emptyBody": "Cuba kosongkan penapis atau luaskan carian.",
+      "copied": "disalin",
+      "systemActor": "sistem",
+      "detailEventId": "ID Peristiwa",
+      "detailEntity": "Entiti",
+      "detailSource": "Sumber",
+      "detailActor": "Pelaku",
+      "detailActorRole": "peranan: {role}",
+      "detailCorrelation": "Korelasi",
+      "detailReason": "Sebab",
+      "detailChanges": "Perubahan",
+      "before": "Sebelum",
+      "after": "Selepas",
+      "noValue": "—",
+      "appendOnlyFooter": "Peristiwa ini tambah sahaja. Ia tidak boleh disunting atau dipadam daripada UI.",
+      "closeDetailAria": "Tutup butiran",
+      "entryTitleSr": "Entri log audit",
+      "classify": {
+        "removal": "Pembuangan",
+        "anomaly": "Anomali",
+        "privileged": "Istimewa",
+        "change": "Perubahan",
+        "auth": "Pengesahan",
+        "event": "Peristiwa"
+      }
+    },
+    "rolesPage": {
+      "title": "Peranan & kebenaran",
+      "editingAsOwner": "Mengedit sebagai pemilik",
+      "readOnly": "Baca sahaja",
+      "saved": "Disimpan",
+      "syncing": "Menyegerak",
+      "description": "Tentukan apa yang setiap peranan boleh lakukan dalam organisasi ini. Pemilik boleh mengatasi mana-mana kebolehan pada mana-mana peranan bukan pemilik. Pengatasan direkodkan dalam log audit.",
+      "statsRoles": "{count, plural, other {# peranan}}",
+      "statsCapabilities": "{count, plural, other {# kebolehan}}",
+      "statsOverrides": "{count, plural, other {# pengatasan}}",
+      "statsLastEdited": " · terakhir {time}",
+      "errorTitle": "Gagal melaksanakan perubahan",
+      "rolesCardTitle": "Peranan",
+      "rolesCardDesc": "Pilih peranan untuk menyemak set kebolehannya.",
+      "grantedOn": "{count} aktif",
+      "legendTitle": "Legenda",
+      "legendOn": "Aktif (sepadan dengan matriks kanonik)",
+      "legendOverride": "Diatasi (diubah oleh pemilik, direkodkan dalam audit)",
+      "legendOff": "Tidak aktif (lalai atau diatasi)",
+      "legendLocked": "Dikunci (tidak boleh dibuang)",
+      "legendLockedBadge": "Dikunci",
+      "capabilitiesEnabled": "{granted} / {total} kebolehan diaktifkan",
+      "resetToDefaults": "Set semula ke lalai",
+      "ownerLocked": "Dikunci untuk pemilik",
+      "overridesBadge": "{count, plural, other {# pengatasan}}",
+      "roleLocked": "Peranan dikunci",
+      "grantedByOverride": "Diberikan melalui pengatasan",
+      "revokedByOverride": "Dibatalkan melalui pengatasan",
+      "toggleOn": "Aktif",
+      "toggleOff": "Tidak aktif",
+      "tooltipEnabled": "Diaktifkan",
+      "tooltipDisabled": "Dinyahaktifkan",
+      "actionGrant": "berikan",
+      "actionRevoke": "batalkan",
+      "toggleTooltip": "{state} — klik untuk {action}",
+      "toggleAriaLabel": "Togol {label} untuk {role}",
+      "lockedReasonOwner": "Pemilik menerima setiap kebolehan secara struktur. Tidak boleh disunting.",
+      "lockedReasonRoleLocked": "Peranan ini dikunci.",
+      "lockedReasonNotOverridable": "Kebolehan ini dikekalkan pada setiap peranan yang memerlukannya. Ia tidak boleh dibuang.",
+      "rank": "kedudukan {rank}",
+      "areas": {
+        "organization": {
+          "label": "Organisasi",
+          "description": "Tetapan yang mentadbir organisasi secara keseluruhan."
+        },
+        "membership": {
+          "label": "Keahlian",
+          "description": "Menjemput pengguna, menukar peranan, skop, dan kitaran hayat akses."
+        },
+        "access_review": {
+          "label": "Semakan akses",
+          "description": "Pengesahan berkala yang mengesahkan keahlian dan peranan."
+        },
+        "support": {
+          "label": "Sesi sokongan",
+          "description": "Akses tinggi bertempoh untuk juruteknik."
+        },
+        "break_glass": {
+          "label": "Break-glass",
+          "description": "Peristiwa pengatasan kecemasan yang direkodkan dalam log audit."
+        },
+        "audit": {
+          "label": "Audit & keselamatan",
+          "description": "Akses baca kepada sejarah tidak boleh ubah dan peristiwa keselamatan."
+        }
+      },
+      "grantTitle": "Beri kebolehan",
+      "revokeTitle": "Batalkan kebolehan",
+      "dialogDescGrant": "Memberi kebolehan ini menambahkannya di atas matriks lalai.",
+      "dialogDescRevoke": "Membuang kebolehan ini mengatasi lalai bagi peranan ini.",
+      "onRole": "pada peranan {role}.",
+      "reasonLabel": "Sebab (wajib, boleh dilihat dalam audit)",
+      "reasonPlaceholder": "cth. Pembantu veterinar perlu akses baca untuk menjana laporan",
+      "reasonHint": "Minimum 10 aksara. Sebab ini direkodkan dalam log audit bersama perubahan.",
+      "cancel": "Batal",
+      "grant": "Beri",
+      "revoke": "Batalkan",
+      "resetTitle": "Set semula peranan ke lalai",
+      "resetDescription": "Semua pengatasan bagi {role} akan dibuang dan peranan akan mewarisi semula matriks kebolehan kanonik.",
+      "resetInfo": "Setiap pembuangan direkodkan secara individu dalam log audit supaya anda boleh memulihkan keadaan sebelumnya jika perlu.",
+      "resetReasonLabel": "Sebab (wajib)",
+      "resetReasonPlaceholder": "cth. Kembali ke asas untuk audit S3",
+      "resetButton": "Set semula"
     }
   }
 }
