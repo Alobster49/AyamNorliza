@@ -1554,6 +1554,16 @@ declare const messages: {
         "board": "Board",
         "table": "Table"
       },
+      "lens": {
+        "label": "Delivery date",
+        "today": "Today",
+        "tomorrow": "Tomorrow",
+        "all": "All dates"
+      },
+      "atRisk": {
+        "overdue": "Overdue",
+        "dueToday": "Due today"
+      },
       "newOrder": "New order",
       "tabs": {
         "all": "All"

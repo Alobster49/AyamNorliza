@@ -19,6 +19,7 @@ import {
 import type { OrderListItem, OrderStatus, OrderWithItems } from "@/features/orders/types";
 import { ORDER_STATUSES } from "@/features/orders/types";
 import { resolveDrop } from "@/features/orders/lib/board-rules";
+import { isAtRisk } from "@/features/orders/lib/board-view-model";
 import { getOrderDetail } from "@/features/orders/server/order-actions";
 import { OrderCard, OrderCardContent } from "./order-card";
 import {
@@ -50,9 +51,16 @@ type OrdersBoardProps = {
   orders: OrderListItem[];
   callerRole: string;
   onOrdersChange: (orders: OrderListItem[]) => void;
+  today: string;
 };
 
-export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChange }: OrdersBoardProps) {
+export function OrdersBoard({
+  organizationSlug,
+  orders,
+  callerRole,
+  onOrdersChange,
+  today,
+}: OrdersBoardProps) {
   const router = useRouter();
   const t = useTranslations("orders.board");
   const tError = useTranslations("orders");
@@ -92,6 +100,8 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
       customer: order.customer?.name ?? tCard("unknownCustomer"),
       status: tStatus(order.status),
     });
+
+  const cardRisk = (order: OrderListItem) => isAtRisk(order, today);
 
   function moveOrder(orderId: string, to: OrderStatus) {
     onOrdersChange(orders.map((o) => (o.id === orderId ? { ...o, status: to } : o)));
@@ -169,13 +179,14 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
               onOpenOrder={(id) => router.push(`/${organizationSlug}/orders/${id}`)}
               onNewOrder={() => router.push(`/${organizationSlug}/orders/new`)}
               cardAriaLabel={cardAriaLabel}
+              cardRisk={cardRisk}
             />
           ))}
         </div>
         <DragOverlay>
           {activeOrder ? (
             <div className="w-72 rotate-2 opacity-90">
-              <OrderCardContent order={activeOrder} />
+              <OrderCardContent order={activeOrder} risk={null} />
             </div>
           ) : null}
         </DragOverlay>
@@ -224,12 +235,14 @@ function BoardColumn({
   onOpenOrder,
   onNewOrder,
   cardAriaLabel,
+  cardRisk,
 }: {
   status: OrderStatus;
   orders: OrderListItem[];
   onOpenOrder: (id: string) => void;
   onNewOrder: () => void;
   cardAriaLabel: (order: OrderListItem) => string;
+  cardRisk: (order: OrderListItem) => "overdue" | "dueToday" | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const t = useTranslations("orders.board");
@@ -275,6 +288,7 @@ function BoardColumn({
               order={order}
               onOpen={() => onOpenOrder(order.id)}
               ariaLabel={cardAriaLabel(order)}
+              risk={cardRisk(order)}
             />
           ))
         )}

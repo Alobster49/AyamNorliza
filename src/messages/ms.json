@@ -1551,6 +1551,16 @@
         "board": "Papan",
         "table": "Jadual"
       },
+      "lens": {
+        "label": "Tarikh hantar",
+        "today": "Hari ini",
+        "tomorrow": "Esok",
+        "all": "Semua tarikh"
+      },
+      "atRisk": {
+        "overdue": "Lewat",
+        "dueToday": "Hantar hari ini"
+      },
       "newOrder": "Pesanan baharu",
       "tabs": {
         "all": "Semua"

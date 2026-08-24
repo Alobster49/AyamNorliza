@@ -6,7 +6,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem, OrderStatus } from "@/features/orders/types";
 import { ORDER_STATUSES, ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
-import { displayAmount } from "@/features/orders/lib/board-view-model";
+import { applyLens, displayAmount, isAtRisk, type DateLens } from "@/features/orders/lib/board-view-model";
 import {
   Table,
   TableBody,
@@ -45,6 +45,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
   const [orders, setOrders] = useState(initialOrders);
   const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [view, setView] = useState<ViewMode>("board");
+  const [lens, setLens] = useState<DateLens>("all");
 
   useEffect(() => {
     // router.refresh() after a workflow returns fresh server data — adopt it.
@@ -78,9 +79,11 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
     }
   }
 
+  const lensedOrders = useMemo(() => applyLens(orders, lens, today), [orders, lens, today]);
+
   const counts = useMemo(() => {
     const base: Record<TabValue, number> = {
-      all: orders.length,
+      all: lensedOrders.length,
       pending: 0,
       confirmed: 0,
       ready: 0,
@@ -88,13 +91,14 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
       closed: 0,
       cancelled: 0,
     };
-    for (const order of orders) {
+    for (const order of lensedOrders) {
       base[order.status] += 1;
     }
     return base;
-  }, [orders]);
+  }, [lensedOrders]);
 
-  const visibleOrders = activeTab === "all" ? orders : orders.filter((o) => o.status === activeTab);
+  const visibleOrders =
+    activeTab === "all" ? lensedOrders : lensedOrders.filter((o) => o.status === activeTab);
 
   const formatDate = (date: string) =>
     format.dateTime(new Date(date), { day: "2-digit", month: "short", year: "numeric" });
@@ -104,6 +108,19 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3" data-testid="orders-toolbar">
+        <div className="mr-auto">
+          <ViewToggle label={t("lens.label")}>
+            {(["today", "tomorrow", "all"] as const).map((value) => (
+              <ViewButton
+                key={value}
+                active={lens === value}
+                onClick={() => setLens(value)}
+                icon={null}
+                label={t(`lens.${value}`)}
+              />
+            ))}
+          </ViewToggle>
+        </div>
         <ViewToggle label={t("viewToggle.label")}>
           <ViewButton
             active={view === "board"}
@@ -133,9 +150,10 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
       ) : view === "board" ? (
         <OrdersBoard
           organizationSlug={organizationSlug}
-          orders={orders}
+          orders={lensedOrders}
           callerRole={callerRole}
           onOrdersChange={setOrders}
+          today={today}
         />
       ) : (
         <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
@@ -171,31 +189,41 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
                       </TableCell>
                     </TableRow>
                   ) : (
-                    visibleOrders.map((order) => (
-                      <TableRow
-                        key={order.id}
-                        className="cursor-pointer"
-                        onClick={() => router.push(`/${organizationSlug}/orders/${order.id}`)}
-                      >
-                        <TableCell className="font-mono text-sm">{order.id.slice(0, 8)}</TableCell>
-                        <TableCell>{order.customer?.name ?? tCard("unknownCustomer")}</TableCell>
-                        <TableCell>{order.zone?.name ?? "-"}</TableCell>
-                        <TableCell>
-                          <Badge className={ORDER_STATUS_COLORS[order.status]}>
-                            {tStatus(order.status)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{formatDate(order.delivery_date)}</TableCell>
-                        <TableCell className="text-right font-medium">
-                          {(() => {
-                            const amount = displayAmount(order);
-                            if (amount.kind === "total") return formatPrice(amount.amount);
-                            if (amount.kind === "unweighed") return tCard("unweighed");
-                            return "—";
-                          })()}
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    visibleOrders.map((order) => {
+                      const risk = isAtRisk(order, today);
+                      return (
+                        <TableRow
+                          key={order.id}
+                          className="cursor-pointer"
+                          onClick={() => router.push(`/${organizationSlug}/orders/${order.id}`)}
+                        >
+                          <TableCell className="font-mono text-sm">{order.id.slice(0, 8)}</TableCell>
+                          <TableCell>{order.customer?.name ?? tCard("unknownCustomer")}</TableCell>
+                          <TableCell>{order.zone?.name ?? "-"}</TableCell>
+                          <TableCell>
+                            <Badge className={ORDER_STATUS_COLORS[order.status]}>
+                              {tStatus(order.status)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(order.delivery_date)}
+                            {risk && (
+                              <Badge variant="destructive" className="ml-2 text-[10px]">
+                                {t(`atRisk.${risk}`)}
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {(() => {
+                              const amount = displayAmount(order);
+                              if (amount.kind === "total") return formatPrice(amount.amount);
+                              if (amount.kind === "unweighed") return tCard("unweighed");
+                              return "—";
+                            })()}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>

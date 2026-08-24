@@ -8,14 +8,29 @@ import { displayAmount } from "@/features/orders/lib/board-view-model";
 import { Badge } from "@/components/ui/badge";
 
 /** Presentational card body — shared by the board card and the DragOverlay preview. */
-export function OrderCardContent({ order }: { order: OrderListItem }) {
+export function OrderCardContent({
+  order,
+  risk,
+}: {
+  order: OrderListItem;
+  risk?: "overdue" | "dueToday" | null;
+}) {
   const t = useTranslations("orders.card");
+  const tList = useTranslations("orders.client");
   const format = useFormatter();
   const formatDate = (date: string) =>
     format.dateTime(new Date(date), { day: "2-digit", month: "short", year: "numeric" });
 
   return (
-    <div className="space-y-2 rounded-lg border bg-card p-3 shadow-sm">
+    <div
+      className={`space-y-2 rounded-lg border bg-card p-3 shadow-sm ${
+        risk === "overdue"
+          ? "border-l-4 border-l-red-500"
+          : risk === "dueToday"
+            ? "border-l-4 border-l-amber-500"
+            : ""
+      }`}
+    >
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs text-muted-foreground">{order.id.slice(0, 8)}</span>
         <Badge variant="outline" className="text-[10px] capitalize">
@@ -35,6 +50,11 @@ export function OrderCardContent({ order }: { order: OrderListItem }) {
         <Badge variant="secondary" className="text-[10px]">
           {formatDate(order.delivery_date)}
         </Badge>
+        {risk && (
+          <Badge variant="destructive" className="text-[10px]">
+            {tList(`atRisk.${risk}`)}
+          </Badge>
+        )}
         {(() => {
           const amount = displayAmount(order);
           if (amount.kind === "none") return null;
@@ -53,10 +73,12 @@ export function OrderCard({
   order,
   onOpen,
   ariaLabel,
+  risk,
 }: {
   order: OrderListItem;
   onOpen: () => void;
   ariaLabel: string;
+  risk?: "overdue" | "dueToday" | null;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: order.id,
@@ -82,7 +104,7 @@ export function OrderCard({
         "cursor-grab [touch-action:pan-y] active:cursor-grabbing " + (isDragging ? "opacity-40" : "")
       }
     >
-      <OrderCardContent order={order} />
+      <OrderCardContent order={order} risk={risk} />
     </div>
   );
 }

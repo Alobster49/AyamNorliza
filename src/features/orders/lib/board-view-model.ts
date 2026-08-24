@@ -4,6 +4,7 @@
  */
 import type { OrderListItem, OrderStatus } from "../types";
 import { resolveDrop } from "./board-rules";
+import { shiftIsoDate } from "@/lib/time/org-date";
 
 export type AmountDisplay =
   | { kind: "total"; amount: number }
@@ -35,4 +36,38 @@ export function classifyDropTarget(
   if (resolution.kind === "noop") return { mode: "idle" };
   if (resolution.kind === "blocked") return { mode: "decline", hintKey: resolution.hintKey };
   return { mode: "invite" };
+}
+
+export type DateLens = "today" | "tomorrow" | "all";
+
+const OPEN_STATUSES = new Set(["pending", "confirmed", "ready"]);
+
+/**
+ * "today" deliberately includes overdue orders that are still in flight —
+ * they are exactly what the seller must deal with today. Terminal statuses
+ * with past dates are history, not workload.
+ */
+export function applyLens(
+  orders: OrderListItem[],
+  lens: DateLens,
+  today: string,
+): OrderListItem[] {
+  if (lens === "all") return orders;
+  if (lens === "tomorrow") {
+    const tomorrow = shiftIsoDate(today, 1);
+    return orders.filter((o) => o.delivery_date === tomorrow);
+  }
+  return orders.filter(
+    (o) => o.delivery_date === today || (o.delivery_date < today && OPEN_STATUSES.has(o.status)),
+  );
+}
+
+export function isAtRisk(
+  order: Pick<OrderListItem, "status" | "delivery_date">,
+  today: string,
+): "overdue" | "dueToday" | null {
+  if (order.status !== "pending" && order.status !== "confirmed") return null;
+  if (order.delivery_date < today) return "overdue";
+  if (order.delivery_date === today) return "dueToday";
+  return null;
 }
