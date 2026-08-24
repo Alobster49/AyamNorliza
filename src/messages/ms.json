@@ -1626,6 +1626,12 @@
         "action": "Sahkan",
         "busy": "Mengesahkan…",
         "success": "Pesanan disahkan"
+      },
+      "bulk": {
+        "select": "Pilih",
+        "exit": "Selesai",
+        "confirmN": "Sahkan {count} pesanan",
+        "summary": "{confirmed} disahkan, {failed} gagal"
       }
     },
     "station": {

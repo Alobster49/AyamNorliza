@@ -50,6 +50,7 @@ export function OrderCardContent({
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               >
                 <Phone className="h-3.5 w-3.5" />
               </a>
@@ -63,6 +64,7 @@ export function OrderCardContent({
                 onPointerDown={(e) => e.stopPropagation()}
                 onMouseDown={(e) => e.stopPropagation()}
                 onTouchStart={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
               >
                 <MessageCircle className="h-3.5 w-3.5" />
               </a>

@@ -319,7 +319,8 @@ export function OrdersBoard({
         </div>
         <DragOverlay>
           {activeOrder ? (
-            <div className="w-72 rotate-2 opacity-90">
+            // Decorative drag preview — its links/buttons must not be reachable by AT or clicks.
+            <div className="pointer-events-none w-72 rotate-2 opacity-90" aria-hidden="true">
               <OrderCardContent order={activeOrder} risk={null} />
             </div>
           ) : null}
