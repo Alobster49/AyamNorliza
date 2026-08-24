@@ -1,5 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
 import { STAFF_ROLES } from "@/features/orders/lib/roles";
@@ -40,7 +40,9 @@ export default async function SellerLayout({
   // and manager-only pages redirect them to /tasks (see CONTRACT CONCERN
   // at the end of this file for why that redirect lives per-page).
   if (!member || !(STAFF_ROLES as readonly string[]).includes(member.role)) {
-    redirect(`/${organizationSlug}`);
+    // Locale-prefixed explicitly (same pattern as requireUserOrRedirect):
+    // a bare path bounces through the middleware 307 and drops the locale.
+    redirect(`/${await getLocale()}/${organizationSlug}`);
   }
 
   // Reuses the `roles` namespace's "seller" key: the fallback text here is
