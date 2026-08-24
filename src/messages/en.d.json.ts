@@ -1145,6 +1145,7 @@ declare const messages: {
         "status": "Status",
         "archived": "Archived",
         "noSizesYet": "no sizes yet",
+        "priceRange": "{range} · {count, plural, one {# size} other {# sizes}}",
         "addSizeAriaLabel": "Add size to {name}",
         "editAriaLabel": "Edit {name}",
         "addFirstSize": "+ Add the first size for {name}",
@@ -1174,15 +1175,26 @@ declare const messages: {
       },
       "catalog": {
         "archivedNotice": "Archived products are hidden from the buyer portal, but their past orders stay intact. Restore one to put it back on sale.",
-        "emptyArchived": "Nothing archived.",
-        "emptyNoCategories": "Create your first category, then add products to it.",
-        "emptyNoProducts": "No products in this category yet. Click “{addProduct}” to create one."
+        "emptyArchived": "Products you archive land here, ready to restore anytime.",
+        "emptyArchivedTitle": "Archive is empty",
+        "emptyNoCategories": "Products live in categories — create your first one to start building the catalog.",
+        "emptyNoCategoriesTitle": "Set up your catalog",
+        "emptyNoProducts": "No products in this category yet.",
+        "emptyNoProductsTitle": "Nothing here yet",
+        "emptyCreateCategoryCta": "Create your first category",
+        "emptyAddProductCta": "Add your first product"
       },
       "card": {
         "noSizes": "No sizes/prices yet."
       },
       "client": {
-        "deleteCategoryConfirm": "Delete category \"{name}\"?",
+        "deleteCategoryConfirm": "\"{name}\" will be removed. A category that still has products cannot be deleted.",
+        "deleteCategoryTitle": "Delete category?",
+        "deleteProductTitle": "Delete product permanently?",
+        "deleteVariantTitle": "Delete size/option?",
+        "confirmDelete": "Delete",
+        "needCategoryFirstTitle": "Create a category first",
+        "needCategoryFirstDescription": "Every product lives in a category — set one up and you can add products right after.",
         "categoryDeleted": "Category deleted",
         "error": "Error",
         "productArchived": "Product archived",
@@ -1196,7 +1208,7 @@ declare const messages: {
         "markedAvailable": "Marked available",
         "markedSoldOut": "Marked sold out",
         "variantToggleDescription": "{product} — {variant}",
-        "deleteVariantConfirm": "Delete \"{variant}\" from {product}?",
+        "deleteVariantConfirm": "\"{variant}\" will be removed from {product}. Buyers can no longer order it.",
         "variantDeleted": "Size/option deleted"
       }
     },

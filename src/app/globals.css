@@ -377,6 +377,48 @@ button[disabled] {
   }
 }
 
+/* ---- Seller catalog (Products page) ---- */
+/* Quick entrance for filtered content: fast enough for a many-times-a-day
+   action, just visible enough to confirm the content changed. */
+.animate-catalog-in {
+  animation: catalog-in 160ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes catalog-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Opacity-only fallback: keep the change cue, drop the movement. */
+@keyframes catalog-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Mobile category chip row scrolls without a visible scrollbar. */
+.scrollbar-none {
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-catalog-in {
+    animation: catalog-in-fade 160ms ease-out both;
+  }
+}
+
 /* ---- Warehouse empty state (sleeping hen doodle) ---- */
 .animate-hen-breathe {
   animation: hen-breathe 3.4s ease-in-out infinite;

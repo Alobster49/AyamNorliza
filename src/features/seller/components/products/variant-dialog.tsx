@@ -2,9 +2,17 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { Loader2 } from "lucide-react";
 import { createVariant, updateVariant } from "@/features/seller/server/actions";
 import { UNIT_TYPES, type ProductVariant, type UnitType } from "@/features/seller/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { AvailabilitySwitch } from "./availability-switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,7 +98,7 @@ export function VariantDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>{variant ? t("editTitle") : t("addTitle")}</DialogTitle>
         </DialogHeader>
@@ -116,15 +124,25 @@ export function VariantDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="variant-price">{priceLabel}</Label>
-            <Input
-              id="variant-price"
-              name="price_per_unit"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={variant?.price_per_unit ?? ""}
-              required
-            />
+            <div className="relative">
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground"
+              >
+                RM
+              </span>
+              <Input
+                id="variant-price"
+                name="price_per_unit"
+                type="number"
+                step="0.01"
+                min="0"
+                inputMode="decimal"
+                defaultValue={variant?.price_per_unit ?? ""}
+                required
+                className="pl-10 tabular-nums"
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <Label>{t("benchmarkLabel")}</Label>
@@ -171,24 +189,31 @@ export function VariantDialog({
               </div>
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <input
+          <div className="flex items-center justify-between gap-2 rounded-lg border px-3 py-2.5">
+            <Label htmlFor="variant-available" className="cursor-pointer">
+              {t("availableLabel")}
+            </Label>
+            <AvailabilitySwitch
               id="variant-available"
-              type="checkbox"
-              checked={available}
-              onChange={(e) => setAvailable(e.target.checked)}
-              className="h-4 w-4"
+              available={available}
+              onToggle={() => setAvailable(!available)}
+              label={t("availableLabel")}
             />
-            <Label htmlFor="variant-available">{t("availableLabel")}</Label>
           </div>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={() => onOpenChange(false)}
+            >
               {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="animate-spin" />}
               {variant ? t("saveChanges") : t("create")}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

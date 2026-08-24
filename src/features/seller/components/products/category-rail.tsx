@@ -36,7 +36,7 @@ export function CategoryRail({
   return (
     <nav
       aria-label={t("ariaLabel")}
-      className="flex items-center gap-1 overflow-x-auto rounded-full border bg-card p-1 md:block md:w-56 md:shrink-0 md:overflow-visible md:rounded-lg md:p-0"
+      className="scrollbar-none flex items-center gap-1 overflow-x-auto rounded-full border bg-card p-1 md:sticky md:top-20 md:block md:w-56 md:shrink-0 md:overflow-visible md:rounded-lg md:p-0"
     >
       <div className="hidden px-3 pb-1 pt-3 md:block">
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -78,7 +78,7 @@ export function CategoryRail({
         <button
           type="button"
           onClick={onAddCategory}
-          className="text-sm text-muted-foreground hover:text-foreground"
+          className="text-sm text-muted-foreground transition-colors duration-150 hover:text-foreground"
         >
           {t("addCategory")}
         </button>
@@ -101,7 +101,7 @@ function RailItem({ label, count, selected, onSelect, onEdit, onDelete, icon }: 
   const t = useTranslations("seller.products.categoryRail");
   return (
     <div
-      className={`group flex shrink-0 items-center rounded-full md:w-full md:rounded-none md:border-l-2 ${
+      className={`group flex shrink-0 items-center rounded-full transition-colors duration-150 md:w-full md:rounded-none md:border-l-2 ${
         selected
           ? "bg-primary text-primary-foreground md:border-primary md:bg-accent md:text-accent-foreground"
           : "text-muted-foreground hover:text-foreground md:border-transparent md:hover:bg-accent/50"

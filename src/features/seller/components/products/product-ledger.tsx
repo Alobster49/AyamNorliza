@@ -3,7 +3,7 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ProductVariant } from "@/features/seller/types";
-import { priceRangeLabel, type CatalogProduct } from "@/features/seller/lib/catalog-model";
+import { priceRange, type CatalogProduct } from "@/features/seller/lib/catalog-model";
 import { formatPrice } from "@/features/seller/lib/pricing";
 import { AvailabilitySwitch } from "./availability-switch";
 import { ProductActionsMenu } from "./product-actions-menu";
@@ -57,14 +57,19 @@ export function ProductLedger({
               </span>
             )}
             <span className="ml-auto hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
-              {priceRangeLabel(product) ?? t("noSizesYet")}
+              {(() => {
+                const parts = priceRange(product);
+                return parts
+                  ? t("priceRange", { range: parts.range, count: parts.count })
+                  : t("noSizesYet");
+              })()}
             </span>
             <span className="flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => onAddVariant(product)}
                 aria-label={t("addSizeAriaLabel", { name: product.name })}
-                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                className="rounded p-1 text-muted-foreground opacity-0 transition-[opacity,color] duration-150 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-60"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -72,7 +77,7 @@ export function ProductLedger({
                 type="button"
                 onClick={() => onEditProduct(product)}
                 aria-label={t("editAriaLabel", { name: product.name })}
-                className="rounded p-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100"
+                className="rounded p-1 text-muted-foreground opacity-0 transition-[opacity,color] duration-150 hover:text-foreground focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-60"
               >
                 <Pencil className="h-3.5 w-3.5" />
               </button>
@@ -91,7 +96,7 @@ export function ProductLedger({
             <button
               type="button"
               onClick={() => onAddVariant(product)}
-              className="block w-full border-b px-4 py-2.5 text-left text-sm text-muted-foreground hover:bg-accent/40"
+              className="block w-full border-b px-4 py-2.5 text-left text-sm text-muted-foreground transition-colors duration-150 hover:bg-accent/40 active:bg-accent/60"
             >
               {t("addFirstSize", { name: product.name })}
             </button>
@@ -132,7 +137,7 @@ function LedgerRow({ product, variant, onEdit, onDelete, onToggle }: LedgerRowPr
         ? tUnit("perPiece")
         : variant.unit_type;
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b px-4 py-2.5 text-sm last:border-b-0 hover:bg-accent/30 sm:grid-cols-[minmax(10rem,1.6fr)_6rem_7rem_7rem] sm:items-center">
+    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b px-4 py-2.5 text-sm transition-colors duration-150 last:border-b-0 hover:bg-accent/30 sm:grid-cols-[minmax(10rem,1.6fr)_6rem_7rem_7rem] sm:items-center">
       <button
         type="button"
         onClick={onEdit}
@@ -160,7 +165,7 @@ function LedgerRow({ product, variant, onEdit, onDelete, onToggle }: LedgerRowPr
           type="button"
           onClick={onDelete}
           aria-label={t("deleteAriaLabel", { name: variant.name })}
-          className="rounded p-1 text-muted-foreground hover:text-destructive"
+          className="rounded p-1 text-muted-foreground transition-colors duration-150 hover:text-destructive"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>

@@ -1142,6 +1142,7 @@
         "status": "Status",
         "archived": "Diarkibkan",
         "noSizesYet": "belum ada saiz",
+        "priceRange": "{range} · {count} saiz",
         "addSizeAriaLabel": "Tambah saiz untuk {name}",
         "editAriaLabel": "Sunting {name}",
         "addFirstSize": "+ Tambah saiz pertama untuk {name}",
@@ -1171,15 +1172,26 @@
       },
       "catalog": {
         "archivedNotice": "Produk yang diarkibkan disembunyikan daripada portal pembeli, tetapi pesanan lampau kekal utuh. Kembalikan satu untuk menjualnya semula.",
-        "emptyArchived": "Tiada apa yang diarkibkan.",
-        "emptyNoCategories": "Cipta kategori pertama anda, kemudian tambah produk ke dalamnya.",
-        "emptyNoProducts": "Belum ada produk dalam kategori ini. Klik “{addProduct}” untuk mencipta satu."
+        "emptyArchived": "Produk yang anda arkibkan akan berada di sini, sedia untuk dikembalikan bila-bila masa.",
+        "emptyArchivedTitle": "Arkib kosong",
+        "emptyNoCategories": "Produk berada dalam kategori — cipta yang pertama untuk mula membina katalog.",
+        "emptyNoCategoriesTitle": "Sediakan katalog anda",
+        "emptyNoProducts": "Belum ada produk dalam kategori ini.",
+        "emptyNoProductsTitle": "Belum ada apa di sini",
+        "emptyCreateCategoryCta": "Cipta kategori pertama anda",
+        "emptyAddProductCta": "Tambah produk pertama anda"
       },
       "card": {
         "noSizes": "Belum ada saiz/harga."
       },
       "client": {
-        "deleteCategoryConfirm": "Padam kategori \"{name}\"?",
+        "deleteCategoryConfirm": "\"{name}\" akan dibuang. Kategori yang masih mempunyai produk tidak boleh dipadam.",
+        "deleteCategoryTitle": "Padam kategori?",
+        "deleteProductTitle": "Padam produk secara kekal?",
+        "deleteVariantTitle": "Padam saiz/pilihan?",
+        "confirmDelete": "Padam",
+        "needCategoryFirstTitle": "Cipta kategori dahulu",
+        "needCategoryFirstDescription": "Setiap produk berada dalam kategori — sediakan satu dan anda boleh menambah produk selepas itu.",
         "categoryDeleted": "Kategori dipadam",
         "error": "Ralat",
         "productArchived": "Produk diarkibkan",
@@ -1193,7 +1205,7 @@
         "markedAvailable": "Ditandakan tersedia",
         "markedSoldOut": "Ditandakan habis dijual",
         "variantToggleDescription": "{product} — {variant}",
-        "deleteVariantConfirm": "Padam \"{variant}\" daripada {product}?",
+        "deleteVariantConfirm": "\"{variant}\" akan dibuang daripada {product}. Pembeli tidak lagi boleh menempahnya.",
         "variantDeleted": "Saiz/pilihan dipadam"
       }
     },
