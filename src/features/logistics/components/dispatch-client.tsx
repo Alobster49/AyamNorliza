@@ -19,10 +19,12 @@ export function DispatchClient({
   organizationSlug,
   initialDate,
   initialData,
+  timeZone,
 }: {
   organizationSlug: string;
   initialDate: string;
   initialData: DispatchBoardData;
+  timeZone: string;
 }) {
   const [date, setDate] = useState(initialDate);
   const dateRef = useRef(date);
@@ -107,7 +109,7 @@ export function DispatchClient({
         {view === "plan" ? (
           <PlanDeck organizationSlug={organizationSlug} date={date} data={data} refetch={refetch} />
         ) : view === "timeline" ? (
-          <DayTimeline date={date} data={data} />
+          <DayTimeline date={date} data={data} timeZone={timeZone} />
         ) : (
           <DispatchBoard organizationSlug={organizationSlug} date={date} data={data} refetch={refetch} />
         )}

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
+import { minutesOfDayInTimeZone, todayInTimeZone } from "@/lib/time/org-date";
 import type { DispatchBoardData } from "../types";
 import { buildTimeline, type BlockState } from "../lib/timeline-model";
 
@@ -14,29 +15,38 @@ const BLOCK_CLASS: Record<BlockState, string> = {
   departed: "border-dashed border-border bg-muted/50 text-muted-foreground",
 };
 
-function localTodayIso(): string {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-}
-
-function useNowMinutes(date: string): number | null {
+/**
+ * "Now" in the depot's zone, or null when the viewed date is not the depot's
+ * today. Both sides of that comparison must use the org time zone: a browser
+ * in another zone would otherwise draw the now line on the wrong day, at the
+ * wrong offset.
+ */
+function useNowMinutes(date: string, timeZone: string): number | null {
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
     const compute = () =>
-      setNow(date === localTodayIso() ? new Date().getHours() * 60 + new Date().getMinutes() : null);
+      setNow(date === todayInTimeZone(timeZone) ? minutesOfDayInTimeZone(timeZone) : null);
     compute();
     const id = setInterval(compute, 60_000);
     return () => clearInterval(id);
-  }, [date]);
+  }, [date, timeZone]);
   return now;
 }
 
-export function DayTimeline({ date, data }: { date: string; data: DispatchBoardData }) {
+export function DayTimeline({
+  date,
+  data,
+  timeZone,
+}: {
+  date: string;
+  data: DispatchBoardData;
+  timeZone: string;
+}) {
   const tEmpty = useTranslations("loadingBoard.empty");
   const t = useTranslations("logistics.dispatch.timeline");
   const tPlan = useTranslations("logistics.dispatch.plan");
   const tStatusRun = useTranslations("status.run");
-  const nowMinutes = useNowMinutes(date);
+  const nowMinutes = useNowMinutes(date, timeZone);
   const view = useMemo(() => buildTimeline(data, date, nowMinutes), [data, date, nowMinutes]);
 
   const STATE_LABEL: Record<BlockState, string> = {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shiftIsoDate, todayInTimeZone, tomorrowInTimeZone } from "./org-date";
+import { minutesOfDayInTimeZone, shiftIsoDate, todayInTimeZone, tomorrowInTimeZone } from "./org-date";
 
 // 2026-08-22T18:25:42Z is 2026-08-23 02:25 in Kuala Lumpur: the window where
 // the UTC date and the depot's date disagree, and the window the warehouse
@@ -44,6 +44,27 @@ describe("tomorrowInTimeZone", () => {
 
   it("rolls over a year boundary", () => {
     expect(tomorrowInTimeZone("Asia/Kuala_Lumpur", new Date("2026-12-31T04:00:00Z"))).toBe("2027-01-01");
+  });
+});
+
+describe("minutesOfDayInTimeZone", () => {
+  it("returns the depot's wall-clock minutes, not the host's", () => {
+    // 18:25 UTC = 02:25 next day in Kuala Lumpur.
+    expect(minutesOfDayInTimeZone("Asia/Kuala_Lumpur", EARLY_MORNING_MYT)).toBe(2 * 60 + 25);
+    expect(minutesOfDayInTimeZone("UTC", EARLY_MORNING_MYT)).toBe(18 * 60 + 25);
+  });
+
+  it("handles a zone behind UTC", () => {
+    // 02:00 UTC = 22:00 the previous day in New York.
+    expect(minutesOfDayInTimeZone("America/New_York", new Date("2026-08-23T02:00:00Z"))).toBe(22 * 60);
+  });
+
+  it("reads midnight as 0, not 1440", () => {
+    expect(minutesOfDayInTimeZone("UTC", new Date("2026-08-23T00:00:00Z"))).toBe(0);
+  });
+
+  it("falls back to UTC rather than throwing on a junk time zone", () => {
+    expect(minutesOfDayInTimeZone("Not/AZone", EARLY_MORNING_MYT)).toBe(18 * 60 + 25);
   });
 });
 

@@ -32,6 +32,11 @@ export default async function DispatchPage({
   }
 
   return (
-    <DispatchClient organizationSlug={organizationSlug} initialDate={date} initialData={result.data} />
+    <DispatchClient
+      organizationSlug={organizationSlug}
+      initialDate={date}
+      initialData={result.data}
+      timeZone={timeZone}
+    />
   );
 }
