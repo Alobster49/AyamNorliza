@@ -7,6 +7,7 @@ import {
   countArchived,
   countByCategory,
   filterCatalog,
+  matchesCatalogSearch,
   sortCategories,
   type CatalogFilter,
   type CatalogProduct,
@@ -24,6 +25,8 @@ type ProductCatalogProps = {
   products: CatalogProduct[];
   selectedCategoryId: CatalogFilter;
   view: CatalogView;
+  searchQuery: string;
+  onClearSearch: () => void;
   onSelectCategory: (filter: CatalogFilter) => void;
   onAddCategory: () => void;
   onAddProduct: () => void;
@@ -44,6 +47,8 @@ export function ProductCatalog({
   products,
   selectedCategoryId,
   view,
+  searchQuery,
+  onClearSearch,
   onSelectCategory,
   onAddCategory,
   onAddProduct,
@@ -62,8 +67,11 @@ export function ProductCatalog({
   const sorted = sortCategories(categories);
   const counts = countByCategory(products);
   const archivedCount = countArchived(products);
-  const visible = filterCatalog(products, selectedCategoryId);
+  // Rail counts stay based on the full catalog; search only narrows the list.
+  const inFilter = filterCatalog(products, selectedCategoryId);
+  const visible = inFilter.filter((p) => matchesCatalogSearch(p, searchQuery));
   const viewingArchive = selectedCategoryId === ARCHIVED_VIEW;
+  const searching = searchQuery.trim().length > 0;
 
   return (
     <div className="flex flex-col gap-4 md:flex-row md:items-start">
@@ -88,7 +96,16 @@ export function ProductCatalog({
 
         {visible.length === 0 ? (
           <div className="animate-catalog-in rounded-lg border border-dashed px-6 py-12">
-            {viewingArchive ? (
+            {searching ? (
+              <div className="flex flex-col items-center gap-4 text-center">
+                <p className="text-sm text-muted-foreground">
+                  {t("emptySearch", { query: searchQuery.trim() })}
+                </p>
+                <Button variant="outline" onClick={onClearSearch}>
+                  {t("clearSearch")}
+                </Button>
+              </div>
+            ) : viewingArchive ? (
               <HenEmptyState title={t("emptyArchivedTitle")} subtitle={t("emptyArchived")} />
             ) : categories.length === 0 ? (
               <div className="flex flex-col items-center gap-5">

@@ -5,6 +5,7 @@ import {
   countByCategory,
   filterByCategory,
   filterCatalog,
+  matchesCatalogSearch,
   priceRangeLabel,
   sortCategories,
   type CatalogProduct,
@@ -198,6 +199,52 @@ describe("countByCategory with archived products", () => {
       product({ id: "p2", category_id: "cat-1", is_active: false }),
     ]);
     expect(counts.get("cat-1")).toBe(1);
+  });
+});
+
+describe("matchesCatalogSearch", () => {
+  const variant = (over: Partial<ProductVariant>): ProductVariant => ({
+    id: "v1",
+    organization_id: "org-1",
+    product_id: "prod-1",
+    name: "Whole",
+    unit_type: "per_kg",
+    price_per_unit: 9.5,
+    is_available: true,
+    created_by: null,
+    created_at: "2026-07-01T00:00:00Z",
+    updated_at: "2026-07-01T00:00:00Z",
+    version: 1,
+    market_item_code: null,
+    market_margin_type: null,
+    market_margin_value: null,
+    ...over,
+  });
+
+  const p = product({
+    name: "Ayam Kampung",
+    category: category({ name: "Ayam Segar" }),
+    variants: [variant({ name: "1kg Pack" })],
+  });
+
+  it("matches everything on an empty or whitespace query", () => {
+    expect(matchesCatalogSearch(p, "")).toBe(true);
+    expect(matchesCatalogSearch(p, "   ")).toBe(true);
+  });
+
+  it("matches product name case-insensitively", () => {
+    expect(matchesCatalogSearch(p, "kampung")).toBe(true);
+    expect(matchesCatalogSearch(p, "KAMPUNG")).toBe(true);
+  });
+
+  it("matches category and variant names", () => {
+    expect(matchesCatalogSearch(p, "segar")).toBe(true);
+    expect(matchesCatalogSearch(p, "1kg")).toBe(true);
+  });
+
+  it("rejects non-matching queries and tolerates a missing category", () => {
+    expect(matchesCatalogSearch(p, "daging")).toBe(false);
+    expect(matchesCatalogSearch(product({ name: "Ayam", category: null }), "ayam")).toBe(true);
   });
 });
 

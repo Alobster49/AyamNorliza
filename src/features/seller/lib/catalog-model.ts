@@ -56,6 +56,17 @@ export function sortCategories(categories: Category[]): Category[] {
   );
 }
 
+/** Case-insensitive search across product, category, and variant names. */
+export function matchesCatalogSearch(product: CatalogProduct, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    product.name.toLowerCase().includes(q) ||
+    (product.category?.name ?? "").toLowerCase().includes(q) ||
+    product.variants.some((v) => v.name.toLowerCase().includes(q))
+  );
+}
+
 /**
  * Formatted price range plus variant count, or null when the product has no
  * variants. The caller renders the count through its own (localized) message.

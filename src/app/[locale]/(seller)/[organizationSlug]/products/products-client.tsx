@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { LayoutGrid, Plus, Rows3 } from "lucide-react";
+import { LayoutGrid, Plus, Rows3, Search } from "lucide-react";
 import {
   countProductOrderItems,
   deleteCategory,
@@ -18,6 +18,7 @@ import {
   type CatalogProduct,
 } from "@/features/seller/lib/catalog-model";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { CategoryDialog } from "@/features/seller/components/products/category-dialog";
@@ -62,6 +63,7 @@ export function ProductsClient({
   const [categories, setCategories] = useState(initialCategories);
   const [products, setProducts] = useState(initialProducts);
   const [selectedCategoryId, setSelectedCategoryId] = useState<CatalogFilter>(null);
+  const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<DialogState>(null);
   // Content and visibility are separate so the closing dialog keeps its text
   // during the exit animation instead of unmounting abruptly.
@@ -214,16 +216,14 @@ export function ProductsClient({
     );
   };
 
-  // Optimistic one-tap sold-out toggle; rolls back on failure.
+  // Optimistic one-tap sold-out toggle; rolls back on failure. The switch
+  // itself is the success feedback — a toast per tap turns rapid price-list
+  // sweeps into a notification storm, so only failures speak up.
   const handleToggleVariant = async (product: CatalogProduct, variant: ProductVariant) => {
     const next = !variant.is_available;
     setVariantAvailability(variant.id, product.id, next);
     try {
       await updateVariant(variant.id, { is_available: next }, organizationSlug);
-      toast({
-        title: next ? t("markedAvailable") : t("markedSoldOut"),
-        description: t("variantToggleDescription", { product: product.name, variant: variant.name }),
-      });
     } catch (error) {
       setVariantAvailability(variant.id, product.id, !next);
       toast({
@@ -299,6 +299,18 @@ export function ProductsClient({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
+        <div className="relative mr-auto w-full max-w-xs">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder={tToolbar("searchPlaceholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setSearch("");
+            }}
+            className="pl-9"
+          />
+        </div>
         <ViewToggle label={tToolbar("viewAriaLabel")}>
           <ViewButton
             active={view === "cards"}
@@ -324,6 +336,8 @@ export function ProductsClient({
         products={products}
         selectedCategoryId={selectedCategoryId}
         view={view}
+        searchQuery={search}
+        onClearSearch={() => setSearch("")}
         onSelectCategory={setSelectedCategoryId}
         onAddCategory={() => setDialog({ kind: "category" })}
         onEditCategory={(category) => setDialog({ kind: "category", category })}

@@ -1128,7 +1128,10 @@ declare const messages: {
         "archived": "Archived",
         "addCategory": "+ Add category",
         "editAriaLabel": "Edit {label}",
-        "deleteAriaLabel": "Delete {label}"
+        "deleteAriaLabel": "Delete {label}",
+        "optionsAriaLabel": "Options for {label}",
+        "edit": "Edit category",
+        "delete": "Delete category"
       },
       "actionsMenu": {
         "ariaLabel": "Actions for {name}",
@@ -1171,7 +1174,8 @@ declare const messages: {
         "viewAriaLabel": "Catalog view",
         "cardsView": "Cards",
         "ledgerView": "Ledger",
-        "addProduct": "Add Product"
+        "addProduct": "Add Product",
+        "searchPlaceholder": "Search products, sizes…"
       },
       "catalog": {
         "archivedNotice": "Archived products are hidden from the buyer portal, but their past orders stay intact. Restore one to put it back on sale.",
@@ -1182,7 +1186,9 @@ declare const messages: {
         "emptyNoProducts": "No products in this category yet.",
         "emptyNoProductsTitle": "Nothing here yet",
         "emptyCreateCategoryCta": "Create your first category",
-        "emptyAddProductCta": "Add your first product"
+        "emptyAddProductCta": "Add your first product",
+        "emptySearch": "No products match \"{query}\".",
+        "clearSearch": "Clear search"
       },
       "card": {
         "noSizes": "No sizes/prices yet."
@@ -1205,9 +1211,6 @@ declare const messages: {
         "cannotDeleteDescription": "{name} appears on {count, plural, one {# past order line} other {# past order lines}}. Archive it instead: it disappears from the shop and the orders stay intact.",
         "deleteProductConfirm": "Permanently delete \"{name}\" and its sizes? It has never been ordered, so nothing else is affected.",
         "productDeleted": "Product deleted",
-        "markedAvailable": "Marked available",
-        "markedSoldOut": "Marked sold out",
-        "variantToggleDescription": "{product} — {variant}",
         "deleteVariantConfirm": "\"{variant}\" will be removed from {product}. Buyers can no longer order it.",
         "variantDeleted": "Size/option deleted"
       }
