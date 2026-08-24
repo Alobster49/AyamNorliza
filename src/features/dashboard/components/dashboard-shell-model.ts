@@ -26,6 +26,7 @@ const routeGroups = [
     title: "Sales",
     sectionKey: "sections.sales",
     items: [
+      { titleKey: "pages.dashboard", segment: "dashboard" },
       { titleKey: "pages.products", segment: "products" },
       { titleKey: "pages.orders", segment: "orders" },
       { titleKey: "pages.customers", segment: "customers" },

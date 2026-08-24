@@ -554,6 +554,7 @@
       "system": "Sistem"
     },
     "pages": {
+      "dashboard": "Papan pemuka",
       "products": "Produk",
       "orders": "Pesanan",
       "customers": "Pelanggan",
@@ -575,6 +576,93 @@
     "sidebar": {
       "regionFallback": "Ruang kerja operasi",
       "operatorProfile": "Profil operator"
+    }
+  },
+  "analytics": {
+    "title": "Papan pemuka",
+    "range": {
+      "today": "Hari ini",
+      "7d": "7 hari",
+      "30d": "30 hari",
+      "90d": "90 hari",
+      "custom": "Julat sendiri",
+      "from": "Dari",
+      "to": "Hingga",
+      "apply": "Guna",
+      "vsPrevious": "berbanding tempoh sebelumnya"
+    },
+    "kpi": {
+      "revenue": "Jualan",
+      "orders": "Pesanan",
+      "kg": "Kg dijual",
+      "aov": "Purata nilai pesanan",
+      "rmPerKg": "RM/kg sebenar"
+    },
+    "chart": { "title": "Trend jualan" },
+    "funnel": { "title": "Corong pesanan", "cancellationRate": "Kadar batal" },
+    "sectionError": "Bahagian ini gagal dimuatkan.",
+    "empty": "Belum ada data untuk tempoh ini.",
+    "today": {
+      "title": "Operasi hari ini",
+      "runs": "Trip penghantaran",
+      "noRuns": "Tiada trip dijadualkan hari ini.",
+      "tasksPending": "Tugasan belum siap",
+      "tasksDoneToday": "Tugasan siap hari ini",
+      "failedStops": "{count} gagal",
+      "alerts": {
+        "ordersWithoutRun": "{count} pesanan hari ini belum ada trip penghantaran",
+        "marketStale": "Harga pasaran tidak dikemas kini 3+ hari"
+      }
+    },
+    "admin": {
+      "title": "Pentadbiran",
+      "activeMembers": "Ahli aktif",
+      "pendingInvitations": "Jemputan menunggu",
+      "openAccessReviews": "Semakan akses terbuka",
+      "activeSupportSessions": "Sesi sokongan aktif",
+      "priorities": "Perlu perhatian",
+      "allClear": "Tiada apa yang perlu perhatian."
+    },
+    "insights": {
+      "title": "Cara nak improve",
+      "pricing": {
+        "title": "Harga vs pasaran",
+        "product": "Produk",
+        "realized": "RM/kg sebenar",
+        "market": "RM/kg pasaran",
+        "gap": "Beza",
+        "noMarket": "Tiada pemetaan pasaran"
+      },
+      "weight": {
+        "title": "Susut berat",
+        "summary": "{diff} kg terlebih bagi ({pct} daripada berat diperuntuk)",
+        "none": "Tiada susut berat dalam tempoh ini."
+      },
+      "retention": {
+        "title": "Pengekalan pelanggan",
+        "active": "Pelanggan aktif",
+        "new": "Baharu",
+        "returning": "Kembali",
+        "silentTitle": "Senyap 30+ hari (win-back)",
+        "noneSilent": "Tiada pelanggan senyap. Bagus."
+      },
+      "delivery": {
+        "title": "Kualiti penghantaran",
+        "failureRate": "Kadar stop gagal",
+        "attempts": "{count} percubaan",
+        "slotFill": "Kepenuhan slot",
+        "byZone": "Kegagalan ikut zon"
+      }
+    },
+    "topLists": {
+      "title": "Prestasi terbaik",
+      "products": "Produk",
+      "customers": "Pelanggan",
+      "zones": "Zon",
+      "name": "Nama",
+      "revenue": "Jualan",
+      "orders": "Pesanan",
+      "kg": "Kg"
     }
   },
   "roles": {

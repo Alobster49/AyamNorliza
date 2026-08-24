@@ -2025,6 +2025,23 @@ export type Database = {
         | { Args: { p_org: string }; Returns: Json }
         | { Args: { p_org: string; p_role: string }; Returns: Json }
       extract_postcode: { Args: { p_address: string }; Returns: string }
+      get_dashboard_insights: {
+        Args: { p_from: string; p_organization_id: string; p_to: string }
+        Returns: Json
+      }
+      get_dashboard_sales: {
+        Args: {
+          p_bucket?: string
+          p_from: string
+          p_organization_id: string
+          p_to: string
+        }
+        Returns: Json
+      }
+      get_dashboard_today: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       get_delivery_options: {
         Args: { p_org: string; p_zone: string }
         Returns: {
