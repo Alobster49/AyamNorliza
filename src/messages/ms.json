@@ -2037,7 +2037,14 @@
     },
     "needsHuman": {
       "ariaLabel": "Trip yang memerlukan perhatian manusia",
-      "heading": "Perlu perhatian manusia · {count}"
+      "heading": "Perlu perhatian manusia · {count}",
+      "messages": {
+        "unloaded": "{count, plural, other {# pesanan belum dimuatkan — trak belum boleh bertolak}}",
+        "unweighed": "{count, plural, other {# pesanan belum ditimbang}}",
+        "overloaded": "{weight} kg dimuatkan pada trak berkapasiti {capacity} kg",
+        "failed": "{count, plural, other {# perhentian tidak dihantar}}",
+        "overdue": "{count, plural, other {# perhentian masih di luar selepas slot masa {end}}}"
+      }
     },
     "rail": {
       "truckFallback": "Trak",

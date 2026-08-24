@@ -2037,7 +2037,14 @@
     },
     "needsHuman": {
       "ariaLabel": "Runs that need attention",
-      "heading": "Needs a human · {count}"
+      "heading": "Needs a human · {count}",
+      "messages": {
+        "unloaded": "{count, plural, one {# order not loaded yet — the truck cannot depart} other {# orders not loaded yet — the truck cannot depart}}",
+        "unweighed": "{count, plural, one {# order still unweighed} other {# orders still unweighed}}",
+        "overloaded": "{weight} kg loaded against a {capacity} kg truck",
+        "failed": "{count, plural, one {# stop did not get delivered} other {# stops did not get delivered}}",
+        "overdue": "{count, plural, one {# stop still out past the {end} window} other {# stops still out past the {end} window}}"
+      }
     },
     "rail": {
       "truckFallback": "Truck",
