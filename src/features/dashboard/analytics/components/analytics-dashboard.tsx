@@ -8,6 +8,8 @@ import { buildSalesViewModel, type SalesPayload } from "../sales-model";
 import { KpiRow } from "./kpi-row";
 import { RangePicker } from "./range-picker";
 import { SectionError } from "./section-error";
+import { RevenueChart } from "./revenue-chart";
+import { FunnelCard } from "./funnel-card";
 
 type Props = {
   organizationSlug: string;
@@ -77,7 +79,17 @@ export function AnalyticsDashboard({ organizationSlug, timeZone, initialRange, i
         <h1 className="text-xl font-semibold">{t("title")}</h1>
         <RangePicker active={preset} onSelect={onPreset} disabled={isPending} />
       </div>
-      {salesError || !salesVm ? <SectionError /> : <KpiRow vm={salesVm} />}
+      {salesError || !salesVm ? (
+        <SectionError />
+      ) : (
+        <>
+          <KpiRow vm={salesVm} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <RevenueChart series={salesVm.series} />
+            <FunnelCard vm={salesVm} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

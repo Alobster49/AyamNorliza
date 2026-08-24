@@ -584,6 +584,8 @@ declare const messages: {
       "aov": "Avg order value",
       "rmPerKg": "Realized RM/kg"
     },
+    "chart": { "title": "Sales trend" },
+    "funnel": { "title": "Order funnel", "cancellationRate": "Cancellation rate" },
     "sectionError": "This section failed to load.",
     "empty": "No data for this period yet."
   },

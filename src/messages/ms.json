@@ -581,6 +581,8 @@
       "aov": "Purata nilai pesanan",
       "rmPerKg": "RM/kg sebenar"
     },
+    "chart": { "title": "Trend jualan" },
+    "funnel": { "title": "Corong pesanan", "cancellationRate": "Kadar batal" },
     "sectionError": "Bahagian ini gagal dimuatkan.",
     "empty": "Belum ada data untuk tempoh ini."
   },
