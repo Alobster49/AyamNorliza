@@ -432,18 +432,23 @@ function BoardColumn({
             {t(`empty.${status}`)}
           </div>
         ) : (
-          orders.map((order) =>
+          orders.map((order, index) =>
             renderSelectableCard ? (
               renderSelectableCard(order)
             ) : (
-              <OrderCard
+              <div
                 key={order.id}
-                order={order}
-                onOpen={() => onOpenOrder(order.id)}
-                ariaLabel={cardAriaLabel(order)}
-                risk={cardRisk(order)}
-                actions={cardActions(order)}
-              />
+                className="animate-board-card-enter"
+                style={{ animationDelay: `${Math.min(index, 8) * 30}ms` }}
+              >
+                <OrderCard
+                  order={order}
+                  onOpen={() => onOpenOrder(order.id)}
+                  ariaLabel={cardAriaLabel(order)}
+                  risk={cardRisk(order)}
+                  actions={cardActions(order)}
+                />
+              </div>
             ),
           )
         )}

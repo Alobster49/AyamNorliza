@@ -227,7 +227,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-medium">
+                          <TableCell className="text-right font-medium tabular-nums">
                             {(() => {
                               const amount = displayAmount(order);
                               if (amount.kind === "total") return formatPrice(amount.amount);

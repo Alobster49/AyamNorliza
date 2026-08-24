@@ -94,7 +94,7 @@ export function OrderCardContent({
           const amount = displayAmount(order);
           if (amount.kind === "none") return null;
           return amount.kind === "total" ? (
-            <span className="ml-auto text-xs font-semibold">{formatPrice(amount.amount)}</span>
+            <span className="ml-auto text-sm font-semibold tabular-nums">{formatPrice(amount.amount)}</span>
           ) : (
             <span className="ml-auto text-[10px] italic text-muted-foreground">{t("unweighed")}</span>
           );
@@ -139,7 +139,8 @@ export function OrderCard({
       }}
       aria-label={ariaLabel}
       className={
-        "cursor-grab [touch-action:pan-y] active:cursor-grabbing " + (isDragging ? "opacity-40" : "")
+        "cursor-grab rounded-lg board-card-lift [touch-action:pan-y] active:scale-[0.98] active:cursor-grabbing " +
+        (isDragging ? "opacity-40" : "")
       }
     >
       <OrderCardContent order={order} risk={risk} actions={actions} />

@@ -79,6 +79,8 @@
   --status-delivered-text: oklch(0.42 0.17 300);
   --status-closed-text: oklch(0.42 0.02 260);
   --status-cancelled-text: oklch(0.45 0.19 25);
+  --ease-enter: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-move: cubic-bezier(0.77, 0, 0.175, 1);
   --radius-sm: 0.25rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
@@ -494,6 +496,50 @@ button[disabled] {
   }
   .animate-panel-in {
     animation: panel-fade 150ms ease-out both;
+  }
+}
+
+/* ---- Orders board ---- */
+@keyframes board-card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-board-card-enter {
+  animation: board-card-enter 240ms var(--ease-enter) both;
+}
+
+.board-card-lift {
+  transition:
+    transform 150ms var(--ease-enter),
+    box-shadow 150ms var(--ease-enter);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-board-card-enter {
+    animation-duration: 1ms;
+  }
+  .board-card-lift {
+    transition: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) and (hover: hover) and (pointer: fine) {
+  .board-card-lift:hover {
+    transform: none;
   }
 }
 
