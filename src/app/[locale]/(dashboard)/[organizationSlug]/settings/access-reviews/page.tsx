@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { getOrganizationBySlug, listAccessReviews, listAccessReviewItems, listMembers } from "@/features/identity-access/server/queries";
 import { AccessReviewsClient } from "@/features/identity-access/components/access-reviews-client";
@@ -15,9 +16,10 @@ export default async function AccessReviewsPage({
   const reviews = await listAccessReviews(org.id);
   const members = await listMembers(org.id);
   const itemLists = await Promise.all(reviews.map((r) => listAccessReviewItems(r.id)));
+  const t = await getTranslations("settings.accessReviews");
   return (
     <section>
-      <h1>Access reviews</h1>
+      <h1>{t("title")}</h1>
       <AccessReviewsClient
         organizationId={org.id}
         reviews={reviews}

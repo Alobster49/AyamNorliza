@@ -392,7 +392,8 @@ declare const messages: {
       "supportSessions": "Support sessions",
       "auditLog": "Audit log",
       "dataConsole": "Data console"
-    }
+    },
+    "fallbackUserName": "Team member"
   },
   "roles": {
     "owner": "Owner",
@@ -401,6 +402,38 @@ declare const messages: {
     "driver": "Driver",
     "inventory": "Inventory",
     "logistics": "Logistics"
+  },
+  "settings": {
+    "organization": {
+      "title": "Organization settings",
+      "description": "Manage your organization's identity and defaults.",
+      "unsavedChanges": "Unsaved changes",
+      "saved": "Saved",
+      "saveChanges": "Save changes",
+      "saving": "Saving..."
+    },
+    "users": {
+      "title": "Users"
+    },
+    "userDetail": {
+      "title": "Member"
+    },
+    "auditLog": {
+      "title": "Audit log",
+      "description": "Append-only record of every privileged action. Most recent first.",
+      "statEvents": "Events",
+      "statActors": "Actors",
+      "statDistinct": "Distinct"
+    },
+    "accessReviews": {
+      "title": "Access reviews"
+    },
+    "supportSessions": {
+      "title": "Support sessions"
+    },
+    "security": {
+      "title": "My security"
+    }
   }
 };
 export default messages;

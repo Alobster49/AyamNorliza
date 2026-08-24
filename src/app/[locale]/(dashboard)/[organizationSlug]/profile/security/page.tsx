@@ -1,3 +1,4 @@
+import { getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { getProfile } from "@/features/identity-access/server/queries";
 import { getMfaFactorsAction } from "@/features/identity-access/server/auth-actions";
@@ -10,9 +11,10 @@ export default async function ProfileSecurityPage() {
   const mfaFactors = factorsResult.ok
     ? factorsResult.data.totp
     : [];
+  const t = await getTranslations("settings.security");
   return (
     <section>
-      <h1>My security</h1>
+      <h1>{t("title")}</h1>
       <SecurityPanel
         userId={user.id}
         email={user.email ?? ""}

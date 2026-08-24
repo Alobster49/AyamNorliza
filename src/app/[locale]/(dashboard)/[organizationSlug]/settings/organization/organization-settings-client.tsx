@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Building2, Check, Loader2 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ export function OrganizationSettingsClient(props: {
   defaultTimeZone: string;
   defaultLocale: string;
 }) {
+  const t = useTranslations("settings.organization");
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<OrgFormStatus>("idle");
 
@@ -31,10 +33,10 @@ export function OrganizationSettingsClient(props: {
 
   const saveLabel =
     status === "pending"
-      ? "Saving..."
+      ? t("saving")
       : status === "saved"
-        ? "Saved"
-        : "Save changes";
+        ? t("saved")
+        : t("saveChanges");
 
   const SaveIcon =
     status === "pending" ? (
@@ -56,19 +58,19 @@ export function OrganizationSettingsClient(props: {
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-2xl font-semibold tracking-tight">
-                Organization settings
+                {t("title")}
               </h1>
               {dirty && status !== "pending" && status !== "saved" ? (
                 <Badge variant="outline" className="text-muted-foreground">
-                  Unsaved changes
+                  {t("unsavedChanges")}
                 </Badge>
               ) : null}
               {status === "saved" ? (
-                <Badge variant="secondary">Saved</Badge>
+                <Badge variant="secondary">{t("saved")}</Badge>
               ) : null}
             </div>
             <p className="text-sm text-muted-foreground">
-              Manage your organization&apos;s identity and defaults.
+              {t("description")}
             </p>
           </div>
         </div>

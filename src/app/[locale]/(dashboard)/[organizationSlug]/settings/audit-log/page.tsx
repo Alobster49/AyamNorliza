@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ScrollText } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { getOrganizationBySlug, listAuditLog } from "@/features/identity-access/server/queries";
@@ -24,6 +25,7 @@ export default async function AuditLogPage({
   await requireUserOrRedirect();
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
+  const t = await getTranslations("settings.auditLog");
 
   const { rows, total } = await listAuditLog({
     organizationId: org.id,
@@ -56,17 +58,17 @@ export default async function AuditLogPage({
           </div>
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">
-              Audit log
+              {t("title")}
             </h1>
             <p className="text-sm text-muted-foreground">
-              Append-only record of every privileged action. Most recent first.
+              {t("description")}
             </p>
           </div>
         </div>
         <div className="grid grid-cols-3 gap-3 text-left sm:grid-cols-3">
-          <Stat label="Events" value={total.toLocaleString()} />
-          <Stat label="Actors" value={actorIds.size.toLocaleString()} />
-          <Stat label="Distinct" value={eventTypes.length.toLocaleString()} />
+          <Stat label={t("statEvents")} value={total.toLocaleString()} />
+          <Stat label={t("statActors")} value={actorIds.size.toLocaleString()} />
+          <Stat label={t("statDistinct")} value={eventTypes.length.toLocaleString()} />
         </div>
       </header>
 

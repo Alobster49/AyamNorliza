@@ -389,7 +389,8 @@
       "supportSessions": "Sesi Sokongan",
       "auditLog": "Log Audit",
       "dataConsole": "Konsol Data"
-    }
+    },
+    "fallbackUserName": "Ahli pasukan"
   },
   "roles": {
     "owner": "Pemilik",
@@ -398,5 +399,37 @@
     "driver": "Pemandu",
     "inventory": "Inventori",
     "logistics": "Logistik"
+  },
+  "settings": {
+    "organization": {
+      "title": "Tetapan organisasi",
+      "description": "Urus identiti dan lalai organisasi anda.",
+      "unsavedChanges": "Perubahan belum disimpan",
+      "saved": "Disimpan",
+      "saveChanges": "Simpan perubahan",
+      "saving": "Menyimpan..."
+    },
+    "users": {
+      "title": "Pengguna"
+    },
+    "userDetail": {
+      "title": "Ahli"
+    },
+    "auditLog": {
+      "title": "Log audit",
+      "description": "Rekod tambah sahaja bagi setiap tindakan istimewa. Terkini dahulu.",
+      "statEvents": "Peristiwa",
+      "statActors": "Pelaku",
+      "statDistinct": "Berbeza"
+    },
+    "accessReviews": {
+      "title": "Semakan akses"
+    },
+    "supportSessions": {
+      "title": "Sesi sokongan"
+    },
+    "security": {
+      "title": "Keselamatan saya"
+    }
   }
 }

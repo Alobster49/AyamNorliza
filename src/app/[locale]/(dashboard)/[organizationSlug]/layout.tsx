@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
@@ -37,10 +38,13 @@ export default async function OrganizationLayout({
     .maybeSingle();
   if (!member) redirect("/login");
 
+  const t = await getTranslations("dashboard");
   const profile = await getProfile(user.id);
   const userEmail = user.email ?? "signed-in-user@ayam-norliza.local";
   const userName =
-    profile?.displayName?.trim() || userEmail.split("@")[0] || "Team member";
+    profile?.displayName?.trim() ||
+    userEmail.split("@")[0] ||
+    t("fallbackUserName");
 
   return (
     <SupabaseSessionProvider>
