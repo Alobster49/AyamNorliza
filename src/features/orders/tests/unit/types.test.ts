@@ -8,7 +8,6 @@ import {
   FALLBACKS,
   OrderItemInputSchema,
   ORDER_STATUS_COLORS,
-  ORDER_STATUS_LABELS,
   ORDER_STATUSES,
   PlaceOrderSchema,
   SlotInputSchema,
@@ -175,9 +174,8 @@ describe("FALLBACK_LABELS completeness", () => {
   });
 });
 
-describe("ORDER_STATUS_LABELS and ORDER_STATUS_COLORS completeness", () => {
-  it("has exactly one label and one color per ORDER_STATUSES entry", () => {
-    expect(Object.keys(ORDER_STATUS_LABELS).sort()).toEqual([...ORDER_STATUSES].sort());
+describe("ORDER_STATUS_COLORS completeness", () => {
+  it("has exactly one color per ORDER_STATUSES entry", () => {
     expect(Object.keys(ORDER_STATUS_COLORS).sort()).toEqual([...ORDER_STATUSES].sort());
   });
 });

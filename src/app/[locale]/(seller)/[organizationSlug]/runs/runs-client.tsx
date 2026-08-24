@@ -29,12 +29,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
-const RUN_STATUS_LABELS: Record<RunStatus, string> = {
-  planned: "In the yard",
-  departed: "On the road",
-  completed: "Back in",
-};
-
 const TONE_CLASS: Record<string, string> = {
   ok: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300",
   hot: "bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300",
@@ -99,14 +93,15 @@ function Bar({ pct, tone = "bg-primary" }: { pct: number; tone?: string }) {
 // ---------------------------------------------------------------------------
 
 function AlertBlock({ alerts, onJump }: { alerts: BoardAlert[]; onJump: (runId: string) => void }) {
+  const t = useTranslations("deliveryRuns.needsHuman");
   if (alerts.length === 0) return null;
   return (
     <section
-      aria-label="Runs that need attention"
+      aria-label={t("ariaLabel")}
       className="rounded-lg border border-destructive/50 bg-destructive/5 p-3"
     >
       <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-destructive">
-        Needs a human · {alerts.length}
+        {t("heading", { count: alerts.length })}
       </p>
       <ul className="flex flex-col gap-1.5">
         {alerts.map((alert, index) => (
@@ -140,6 +135,8 @@ function RailCard({
   onSelect: () => void;
 }) {
   const vitals = runVitals(run);
+  const t = useTranslations("deliveryRuns.rail");
+  const tStatus = useTranslations("status.run");
   return (
     <button
       type="button"
@@ -150,24 +147,24 @@ function RailCard({
       }`}
     >
       <div className="flex items-center gap-3">
-        <Dial pct={vitals.loadPct} label={`${truckLabel(run)} load`} />
+        <Dial pct={vitals.loadPct} label={t("load", { name: truckLabel(run) })} />
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold">{run.truck?.name ?? "Truck"}</div>
+          <div className="truncate text-sm font-semibold">{run.truck?.name ?? t("truckFallback")}</div>
           <div className="truncate text-[11px] tabular-nums text-muted-foreground">
             {vitals.capacityKg !== null
               ? `${vitals.weightKg} / ${vitals.capacityKg} kg`
               : `${vitals.weightKg} kg`}
             {" · "}
-            {vitals.total} stop{vitals.total === 1 ? "" : "s"}
+            {t("stopCount", { count: vitals.total })}
           </div>
           <div className="truncate text-[11px] text-muted-foreground">
-            {run.driver?.name ?? "No driver"}
+            {run.driver?.name ?? t("noDriver")}
           </div>
         </div>
       </div>
       <Bar pct={vitals.progressPct} tone={vitals.progressPct === 100 ? "bg-emerald-500" : "bg-primary"} />
       <div className="flex items-center justify-between gap-2">
-        <Chip tone={RUN_TONE[run.status]}>{RUN_STATUS_LABELS[run.status]}</Chip>
+        <Chip tone={RUN_TONE[run.status]}>{tStatus(run.status)}</Chip>
         <span className="text-[11px] tabular-nums text-muted-foreground">
           {vitals.delivered}/{vitals.total}
         </span>
@@ -191,6 +188,7 @@ function StopTable({
 }) {
   const [dragFrom, setDragFrom] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
+  const t = useTranslations("deliveryRuns.table");
 
   function dropOn(index: number) {
     if (dragFrom !== null && dragFrom !== index) onMove(dragFrom, index);
@@ -208,15 +206,15 @@ function StopTable({
               <th className="w-10 px-3 py-2 font-medium">#</th>
               {canReorder && (
                 <th className="w-8 px-1 py-2 font-medium">
-                  <span className="sr-only">Reorder</span>
+                  <span className="sr-only">{t("reorder")}</span>
                 </th>
               )}
-              <th className="px-3 py-2 font-medium">Stop</th>
-              <th className="px-3 py-2 font-medium">Zone</th>
-              <th className="px-3 py-2 font-medium">Load</th>
-              <th className="hidden px-3 py-2 font-medium lg:table-cell">Amount</th>
-              <th className="hidden px-3 py-2 font-medium lg:table-cell">Window</th>
-              <th className="px-3 py-2 font-medium">State</th>
+              <th className="px-3 py-2 font-medium">{t("headers.stop")}</th>
+              <th className="px-3 py-2 font-medium">{t("headers.zone")}</th>
+              <th className="px-3 py-2 font-medium">{t("headers.load")}</th>
+              <th className="hidden px-3 py-2 font-medium lg:table-cell">{t("headers.amount")}</th>
+              <th className="hidden px-3 py-2 font-medium lg:table-cell">{t("headers.window")}</th>
+              <th className="px-3 py-2 font-medium">{t("headers.state")}</th>
             </tr>
           </thead>
           <tbody>
@@ -248,7 +246,7 @@ function StopTable({
                     <div className="flex flex-col">
                       <button
                         type="button"
-                        aria-label={`Move ${row.customerName} earlier`}
+                        aria-label={t("moveEarlier", { name: row.customerName })}
                         disabled={index === 0}
                         onClick={() => onMove(index, index - 1)}
                         className="rounded px-1 text-[10px] leading-3 text-muted-foreground hover:bg-accent disabled:opacity-30"
@@ -257,7 +255,7 @@ function StopTable({
                       </button>
                       <button
                         type="button"
-                        aria-label={`Move ${row.customerName} later`}
+                        aria-label={t("moveLater", { name: row.customerName })}
                         disabled={index === rows.length - 1}
                         onClick={() => onMove(index, index + 1)}
                         className="rounded px-1 text-[10px] leading-3 text-muted-foreground hover:bg-accent disabled:opacity-30"
@@ -274,7 +272,7 @@ function StopTable({
                 <td className="px-3 py-2 text-xs">{row.zoneName}</td>
                 <td className="px-3 py-2 text-xs tabular-nums">
                   {row.weightKg > 0 ? `${row.weightKg} kg · ` : ""}
-                  {row.itemCount} item{row.itemCount === 1 ? "" : "s"}
+                  {t("itemCount", { count: row.itemCount })}
                 </td>
                 <td className="hidden px-3 py-2 text-xs tabular-nums lg:table-cell">{money(row.amount)}</td>
                 <td className="hidden px-3 py-2 text-xs tabular-nums lg:table-cell">
@@ -303,7 +301,7 @@ function StopTable({
                   <span className="flex gap-0.5">
                     <button
                       type="button"
-                      aria-label={`Move ${row.customerName} earlier`}
+                      aria-label={t("moveEarlier", { name: row.customerName })}
                       disabled={index === 0}
                       onClick={() => onMove(index, index - 1)}
                       className="rounded border px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground disabled:opacity-30"
@@ -312,7 +310,7 @@ function StopTable({
                     </button>
                     <button
                       type="button"
-                      aria-label={`Move ${row.customerName} later`}
+                      aria-label={t("moveLater", { name: row.customerName })}
                       disabled={index === rows.length - 1}
                       onClick={() => onMove(index, index + 1)}
                       className="rounded border px-1.5 py-0.5 text-[11px] leading-none text-muted-foreground disabled:opacity-30"
@@ -361,6 +359,10 @@ function RunDetail({
   busy: boolean;
 }) {
   const router = useRouter();
+  const t = useTranslations("deliveryRuns.detail");
+  const tRail = useTranslations("deliveryRuns.rail");
+  const tStatus = useTranslations("status.run");
+  const tCommon = useTranslations("common");
   const [pending, setPending] = useState<PendingAction>(null);
   // Local route order, applied the moment the dispatcher moves a stop. The
   // server confirms it a beat later; a refused move snaps back.
@@ -393,18 +395,20 @@ function RunDetail({
           <h2 className="truncate text-lg font-semibold">{truckLabel(run)}</h2>
           <p className="text-xs text-muted-foreground">
             {vitals.window ? `${vitals.window.start}–${vitals.window.end} · ` : ""}
-            {vitals.total} stop{vitals.total === 1 ? "" : "s"}
-            {vitals.capacityKg !== null ? ` · ${vitals.weightKg} of ${vitals.capacityKg} kg` : ""}
+            {tRail("stopCount", { count: vitals.total })}
+            {vitals.capacityKg !== null
+              ? t("windowCapacity", { weight: vitals.weightKg, capacity: vitals.capacityKg })
+              : ""}
           </p>
           <label className="mt-1.5 flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Driver</span>
+            <span>{t("driverLabel")}</span>
             <select
               value={run.driver_id ?? ""}
               disabled={busy || run.status === "completed"}
               onChange={(event) => onAssignDriver(event.target.value || null)}
               className="rounded-md border bg-background px-2 py-1 text-xs disabled:opacity-50"
             >
-              <option value="">Nobody assigned</option>
+              <option value="">{t("nobodyAssigned")}</option>
               {drivers.map((driver) => (
                 <option key={driver.userId} value={driver.userId}>
                   {driver.name}
@@ -418,17 +422,17 @@ function RunDetail({
           </label>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Chip tone={RUN_TONE[run.status]}>{RUN_STATUS_LABELS[run.status]}</Chip>
+          <Chip tone={RUN_TONE[run.status]}>{tStatus(run.status)}</Chip>
           <Button
             variant="outline"
             size="sm"
             onClick={() => router.push(`/${organizationSlug}/runs/${run.id}/manifest`)}
           >
-            Manifest
+            {t("manifest")}
           </Button>
           {run.status === "planned" && (
             <Button size="sm" disabled={busy || !gate.canDepart} onClick={() => setPending({ status: "departed" })}>
-              Mark departed
+              {t("markDeparted")}
             </Button>
           )}
           {run.status !== "completed" && (
@@ -438,7 +442,7 @@ function RunDetail({
               disabled={busy}
               onClick={() => setPending({ status: "completed" })}
             >
-              Close run
+              {t("closeRun")}
             </Button>
           )}
         </div>
@@ -448,11 +452,13 @@ function RunDetail({
       {run.status === "planned" && blockers.length > 0 && (
         <div className="border-b bg-amber-50 px-4 py-2.5 text-sm dark:bg-amber-950/40">
           <p className="font-medium text-amber-900 dark:text-amber-200">
-            This truck cannot depart yet
+            {t("cannotDepart.title")}
           </p>
           <p className="text-xs text-amber-900/80 dark:text-amber-200/80">
-            {gate.unloaded.length > 0 && `Not loaded: ${gate.unloaded.map((o) => o.label).join(", ")}. `}
-            {gate.unweighed.length > 0 && `Unweighed: ${gate.unweighed.map((o) => o.label).join(", ")}.`}
+            {gate.unloaded.length > 0 &&
+              t("cannotDepart.notLoaded", { list: gate.unloaded.map((o) => o.label).join(", ") })}
+            {gate.unweighed.length > 0 &&
+              t("cannotDepart.unweighed", { list: gate.unweighed.map((o) => o.label).join(", ") })}
           </p>
         </div>
       )}
@@ -463,34 +469,37 @@ function RunDetail({
           <div className="min-w-0 text-sm">
             {pending.status === "departed" ? (
               <>
-                <p className="font-medium">Send {truckLabel(run)} out?</p>
+                <p className="font-medium">{t("confirm.sendOutTitle", { truck: truckLabel(run) })}</p>
                 <p className="text-xs text-muted-foreground">
                   {departureImpact(run).droppedFromRun.length > 0
-                    ? `${departureImpact(run).droppedFromRun.length} order(s) that are not ready will be taken off this run: ${departureImpact(run)
-                        .droppedFromRun.map((o) => o.label)
-                        .join(", ")}.`
-                    : "Every order on the run is ready to go."}{" "}
-                  A run cannot be sent back to the yard afterwards.
+                    ? t("confirm.droppedWarning", {
+                        count: departureImpact(run).droppedFromRun.length,
+                        list: departureImpact(run)
+                          .droppedFromRun.map((o) => o.label)
+                          .join(", "),
+                      })
+                    : t("confirm.allReady")}{" "}
+                  {t("confirm.cannotReturn")}
                 </p>
               </>
             ) : (
               <>
-                <p className="font-medium">Close {truckLabel(run)}?</p>
+                <p className="font-medium">{t("confirm.closeTitle", { truck: truckLabel(run) })}</p>
                 <p className="text-xs text-muted-foreground">
                   {completionImpact(run).markedDelivered > 0
-                    ? `${completionImpact(run).markedDelivered} remaining order(s) will be marked delivered.`
-                    : "No orders are left to mark delivered."}{" "}
-                  This cannot be undone.
+                    ? t("confirm.markedDelivered", { count: completionImpact(run).markedDelivered })
+                    : t("confirm.allDelivered")}{" "}
+                  {t("confirm.cannotUndo")}
                 </p>
               </>
             )}
           </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setPending(null)}>
-              Cancel
+              {tCommon("cancel")}
             </Button>
             <Button size="sm" disabled={busy} onClick={() => onStatusChange(pending.status)}>
-              {pending.status === "departed" ? "Send out" : "Close run"}
+              {pending.status === "departed" ? t("confirm.sendOutConfirm") : t("closeRun")}
             </Button>
           </div>
         </div>
@@ -500,21 +509,21 @@ function RunDetail({
       <div className="flex flex-wrap items-end gap-x-8 gap-y-3 border-b bg-muted/30 px-4 py-3">
         <div className="min-w-[180px] flex-1">
           <p className="mb-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
-            {vitals.delivered} dropped · {vitals.remaining} left
-            {vitals.failed > 0 ? ` · ${vitals.failed} failed` : ""}
+            {t("vitals.progress", { delivered: vitals.delivered, remaining: vitals.remaining })}
+            {vitals.failed > 0 ? t("vitals.failedSuffix", { count: vitals.failed }) : ""}
           </p>
           <Bar pct={vitals.progressPct} tone={vitals.progressPct === 100 ? "bg-emerald-500" : "bg-primary"} />
         </div>
         <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Collected</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("vitals.collected")}</p>
           <p className="text-sm font-semibold tabular-nums">{money(vitals.cashCollected)}</p>
         </div>
         <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Outstanding</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("vitals.outstanding")}</p>
           <p className="text-sm font-semibold tabular-nums">{money(vitals.cashOutstanding)}</p>
         </div>
         <div>
-          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Loaded</p>
+          <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("vitals.loaded")}</p>
           <p className="text-sm font-semibold tabular-nums">
             {vitals.loaded}/{vitals.total}
           </p>
@@ -522,7 +531,7 @@ function RunDetail({
       </div>
 
       {rows.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-muted-foreground">No orders on this run.</p>
+        <p className="px-4 py-6 text-sm text-muted-foreground">{t("noOrders")}</p>
       ) : (
         <StopTable rows={rows} canReorder={canReorder} onMove={handleMove} />
       )}
@@ -544,6 +553,8 @@ type RunsClientProps = {
 
 export function RunsClient({ organizationSlug, initialDate, timeZone, initialRuns }: RunsClientProps) {
   const { toast } = useToast();
+  const t = useTranslations("deliveryRuns");
+  const tPages = useTranslations("dashboard.pages");
   const tEmpty = useTranslations("deliveryRuns.empty");
   const [date, setDate] = useState(initialDate);
   const [runs, setRuns] = useState(initialRuns);
@@ -573,7 +584,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
     const result = await getRuns(organizationSlug, nextDate);
     setLoading(false);
     if (!result.ok) {
-      toast({ title: "Could not load runs", description: result.message, variant: "destructive" });
+      toast({ title: t("toasts.couldNotLoadRuns"), description: result.message, variant: "destructive" });
       return;
     }
     setRuns(result.data);
@@ -591,7 +602,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
   async function handleReorder(runId: string, orderIds: string[]): Promise<boolean> {
     const result = await reorderRun(organizationSlug, runId, orderIds);
     if (!result.ok) {
-      toast({ title: "Could not reorder the run", description: result.message, variant: "destructive" });
+      toast({ title: t("toasts.couldNotReorderRun"), description: result.message, variant: "destructive" });
       await loadRuns(date);
       return false;
     }
@@ -603,10 +614,10 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
     startTransition(async () => {
       const result = await assignRunDriver(organizationSlug, runId, driverId);
       if (!result.ok) {
-        toast({ title: "Could not set the driver", description: result.message, variant: "destructive" });
+        toast({ title: t("toasts.couldNotSetDriver"), description: result.message, variant: "destructive" });
         return;
       }
-      toast({ title: driverId ? "Driver assigned" : "Driver removed" });
+      toast({ title: driverId ? t("toasts.driverAssigned") : t("toasts.driverRemoved") });
       await loadRuns(date);
     });
   }
@@ -615,10 +626,10 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
     startTransition(async () => {
       const result = await setRunStatus(organizationSlug, runId, status);
       if (!result.ok) {
-        toast({ title: "Could not update the run", description: result.message, variant: "destructive" });
+        toast({ title: t("toasts.couldNotUpdateRun"), description: result.message, variant: "destructive" });
         return;
       }
-      toast({ title: status === "departed" ? "Truck sent out" : "Run closed" });
+      toast({ title: status === "departed" ? t("toasts.truckSentOut") : t("toasts.runClosed") });
       await loadRuns(date);
     });
   }
@@ -629,14 +640,14 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Delivery runs</h1>
-          <p className="text-muted-foreground">Where every truck is, and what is still on it</p>
+          <h1 className="text-2xl font-bold">{tPages("deliveryRuns")}</h1>
+          <p className="text-muted-foreground">{t("subheading")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
-            aria-label="Previous day"
+            aria-label={t("previousDay")}
             onClick={() => handleDateChange(shiftIsoDate(date, -1))}
           >
             ‹
@@ -646,12 +657,12 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
             size="sm"
             onClick={() => handleDateChange(todayInTimeZone(timeZone))}
           >
-            Today
+            {t("today")}
           </Button>
           <Button
             variant="outline"
             size="sm"
-            aria-label="Next day"
+            aria-label={t("nextDay")}
             onClick={() => handleDateChange(shiftIsoDate(date, 1))}
           >
             ›
@@ -668,7 +679,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
       <AlertBlock alerts={alerts} onJump={setSelectedId} />
 
       {loading ? (
-        <p className="text-muted-foreground">Loading…</p>
+        <p className="text-muted-foreground">{t("loading")}</p>
       ) : runs.length === 0 ? (
         <HenEmptyState title={tEmpty("title")} subtitle={tEmpty("subtitle")} className="py-20" />
       ) : (
@@ -676,7 +687,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
           <div
             className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
             role="tablist"
-            aria-label="Trucks running today"
+            aria-label={t("trucksRunningToday")}
           >
             {runs.map((run) => (
               <RailCard

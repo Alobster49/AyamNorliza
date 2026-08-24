@@ -1096,7 +1096,8 @@
       "left": "Baris gilir · {count, plural, other {# baki}}",
       "saving": "Menyimpan",
       "itemProgress": "item {index} daripada {total}",
-      "weighedProgress": "{done} / {total} ditimbang"
+      "weighedProgress": "{done} / {total} ditimbang",
+      "orderProgressAriaLabel": "Kemajuan pesanan: {customerName}"
     },
     "swipeCard": {
       "orderedKg": "{quantity} kg ditempah · saiz {min}–{max} kg",
@@ -1357,6 +1358,37 @@
         "failFailedTitle": "Tidak dapat melaporkan perhentian",
         "reportedTitle": "Dilaporkan kepada pejabat"
       }
+    },
+    "client": {
+      "viewToggle": {
+        "board": "Papan",
+        "table": "Jadual"
+      },
+      "newOrder": "Pesanan baharu",
+      "tabs": {
+        "all": "Semua"
+      },
+      "table": {
+        "headers": {
+          "order": "Pesanan",
+          "customer": "Pelanggan",
+          "zone": "Zon",
+          "status": "Status",
+          "deliveryDate": "Tarikh penghantaran",
+          "total": "Jumlah"
+        },
+        "empty": "Tiada pesanan dalam paparan ini"
+      }
+    },
+    "board": {
+      "newOrder": "Pesanan baharu",
+      "addOrderAria": "Tambah pesanan ke {status}",
+      "empty": "Tiada pesanan",
+      "moveNotAllowedTitle": "Pergerakan tidak dibenarkan"
+    },
+    "station": {
+      "slotSuffix": " · slot {start}–{end}",
+      "autosaveHint": "Pesanan disimpan secara automatik selepas item terakhirnya. Papan kekunci turut berfungsi: digit, ⌫, Enter."
     }
   },
   "logistics": {
@@ -1727,6 +1759,78 @@
     "empty": {
       "title": "Tiada perjalanan untuk tarikh ini",
       "subtitle": "Lori parkir, ayam pun rehat."
+    },
+    "subheading": "Lokasi setiap trak, dan apa yang masih ada di atasnya",
+    "loading": "Memuatkan…",
+    "previousDay": "Hari sebelum",
+    "nextDay": "Hari seterusnya",
+    "today": "Hari ini",
+    "trucksRunningToday": "Trak yang beroperasi hari ini",
+    "toasts": {
+      "couldNotLoadRuns": "Tidak dapat memuatkan trip",
+      "couldNotReorderRun": "Tidak dapat menyusun semula trip",
+      "couldNotSetDriver": "Tidak dapat menetapkan pemandu",
+      "driverAssigned": "Pemandu ditetapkan",
+      "driverRemoved": "Pemandu dibuang",
+      "couldNotUpdateRun": "Tidak dapat mengemas kini trip",
+      "truckSentOut": "Trak dihantar keluar",
+      "runClosed": "Trip ditutup"
+    },
+    "needsHuman": {
+      "ariaLabel": "Trip yang memerlukan perhatian manusia",
+      "heading": "Perlu perhatian manusia · {count}"
+    },
+    "rail": {
+      "truckFallback": "Trak",
+      "load": "Muatan {name}",
+      "noDriver": "Tiada pemandu",
+      "stopCount": "{count, plural, other {# perhentian}}"
+    },
+    "table": {
+      "reorder": "Susun semula",
+      "headers": {
+        "stop": "Perhentian",
+        "zone": "Zon",
+        "load": "Muatan",
+        "amount": "Jumlah",
+        "window": "Slot masa",
+        "state": "Status"
+      },
+      "itemCount": "{count, plural, other {# item}}",
+      "moveEarlier": "Alih {name} lebih awal",
+      "moveLater": "Alih {name} lebih lewat"
+    },
+    "detail": {
+      "driverLabel": "Pemandu",
+      "nobodyAssigned": "Tiada ditetapkan",
+      "manifest": "Manifes",
+      "markDeparted": "Tandakan bertolak",
+      "closeRun": "Tutup trip",
+      "windowCapacity": " · {weight} daripada {capacity} kg",
+      "noOrders": "Tiada pesanan pada trip ini.",
+      "cannotDepart": {
+        "title": "Trak ini belum boleh bertolak",
+        "notLoaded": "Belum dimuatkan: {list}. ",
+        "unweighed": "Belum ditimbang: {list}."
+      },
+      "confirm": {
+        "sendOutTitle": "Hantar {truck} keluar?",
+        "allReady": "Semua pesanan pada trip ini sudah sedia.",
+        "droppedWarning": "{count, plural, other {# pesanan yang belum sedia akan dikeluarkan daripada trip ini: {list}.}}",
+        "cannotReturn": "Trip yang sudah bertolak tidak boleh dipulangkan ke garaj.",
+        "closeTitle": "Tutup {truck}?",
+        "allDelivered": "Tiada pesanan tertinggal untuk ditandakan dihantar.",
+        "markedDelivered": "{count, plural, other {# pesanan berbaki akan ditandakan dihantar.}}",
+        "cannotUndo": "Ini tidak boleh dibuat asal.",
+        "sendOutConfirm": "Hantar keluar"
+      },
+      "vitals": {
+        "progress": "{delivered} dihantar · {remaining} berbaki",
+        "failedSuffix": " · {count} gagal",
+        "collected": "Terkumpul",
+        "outstanding": "Tertunggak",
+        "loaded": "Dimuatkan"
+      }
     }
   },
   "loadingBoard": {

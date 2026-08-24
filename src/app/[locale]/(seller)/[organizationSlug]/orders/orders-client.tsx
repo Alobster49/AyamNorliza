@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem, OrderStatus } from "@/features/orders/types";
-import { ORDER_STATUSES, ORDER_STATUS_LABELS, ORDER_STATUS_COLORS } from "@/features/orders/types";
+import { ORDER_STATUSES, ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
 import {
   Table,
@@ -31,13 +32,12 @@ const VIEW_STORAGE_KEY = "orders-view";
 const TABS = ["all", ...ORDER_STATUSES] as const;
 type TabValue = (typeof TABS)[number];
 
-const TAB_LABELS: Record<TabValue, string> = {
-  all: "All",
-  ...ORDER_STATUS_LABELS,
-};
-
 export function OrdersClient({ organizationSlug, callerRole, initialOrders }: OrdersClientProps) {
   const router = useRouter();
+  const t = useTranslations("orders.client");
+  const tStatus = useTranslations("status.order");
+  const tCard = useTranslations("orders.card");
+  const format = useFormatter();
   const [orders, setOrders] = useState(initialOrders);
   const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [view, setView] = useState<ViewMode>("board");
@@ -88,7 +88,9 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
   const visibleOrders = activeTab === "all" ? orders : orders.filter((o) => o.status === activeTab);
 
   const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString("en-MY", { day: "2-digit", month: "short", year: "numeric" });
+    format.dateTime(new Date(date), { day: "2-digit", month: "short", year: "numeric" });
+
+  const tabLabel = (tab: TabValue) => (tab === "all" ? t("tabs.all") : tStatus(tab));
 
   return (
     <div className="space-y-6">
@@ -101,7 +103,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
             onClick={() => switchView("board")}
           >
             <LayoutGrid className="h-3.5 w-3.5" />
-            Board
+            {t("viewToggle.board")}
           </Button>
           <Button
             variant={view === "table" ? "secondary" : "ghost"}
@@ -110,12 +112,12 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
             onClick={() => switchView("table")}
           >
             <Table2 className="h-3.5 w-3.5" />
-            Table
+            {t("viewToggle.table")}
           </Button>
         </div>
         <Button onClick={() => router.push(`/${organizationSlug}/orders/new`)}>
           <Plus className="mr-2 h-4 w-4" />
-          New Order
+          {t("newOrder")}
         </Button>
       </div>
 
@@ -131,7 +133,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
           <TabsList>
             {TABS.map((tab) => (
               <TabsTrigger key={tab} value={tab}>
-                {TAB_LABELS[tab]}
+                {tabLabel(tab)}
                 <Badge variant="secondary" className="ml-1.5">
                   {counts[tab]}
                 </Badge>
@@ -144,19 +146,19 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Order</TableHead>
-                    <TableHead>Customer</TableHead>
-                    <TableHead>Zone</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Delivery date</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead>{t("table.headers.order")}</TableHead>
+                    <TableHead>{t("table.headers.customer")}</TableHead>
+                    <TableHead>{t("table.headers.zone")}</TableHead>
+                    <TableHead>{t("table.headers.status")}</TableHead>
+                    <TableHead>{t("table.headers.deliveryDate")}</TableHead>
+                    <TableHead className="text-right">{t("table.headers.total")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {visibleOrders.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                        No orders in this view
+                        {t("table.empty")}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -167,11 +169,11 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
                         onClick={() => router.push(`/${organizationSlug}/orders/${order.id}`)}
                       >
                         <TableCell className="font-mono text-sm">{order.id.slice(0, 8)}</TableCell>
-                        <TableCell>{order.customer?.name ?? "Unknown"}</TableCell>
+                        <TableCell>{order.customer?.name ?? tCard("unknownCustomer")}</TableCell>
                         <TableCell>{order.zone?.name ?? "-"}</TableCell>
                         <TableCell>
                           <Badge className={ORDER_STATUS_COLORS[order.status]}>
-                            {ORDER_STATUS_LABELS[order.status]}
+                            {tStatus(order.status)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{formatDate(order.delivery_date)}</TableCell>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { isSettled, projectMomentum, rubberband, springStep } from "../lib/gesture-physics";
 import {
@@ -32,6 +33,7 @@ type SwipeDeckProps = {
  * Apple's fluid-interface model. Swipe left = skip, right = undo.
  */
 export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
+  const t = useTranslations("orders.queue");
   const line = state.queue[state.cursor];
   const draft = line ? (state.drafts[line.itemId] ?? EMPTY_DRAFT) : EMPTY_DRAFT;
 
@@ -246,7 +248,7 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       {/* Progress ticks for the current order */}
-      <div className="flex gap-1" aria-label={`Order progress: ${line.customerName}`}>
+      <div className="flex gap-1" aria-label={t("orderProgressAriaLabel", { customerName: line.customerName })}>
         {taskLines.map((l) => (
           <span
             key={l.itemId}

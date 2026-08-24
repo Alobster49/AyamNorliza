@@ -1099,7 +1099,8 @@ declare const messages: {
       "left": "Queue · {count, plural, one {# left} other {# left}}",
       "saving": "Saving",
       "itemProgress": "item {index} of {total}",
-      "weighedProgress": "{done} / {total} weighed"
+      "weighedProgress": "{done} / {total} weighed",
+      "orderProgressAriaLabel": "Order progress: {customerName}"
     },
     "swipeCard": {
       "orderedKg": "{quantity} kg ordered · size {min}–{max} kg",
@@ -1360,6 +1361,37 @@ declare const messages: {
         "failFailedTitle": "Could not report the stop",
         "reportedTitle": "Reported to the office"
       }
+    },
+    "client": {
+      "viewToggle": {
+        "board": "Board",
+        "table": "Table"
+      },
+      "newOrder": "New Order",
+      "tabs": {
+        "all": "All"
+      },
+      "table": {
+        "headers": {
+          "order": "Order",
+          "customer": "Customer",
+          "zone": "Zone",
+          "status": "Status",
+          "deliveryDate": "Delivery date",
+          "total": "Total"
+        },
+        "empty": "No orders in this view"
+      }
+    },
+    "board": {
+      "newOrder": "New order",
+      "addOrderAria": "Add order to {status}",
+      "empty": "No orders",
+      "moveNotAllowedTitle": "Move not allowed"
+    },
+    "station": {
+      "slotSuffix": " · slot {start}–{end}",
+      "autosaveHint": "Orders save automatically after their last item. Keyboard works too: digits, ⌫, Enter."
     }
   },
   "logistics": {
@@ -1730,6 +1762,78 @@ declare const messages: {
     "empty": {
       "title": "No runs scheduled for this date",
       "subtitle": "Trucks parked, ayam resting."
+    },
+    "subheading": "Where every truck is, and what is still on it",
+    "loading": "Loading…",
+    "previousDay": "Previous day",
+    "nextDay": "Next day",
+    "today": "Today",
+    "trucksRunningToday": "Trucks running today",
+    "toasts": {
+      "couldNotLoadRuns": "Could not load runs",
+      "couldNotReorderRun": "Could not reorder the run",
+      "couldNotSetDriver": "Could not set the driver",
+      "driverAssigned": "Driver assigned",
+      "driverRemoved": "Driver removed",
+      "couldNotUpdateRun": "Could not update the run",
+      "truckSentOut": "Truck sent out",
+      "runClosed": "Run closed"
+    },
+    "needsHuman": {
+      "ariaLabel": "Runs that need attention",
+      "heading": "Needs a human · {count}"
+    },
+    "rail": {
+      "truckFallback": "Truck",
+      "load": "{name} load",
+      "noDriver": "No driver",
+      "stopCount": "{count, plural, one {# stop} other {# stops}}"
+    },
+    "table": {
+      "reorder": "Reorder",
+      "headers": {
+        "stop": "Stop",
+        "zone": "Zone",
+        "load": "Load",
+        "amount": "Amount",
+        "window": "Window",
+        "state": "State"
+      },
+      "itemCount": "{count, plural, one {# item} other {# items}}",
+      "moveEarlier": "Move {name} earlier",
+      "moveLater": "Move {name} later"
+    },
+    "detail": {
+      "driverLabel": "Driver",
+      "nobodyAssigned": "Nobody assigned",
+      "manifest": "Manifest",
+      "markDeparted": "Mark departed",
+      "closeRun": "Close run",
+      "windowCapacity": " · {weight} of {capacity} kg",
+      "noOrders": "No orders on this run.",
+      "cannotDepart": {
+        "title": "This truck cannot depart yet",
+        "notLoaded": "Not loaded: {list}. ",
+        "unweighed": "Unweighed: {list}."
+      },
+      "confirm": {
+        "sendOutTitle": "Send {truck} out?",
+        "allReady": "Every order on the run is ready to go.",
+        "droppedWarning": "{count, plural, one {# order that is not ready will be taken off this run: {list}.} other {# orders that are not ready will be taken off this run: {list}.}}",
+        "cannotReturn": "A run cannot be sent back to the yard afterwards.",
+        "closeTitle": "Close {truck}?",
+        "allDelivered": "No orders are left to mark delivered.",
+        "markedDelivered": "{count, plural, one {# remaining order will be marked delivered.} other {# remaining orders will be marked delivered.}}",
+        "cannotUndo": "This cannot be undone.",
+        "sendOutConfirm": "Send out"
+      },
+      "vitals": {
+        "progress": "{delivered} dropped · {remaining} left",
+        "failedSuffix": " · {count} failed",
+        "collected": "Collected",
+        "outstanding": "Outstanding",
+        "loaded": "Loaded"
+      }
     }
   },
   "loadingBoard": {

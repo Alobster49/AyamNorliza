@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   DndContext,
   DragOverlay,
@@ -13,7 +14,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import type { OrderListItem, OrderStatus, OrderWithItems } from "@/features/orders/types";
-import { ORDER_STATUSES, ORDER_STATUS_LABELS } from "@/features/orders/types";
+import { ORDER_STATUSES } from "@/features/orders/types";
 import { resolveDrop } from "@/features/orders/lib/board-rules";
 import { getOrderDetail } from "@/features/orders/server/order-actions";
 import { OrderCard, OrderCardContent } from "./order-card";
@@ -50,6 +51,8 @@ type OrdersBoardProps = {
 
 export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChange }: OrdersBoardProps) {
   const router = useRouter();
+  const t = useTranslations("orders.board");
+  const tError = useTranslations("orders");
   const { toast } = useToast();
   const [activeOrder, setActiveOrder] = useState<OrderListItem | null>(null);
   const [workflow, setWorkflow] = useState<PendingWorkflow | null>(null);
@@ -81,7 +84,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
       case "noop":
         return;
       case "blocked":
-        toast({ title: "Move not allowed", description: resolution.reason, variant: "destructive" });
+        toast({ title: t("moveNotAllowedTitle"), description: resolution.reason, variant: "destructive" });
         return;
       case "settle":
         router.push(`/${organizationSlug}/orders/${order.id}`);
@@ -96,7 +99,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
         const result = await getOrderDetail(organizationSlug, order.id);
         if (token !== detailFetchToken.current) return; // a newer drag superseded this fetch
         if (!result.ok) {
-          toast({ title: "Error", description: result.message, variant: "destructive" });
+          toast({ title: tError("error"), description: result.message, variant: "destructive" });
           return;
         }
         setWorkflow({ kind: "confirm", orderId: order.id, detail: result.data });
@@ -177,11 +180,14 @@ function BoardColumn({
   onNewOrder: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
+  const t = useTranslations("orders.board");
+  const tStatus = useTranslations("status.order");
+  const statusLabel = tStatus(status);
 
   return (
     <section
       ref={setNodeRef}
-      aria-label={ORDER_STATUS_LABELS[status]}
+      aria-label={statusLabel}
       className={
         "flex h-[calc(100vh-10rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/40 " +
         (isOver ? "ring-2 ring-primary/40" : "")
@@ -189,7 +195,7 @@ function BoardColumn({
     >
       <header className="flex items-center gap-2 px-3 py-2.5">
         <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
-        <h3 className="text-sm font-semibold">{ORDER_STATUS_LABELS[status]}</h3>
+        <h3 className="text-sm font-semibold">{statusLabel}</h3>
         <Badge variant="secondary" className="text-[10px]">
           {orders.length}
         </Badge>
@@ -198,7 +204,7 @@ function BoardColumn({
           size="icon"
           className="ml-auto h-6 w-6"
           onClick={onNewOrder}
-          aria-label={`Add order to ${ORDER_STATUS_LABELS[status]}`}
+          aria-label={t("addOrderAria", { status: statusLabel })}
         >
           <Plus className="h-3.5 w-3.5" />
         </Button>
@@ -206,7 +212,7 @@ function BoardColumn({
       <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">
         {orders.length === 0 ? (
           <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-            No orders
+            {t("empty")}
           </div>
         ) : (
           orders.map((order) => (
@@ -217,7 +223,7 @@ function BoardColumn({
       <footer className="px-2 pb-2">
         <Button variant="ghost" className="w-full justify-start text-muted-foreground" size="sm" onClick={onNewOrder}>
           <Plus className="mr-2 h-3.5 w-3.5" />
-          New order
+          {t("newOrder")}
         </Button>
       </footer>
     </section>

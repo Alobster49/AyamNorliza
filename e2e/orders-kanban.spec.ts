@@ -15,7 +15,7 @@ test("orders page defaults to a kanban board with all six status columns", async
   await signIn(page, OWNER.email, OWNER.password);
   await page.goto("/ayam-norliza-pilot/orders");
 
-  await expect(page.getByText(/grouped by status/i)).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByRole("button", { name: "New Order", exact: true })).toBeVisible({ timeout: 10_000 });
   for (const label of COLUMNS) {
     // Each column is a <section aria-label={status label}>.
     await expect(page.getByRole("region", { name: label })).toBeVisible();

@@ -20,15 +20,6 @@ export const ORDER_STATUSES = [
 ] as const;
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  pending: "Pending",
-  confirmed: "Confirmed",
-  ready: "Ready",
-  delivered: "Delivered",
-  closed: "Closed",
-  cancelled: "Cancelled",
-};
-
 export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   pending: "bg-blue-100 text-blue-800",
   confirmed: "bg-yellow-100 text-yellow-800",

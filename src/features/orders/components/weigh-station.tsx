@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -28,6 +29,10 @@ type WeighStationProps = {
  * right with a scale-sized readout, size-band gauge and numpad.
  */
 export function WeighStation({ state, dispatch, syncingTaskIds, className }: WeighStationProps) {
+  const tDetail = useTranslations("orders.detail");
+  const tQueue = useTranslations("orders.queue");
+  const tStation = useTranslations("orders.station");
+  const tSwipeCard = useTranslations("orders.swipeCard");
   const line = state.queue[state.cursor];
 
   return (
@@ -47,8 +52,10 @@ export function WeighStation({ state, dispatch, syncingTaskIds, className }: Wei
                 <div className="min-w-0">
                   <h1 className="truncate text-2xl font-semibold">{line.customerName}</h1>
                   <p className="font-mono text-xs text-muted-foreground">
-                    Order {line.orderIdShort} · item {line.indexInTask} of {line.totalInTask}
-                    {line.slotWindow && ` · slot ${line.slotWindow.start}–${line.slotWindow.end}`}
+                    {tDetail("heading", { id: line.orderIdShort })} ·{" "}
+                    {tQueue("itemProgress", { index: line.indexInTask, total: line.totalInTask })}
+                    {line.slotWindow &&
+                      tStation("slotSuffix", { start: line.slotWindow.start, end: line.slotWindow.end })}
                   </p>
                 </div>
                 <Badge variant="secondary">{line.truckCode}</Badge>
@@ -57,8 +64,17 @@ export function WeighStation({ state, dispatch, syncingTaskIds, className }: Wei
               <div>
                 <div className="text-xl font-medium">{line.productName}</div>
                 <div className="text-sm text-muted-foreground">
-                  {line.orderedQuantity} {line.mode === "kg" ? "kg" : "pcs"} ordered · size{" "}
-                  {line.sizeMinKg}–{line.sizeMaxKg} kg
+                  {line.mode === "kg"
+                    ? tSwipeCard("orderedKg", {
+                        quantity: line.orderedQuantity,
+                        min: line.sizeMinKg,
+                        max: line.sizeMaxKg,
+                      })
+                    : tSwipeCard("orderedPieces", {
+                        quantity: line.orderedQuantity,
+                        min: line.sizeMinKg,
+                        max: line.sizeMaxKg,
+                      })}
                 </div>
               </div>
 
@@ -83,10 +99,7 @@ export function WeighStation({ state, dispatch, syncingTaskIds, className }: Wei
                 onSkip={() => dispatch({ type: "SKIP" })}
               />
 
-              <p className="text-xs text-muted-foreground">
-                Orders save automatically after their last item. Keyboard works too: digits, ⌫,
-                Enter.
-              </p>
+              <p className="text-xs text-muted-foreground">{tStation("autosaveHint")}</p>
             </div>
           </div>
         </div>
