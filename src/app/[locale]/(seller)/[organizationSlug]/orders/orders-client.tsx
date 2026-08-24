@@ -6,6 +6,7 @@ import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem, OrderStatus } from "@/features/orders/types";
 import { ORDER_STATUSES, ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
+import { displayAmount } from "@/features/orders/lib/board-view-model";
 import {
   Table,
   TableBody,
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, Plus, Table2 } from "lucide-react";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
+import { ViewToggle, ViewButton } from "@/components/shared/view-toggle";
 import { OrdersBoard } from "@/features/orders/components/orders-board";
 
 type OrdersClientProps = {
@@ -55,9 +57,14 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
       if (stored === "table" || stored === "board") {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setView(stored);
+        return;
       }
     } catch {
-      // storage unavailable (private browsing) — keep default view
+      // storage unavailable (private browsing) — fall through to viewport default
+    }
+    // First visit on a phone: six 288px columns are unusable — start on the table.
+    if (window.matchMedia("(max-width: 639px)").matches) {
+      setView("table");
     }
   }, []);
 
@@ -95,27 +102,21 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-3">
-        <div className="inline-flex rounded-lg border p-0.5" role="group" aria-label={t("viewToggle.label")}>
-          <Button
-            variant={view === "board" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 gap-1.5 px-2.5"
+      <div className="flex flex-wrap items-center justify-end gap-3" data-testid="orders-toolbar">
+        <ViewToggle label={t("viewToggle.label")}>
+          <ViewButton
+            active={view === "board"}
             onClick={() => switchView("board")}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            {t("viewToggle.board")}
-          </Button>
-          <Button
-            variant={view === "table" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 gap-1.5 px-2.5"
+            icon={<LayoutGrid className="h-3.5 w-3.5" />}
+            label={t("viewToggle.board")}
+          />
+          <ViewButton
+            active={view === "table"}
             onClick={() => switchView("table")}
-          >
-            <Table2 className="h-3.5 w-3.5" />
-            {t("viewToggle.table")}
-          </Button>
-        </div>
+            icon={<Table2 className="h-3.5 w-3.5" />}
+            label={t("viewToggle.table")}
+          />
+        </ViewToggle>
         <Button onClick={() => router.push(`/${organizationSlug}/orders/new`)}>
           <Plus className="mr-2 h-4 w-4" />
           {t("newOrder")}
@@ -185,7 +186,12 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
                         </TableCell>
                         <TableCell className="text-muted-foreground">{formatDate(order.delivery_date)}</TableCell>
                         <TableCell className="text-right font-medium">
-                          {order.status === "closed" ? formatPrice(order.total_amount) : "—"}
+                          {(() => {
+                            const amount = displayAmount(order);
+                            if (amount.kind === "total") return formatPrice(amount.amount);
+                            if (amount.kind === "unweighed") return tCard("unweighed");
+                            return "—";
+                          })()}
                         </TableCell>
                       </TableRow>
                     ))

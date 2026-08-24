@@ -160,7 +160,7 @@ export function OrdersBoard({ organizationSlug, orders, callerRole, onOrdersChan
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveOrder(null)}
       >
-        <div className="flex gap-4 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
           {ORDER_STATUSES.map((status) => (
             <BoardColumn
               key={status}
@@ -241,7 +241,7 @@ function BoardColumn({
       ref={setNodeRef}
       aria-label={statusLabel}
       className={
-        "flex h-[calc(100vh-10rem)] w-72 shrink-0 flex-col rounded-xl border bg-muted/40 " +
+        "flex h-[calc(100vh-10rem)] w-72 shrink-0 snap-center flex-col rounded-xl border bg-muted/40 " +
         (isOver ? "ring-2 ring-primary/40" : "")
       }
     >
@@ -255,7 +255,7 @@ function BoardColumn({
           <Button
             variant="ghost"
             size="icon"
-            className="ml-auto h-6 w-6"
+            className="ml-auto h-9 w-9"
             onClick={onNewOrder}
             aria-label={t("addToPending")}
           >
@@ -281,7 +281,7 @@ function BoardColumn({
       </div>
       {status === "pending" && (
         <footer className="px-2 pb-2">
-          <Button variant="ghost" className="w-full justify-start text-muted-foreground" size="sm" onClick={onNewOrder}>
+          <Button variant="ghost" className="w-full justify-start text-muted-foreground" onClick={onNewOrder}>
             <Plus className="mr-2 h-3.5 w-3.5" />
             {t("newOrder")}
           </Button>

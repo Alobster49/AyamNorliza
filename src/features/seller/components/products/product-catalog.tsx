@@ -125,28 +125,3 @@ export function ProductCatalog({
     </div>
   );
 }
-
-type ViewButtonProps = {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  label: string;
-};
-
-export function ViewButton({ active, onClick, icon, label }: ViewButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-        active
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:text-foreground"
-      }`}
-    >
-      {icon}
-      {label}
-    </button>
-  );
-}

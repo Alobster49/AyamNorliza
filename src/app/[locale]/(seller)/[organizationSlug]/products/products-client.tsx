@@ -24,9 +24,9 @@ import { ProductDialog } from "@/features/seller/components/products/product-dia
 import { VariantDialog } from "@/features/seller/components/products/variant-dialog";
 import {
   ProductCatalog,
-  ViewButton,
   type CatalogView,
 } from "@/features/seller/components/products/product-catalog";
+import { ViewToggle, ViewButton } from "@/components/shared/view-toggle";
 
 const VIEW_STORAGE_KEY = "seller-catalog-view";
 
@@ -239,11 +239,7 @@ export function ProductsClient({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-end gap-3">
-        <div
-          role="group"
-          aria-label={tToolbar("viewAriaLabel")}
-          className="inline-flex gap-0.5 rounded-lg border bg-muted p-0.5"
-        >
+        <ViewToggle label={tToolbar("viewAriaLabel")}>
           <ViewButton
             active={view === "cards"}
             onClick={() => changeView("cards")}
@@ -256,7 +252,7 @@ export function ProductsClient({
             icon={<Rows3 className="h-3.5 w-3.5" />}
             label={tToolbar("ledgerView")}
           />
-        </div>
+        </ViewToggle>
         <Button
           onClick={() =>
             setDialog({ kind: "product", defaultCategoryId: activeCategoryId })
