@@ -90,7 +90,7 @@
       "pending": "Menunggu",
       "confirmed": "Disahkan",
       "ready": "Sedia",
-      "delivered": "Dihantar",
+      "delivered": "Sampai",
       "closed": "Selesai",
       "cancelled": "Dibatalkan"
     },
@@ -598,8 +598,13 @@
       "aov": "Purata nilai pesanan",
       "rmPerKg": "RM/kg sebenar"
     },
-    "chart": { "title": "Trend jualan" },
-    "funnel": { "title": "Corong pesanan", "cancellationRate": "Kadar batal" },
+    "chart": {
+      "title": "Trend jualan"
+    },
+    "funnel": {
+      "title": "Corong pesanan",
+      "cancellationRate": "Kadar batal"
+    },
     "sectionError": "Bahagian ini gagal dimuatkan.",
     "empty": "Belum ada data untuk tempoh ini.",
     "today": {
@@ -1038,14 +1043,30 @@
       "roleColumnHeader": "Peranan",
       "cellAriaLabel": "{role} {hasCapability, select, true {mempunyai} other {tidak mempunyai}} keupayaan {capability}",
       "groups": {
-        "organization": { "label": "Organisasi" },
-        "membership": { "label": "Keahlian" },
-        "catalog": { "label": "Katalog" },
-        "sales": { "label": "Jualan" },
-        "access_review": { "label": "Semakan akses" },
-        "support": { "label": "Sokongan" },
-        "break_glass": { "label": "Break-glass" },
-        "audit_auth": { "label": "Audit & pengesahan" }
+        "organization": {
+          "label": "Organisasi"
+        },
+        "membership": {
+          "label": "Keahlian"
+        },
+        "catalog": {
+          "label": "Katalog"
+        },
+        "sales": {
+          "label": "Jualan"
+        },
+        "access_review": {
+          "label": "Semakan akses"
+        },
+        "support": {
+          "label": "Sokongan"
+        },
+        "break_glass": {
+          "label": "Break-glass"
+        },
+        "audit_auth": {
+          "label": "Audit & pengesahan"
+        }
       }
     },
     "invitationsQueue": {
@@ -1376,7 +1397,7 @@
         },
         "ready": {
           "title": "Sudah ditimbang dan sedia dimuatkan",
-          "body": "Menunggu pemuatan dan trip penghantaran. Ia menjadi Dihantar selepas pemandu menghantarnya."
+          "body": "Menunggu pemuatan dan trip penghantaran. Ia menjadi Sampai selepas pemandu menghantarnya."
         },
         "delivered": {
           "title": "Masukkan berat & harga akhir",
@@ -1608,7 +1629,7 @@
         "navigate": "Navigasi",
         "whatsapp": "WhatsApp",
         "imAtDoor": "Saya di pintu",
-        "delivered": "Dihantar",
+        "delivered": "Sampai",
         "cantDeliver": "Tidak dapat hantar"
       },
       "next": {
@@ -1650,7 +1671,7 @@
         "cashInvalidTitle": "Semak jumlah tunai",
         "cashInvalidDescription": "Masukkan nombor, atau biarkan kosong.",
         "deliverFailedTitle": "Tidak dapat merekod penghantaran",
-        "deliveredTitle": "Dihantar kepada {name}",
+        "deliveredTitle": "Sampai kepada {name}",
         "failFailedTitle": "Tidak dapat melaporkan perhentian",
         "reportedTitle": "Dilaporkan kepada pejabat"
       }
@@ -1706,7 +1727,7 @@
       "moveNotAllowedTitle": "Pergerakan tidak dibenarkan",
       "blocked": {
         "ready": "Status Sedia ditetapkan oleh tugasan timbang di gudang.",
-        "delivered": "Status Dihantar ditetapkan apabila trip penghantaran selesai.",
+        "delivered": "Status Sampai ditetapkan apabila trip penghantaran selesai.",
         "pending": "Pesanan tidak boleh kembali ke status menunggu.",
         "confirmed": "Hanya pesanan yang menunggu boleh disahkan.",
         "cancelled": "Hanya pesanan menunggu atau disahkan boleh dibatalkan.",
