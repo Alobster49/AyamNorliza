@@ -24,7 +24,7 @@
       "pageTitle": "Log masuk - AyamNorliza",
       "title": "Log masuk ke akaun anda",
       "subtitle": "Masukkan kelayakan anda untuk mengakses operasi AyamNorliza.",
-      "emailLabel": "Emel",
+      "emailLabel": "E-mel",
       "passwordLabel": "Kata laluan",
       "submit": "Log Masuk",
       "submitting": "Sedang log masuk...",
@@ -37,14 +37,14 @@
       "pageTitle": "Daftar - AyamNorliza",
       "title": "Daftar akaun",
       "subtitle": "Akaun baharu adalah atas jemputan sahaja. Hubungi pemilik organisasi anda jika anda memerlukan akses.",
-      "emailLabel": "Emel",
+      "emailLabel": "E-mel",
       "displayNameLabel": "Nama paparan",
       "passwordLabel": "Kata laluan (min 12)",
       "submit": "Daftar akaun",
       "submitting": "Sedang daftar...",
       "haveAccount": "Sudah ada akaun?",
       "signInLink": "Log Masuk",
-      "checkEmailTitle": "Semak emel anda",
+      "checkEmailTitle": "Semak e-mel anda",
       "checkEmailBody": "Kami telah menghantar pautan pengesahan ke {email}. Klik pautan itu untuk selesaikan persediaan akaun anda."
     },
     "mfa": {
@@ -78,7 +78,7 @@
       "failureTitle": "Tidak dapat menerima jemputan"
     },
     "errors": {
-      "invalidCredentials": "Emel dan kata laluan itu tidak sepadan.",
+      "invalidCredentials": "E-mel dan kata laluan itu tidak sepadan.",
       "rateLimited": "Terlalu banyak cubaan. Cuba lagi dalam beberapa minit.",
       "unexpected": "Ada masalah berlaku. Cuba lagi."
     }
@@ -201,7 +201,7 @@
     },
     "login": {
       "loginFailedTitle": "Log masuk gagal",
-      "loginFailedDefault": "Email atau kata laluan salah.",
+      "loginFailedDefault": "E-mel atau kata laluan salah.",
       "welcomeBackToastTitle": "Selamat kembali!",
       "loggedInDesc": "Anda telah log masuk.",
       "passwordMismatchTitle": "Kata laluan tidak sepadan",
@@ -219,7 +219,7 @@
       "modeAriaLabel": "Mod akaun",
       "loginTab": "Log masuk",
       "signupTab": "Daftar",
-      "emailLabel": "Email",
+      "emailLabel": "E-mel",
       "passwordLabel": "Kata laluan",
       "loginPasswordPlaceholder": "Kata laluan anda",
       "nameLabel": "Nama",
@@ -263,7 +263,7 @@
       "stageAddress": "Pilih alamat",
       "stageSlot": "Pilih slot penghantaran",
       "stageReady": "Hantar pesanan",
-      "emailAlreadyRegisteredTitle": "Email sudah didaftar",
+      "emailAlreadyRegisteredTitle": "E-mel sudah didaftar",
       "emailAlreadyRegisteredDesc": "Masukkan kata laluan anda untuk teruskan.",
       "accountFailedTitle": "Akaun gagal",
       "defaultBuyerNameSignup": "Pembeli",
@@ -343,12 +343,12 @@
         "orgNotFound": "Kedai tidak dijumpai.",
         "createFailed": "Tidak dapat membuat akaun. Sila cuba lagi.",
         "profileSaveFailed": "Tidak dapat menyimpan profil pembeli. Sila cuba lagi.",
-        "alreadyRegistered": "Emel ini sudah didaftarkan. Sila log masuk.",
+        "alreadyRegistered": "E-mel ini sudah didaftarkan. Sila log masuk.",
         "profileCheckFailed": "Tidak dapat menyemak profil pembeli. Sila cuba lagi."
       },
       "login": {
         "invalid": "Log masuk tidak sah",
-        "invalidCredentials": "Emel atau kata laluan salah.",
+        "invalidCredentials": "E-mel atau kata laluan salah.",
         "notABuyer": "Akaun ini belum didaftarkan sebagai pembeli."
       },
       "account": {
@@ -555,19 +555,19 @@
       "products": "Produk",
       "orders": "Pesanan",
       "customers": "Pelanggan",
-      "marketPrices": "Harga Pasaran",
-      "deliverySetup": "Persediaan Penghantaran",
+      "marketPrices": "Harga pasaran",
+      "deliverySetup": "Persediaan penghantaran",
       "dispatch": "Penghantaran keluar",
       "loading": "Muatan",
-      "deliveryRuns": "Trip Penghantaran",
-      "warehouseTasks": "Tugasan Gudang",
+      "deliveryRuns": "Trip penghantaran",
+      "warehouseTasks": "Tugasan gudang",
       "organization": "Organisasi",
       "users": "Pengguna",
       "roles": "Peranan",
-      "accessReviews": "Semakan Akses",
-      "supportSessions": "Sesi Sokongan",
-      "auditLog": "Log Audit",
-      "dataConsole": "Konsol Data"
+      "accessReviews": "Semakan akses",
+      "supportSessions": "Sesi sokongan",
+      "auditLog": "Log audit",
+      "dataConsole": "Konsol data"
     },
     "fallbackUserName": "Ahli pasukan",
     "sidebar": {
@@ -760,14 +760,14 @@
       "readOnly": "Baca sahaja",
       "saved": "Disimpan",
       "syncing": "Menyegerak",
-      "description": "Tentukan apa yang setiap peranan boleh lakukan dalam organisasi ini. Pemilik boleh mengatasi mana-mana kebolehan pada mana-mana peranan bukan pemilik. Pengatasan direkodkan dalam log audit.",
+      "description": "Tentukan apa yang setiap peranan boleh lakukan dalam organisasi ini. Pemilik boleh mengatasi mana-mana keupayaan pada mana-mana peranan bukan pemilik. Pengatasan direkodkan dalam log audit.",
       "statsRoles": "{count, plural, other {# peranan}}",
-      "statsCapabilities": "{count, plural, other {# kebolehan}}",
+      "statsCapabilities": "{count, plural, other {# keupayaan}}",
       "statsOverrides": "{count, plural, other {# pengatasan}}",
       "statsLastEdited": " · terakhir {time}",
       "errorTitle": "Gagal melaksanakan perubahan",
       "rolesCardTitle": "Peranan",
-      "rolesCardDesc": "Pilih peranan untuk menyemak set kebolehannya.",
+      "rolesCardDesc": "Pilih peranan untuk menyemak set keupayaannya.",
       "grantedOn": "{count} aktif",
       "legendTitle": "Legenda",
       "legendOn": "Aktif (sepadan dengan matriks kanonik)",
@@ -775,7 +775,7 @@
       "legendOff": "Tidak aktif (lalai atau diatasi)",
       "legendLocked": "Dikunci (tidak boleh dibuang)",
       "legendLockedBadge": "Dikunci",
-      "capabilitiesEnabled": "{granted} / {total} kebolehan diaktifkan",
+      "capabilitiesEnabled": "{granted} / {total} keupayaan diaktifkan",
       "resetToDefaults": "Set semula ke lalai",
       "ownerLocked": "Dikunci untuk pemilik",
       "overridesBadge": "{count, plural, other {# pengatasan}}",
@@ -790,9 +790,9 @@
       "actionRevoke": "batalkan",
       "toggleTooltip": "{state} — klik untuk {action}",
       "toggleAriaLabel": "Togol {label} untuk {role}",
-      "lockedReasonOwner": "Pemilik menerima setiap kebolehan secara struktur. Tidak boleh disunting.",
+      "lockedReasonOwner": "Pemilik menerima setiap keupayaan secara struktur. Tidak boleh disunting.",
       "lockedReasonRoleLocked": "Peranan ini dikunci.",
-      "lockedReasonNotOverridable": "Kebolehan ini dikekalkan pada setiap peranan yang memerlukannya. Ia tidak boleh dibuang.",
+      "lockedReasonNotOverridable": "Keupayaan ini dikekalkan pada setiap peranan yang memerlukannya. Ia tidak boleh dibuang.",
       "rank": "kedudukan {rank}",
       "areas": {
         "organization": {
@@ -922,10 +922,10 @@
         "auditor": "Akses baca sahaja kepada peristiwa audit dan keselamatan.",
         "support": "Akses bertempoh diberikan melalui sesi sokongan."
       },
-      "grantTitle": "Beri kebolehan",
-      "revokeTitle": "Batalkan kebolehan",
-      "dialogDescGrant": "Memberi kebolehan ini menambahkannya di atas matriks lalai.",
-      "dialogDescRevoke": "Membuang kebolehan ini mengatasi lalai bagi peranan ini.",
+      "grantTitle": "Beri keupayaan",
+      "revokeTitle": "Batalkan keupayaan",
+      "dialogDescGrant": "Memberi keupayaan ini menambahkannya di atas matriks lalai.",
+      "dialogDescRevoke": "Membuang keupayaan ini mengatasi lalai bagi peranan ini.",
       "onRole": "pada peranan {role}.",
       "reasonLabel": "Sebab (wajib, boleh dilihat dalam audit)",
       "reasonPlaceholder": "cth. Pembantu veterinar perlu akses baca untuk menjana laporan",
@@ -934,7 +934,7 @@
       "grant": "Beri",
       "revoke": "Batalkan",
       "resetTitle": "Set semula peranan ke lalai",
-      "resetDescription": "Semua pengatasan bagi {role} akan dibuang dan peranan akan mewarisi semula matriks kebolehan kanonik.",
+      "resetDescription": "Semua pengatasan bagi {role} akan dibuang dan peranan akan mewarisi semula matriks keupayaan kanonik.",
       "resetInfo": "Setiap pembuangan direkodkan secara individu dalam log audit supaya anda boleh memulihkan keadaan sebelumnya jika perlu.",
       "resetReasonLabel": "Sebab (wajib)",
       "resetReasonPlaceholder": "cth. Kembali ke asas untuk audit S3",
@@ -1067,7 +1067,7 @@
   },
   "seller": {
     "shell": {
-      "title": "Papan Pemuka Penjual"
+      "title": "Papan pemuka penjual"
     },
     "products": {
       "categoryDialog": {
@@ -1546,6 +1546,7 @@
       }
     },
     "client": {
+      "searchPlaceholder": "Cari pelanggan, zon, atau id pesanan…",
       "viewToggle": {
         "label": "Paparan pesanan",
         "board": "Papan",
@@ -1594,7 +1595,7 @@
       },
       "moveNotAllowedTitle": "Pergerakan tidak dibenarkan",
       "blocked": {
-        "ready": "Status Ready ditetapkan oleh tugasan timbang di gudang.",
+        "ready": "Status Sedia ditetapkan oleh tugasan timbang di gudang.",
         "delivered": "Status Sampai ditetapkan apabila trip penghantaran selesai.",
         "pending": "Pesanan tidak boleh kembali ke status menunggu.",
         "confirmed": "Hanya pesanan yang menunggu boleh disahkan.",
@@ -2004,7 +2005,7 @@
   },
   "deliveryRuns": {
     "empty": {
-      "title": "Tiada perjalanan untuk tarikh ini",
+      "title": "Tiada trip untuk tarikh ini",
       "subtitle": "Lori parkir, ayam pun rehat."
     },
     "subheading": "Lokasi setiap trak, dan apa yang masih ada di atasnya",

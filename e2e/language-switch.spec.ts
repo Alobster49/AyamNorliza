@@ -54,7 +54,7 @@ test.describe("language switching", () => {
       const destination = "/ms/ayam-norliza-pilot/orders";
       await page.goto(`/ms/login?next=${encodeURIComponent(destination)}`);
 
-      await page.getByLabel(/emel/i).fill(OWNER.email);
+      await page.getByLabel(/e-mel/i).fill(OWNER.email);
       await page.getByLabel(/kata laluan/i).fill(OWNER.password);
       await page.getByRole("button", { name: "Log Masuk" }).click();
 
