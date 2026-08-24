@@ -5,17 +5,23 @@ import { useTranslations } from "next-intl";
 import { getDashboardSales } from "@/features/dashboard/server/analytics-actions";
 import { bucketForRange, resolveRange, type RangePreset } from "../date-range";
 import { buildSalesViewModel, type SalesPayload } from "../sales-model";
+import type { TodayPayload } from "../today-model";
+import type { AdminSummary } from "../admin-summary-model";
 import { KpiRow } from "./kpi-row";
 import { RangePicker } from "./range-picker";
 import { SectionError } from "./section-error";
 import { RevenueChart } from "./revenue-chart";
 import { FunnelCard } from "./funnel-card";
+import { TodayStrip } from "./today-strip";
+import { AdminPanel } from "./admin-panel";
 
 type Props = {
   organizationSlug: string;
   timeZone: string;
   initialRange: { from: string; to: string };
   initialSales: SalesPayload | null;
+  today: TodayPayload | null;
+  adminSummary: AdminSummary | null;
 };
 
 /** Sales payload bound to the exact range/bucket it was fetched for, so a stale render can never mix old data with a new range. */
@@ -26,7 +32,14 @@ type SalesState = {
   bucket: "day" | "week";
 };
 
-export function AnalyticsDashboard({ organizationSlug, timeZone, initialRange, initialSales }: Props) {
+export function AnalyticsDashboard({
+  organizationSlug,
+  timeZone,
+  initialRange,
+  initialSales,
+  today,
+  adminSummary,
+}: Props) {
   const t = useTranslations("analytics");
   const [preset, setPreset] = useState<RangePreset | "custom">("30d");
   const [range, setRange] = useState(initialRange);
@@ -90,6 +103,8 @@ export function AnalyticsDashboard({ organizationSlug, timeZone, initialRange, i
           </div>
         </>
       )}
+      {today ? <TodayStrip payload={today} /> : <SectionError />}
+      {adminSummary && <AdminPanel summary={adminSummary} organizationSlug={organizationSlug} />}
     </div>
   );
 }

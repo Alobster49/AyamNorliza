@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildOverviewDashboardSummary } from "../../summary-model";
+import { buildAdminSummary } from "../../analytics/admin-summary-model";
 import type {
   AccessReview,
   AuditLogEntry,
@@ -89,9 +89,9 @@ function audit(overrides: Partial<AuditLogEntry>): AuditLogEntry {
   };
 }
 
-describe("buildOverviewDashboardSummary", () => {
+describe("buildAdminSummary", () => {
   it("counts live identity and access metrics from existing rows", () => {
-    const summary = buildOverviewDashboardSummary(
+    const summary = buildAdminSummary(
       {
         members: [
           member({ id: "active-1", status: "active" }),
@@ -133,8 +133,8 @@ describe("buildOverviewDashboardSummary", () => {
     expect(summary.priorityItems.map((item) => item.id)).toContain("support-active-support");
   });
 
-  it("returns zero live counts and the default operations snapshot for empty rows", () => {
-    const summary = buildOverviewDashboardSummary(
+  it("returns zero live counts and no priority items for empty rows", () => {
+    const summary = buildAdminSummary(
       {
         members: [],
         invitations: [],
@@ -154,7 +154,6 @@ describe("buildOverviewDashboardSummary", () => {
       activeSupportSessions: 0,
       recentAuditEvents: 0,
     });
-    expect(summary.operations.readinessScore).toBeGreaterThan(0);
-    expect(summary.priorityItems.length).toBeGreaterThanOrEqual(0);
+    expect(summary.priorityItems).toEqual([]);
   });
 });

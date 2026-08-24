@@ -584,7 +584,28 @@
     "chart": { "title": "Trend jualan" },
     "funnel": { "title": "Corong pesanan", "cancellationRate": "Kadar batal" },
     "sectionError": "Bahagian ini gagal dimuatkan.",
-    "empty": "Belum ada data untuk tempoh ini."
+    "empty": "Belum ada data untuk tempoh ini.",
+    "today": {
+      "title": "Operasi hari ini",
+      "runs": "Trip penghantaran",
+      "noRuns": "Tiada trip dijadualkan hari ini.",
+      "tasksPending": "Tugasan belum siap",
+      "tasksDoneToday": "Tugasan siap hari ini",
+      "failedStops": "{count} gagal",
+      "alerts": {
+        "ordersWithoutRun": "{count} pesanan hari ini belum ada trip penghantaran",
+        "marketStale": "Harga pasaran tidak dikemas kini 3+ hari"
+      }
+    },
+    "admin": {
+      "title": "Pentadbiran",
+      "activeMembers": "Ahli aktif",
+      "pendingInvitations": "Jemputan menunggu",
+      "openAccessReviews": "Semakan akses terbuka",
+      "activeSupportSessions": "Sesi sokongan aktif",
+      "priorities": "Perlu perhatian",
+      "allClear": "Tiada apa yang perlu perhatian."
+    }
   },
   "roles": {
     "owner": "Pemilik",

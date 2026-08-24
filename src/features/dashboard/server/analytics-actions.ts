@@ -4,12 +4,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { MANAGER_ROLES } from "@/features/orders/lib/roles";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
 import type { SalesPayload } from "../analytics/sales-model";
+import type { TodayPayload } from "../analytics/today-model";
 
 export type ActionResult<T> = { ok: true; data: T } | { ok: false; message: string };
 
 async function callDashboardRpc<T>(
   organizationSlug: string,
-  rpcName: "get_dashboard_sales",
+  rpcName: "get_dashboard_sales" | "get_dashboard_today",
   args: Record<string, unknown>,
 ): Promise<ActionResult<T>> {
   let orgId: string;
@@ -42,4 +43,10 @@ export async function getDashboardSales(
     p_to: to,
     p_bucket: bucket,
   });
+}
+
+export async function getDashboardToday(
+  organizationSlug: string,
+): Promise<ActionResult<TodayPayload>> {
+  return callDashboardRpc<TodayPayload>(organizationSlug, "get_dashboard_today", {});
 }

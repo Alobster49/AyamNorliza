@@ -584,7 +584,28 @@
     "chart": { "title": "Sales trend" },
     "funnel": { "title": "Order funnel", "cancellationRate": "Cancellation rate" },
     "sectionError": "This section failed to load.",
-    "empty": "No data for this period yet."
+    "empty": "No data for this period yet.",
+    "today": {
+      "title": "Today's operations",
+      "runs": "Delivery runs",
+      "noRuns": "No runs scheduled today.",
+      "tasksPending": "Tasks pending",
+      "tasksDoneToday": "Tasks done today",
+      "failedStops": "{count} failed",
+      "alerts": {
+        "ordersWithoutRun": "{count} orders for today have no delivery run",
+        "marketStale": "Market prices have not synced for 3+ days"
+      }
+    },
+    "admin": {
+      "title": "Admin",
+      "activeMembers": "Active members",
+      "pendingInvitations": "Pending invitations",
+      "openAccessReviews": "Open access reviews",
+      "activeSupportSessions": "Active support sessions",
+      "priorities": "Needs attention",
+      "allClear": "Nothing needs attention."
+    }
   },
   "roles": {
     "owner": "Owner",
