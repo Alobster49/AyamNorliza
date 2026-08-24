@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LayoutGrid, Plus, Table2 } from "lucide-react";
+import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { OrdersBoard } from "@/features/orders/components/orders-board";
 
 type OrdersClientProps = {
@@ -121,7 +122,13 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
         </Button>
       </div>
 
-      {view === "board" ? (
+      {orders.length === 0 ? (
+        <HenEmptyState
+          title={t("empty.title")}
+          subtitle={t("empty.subtitle")}
+          className="min-h-[50vh]"
+        />
+      ) : view === "board" ? (
         <OrdersBoard
           organizationSlug={organizationSlug}
           orders={orders}

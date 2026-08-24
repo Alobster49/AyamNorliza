@@ -223,7 +223,7 @@ function BoardColumn({
       <div className="flex-1 space-y-2 overflow-y-auto px-2 pb-2">
         {orders.length === 0 ? (
           <div className="rounded-lg border border-dashed p-4 text-center text-xs text-muted-foreground">
-            {t("empty")}
+            {t(`empty.${status}`)}
           </div>
         ) : (
           orders.map((order) => (

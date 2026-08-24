@@ -1448,12 +1448,23 @@
           "total": "Jumlah"
         },
         "empty": "Tiada pesanan dalam paparan ini"
+      },
+      "empty": {
+        "title": "Tiada pesanan lagi",
+        "subtitle": "Papan sunyi — ayam pun rehat."
       }
     },
     "board": {
       "newOrder": "Pesanan baharu",
       "addToPending": "Tambah pesanan baharu",
-      "empty": "Tiada pesanan",
+      "empty": {
+        "pending": "Belum ada pesanan baru",
+        "confirmed": "Tiada yang disahkan",
+        "ready": "Belum ada yang ditimbang",
+        "delivered": "Belum ada penghantaran sampai",
+        "closed": "Belum ada yang ditutup",
+        "cancelled": "Tiada pembatalan"
+      },
       "moveNotAllowedTitle": "Pergerakan tidak dibenarkan",
       "blocked": {
         "ready": "Status Ready ditetapkan oleh tugasan timbang di gudang.",

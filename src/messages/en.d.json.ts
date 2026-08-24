@@ -1451,12 +1451,23 @@ declare const messages: {
           "total": "Total"
         },
         "empty": "No orders in this view"
+      },
+      "empty": {
+        "title": "No orders yet",
+        "subtitle": "The board is quiet — even the ayam is resting."
       }
     },
     "board": {
       "newOrder": "New order",
       "addToPending": "Add a new pending order",
-      "empty": "No orders",
+      "empty": {
+        "pending": "No new orders yet",
+        "confirmed": "Nothing confirmed",
+        "ready": "Nothing weighed yet",
+        "delivered": "No deliveries done",
+        "closed": "Nothing settled yet",
+        "cancelled": "Nothing cancelled"
+      },
       "moveNotAllowedTitle": "Move not allowed",
       "blocked": {
         "ready": "Ready is set by the warehouse weigh task.",
