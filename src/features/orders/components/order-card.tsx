@@ -4,6 +4,7 @@ import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
 import type { OrderListItem } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
+import { displayAmount } from "@/features/orders/lib/board-view-model";
 import { Badge } from "@/components/ui/badge";
 
 /** Presentational card body — shared by the board card and the DragOverlay preview. */
@@ -34,7 +35,15 @@ export function OrderCardContent({ order }: { order: OrderListItem }) {
         <Badge variant="secondary" className="text-[10px]">
           {formatDate(order.delivery_date)}
         </Badge>
-        <span className="ml-auto text-xs font-semibold">{formatPrice(order.total_amount)}</span>
+        {(() => {
+          const amount = displayAmount(order);
+          if (amount.kind === "none") return null;
+          return amount.kind === "total" ? (
+            <span className="ml-auto text-xs font-semibold">{formatPrice(amount.amount)}</span>
+          ) : (
+            <span className="ml-auto text-[10px] italic text-muted-foreground">{t("unweighed")}</span>
+          );
+        })()}
       </div>
     </div>
   );

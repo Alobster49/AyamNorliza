@@ -1126,7 +1126,8 @@
       "source": {
         "portal": "Portal",
         "manual": "Manual"
-      }
+      },
+      "unweighed": "Belum timbang"
     },
     "journey": {
       "ariaLabel": "Kemajuan pesanan: langkah {step} daripada {total}",

@@ -1129,7 +1129,8 @@ declare const messages: {
       "source": {
         "portal": "Portal",
         "manual": "Manual"
-      }
+      },
+      "unweighed": "Not weighed yet"
     },
     "journey": {
       "ariaLabel": "Order progress: step {step} of {total}",

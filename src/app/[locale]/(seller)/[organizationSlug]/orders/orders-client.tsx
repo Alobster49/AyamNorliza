@@ -177,7 +177,9 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders }: Or
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">{formatDate(order.delivery_date)}</TableCell>
-                        <TableCell className="text-right font-medium">{formatPrice(order.total_amount)}</TableCell>
+                        <TableCell className="text-right font-medium">
+  {order.status === "closed" ? formatPrice(order.total_amount) : "—"}
+</TableCell>
                       </TableRow>
                     ))
                   )}
