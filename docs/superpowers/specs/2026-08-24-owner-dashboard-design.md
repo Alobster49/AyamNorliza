@@ -41,7 +41,7 @@ Three SQL RPCs following the data-console RPC pattern (org-membership check insi
    - Retention: new vs repeat customers, customers with no order in 30+ days (win-back list).
    - Delivery quality: failed-stop rate per zone/run, truck slot utilization.
 3. `get_dashboard_today(p_org)`
-   - Today's runs with stop progress, warehouse tasks pending/done, orders waiting at the weigh station.
+   - Today's runs with stop progress, warehouse tasks pending/done. (The weigh queue IS the pending-task count: every `order_tasks` row is an allocate-and-weigh task, so a separate weigh-station metric would duplicate it — collapsed by decision 2026-08-24.)
    - Alerts: orders without an assigned run, stale market price sync.
 
 ### Definitions (fixed, not configurable)
@@ -57,7 +57,7 @@ Three SQL RPCs following the data-console RPC pattern (org-membership check insi
 3. **Revenue chart** (30d default) beside the **status funnel**.
 4. **Improvement row** — price-vs-market table, weight-leakage card, retention card, delivery-quality card.
 5. **Top lists** — tabs for products / customers / zones.
-6. **Ops-today strip** — runs, tasks, weigh queue, alerts. Always shows today; ignores the date filter.
+6. **Ops-today strip** — runs, tasks (pending count doubles as the weigh queue — see Data layer note), alerts. Always shows today; ignores the date filter.
 7. **Admin panel** — pending invitations, open access reviews, recent audit events via the existing `buildOverviewDashboardSummary`.
 
 Charts use `recharts` with the shadcn chart wrapper (new dependency). All copy is key-based i18n in `en.json` and `ms.json` from day one — no hardcoded prose (e2e specs locate fields by label text, so specs are added/updated alongside copy).
