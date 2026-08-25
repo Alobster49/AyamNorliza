@@ -7,7 +7,7 @@
 
 begin;
 
-select plan(64);
+select plan(66);
 
 create temporary table _scratch (label text primary key, order_id uuid);
 
@@ -307,7 +307,7 @@ reset role;
 set local role authenticated;
 set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
 
-select lives_ok(
+select throws_ok(
   $$
     select public.confirm_order(
       (select order_id from _scratch where label = 'confirm'),
@@ -317,8 +317,33 @@ select lives_ok(
       )
     )
   $$,
+  'P0001', 'invalid_price',
+  'confirm_order rejects a surviving (mix-fallback) line without a price_per_kg'
+);
+
+select lives_ok(
+  $$
+    select public.confirm_order(
+      (select order_id from _scratch where label = 'confirm'),
+      (
+        select jsonb_agg(jsonb_build_object('item_id', id, 'available', false, 'price_per_kg', 12.0))
+        from public.order_items where order_id = (select order_id from _scratch where label = 'confirm')
+      )
+    )
+  $$,
   'manager confirms the order, marking every line unavailable'
 );
+
+reset role;
+
+select results_eq(
+  $$ select price_per_kg from public.order_items where order_id = (select order_id from _scratch where label = 'confirm') and fallback = 'mix' $$,
+  $$ values (12.0::numeric) $$,
+  'confirm stores price_per_kg on the surviving line'
+);
+
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
 
 reset role;
 
@@ -457,21 +482,21 @@ select lives_ok(
     select public.close_order(
       (select order_id from _scratch where label = 'confirm'),
       (
-        select jsonb_agg(jsonb_build_object('item_id', id, 'final_weight_kg', 3.0, 'final_pieces', 2, 'price_per_kg', 12.50))
+        select jsonb_agg(jsonb_build_object('item_id', id, 'final_weight_kg', 3.0, 'final_pieces', 2))
         from public.order_items
         where order_id = (select order_id from _scratch where label = 'confirm') and is_cancelled = false
       )
     )
   $$,
-  'manager closes the order'
+  'manager closes the order without re-keying price (confirm-time price stands)'
 );
 
 reset role;
 
 select results_eq(
   $$ select status::text, total_amount from public.orders where id = (select order_id from _scratch where label = 'confirm') $$,
-  $$ values ('closed'::text, 37.50::numeric) $$,
-  'closing computes total_amount = final_weight_kg * price_per_kg'
+  $$ values ('closed'::text, 36.00::numeric) $$,
+  'closing computes total_amount = final_weight_kg * confirm-time price_per_kg'
 );
 
 -- ---------------------------------------------------------------------------
@@ -714,7 +739,7 @@ select lives_ok(
     select public.confirm_order(
       (select order_id from _scratch where label = 'late_on_completed_run'),
       (
-        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true))
+        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true, 'price_per_kg', 10.0))
         from public.order_items where order_id = (select order_id from _scratch where label = 'late_on_completed_run')
       )
     )
@@ -957,7 +982,7 @@ select lives_ok(
     select public.confirm_order(
       (select order_id from _scratch where label = 'complete_bad_weights'),
       (
-        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true))
+        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true, 'price_per_kg', 10.0))
         from public.order_items where order_id = (select order_id from _scratch where label = 'complete_bad_weights')
       )
     )
@@ -1057,7 +1082,7 @@ select lives_ok(
     select public.confirm_order(
       (select order_id from _scratch where label = 'close_bad_lines'),
       (
-        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true))
+        select jsonb_agg(jsonb_build_object('item_id', id, 'available', true, 'price_per_kg', 10.0))
         from public.order_items where order_id = (select order_id from _scratch where label = 'close_bad_lines')
       )
     )

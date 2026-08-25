@@ -51,8 +51,8 @@ insert into public.categories (id, organization_id, name, created_by)
 values ('dc000000-0000-0000-0000-000000000010', 'dc000000-0000-0000-0000-00000000000a', 'Cat', 'dc000000-0000-0000-0000-000000000001');
 insert into public.products (id, organization_id, category_id, name, created_by)
 values ('dc000000-0000-0000-0000-000000000011', 'dc000000-0000-0000-0000-00000000000a', 'dc000000-0000-0000-0000-000000000010', 'Prod', 'dc000000-0000-0000-0000-000000000001');
-insert into public.product_variants (id, organization_id, product_id, name, price_per_unit, created_by)
-values ('dc000000-0000-0000-0000-000000000012', 'dc000000-0000-0000-0000-00000000000a', 'dc000000-0000-0000-0000-000000000011', 'Per kg', 10, 'dc000000-0000-0000-0000-000000000001');
+insert into public.product_variants (id, organization_id, product_id, name, created_by)
+values ('dc000000-0000-0000-0000-000000000012', 'dc000000-0000-0000-0000-00000000000a', 'dc000000-0000-0000-0000-000000000011', 'Per kg', 'dc000000-0000-0000-0000-000000000001');
 insert into public.delivery_zones (id, organization_id, name, created_by)
 values ('dc000000-0000-0000-0000-000000000013', 'dc000000-0000-0000-0000-00000000000a', 'Zone T', 'dc000000-0000-0000-0000-000000000001');
 insert into public.trucks (id, organization_id, name, code, created_by)

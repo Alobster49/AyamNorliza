@@ -35,12 +35,12 @@ values ('30000000-0000-0000-0000-000000000003',
         '30000000-0000-0000-0000-000000000009', 'Ayam Bersih');
 
 insert into public.product_variants
-  (id, organization_id, product_id, name, price_per_unit,
+  (id, organization_id, product_id, name,
    market_item_code, market_margin_type, market_margin_value)
 values ('40000000-0000-0000-0000-000000000004',
         '20000000-0000-0000-0000-000000000002',
         '30000000-0000-0000-0000-000000000003',
-        'Standard', 10.50, 1, 'rm', 1.00);
+        'Standard', 1, 'rm', 1.00);
 
 -- Seven days of Selangor medians 9.00..9.60 → median 9.30, +1.00 margin = 10.30.
 insert into public.market_prices
