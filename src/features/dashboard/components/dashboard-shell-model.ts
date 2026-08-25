@@ -31,11 +31,17 @@ const routeGroups = [
       { titleKey: "pages.orders", segment: "orders" },
       { titleKey: "pages.customers", segment: "customers" },
       { titleKey: "pages.marketPrices", segment: "market-prices" },
-      { titleKey: "pages.deliverySetup", segment: "delivery" },
+    ],
+  },
+  {
+    title: "Fulfillment",
+    sectionKey: "sections.fulfillment",
+    items: [
+      { titleKey: "pages.warehouseTasks", segment: "tasks" },
       { titleKey: "pages.dispatch", segment: "dispatch" },
       { titleKey: "pages.loading", segment: "loading" },
       { titleKey: "pages.deliveryRuns", segment: "runs" },
-      { titleKey: "pages.warehouseTasks", segment: "tasks" },
+      { titleKey: "pages.deliverySetup", segment: "delivery" },
     ],
   },
   {

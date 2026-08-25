@@ -22,12 +22,12 @@ describe("dashboard shell model", () => {
       pathname: "/en/ayam-norliza-pilot/settings/organization",
     });
 
-    expect(groups[1]).toMatchObject({
+    expect(groups[2]).toMatchObject({
       title: "Access control",
       sectionKey: "sections.accessControl",
       isActive: true,
     });
-    const orgItem = groups[1]?.items.find((item) => item.titleKey === "pages.organization");
+    const orgItem = groups[2]?.items.find((item) => item.titleKey === "pages.organization");
     expect(orgItem?.isActive).toBe(true);
   });
 
@@ -37,12 +37,12 @@ describe("dashboard shell model", () => {
       pathname: "/ayam-norliza-pilot/settings/organization",
     });
 
-    expect(groups[1]).toMatchObject({
+    expect(groups[2]).toMatchObject({
       title: "Access control",
       sectionKey: "sections.accessControl",
       isActive: true,
     });
-    const orgItem = groups[1]?.items.find((item) => item.titleKey === "pages.organization");
+    const orgItem = groups[2]?.items.find((item) => item.titleKey === "pages.organization");
     expect(orgItem).toMatchObject({
       titleKey: "pages.organization",
       href: "/ayam-norliza-pilot/settings/organization",
@@ -56,7 +56,7 @@ describe("dashboard shell model", () => {
       pathname: "/ayam-norliza-pilot/settings/users",
     });
 
-    expect(groups[1]).toMatchObject({
+    expect(groups[2]).toMatchObject({
       title: "Access control",
       sectionKey: "sections.accessControl",
       isActive: true,
@@ -163,7 +163,7 @@ describe("dashboard shell model", () => {
       role: "seller",
     });
 
-    expect(groups).toHaveLength(2);
+    expect(groups).toHaveLength(3);
     const salesTitleKeys = groups[0]?.items.map((item) => item.titleKey);
     expect(salesTitleKeys).toEqual([
       "pages.dashboard",
@@ -171,13 +171,8 @@ describe("dashboard shell model", () => {
       "pages.orders",
       "pages.customers",
       "pages.marketPrices",
-      "pages.deliverySetup",
-      "pages.dispatch",
-      "pages.loading",
-      "pages.deliveryRuns",
-      "pages.warehouseTasks",
     ]);
-    const deliverySetup = groups[0]?.items.find((item) => item.titleKey === "pages.deliverySetup");
+    const deliverySetup = groups[1]?.items.find((item) => item.titleKey === "pages.deliverySetup");
     expect(deliverySetup).toMatchObject({
       titleKey: "pages.deliverySetup",
       href: "/ayam-norliza-pilot/delivery",
@@ -191,13 +186,46 @@ describe("dashboard shell model", () => {
       pathname: "/ayam-norliza-pilot/runs",
     });
 
-    expect(groups).toHaveLength(2);
-    const runsItem = groups[0]?.items.find((item) => item.titleKey === "pages.deliveryRuns");
+    expect(groups).toHaveLength(3);
+    const runsItem = groups[1]?.items.find((item) => item.titleKey === "pages.deliveryRuns");
     expect(runsItem).toMatchObject({
       titleKey: "pages.deliveryRuns",
       href: "/ayam-norliza-pilot/runs",
       isActive: true,
     });
+  });
+
+  it("splits sales and fulfillment into separate groups", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/dispatch",
+    });
+
+    expect(groups[0]).toMatchObject({
+      title: "Sales",
+      sectionKey: "sections.sales",
+      isActive: false,
+    });
+    expect(groups[0]?.items.map((item) => item.titleKey)).toEqual([
+      "pages.dashboard",
+      "pages.products",
+      "pages.orders",
+      "pages.customers",
+      "pages.marketPrices",
+    ]);
+
+    expect(groups[1]).toMatchObject({
+      title: "Fulfillment",
+      sectionKey: "sections.fulfillment",
+      isActive: true,
+    });
+    expect(groups[1]?.items.map((item) => item.titleKey)).toEqual([
+      "pages.warehouseTasks",
+      "pages.dispatch",
+      "pages.loading",
+      "pages.deliveryRuns",
+      "pages.deliverySetup",
+    ]);
   });
 
   it("shows the Data console group to owners only", () => {
