@@ -127,7 +127,7 @@ export const UpdateMemberProfileInput = z
     memberId: uuid,
     displayName: z.string().min(1).max(150).optional(),
     email: z.string().email().max(254).optional(),
-    reason: z.string().min(1).max(1000),
+    reason: reasonSchema,
   })
   .refine((v) => v.displayName !== undefined || v.email !== undefined, {
     message: "Provide a display name or an email to update",

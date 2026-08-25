@@ -152,20 +152,25 @@ const UUID = "11111111-1111-1111-1111-111111111111";
 describe("UpdateMemberProfileInput", () => {
   it("accepts a name-only update", () => {
     expect(
-      UpdateMemberProfileInput.safeParse({ memberId: UUID, displayName: "Mak Norliza", reason: "fix name" }).success,
+      UpdateMemberProfileInput.safeParse({ memberId: UUID, displayName: "Mak Norliza", reason: "correcting the name" }).success,
     ).toBe(true);
   });
   it("accepts an email-only update", () => {
     expect(
-      UpdateMemberProfileInput.safeParse({ memberId: UUID, email: "new@ayam.my", reason: "typo" }).success,
+      UpdateMemberProfileInput.safeParse({ memberId: UUID, email: "new@ayam.my", reason: "fixing email typo" }).success,
     ).toBe(true);
   });
   it("rejects when neither displayName nor email is given", () => {
-    expect(UpdateMemberProfileInput.safeParse({ memberId: UUID, reason: "noop" }).success).toBe(false);
+    expect(UpdateMemberProfileInput.safeParse({ memberId: UUID, reason: "no operation needed" }).success).toBe(false);
   });
   it("rejects an invalid email", () => {
     expect(
-      UpdateMemberProfileInput.safeParse({ memberId: UUID, email: "not-an-email", reason: "x" }).success,
+      UpdateMemberProfileInput.safeParse({ memberId: UUID, email: "not-an-email", reason: "fixing email typo" }).success,
+    ).toBe(false);
+  });
+  it("rejects a reason shorter than 10 chars", () => {
+    expect(
+      UpdateMemberProfileInput.safeParse({ memberId: UUID, displayName: "New Name", reason: "short" }).success,
     ).toBe(false);
   });
 });
@@ -204,6 +209,28 @@ describe("CreateUserInput", () => {
         email: "staff@ayam.my",
         displayName: "New Staff",
         role: "superhero",
+      }).success,
+    ).toBe(false);
+  });
+  it("accepts a valid clientOperationId UUID", () => {
+    expect(
+      CreateUserInput.safeParse({
+        organizationId: UUID,
+        email: "staff@ayam.my",
+        displayName: "New Staff",
+        role: "caretaker",
+        clientOperationId: "22222222-2222-2222-2222-222222222222",
+      }).success,
+    ).toBe(true);
+  });
+  it("rejects an invalid clientOperationId", () => {
+    expect(
+      CreateUserInput.safeParse({
+        organizationId: UUID,
+        email: "staff@ayam.my",
+        displayName: "New Staff",
+        role: "caretaker",
+        clientOperationId: "not-a-uuid",
       }).success,
     ).toBe(false);
   });
