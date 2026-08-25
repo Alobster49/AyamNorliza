@@ -1658,12 +1658,17 @@
         "title": "Every stop is done.",
         "delivered": "{count, plural, one {# delivered} other {# delivered}}",
         "couldNotDeliver": "{count, plural, one {# could not be delivered} other {# could not be delivered}}",
-        "wrapUp": "Head back to the yard and hand in {amount}."
+        "wrapUp": "Head back to the yard and hand in {amount}.",
+        "invoiceHint": "Open any delivered stop in the list above for its invoice."
       },
       "retryLabel": "Retry · {reason}",
       "atDoor": "At the door",
       "dwellMinutes": "{count, plural, one {# min} other {# min}}",
       "itemCount": "{count, plural, one {# item} other {# items}}",
+      "startRun": {
+        "hint": "Check the route below, then pull out.",
+        "button": "Start delivering"
+      },
       "actions": {
         "call": "Call",
         "navigate": "Navigate",
@@ -1683,7 +1688,8 @@
         "failed": "Failed",
         "cancelled": "Cancelled",
         "hereNow": "Here now",
-        "toDo": "To do"
+        "toDo": "To do",
+        "invoice": "Invoice"
       },
       "deliverSheet": {
         "title": "Proof of delivery",
@@ -1695,7 +1701,12 @@
         "photoUploading": "Uploading…",
         "photoReplace": "Photo attached · replace",
         "photoTake": "Take a photo",
-        "confirm": "Confirm delivery"
+        "confirm": "Confirm delivery",
+        "itemFallback": "Item",
+        "weightPlaceholder": "Weight (kg)",
+        "weightPlaceholderKg": "Weighed {weight} kg at the warehouse",
+        "piecesPlaceholder": "{count} pcs",
+        "liveTotal": "Total to collect"
       },
       "failSheet": {
         "subtitle": "{name} · the order stays open, the office is told now",
@@ -1713,7 +1724,10 @@
         "deliverFailedTitle": "Could not record the delivery",
         "deliveredTitle": "Delivered to {name}",
         "failFailedTitle": "Could not report the stop",
-        "reportedTitle": "Reported to the office"
+        "reportedTitle": "Reported to the office",
+        "startRunFailedTitle": "Could not start the run",
+        "startedTitle": "Run started. Drive safe.",
+        "weightsMissingTitle": "Weights missing"
       }
     },
     "client": {

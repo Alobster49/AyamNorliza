@@ -1679,12 +1679,17 @@
         "title": "Semua perhentian selesai.",
         "delivered": "{count, plural, other {# dihantar}}",
         "couldNotDeliver": "{count, plural, other {# tidak dapat dihantar}}",
-        "wrapUp": "Pulang ke garaj dan serahkan {amount}."
+        "wrapUp": "Pulang ke garaj dan serahkan {amount}.",
+        "invoiceHint": "Buka mana-mana hantaran selesai dalam senarai di atas untuk invoisnya."
       },
       "retryLabel": "Cuba lagi · {reason}",
       "atDoor": "Di pintu",
       "dwellMinutes": "{count, plural, other {# min}}",
       "itemCount": "{count, plural, other {# item}}",
+      "startRun": {
+        "hint": "Semak laluan di bawah, kemudian bertolak.",
+        "button": "Mula hantar"
+      },
       "actions": {
         "call": "Panggil",
         "navigate": "Navigasi",
@@ -1704,7 +1709,8 @@
         "failed": "Gagal",
         "cancelled": "Dibatalkan",
         "hereNow": "Di sini sekarang",
-        "toDo": "Belum selesai"
+        "toDo": "Belum selesai",
+        "invoice": "Invois"
       },
       "deliverSheet": {
         "title": "Bukti penghantaran",
@@ -1716,7 +1722,12 @@
         "photoUploading": "Memuat naik…",
         "photoReplace": "Foto dilampirkan · ganti",
         "photoTake": "Ambil foto",
-        "confirm": "Sahkan penghantaran"
+        "confirm": "Sahkan penghantaran",
+        "itemFallback": "Item",
+        "weightPlaceholder": "Berat (kg)",
+        "weightPlaceholderKg": "Ditimbang {weight} kg di gudang",
+        "piecesPlaceholder": "{count} ekor",
+        "liveTotal": "Jumlah kutipan"
       },
       "failSheet": {
         "subtitle": "{name} · pesanan kekal terbuka, pejabat sudah dimaklumkan",
@@ -1734,7 +1745,10 @@
         "deliverFailedTitle": "Tidak dapat merekod penghantaran",
         "deliveredTitle": "Sampai kepada {name}",
         "failFailedTitle": "Tidak dapat melaporkan perhentian",
-        "reportedTitle": "Dilaporkan kepada pejabat"
+        "reportedTitle": "Dilaporkan kepada pejabat",
+        "startRunFailedTitle": "Tidak dapat mulakan trip",
+        "startedTitle": "Trip bermula. Pandu selamat.",
+        "weightsMissingTitle": "Berat belum diisi"
       }
     },
     "client": {
