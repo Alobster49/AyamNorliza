@@ -378,6 +378,9 @@ export const ConfirmOrderSchema = z.object({
       z.object({
         itemId: z.string().uuid(),
         available: z.boolean(),
+        // Required by confirm_order for every line that survives (SQL enforces
+        // the unavailable-and-cancel exemption).
+        pricePerKg: z.number().positive().max(10000).optional(),
       }),
     )
     .min(1),
@@ -408,7 +411,8 @@ export const CloseOrderSchema = z.object({
         itemId: z.string().uuid(),
         finalWeightKg: z.number().positive().max(10000),
         finalPieces: z.number().int().positive().optional(),
-        pricePerKg: z.number().nonnegative().max(10000),
+        // Optional: the confirm-time price stands unless overridden here.
+        pricePerKg: z.number().nonnegative().max(10000).optional(),
       }),
     )
     .min(1),

@@ -198,6 +198,28 @@ describe("ConfirmOrderSchema", () => {
     });
     expect(result.success).toBe(true);
   });
+
+  it("accepts a decision carrying a confirm-time price", () => {
+    const result = ConfirmOrderSchema.safeParse({
+      organizationSlug: "ayam-norliza-pilot",
+      orderId: "11111111-1111-1111-1111-111111111111",
+      decisions: [
+        { itemId: "22222222-2222-2222-2222-222222222222", available: true, pricePerKg: 11.5 },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a zero pricePerKg (must be positive when given)", () => {
+    const result = ConfirmOrderSchema.safeParse({
+      organizationSlug: "ayam-norliza-pilot",
+      orderId: "11111111-1111-1111-1111-111111111111",
+      decisions: [
+        { itemId: "22222222-2222-2222-2222-222222222222", available: true, pricePerKg: 0 },
+      ],
+    });
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("CloseOrderSchema", () => {
@@ -225,6 +247,20 @@ describe("CloseOrderSchema", () => {
           itemId: "22222222-2222-2222-2222-222222222222",
           finalWeightKg: 12,
           pricePerKg: 0,
+        },
+      ],
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a line without pricePerKg (confirm-time price stands)", () => {
+    const result = CloseOrderSchema.safeParse({
+      organizationSlug: "ayam-norliza-pilot",
+      orderId: "11111111-1111-1111-1111-111111111111",
+      lines: [
+        {
+          itemId: "22222222-2222-2222-2222-222222222222",
+          finalWeightKg: 12,
         },
       ],
     });

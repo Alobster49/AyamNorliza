@@ -275,6 +275,8 @@ function confirmMessageKey(rawMessage: string): string {
       return "errors.orders.confirm.invalidStatus";
     case "decisions_incomplete":
       return "errors.orders.confirm.decisionsIncomplete";
+    case "invalid_price":
+      return "errors.orders.confirm.invalidPrice";
     default:
       return "errors.orders.confirm.internal";
   }
@@ -302,7 +304,11 @@ export async function confirmOrder(rawInput: unknown): Promise<ActionResult> {
   // supabase/migrations/20260810000002_order_pipeline_functions.sql.
   const { error } = await supabase.rpc("confirm_order", {
     p_order: input.orderId,
-    p_decisions: input.decisions.map((d) => ({ item_id: d.itemId, available: d.available })),
+    p_decisions: input.decisions.map((d) => ({
+      item_id: d.itemId,
+      available: d.available,
+      price_per_kg: d.pricePerKg ?? null,
+    })),
   });
 
   if (error) {
@@ -760,7 +766,7 @@ export async function closeOrder(
       item_id: l.itemId,
       final_weight_kg: l.finalWeightKg,
       final_pieces: l.finalPieces ?? null,
-      price_per_kg: l.pricePerKg,
+      price_per_kg: l.pricePerKg ?? null,
     })),
   });
 
