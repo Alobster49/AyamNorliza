@@ -1455,7 +1455,6 @@ export type Database = {
           market_margin_value: number | null
           name: string
           organization_id: string
-          price_per_unit: number
           product_id: string
           unit_type: string
           updated_at: string
@@ -1471,7 +1470,6 @@ export type Database = {
           market_margin_value?: number | null
           name: string
           organization_id: string
-          price_per_unit: number
           product_id: string
           unit_type?: string
           updated_at?: string
@@ -1487,7 +1485,6 @@ export type Database = {
           market_margin_value?: number | null
           name?: string
           organization_id?: string
-          price_per_unit?: number
           product_id?: string
           unit_type?: string
           updated_at?: string
