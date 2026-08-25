@@ -178,7 +178,7 @@
     "pricing": {
       "perKg": "/kg",
       "perPiece": "/ekor",
-      "whyEstimate": "Kenapa harga anggaran?",
+      "whyEstimate": "Bagaimana harga ditetapkan?",
       "weighed": "Ditimbang {weight} × {pricePerKg}/kg",
       "afterWeighing": "Harga selepas timbang",
       "gotIt": "Faham!",
@@ -188,7 +188,7 @@
         "weighTitle": "Kami timbang bila sedia",
         "weighBody": "Setiap ekor ditimbang betul-betul sebelum dihantar.",
         "priceTitle": "Harga ikut berat sebenar",
-        "priceBody": "Harga akhir = berat sebenar × harga/kg. Tanda ~ maksudnya anggaran."
+        "priceBody": "Harga akhir = berat sebenar × harga/kg yang disahkan penjual untuk pesanan anda."
       }
     },
     "orderTracker": {

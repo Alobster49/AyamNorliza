@@ -152,7 +152,7 @@ declare const messages: {
       "checkout": "Continue to checkout",
       "title": "Your Cart",
       "viewCart": "View cart",
-      "barSummary": "{count, plural, one {# item} other {# items}} · {total}"
+      "barSummary": "{count, plural, one {# item} other {# items}} in cart"
     },
     "sheet": {
       "close": "Close",
@@ -181,7 +181,7 @@ declare const messages: {
     "pricing": {
       "perKg": "/kg",
       "perPiece": "/piece",
-      "whyEstimate": "Why an estimated price?",
+      "whyEstimate": "How is the price set?",
       "weighed": "Weighed {weight} × {pricePerKg}/kg",
       "afterWeighing": "Price after weighing",
       "gotIt": "Got it!",
@@ -191,7 +191,7 @@ declare const messages: {
         "weighTitle": "We weigh it when it's ready",
         "weighBody": "Every bird is weighed precisely before delivery.",
         "priceTitle": "Price follows actual weight",
-        "priceBody": "Final price = actual weight × price/kg. The ~ mark means an estimate."
+        "priceBody": "Final price = actual weight × the price/kg your seller confirms for your order."
       }
     },
     "orderTracker": {
@@ -269,7 +269,7 @@ declare const messages: {
       "slotsRemaining": "{count, plural, one {# slot left} other {# slots left}}",
       "addNotes": "+ Add notes",
       "notesPlaceholder": "Any special instructions for your order?",
-      "estimateLabel": "Estimate",
+      "estimateLabel": "Price confirmed after weighing",
       "estimatePlaceholder": "—",
       "submitting": "Submitting…",
       "stageAccount": "Fill in your account",
@@ -520,6 +520,7 @@ declare const messages: {
         "invalidStatus": "This order is not in the right status for that action.",
         "forbidden": "You do not have permission to do that.",
         "decisionsIncomplete": "Every line needs a stock decision before you can confirm.",
+        "invalidPrice": "Every remaining line needs a price per kg above zero.",
         "internal": "Something went wrong. Please try again."
       },
       "cancel": {
@@ -1523,12 +1524,16 @@ declare const messages: {
         "available": "Available",
         "notAvailable": "Not available",
         "resultingFallback": "Resulting fallback: {fallback}",
+        "pricePerKg": "Price / kg (RM)",
+        "marketToday": "Market today: {price}",
+        "enterToConfirm": "Enter a price on every remaining line to confirm.",
         "confirming": "Confirming…",
         "confirmOrder": "Confirm order",
         "confirmedToast": "Order confirmed"
       },
       "confirmedReady": {
         "orderLines": "Order lines",
+        "perKg": "{price}/kg",
         "item": "Item",
         "cancelled": "Cancelled",
         "asOrdered": "As ordered",

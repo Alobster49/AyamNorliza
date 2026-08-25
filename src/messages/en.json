@@ -178,7 +178,7 @@
     "pricing": {
       "perKg": "/kg",
       "perPiece": "/piece",
-      "whyEstimate": "Why an estimated price?",
+      "whyEstimate": "How is the price set?",
       "weighed": "Weighed {weight} × {pricePerKg}/kg",
       "afterWeighing": "Price after weighing",
       "gotIt": "Got it!",
@@ -188,7 +188,7 @@
         "weighTitle": "We weigh it when it's ready",
         "weighBody": "Every bird is weighed precisely before delivery.",
         "priceTitle": "Price follows actual weight",
-        "priceBody": "Final price = actual weight × price/kg. The ~ mark means an estimate."
+        "priceBody": "Final price = actual weight × the price/kg your seller confirms for your order."
       }
     },
     "orderTracker": {
