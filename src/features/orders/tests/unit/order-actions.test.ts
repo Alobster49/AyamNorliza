@@ -124,13 +124,13 @@ describe("confirmOrder", () => {
     const result = await confirmOrder({
       organizationSlug: "ayam-norliza-pilot",
       orderId: ORDER_ID,
-      decisions: [{ itemId: ITEM_ID, available: true }],
+      decisions: [{ itemId: ITEM_ID, available: true, pricePerKg: 11.5 }],
     });
 
     expect(result).toEqual({ ok: true, data: undefined });
     expect(supabase.rpc).toHaveBeenCalledWith("confirm_order", {
       p_order: ORDER_ID,
-      p_decisions: [{ item_id: ITEM_ID, available: true }],
+      p_decisions: [{ item_id: ITEM_ID, available: true, price_per_kg: 11.5 }],
     });
   });
 });

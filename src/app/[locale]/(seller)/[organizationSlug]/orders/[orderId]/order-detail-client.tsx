@@ -289,7 +289,38 @@ function PendingPanel({
   const [availability, setAvailability] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(order.items.map((item) => [item.id, true])),
   );
+  const [prices, setPrices] = useState<Record<string, string>>(() =>
+    Object.fromEntries(order.items.map((item) => [item.id, ""])),
+  );
+  const [hints, setHints] = useState<MarketSuggestion[]>([]);
   const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    // Hints are a nice-to-have: a failed load just means no chips.
+    let alive = true;
+    getPriceHints(organizationSlug).then((result) => {
+      if (alive && result.ok) setHints(result.data);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [organizationSlug]);
+
+  function parsePrice(value: string): number | null {
+    if (value.trim() === "") return null;
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  // A line needs a price unless it is about to be cancelled outright.
+  function needsPrice(item: OrderWithItems["items"][number]): boolean {
+    const available = availability[item.id] ?? true;
+    return available || item.fallback !== "cancel";
+  }
+
+  const allPriced = order.items.every(
+    (item) => !needsPrice(item) || parsePrice(prices[item.id] ?? "") != null,
+  );
 
   async function handleConfirm() {
     setConfirming(true);
@@ -299,6 +330,7 @@ function PendingPanel({
       decisions: order.items.map((item) => ({
         itemId: item.id,
         available: availability[item.id] ?? true,
+        pricePerKg: needsPrice(item) ? (parsePrice(prices[item.id] ?? "") ?? undefined) : undefined,
       })),
     });
     setConfirming(false);
@@ -352,17 +384,55 @@ function PendingPanel({
                   {t("resultingFallback", { fallback: tFallback(item.fallback) })}
                 </Badge>
               )}
+              {needsPrice(item) && (
+                <div className="mt-3 max-w-xs space-y-1">
+                  <Label className="text-xs">{t("pricePerKg")}</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={prices[item.id] ?? ""}
+                    onChange={(e) =>
+                      setPrices((prev) => ({ ...prev, [item.id]: e.target.value }))
+                    }
+                  />
+                  {(() => {
+                    const hint = pickPriceHint(hints, item.product?.name);
+                    if (hint == null) return null;
+                    return (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-600 hover:bg-blue-500/20 dark:text-blue-400"
+                        onClick={() =>
+                          setPrices((prev) => ({ ...prev, [item.id]: String(hint) }))
+                        }
+                      >
+                        <Zap className="h-3 w-3" aria-hidden />
+                        {t("marketToday", { price: formatPrice(hint) })}
+                      </button>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
           );
         })}
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Button className="w-full sm:w-auto" size="lg" disabled={confirming} onClick={handleConfirm}>
+        <Button
+          className="w-full sm:w-auto"
+          size="lg"
+          disabled={confirming || !allPriced}
+          onClick={handleConfirm}
+        >
           {confirming ? t("confirming") : t("confirmOrder")}
         </Button>
         <CancelOrderDialog organizationSlug={organizationSlug} orderId={order.id} onReload={onReload} />
       </div>
+      {!allPriced && (
+        <p className="text-xs text-muted-foreground">{t("enterToConfirm")}</p>
+      )}
     </div>
   );
 }
@@ -389,6 +459,12 @@ function ConfirmedReadyPanel({
               <span>
                 {item.product?.name ?? t("item")} —{" "}
                 {item.mode === "kg" ? formatWeight(item.quantity) : tUnits("pieces", { count: item.quantity })}
+                {!item.is_cancelled && item.price_per_kg != null && (
+                  <span className="text-muted-foreground">
+                    {" · "}
+                    {t("perKg", { price: formatPrice(item.price_per_kg) })}
+                  </span>
+                )}
               </span>
               {item.is_cancelled ? (
                 <Badge variant="destructive">{t("cancelled")}</Badge>
@@ -451,7 +527,7 @@ function DeliveredPanel({
         {
           finalWeightKg: item.warehouse_weight_kg != null ? String(item.warehouse_weight_kg) : "",
           finalPieces: item.warehouse_pieces != null ? String(item.warehouse_pieces) : "",
-          pricePerKg: "",
+          pricePerKg: item.price_per_kg != null ? String(item.price_per_kg) : "",
         },
       ]),
     ),

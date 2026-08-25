@@ -517,6 +517,7 @@
         "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
         "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
         "decisionsIncomplete": "Setiap baris memerlukan keputusan stok sebelum anda boleh sahkan.",
+        "invalidPrice": "Setiap baris yang diteruskan memerlukan harga sekilo melebihi sifar.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi."
       },
       "cancel": {
@@ -1541,12 +1542,16 @@
         "available": "Ada",
         "notAvailable": "Tiada",
         "resultingFallback": "Tindakan gantian: {fallback}",
+        "pricePerKg": "Harga / kg (RM)",
+        "marketToday": "Harga pasaran hari ini: {price}",
+        "enterToConfirm": "Masukkan harga pada setiap baris yang diteruskan untuk mengesahkan.",
         "confirming": "Mengesahkan…",
         "confirmOrder": "Sahkan pesanan",
         "confirmedToast": "Pesanan disahkan"
       },
       "confirmedReady": {
         "orderLines": "Baris pesanan",
+        "perKg": "{price}/kg",
         "item": "Item",
         "cancelled": "Dibatalkan",
         "asOrdered": "Seperti ditempah",

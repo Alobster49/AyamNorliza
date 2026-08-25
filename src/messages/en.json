@@ -517,6 +517,7 @@
         "invalidStatus": "This order is not in the right status for that action.",
         "forbidden": "You do not have permission to do that.",
         "decisionsIncomplete": "Every line needs a stock decision before you can confirm.",
+        "invalidPrice": "Every remaining line needs a price per kg above zero.",
         "internal": "Something went wrong. Please try again."
       },
       "cancel": {
@@ -1520,12 +1521,16 @@
         "available": "Available",
         "notAvailable": "Not available",
         "resultingFallback": "Resulting fallback: {fallback}",
+        "pricePerKg": "Price / kg (RM)",
+        "marketToday": "Market today: {price}",
+        "enterToConfirm": "Enter a price on every remaining line to confirm.",
         "confirming": "Confirming…",
         "confirmOrder": "Confirm order",
         "confirmedToast": "Order confirmed"
       },
       "confirmedReady": {
         "orderLines": "Order lines",
+        "perKg": "{price}/kg",
         "item": "Item",
         "cancelled": "Cancelled",
         "asOrdered": "As ordered",
