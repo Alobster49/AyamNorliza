@@ -13,13 +13,14 @@ import {
 } from "@/features/identity-access/server/actions";
 import { ROLES } from "@/lib/auth/permissions";
 import { roleLabelKey } from "@/features/access-control/components/role-label";
-import type { Invitation, MemberScope, OrganizationMember } from "../types";
+import type { Invitation, MemberScope } from "../types";
+import type { MemberDirectoryRow } from "../directory";
 import { ReauthDialog } from "@/components/forms/reauth-dialog";
 
 export function UsersPageClient(props: {
   organizationId: string;
   organizationSlug: string;
-  members: OrganizationMember[];
+  members: MemberDirectoryRow[];
   invitations: Invitation[];
   scopes: MemberScope[];
 }) {
@@ -124,7 +125,13 @@ export function UsersPageClient(props: {
         <tbody>
           {props.members.map((m) => (
             <tr key={m.id}>
-              <td><code>{m.userId}</code></td>
+              <td>
+                <div title={m.userId}>
+                  <strong>{m.displayName ?? t("unknownUser")}</strong>
+                  <br />
+                  <span className="text-muted-foreground">{m.email ?? "—"}</span>
+                </div>
+              </td>
               <td>
                 <select defaultValue={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
                   {ROLES.map((r) => (

@@ -790,6 +790,7 @@
     "usersPage": {
       "inviteUser": "Invite user",
       "membersHeading": "Members ({count})",
+      "unknownUser": "Unknown user",
       "colUser": "User",
       "colRole": "Role",
       "colStatus": "Status",

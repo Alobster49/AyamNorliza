@@ -795,6 +795,7 @@
     "usersPage": {
       "inviteUser": "Jemput pengguna",
       "membersHeading": "Ahli ({count})",
+      "unknownUser": "Pengguna tidak dikenali",
       "colUser": "Pengguna",
       "colRole": "Peranan",
       "colStatus": "Status",
