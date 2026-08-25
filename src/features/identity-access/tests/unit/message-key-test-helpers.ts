@@ -50,6 +50,7 @@ export function mockSupabaseWithQueues({
         data: { user: userId ? { id: userId } : null },
         error: null,
       }),
+      resetPasswordForEmail: vi.fn(async () => ({ data: {}, error: null })),
     },
     from,
   };

@@ -79,6 +79,14 @@
       "expired": "Pautan jemputan ini sudah tamat tempoh. Minta pemilik organisasi hantar yang baharu.",
       "failureTitle": "Tidak dapat menerima jemputan"
     },
+    "setPassword": {
+      "title": "Tetapkan kata laluan baharu",
+      "passwordLabel": "Kata laluan baharu",
+      "confirmLabel": "Sahkan kata laluan",
+      "submit": "Simpan kata laluan",
+      "saving": "Menyimpan…",
+      "mismatch": "Kata laluan tidak sepadan"
+    },
     "errors": {
       "invalidCredentials": "E-mel dan kata laluan itu tidak sepadan.",
       "rateLimited": "Terlalu banyak cubaan. Cuba lagi dalam beberapa minit.",
@@ -426,7 +434,9 @@
         "emailInUse": "E-mel itu sudah digunakan",
         "updateFailed": "Tidak dapat mengemas kini ahli",
         "cannotRemoveSelf": "Anda tidak boleh membuang akaun anda sendiri",
-        "removeFailed": "Tidak dapat membuang ahli"
+        "removeFailed": "Tidak dapat membuang ahli",
+        "noEmail": "Ahli ini tiada alamat e-mel",
+        "resetFailed": "Tidak dapat menghantar e-mel tetapan semula"
       },
       "accessReview": {
         "itemNotFound": "Item semakan tidak dijumpai",

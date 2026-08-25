@@ -1022,6 +1022,79 @@ export async function removeMemberAction(
 }
 
 // ---------------------------------------------------------------------------
+// sendPasswordReset (admin-triggered recovery email; no reauth needed)
+// ---------------------------------------------------------------------------
+export async function sendPasswordResetAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ memberId: string }>> {
+  const parsed = SendPasswordResetInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const user = await requireUser();
+
+  const { data: target } = await supabase
+    .from("organization_members")
+    .select("id, organization_id, user_id")
+    .eq("id", input.memberId)
+    .maybeSingle();
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
+
+  const { data: actor } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", target.organization_id)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!actor || !can(actor.role as Role, "membership.invite")) {
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+
+  const emails = await adminGetMemberEmails([target.user_id]);
+  const email = emails.get(target.user_id);
+  if (!email) return err("conflict", "Member has no email", "errors.identity.member.noEmail");
+
+  const env = serverEnv();
+  const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${env.INVITE_BASE_URL}/auth/callback?next=/set-password`,
+  });
+  if (resetErr) return err("internal", resetErr.message, "errors.identity.member.resetFailed");
+
+  const ctx = await ctxFor(user.id);
+  await admin.insertAuthSecurityEvent(
+    {
+      userId: target.user_id,
+      organizationId: target.organization_id,
+      eventType: "password_reset",
+      ip: null,
+      userAgent: null,
+      geoCountry: null,
+      metadata: { triggered_by: user.id },
+    },
+    ctx,
+  );
+  await recordAudit(
+    {
+      organizationId: target.organization_id,
+      actorUserId: user.id,
+      actorRole: actor.role,
+      eventType: "identity.password_reset_sent",
+      entityType: "organization_members",
+      entityId: target.id,
+      after: { email_sent: true },
+      correlationId: ctx.correlationId,
+      source: "web",
+    },
+    ctx,
+  );
+
+  return ok({ memberId: target.id });
+}
+
+// ---------------------------------------------------------------------------
 // 10. startAccessReview
 // ---------------------------------------------------------------------------
 export async function startAccessReviewAction(

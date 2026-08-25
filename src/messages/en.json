@@ -79,6 +79,14 @@
       "expired": "This invitation link has expired. Ask your organization owner to send a new one.",
       "failureTitle": "Could not accept invitation"
     },
+    "setPassword": {
+      "title": "Set a new password",
+      "passwordLabel": "New password",
+      "confirmLabel": "Confirm password",
+      "submit": "Save password",
+      "saving": "Saving…",
+      "mismatch": "Passwords do not match"
+    },
     "errors": {
       "invalidCredentials": "That email and password combination did not match.",
       "rateLimited": "Too many attempts. Try again in a few minutes.",
@@ -426,7 +434,9 @@
         "emailInUse": "That email is already in use",
         "updateFailed": "Could not update the member",
         "cannotRemoveSelf": "You cannot remove your own account",
-        "removeFailed": "Could not remove the member"
+        "removeFailed": "Could not remove the member",
+        "noEmail": "This member has no email address",
+        "resetFailed": "Could not send the reset email"
       },
       "accessReview": {
         "itemNotFound": "Review item not found",

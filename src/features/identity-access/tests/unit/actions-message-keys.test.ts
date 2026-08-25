@@ -38,6 +38,7 @@ vi.mock("@/lib/auth/reauth.server", async () => {
 });
 
 vi.mock("@/lib/audit/events", () => ({ recordAudit: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({ admin: { insertAuthSecurityEvent: vi.fn() } }));
 vi.mock("@/lib/notifications/dispatch", () => ({ dispatch: vi.fn() }));
 vi.mock("../../server/admin-queries", () => ({
   adminCreateInvitation: vi.fn(),
@@ -63,7 +64,12 @@ vi.mock("@/lib/env", () => ({
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser, requireOrgMember, PermissionError } from "@/lib/auth/require-user";
 import { requireReauth, ReauthRequiredError } from "@/lib/auth/reauth.server";
-import { adminCreateInvitation, adminUpdateMemberIdentity, adminDeleteOrgMember } from "../../server/admin-queries";
+import {
+  adminCreateInvitation,
+  adminUpdateMemberIdentity,
+  adminDeleteOrgMember,
+  adminGetMemberEmails,
+} from "../../server/admin-queries";
 import { mockSupabaseWithQueues, type QueryResult } from "./message-key-test-helpers";
 import {
   updateOrganizationSettingsAction,
@@ -76,6 +82,7 @@ import {
   deactivateUserAction,
   updateMemberProfileAction,
   removeMemberAction,
+  sendPasswordResetAction,
   startAccessReviewAction,
   decideReviewItemAction,
   openSupportSessionAction,
@@ -409,6 +416,44 @@ describe("removeMemberAction", () => {
     const result = await removeMemberAction(validInput);
     expect(result.ok).toBe(true);
     expect(adminDeleteOrgMember).toHaveBeenCalledWith(UUID, expect.anything());
+  });
+});
+
+describe("sendPasswordResetAction", () => {
+  const UUID = "11111111-1111-1111-1111-111111111111";
+  const TARGET = { data: { id: UUID, organization_id: "org-1", user_id: "u-target" }, error: null };
+
+  it("returns member.notFound for an unknown member", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.notFound");
+  });
+
+  it("returns common.forbidden when the actor cannot invite", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("caretaker")] });
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
+  });
+
+  it("returns member.noEmail when the target has no auth email", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminGetMemberEmails).mockResolvedValue(new Map([["u-target", null]]));
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.noEmail");
+  });
+
+  it("sends the reset email for an org_admin", async () => {
+    const supabase = setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminGetMemberEmails).mockResolvedValue(new Map([["u-target", "t@x.my"]]));
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(true);
+    expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith(
+      "t@x.my",
+      expect.objectContaining({ redirectTo: expect.stringContaining("/auth/callback?next=/set-password") }),
+    );
   });
 });
 
