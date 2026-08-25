@@ -16,6 +16,15 @@ import { customerName, liveItemCount, orderWeightKg, sortedRunOrders } from "./r
 
 export type StopOutcome = "delivered" | "failed" | "cancelled" | "pending";
 
+export type StopItem = {
+  itemId: string;
+  productName: string | null;
+  mode: "piece" | "kg";
+  quantity: number;
+  warehouseWeightKg: number | null;
+  pricePerKg: number | null;
+};
+
 // ---------------------------------------------------------------------------
 // Per-stop reads
 // ---------------------------------------------------------------------------
@@ -69,6 +78,16 @@ function isResolved(order: OrderWithItems): boolean {
 // The deck
 // ---------------------------------------------------------------------------
 
+/** Live door total while the driver keys weights. Entries missing either side count 0. */
+export function linesTotal(entries: { weightKg: number | null; pricePerKg: number | null }[]): number {
+  const sum = entries.reduce(
+    (acc, entry) =>
+      entry.weightKg !== null && entry.pricePerKg !== null ? acc + entry.weightKg * entry.pricePerKg : acc,
+    0,
+  );
+  return Math.round(sum * 100) / 100;
+}
+
 export type DriverStop = {
   orderId: string;
   sequence: number;
@@ -85,6 +104,7 @@ export type DriverStop = {
   atStop: boolean;
   dwellMinutes: number | null;
   lastFailureReason: DeliveryAttempt["reason"];
+  items: StopItem[];
 };
 
 export type DriverDeck = {
@@ -103,6 +123,7 @@ export type DriverDeck = {
   progressPct: number;
   cashCollected: number;
   finished: boolean;
+  runStatus: RunWithOrders["status"];
 };
 
 export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): DriverDeck {
@@ -124,6 +145,16 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
     atStop: isAtStop(order),
     dwellMinutes: dwellMinutes(order, now),
     lastFailureReason: lastAttempt(order)?.reason ?? null,
+    items: (order.items ?? [])
+      .filter((item) => !item.is_cancelled)
+      .map((item) => ({
+        itemId: item.id,
+        productName: item.product?.name ?? null,
+        mode: item.mode,
+        quantity: item.quantity,
+        warehouseWeightKg: item.warehouse_weight_kg,
+        pricePerKg: item.price_per_kg,
+      })),
   }));
 
   // Standing at a stop beats route order: that is where the driver actually is.
@@ -169,5 +200,6 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
     progressPct: live.length === 0 ? 0 : (delivered / live.length) * 100,
     cashCollected,
     finished: current === null,
+    runStatus: run.status,
   };
 }
