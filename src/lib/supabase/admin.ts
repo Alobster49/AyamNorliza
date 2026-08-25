@@ -85,6 +85,31 @@ export const admin = {
   },
 
   /**
+   * Change a user's login email. Admin path: the change takes effect
+   * immediately (no confirmation email round-trip) because the actor is
+   * an org admin correcting staff data, not the user self-serving.
+   */
+  async updateUserEmail(userId: string, email: string) {
+    const c = client();
+    const { error } = await c.auth.admin.updateUserById(userId, {
+      email,
+      email_confirm: true,
+    });
+    if (error) throw error;
+  },
+
+  /**
+   * Delete an organization membership row (remove-from-org). No RLS
+   * DELETE policy exists on organization_members by design; the DB
+   * trigger still refuses to delete an active owner.
+   */
+  async deleteOrgMember(memberId: string, _ctx: AdminContext) {
+    const c = client();
+    const { error } = await c.from("organization_members").delete().eq("id", memberId);
+    if (error) throw error;
+  },
+
+  /**
    * Resolve auth emails for a set of user ids. Emails live only on
    * `auth.users`, which RLS-scoped clients cannot read — the break-glass
    * owner notification uses this to turn membership `user_id`s into
