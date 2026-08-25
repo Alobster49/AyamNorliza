@@ -13,6 +13,7 @@ import type {
   DeliveryRun,
   Truck,
   OrderWithItems,
+  DeliveryAttempt,
 } from "../types";
 
 type DriverErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
@@ -253,6 +254,57 @@ export async function deliverStop(
       final_weight_kg: line.finalWeightKg,
       final_pieces: line.finalPieces ?? null,
     })),
+  });
+}
+
+export type DriverInvoicePayload = {
+  organizationName: string;
+  order: OrderWithItems;
+  deliveredAttempt: DeliveryAttempt | null;
+};
+
+/**
+ * One delivered order, priced by the weights keyed at the door. RLS scopes
+ * drivers to their own runs' orders; the office sees its whole org.
+ */
+export async function getDriverInvoice(
+  organizationSlug: string,
+  orderId: string,
+): Promise<ActionResult<DriverInvoicePayload>> {
+  const ctx = await guard(organizationSlug);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
+
+  const supabase = await createSupabaseServerClient();
+  const [{ data: org }, { data: order, error }] = await Promise.all([
+    supabase.from("organizations").select("name").eq("id", ctx.orgId).single(),
+    supabase
+      .from("orders")
+      .select(
+        `
+        *,
+        zone:delivery_zones(*),
+        slot:delivery_slots(*),
+        customer:customers(id, name, phone),
+        items:order_items(*, product:products(id, name, image_url)),
+        attempts:delivery_attempts(*)
+      `,
+      )
+      .eq("id", orderId)
+      .eq("organization_id", ctx.orgId)
+      .maybeSingle(),
+  ]);
+
+  if (error) return err("internal", "Failed to load the invoice", "errors.drive.invoice.loadFailed");
+  if (!order) return err("not_found", "Order not found", "errors.drive.invoice.notFound");
+
+  const attempts = ((order.attempts ?? []) as DeliveryAttempt[])
+    .filter((attempt) => attempt.outcome === "delivered")
+    .sort((a, b) => a.attempted_at.localeCompare(b.attempted_at));
+
+  return ok({
+    organizationName: org?.name ?? organizationSlug,
+    order: order as OrderWithItems,
+    deliveredAttempt: attempts.at(-1) ?? null,
   });
 }
 

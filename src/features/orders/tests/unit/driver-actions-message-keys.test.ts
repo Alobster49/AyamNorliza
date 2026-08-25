@@ -24,7 +24,14 @@ vi.mock("../../server/guards", async () => {
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireOrgRole, OrderPermissionError } from "../../server/guards";
-import { getDriverRun, arriveStop, deliverStop, failStop, startRun } from "../../server/driver-actions";
+import {
+  getDriverRun,
+  arriveStop,
+  deliverStop,
+  failStop,
+  startRun,
+  getDriverInvoice,
+} from "../../server/driver-actions";
 
 function chain(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {};
@@ -278,5 +285,14 @@ describe("deliverStop weights", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidWeight");
+  });
+});
+
+describe("getDriverInvoice", () => {
+  it("returns forbidden messageKey when the guard rejects", async () => {
+    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Not authenticated"));
+    const result = await getDriverInvoice("org-slug", "order-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.unauthenticated");
   });
 });
