@@ -38,7 +38,7 @@ begin
   end if;
 
   update public.orders
-  set run_id = null, assignment_source = 'none'
+  set run_id = null, assignment_source = 'none', loaded_at = null, loaded_by = null
   where run_id = p_run and status <> 'ready';
 
   update public.delivery_runs set status = 'departed' where id = p_run;
