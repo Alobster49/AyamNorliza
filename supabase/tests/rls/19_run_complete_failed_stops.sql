@@ -43,6 +43,18 @@ insert into public.trucks (id, organization_id, name, code, created_by)
 values ('f9000000-0000-0000-0000-000000000007', 'f9000000-0000-0000-0000-00000000000a', 'Lori 9', 'TRK-RC9', 'f9000000-0000-0000-0000-000000000001')
 on conflict (id) do nothing;
 
+insert into public.categories (id, organization_id, name, created_by)
+values ('f9000000-0000-0000-0000-000000000004', 'f9000000-0000-0000-0000-00000000000a', 'Chicken', 'f9000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
+
+insert into public.products (id, organization_id, category_id, name, created_by)
+values ('f9000000-0000-0000-0000-000000000001', 'f9000000-0000-0000-0000-00000000000a', 'f9000000-0000-0000-0000-000000000004', 'Whole Chicken', 'f9000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
+
+insert into public.product_variants (id, organization_id, product_id, name, created_by)
+values ('f9000000-0000-0000-0000-000000000002', 'f9000000-0000-0000-0000-00000000000a', 'f9000000-0000-0000-0000-000000000001', 'Per kg', 'f9000000-0000-0000-0000-000000000001')
+on conflict (id) do nothing;
+
 insert into public.delivery_slots (id, organization_id, truck_id, weekday, start_time, end_time, created_by)
 values ('f9000000-0000-0000-0000-000000000008', 'f9000000-0000-0000-0000-00000000000a', 'f9000000-0000-0000-0000-000000000007', 1, '09:00', '12:00', 'f9000000-0000-0000-0000-000000000001')
 on conflict (id) do nothing;
@@ -60,6 +72,12 @@ values
   ('f9000000-0000-0000-0000-000000000023', 'f9000000-0000-0000-0000-00000000000a', 'f9000000-0000-0000-0000-000000000005', 'f9000000-0000-0000-0000-000000000001', 'manual', 'ready', 'f9000000-0000-0000-0000-000000000006', '3 Jalan Tiga', current_date + 1, 'f9000000-0000-0000-0000-000000000008', 'f9000000-0000-0000-0000-000000000007', 'f9000000-0000-0000-0000-000000000010', 'manual', 0, now(), 'f9000000-0000-0000-0000-000000000001')
 on conflict (id) do nothing;
 
+-- Order items for test orders (needed for driver_deliver_stop weight validation)
+insert into public.order_items (id, order_id, product_id, mode, quantity, size_min_kg, size_max_kg, fallback, price_per_kg)
+values
+  ('f9000000-0000-0000-0000-000000000031', 'f9000000-0000-0000-0000-000000000022', 'f9000000-0000-0000-0000-000000000001', 'kg', 11, 1.0, 2.0, 'mix', 24.00)
+on conflict (id) do nothing;
+
 -- ---------------------------------------------------------------------------
 -- The driver fails stop 021 and delivers stop 022.
 -- ---------------------------------------------------------------------------
@@ -72,7 +90,14 @@ select lives_ok(
 );
 
 select lives_ok(
-  $$ select public.driver_deliver_stop('f9000000-0000-0000-0000-000000000022', 'Pak Din') $$,
+  $$ select public.driver_deliver_stop(
+       'f9000000-0000-0000-0000-000000000022',
+       'Pak Din',
+       null,
+       null,
+       null,
+       '[{"item_id": "f9000000-0000-0000-0000-000000000031", "final_weight_kg": 11, "final_pieces": null}]'::jsonb
+     ) $$,
   'the driver can record a delivered stop'
 );
 

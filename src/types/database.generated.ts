@@ -2001,12 +2001,13 @@ export type Database = {
       driver_deliver_stop: {
         Args: {
           p_cash_collected?: number
+          p_lines?: Json
           p_order: string
           p_photo_path?: string
           p_received_by?: string
           p_signature_path?: string
         }
-        Returns: undefined
+        Returns: number
       }
       driver_fail_stop: {
         Args: {
@@ -2018,6 +2019,7 @@ export type Database = {
         Returns: undefined
       }
       driver_run_ids: { Args: never; Returns: string[] }
+      driver_start_run: { Args: { p_run: string }; Returns: undefined }
       effective_capabilities:
         | { Args: { p_org: string }; Returns: Json }
         | { Args: { p_org: string; p_role: string }; Returns: Json }
