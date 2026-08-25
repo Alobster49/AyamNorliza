@@ -1,26 +1,11 @@
 import { describe, expect, it } from "vitest";
-import {
-  formatPrice,
-  formatQuantity,
-  formatVariantPrice,
-  isValidQuantity,
-  lineSubtotal,
-} from "../../lib/pricing";
+import { formatPrice, formatQuantity, isValidQuantity, lineSubtotal } from "../../lib/pricing";
 
 describe("formatPrice", () => {
   it("formats MYR with two decimals", () => {
     // Intl may use a non-breaking space; match flexibly.
     expect(formatPrice(12)).toMatch(/^RM\s?12\.00$/);
     expect(formatPrice(1234.5)).toMatch(/^RM\s?1,234\.50$/);
-  });
-});
-
-describe("formatVariantPrice", () => {
-  it("suffixes /kg for per_kg", () => {
-    expect(formatVariantPrice(12, "per_kg")).toBe(`${formatPrice(12)} /kg`);
-  });
-  it("suffixes each for per_piece", () => {
-    expect(formatVariantPrice(25, "per_piece")).toBe(`${formatPrice(25)} each`);
   });
 });
 

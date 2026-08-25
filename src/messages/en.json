@@ -149,7 +149,7 @@
       "checkout": "Continue to checkout",
       "title": "Your Cart",
       "viewCart": "View cart",
-      "barSummary": "{count, plural, one {# item} other {# items}} · {total}"
+      "barSummary": "{count, plural, one {# item} other {# items}} in cart"
     },
     "sheet": {
       "close": "Close",
@@ -266,7 +266,7 @@
       "slotsRemaining": "{count, plural, one {# slot left} other {# slots left}}",
       "addNotes": "+ Add notes",
       "notesPlaceholder": "Any special instructions for your order?",
-      "estimateLabel": "Estimate",
+      "estimateLabel": "Price confirmed after weighing",
       "estimatePlaceholder": "—",
       "submitting": "Submitting…",
       "stageAccount": "Fill in your account",

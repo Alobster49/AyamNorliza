@@ -57,22 +57,3 @@ export async function getMarketSuggestions(orgId: string): Promise<MarketSuggest
   if (error) throw new Error(error.message);
   return data ?? [];
 }
-
-/**
- * Apply a suggested price to a variant. Always user-initiated — the sync
- * job never touches price_per_unit. RLS restricts the update to sellers
- * of the variant's org.
- */
-export async function applySuggestedPrice(variantId: string, price: number, orgSlug?: string) {
-  if (!Number.isFinite(price) || price <= 0) throw new Error("Invalid price");
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("product_variants")
-    .update({ price_per_unit: Math.round(price * 100) / 100 })
-    .eq("id", variantId);
-  if (error) throw new Error(error.message);
-  if (orgSlug) {
-    revalidatePath(`/${orgSlug}/market-prices`);
-    revalidatePath(`/${orgSlug}/products`);
-  }
-}

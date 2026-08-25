@@ -1,10 +1,9 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { AlertTriangle } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -14,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { applySuggestedPrice, setMarketState } from "@/features/market/server/actions";
+import { setMarketState } from "@/features/market/server/actions";
 import { priceDelta, sparklinePoints } from "@/features/market/lib/market-model";
 import {
   MARKET_ITEMS,
@@ -47,7 +46,6 @@ export function MarketPricesClient({
   const { toast } = useToast();
   const t = useTranslations("market");
   const [isPending, startTransition] = useTransition();
-  const [applyingId, setApplyingId] = useState<string | null>(null);
 
   const byItem = useMemo(() => {
     const map = new Map<number, MarketPriceRow[]>();
@@ -73,26 +71,6 @@ export function MarketPricesClient({
           description: error instanceof Error ? error.message : String(error),
           variant: "destructive",
         });
-      }
-    });
-  };
-
-  const handleApply = (s: MarketSuggestion) => {
-    if (s.suggested_price == null) return;
-    setApplyingId(s.variant_id);
-    startTransition(async () => {
-      try {
-        await applySuggestedPrice(s.variant_id, s.suggested_price!, organizationSlug);
-        toast({ title: t("priceUpdated", { price: formatPrice(s.suggested_price!) }) });
-        router.refresh();
-      } catch (error) {
-        toast({
-          title: t("error"),
-          description: error instanceof Error ? error.message : String(error),
-          variant: "destructive",
-        });
-      } finally {
-        setApplyingId(null);
       }
     });
   };
@@ -192,7 +170,6 @@ export function MarketPricesClient({
                     <th className="py-2 font-medium">{t("table.marketBase")}</th>
                     <th className="py-2 font-medium">{t("table.current")}</th>
                     <th className="py-2 font-medium">{t("table.suggested")}</th>
-                    <th className="py-2" />
                   </tr>
                 </thead>
                 <tbody>
@@ -201,8 +178,6 @@ export function MarketPricesClient({
                       s.suggested_price != null
                         ? priceDelta(s.current_price, s.suggested_price)
                         : null;
-                    const matches =
-                      s.suggested_price != null && delta !== null && delta.amount === 0;
                     return (
                       <tr key={s.variant_id} className="border-t">
                         <td className="py-2">
@@ -231,17 +206,6 @@ export function MarketPricesClient({
                           ) : (
                             "—"
                           )}
-                        </td>
-                        <td className="py-2 text-right">
-                          <Button
-                            size="sm"
-                            disabled={
-                              s.suggested_price == null || matches || applyingId === s.variant_id
-                            }
-                            onClick={() => handleApply(s)}
-                          >
-                            {matches ? t("upToDate") : t("apply")}
-                          </Button>
                         </td>
                       </tr>
                     );

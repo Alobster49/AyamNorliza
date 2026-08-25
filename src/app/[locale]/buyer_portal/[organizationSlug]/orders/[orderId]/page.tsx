@@ -5,7 +5,7 @@ import { requireBuyerOrRedirect } from "@/lib/auth/buyer-auth";
 import { getMyOrder } from "@/features/orders/server/portal-actions";
 import { ORDER_STATUS_COLORS } from "@/features/orders/types";
 import { formatPrice, describeFallback } from "@/features/orders/lib/order-model";
-import { BUYER_FALLBACK_KEYS } from "@/features/buyer/lib/price-estimate";
+import { BUYER_FALLBACK_KEYS } from "@/features/buyer/types";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -44,6 +44,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
   const tCart = await getTranslations("buyer.cart");
   const tStatus = await getTranslations("status");
   const tProduct = await getTranslations("buyer.product");
+  const tPricing = await getTranslations("buyer.pricing");
   const format = await getFormatter();
 
   return (
@@ -143,7 +144,6 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                     {isClosed && item.final_weight_kg !== null && item.price_per_kg !== null && (
                       <div className="text-right">
                         <ScaleChip
-                          estimate={null}
                           final={{
                             total: Number(item.line_total),
                             weightKg: Number(item.final_weight_kg),
@@ -155,6 +155,14 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                             {t("quantityPieces", { count: Number(item.final_pieces) })}
                           </p>
                         )}
+                      </div>
+                    )}
+                    {!isClosed && order.status !== "pending" && item.price_per_kg !== null && (
+                      <div className="text-right">
+                        <p className="font-buyer-mono text-base font-medium">
+                          {formatPrice(Number(item.price_per_kg))}
+                          {tPricing("perKg")}
+                        </p>
                       </div>
                     )}
                   </div>

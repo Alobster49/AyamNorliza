@@ -19,10 +19,6 @@ export type CartLine = {
   sizeMinKg: number;
   sizeMaxKg: number;
   fallback: OrderFallback;
-  /** Indicative unit price captured at add-to-cart time, for estimate chips
-   *  only — placeOrder never sends it. Optional so v2 carts keep parsing. */
-  pricePerUnit?: number;
-  unitType?: "per_kg" | "per_piece";
 };
 
 // Validates localStorage-hydrated cart lines. A corrupt or stale shape
@@ -38,8 +34,6 @@ const CartLineSchema = z
     sizeMinKg: z.number().positive(),
     sizeMaxKg: z.number().positive(),
     fallback: z.enum(FALLBACKS),
-    pricePerUnit: z.number().positive().optional(),
-    unitType: z.enum(["per_kg", "per_piece"]).optional(),
   })
   .refine((v) => v.sizeMaxKg >= v.sizeMinKg, { message: "sizeMaxKg must be >= sizeMinKg" })
   .refine((v) => v.mode !== "piece" || Number.isInteger(v.quantity), {
@@ -92,8 +86,7 @@ function sameLine(a: CartLine, b: CartLine) {
     a.mode === b.mode &&
     a.sizeMinKg === b.sizeMinKg &&
     a.sizeMaxKg === b.sizeMaxKg &&
-    a.fallback === b.fallback &&
-    a.pricePerUnit === b.pricePerUnit
+    a.fallback === b.fallback
   );
 }
 

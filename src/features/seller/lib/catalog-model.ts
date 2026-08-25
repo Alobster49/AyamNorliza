@@ -3,7 +3,6 @@
  */
 
 import type { Category, Product, ProductVariant } from "../types";
-import { formatPrice } from "./pricing";
 
 export type CatalogProduct = Product & {
   variants: ProductVariant[];
@@ -65,28 +64,6 @@ export function matchesCatalogSearch(product: CatalogProduct, query: string): bo
     (product.category?.name ?? "").toLowerCase().includes(q) ||
     product.variants.some((v) => v.name.toLowerCase().includes(q))
   );
-}
-
-/**
- * Formatted price range plus variant count, or null when the product has no
- * variants. The caller renders the count through its own (localized) message.
- */
-export function priceRange(
-  product: CatalogProduct,
-): { range: string; count: number } | null {
-  if (product.variants.length === 0) return null;
-  const prices = product.variants.map((v) => Number(v.price_per_unit));
-  const min = Math.min(...prices);
-  const max = Math.max(...prices);
-  const range = min === max ? formatPrice(min) : `${formatPrice(min)} – ${formatPrice(max)}`;
-  return { range, count: product.variants.length };
-}
-
-/** "RM 9.50 – RM 16.00 · 3 sizes", or null when the product has no variants. */
-export function priceRangeLabel(product: CatalogProduct): string | null {
-  const parts = priceRange(product);
-  if (!parts) return null;
-  return `${parts.range} · ${parts.count} ${parts.count === 1 ? "size" : "sizes"}`;
 }
 
 export type CatalogSummary = {

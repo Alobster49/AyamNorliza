@@ -149,7 +149,7 @@
       "checkout": "Teruskan ke checkout",
       "title": "Troli Anda",
       "viewCart": "Lihat troli",
-      "barSummary": "{count, plural, other {# item}} · {total}"
+      "barSummary": "{count, plural, other {# item}} dalam troli"
     },
     "sheet": {
       "close": "Tutup",
@@ -266,7 +266,7 @@
       "slotsRemaining": "{count, plural, other {# slot tersisa}}",
       "addNotes": "+ Tambah nota",
       "notesPlaceholder": "Sebarang arahan khas untuk pesanan anda?",
-      "estimateLabel": "Anggaran",
+      "estimateLabel": "Harga disahkan selepas ditimbang",
       "estimatePlaceholder": "—",
       "submitting": "Menghantar…",
       "stageAccount": "Isi akaun anda",

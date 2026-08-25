@@ -6,11 +6,9 @@ import {
   filterByCategory,
   filterCatalog,
   matchesCatalogSearch,
-  priceRangeLabel,
   sortCategories,
   type CatalogProduct,
 } from "../../lib/catalog-model";
-import { formatPrice } from "../../lib/pricing";
 import type { Category, ProductVariant } from "../../types";
 
 function category(overrides: Partial<Category>): Category {
@@ -88,56 +86,6 @@ describe("sortCategories", () => {
   });
 });
 
-describe("priceRangeLabel", () => {
-  const variant = (over: Partial<ProductVariant>): ProductVariant => ({
-    id: "v1",
-    organization_id: "org-1",
-    product_id: "prod-1",
-    name: "Whole",
-    unit_type: "per_kg",
-    price_per_unit: 9.5,
-    is_available: true,
-    created_by: null,
-    created_at: "2026-07-01T00:00:00Z",
-    updated_at: "2026-07-01T00:00:00Z",
-    version: 1,
-    market_item_code: null,
-    market_margin_type: null,
-    market_margin_value: null,
-    ...over,
-  });
-
-  it("returns null for no variants", () => {
-    expect(priceRangeLabel(product({ variants: [] }))).toBeNull();
-  });
-
-  it("shows single price for one variant", () => {
-    const p = product({ variants: [variant({})] });
-    expect(priceRangeLabel(p)).toBe(`${formatPrice(9.5)} · 1 size`);
-  });
-
-  it("shows min–max for several variants", () => {
-    const p = product({
-      variants: [
-        variant({ id: "v1", price_per_unit: 9.5 }),
-        variant({ id: "v2", price_per_unit: 16 }),
-        variant({ id: "v3", price_per_unit: 10.2 }),
-      ],
-    });
-    expect(priceRangeLabel(p)).toBe(`${formatPrice(9.5)} – ${formatPrice(16)} · 3 sizes`);
-  });
-
-  it("collapses equal min and max", () => {
-    const p = product({
-      variants: [
-        variant({ id: "v1", price_per_unit: 9.5 }),
-        variant({ id: "v2", price_per_unit: 9.5 }),
-      ],
-    });
-    expect(priceRangeLabel(p)).toBe(`${formatPrice(9.5)} · 2 sizes`);
-  });
-});
-
 describe("catalogSummary", () => {
   const variant = (over: Partial<ProductVariant>): ProductVariant => ({
     id: "v1",
@@ -145,7 +93,6 @@ describe("catalogSummary", () => {
     product_id: "prod-1",
     name: "Whole",
     unit_type: "per_kg",
-    price_per_unit: 9.5,
     is_available: true,
     created_by: null,
     created_at: "2026-07-01T00:00:00Z",
@@ -209,7 +156,6 @@ describe("matchesCatalogSearch", () => {
     product_id: "prod-1",
     name: "Whole",
     unit_type: "per_kg",
-    price_per_unit: 9.5,
     is_available: true,
     created_by: null,
     created_at: "2026-07-01T00:00:00Z",

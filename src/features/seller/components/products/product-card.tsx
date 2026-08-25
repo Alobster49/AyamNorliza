@@ -3,9 +3,8 @@
 import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Pencil, Plus, Trash2 } from "lucide-react";
-import type { ProductVariant, UnitType } from "@/features/seller/types";
+import type { ProductVariant } from "@/features/seller/types";
 import type { CatalogProduct } from "@/features/seller/lib/catalog-model";
-import { formatVariantPrice } from "@/features/seller/lib/pricing";
 import { AvailabilitySwitch } from "./availability-switch";
 import { ProductActionsMenu } from "./product-actions-menu";
 
@@ -124,13 +123,6 @@ export function SellerProductCard({
               >
                 {variant.name}
               </button>
-              <span
-                className={`shrink-0 text-sm font-semibold tabular-nums ${
-                  variant.is_available ? "" : "text-muted-foreground"
-                }`}
-              >
-                {formatVariantPrice(Number(variant.price_per_unit), variant.unit_type as UnitType)}
-              </span>
               <AvailabilitySwitch
                 available={variant.is_available}
                 onToggle={() => onToggleVariant(variant)}

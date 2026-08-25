@@ -3,8 +3,7 @@
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ProductVariant } from "@/features/seller/types";
-import { priceRange, type CatalogProduct } from "@/features/seller/lib/catalog-model";
-import { formatPrice } from "@/features/seller/lib/pricing";
+import type { CatalogProduct } from "@/features/seller/lib/catalog-model";
 import { AvailabilitySwitch } from "./availability-switch";
 import { ProductActionsMenu } from "./product-actions-menu";
 
@@ -39,10 +38,9 @@ export function ProductLedger({
   return (
     <div className="overflow-hidden rounded-xl border bg-card">
       {/* Column header (hidden on small screens where rows stack) */}
-      <div className="hidden grid-cols-[minmax(10rem,1.6fr)_6rem_7rem_7rem] items-center gap-3 border-b bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
+      <div className="hidden grid-cols-[minmax(10rem,1.6fr)_6rem_7rem] items-center gap-3 border-b bg-muted/50 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:grid">
         <span>{t("sizeOption")}</span>
         <span>{t("unit")}</span>
-        <span className="text-right">{t("price")}</span>
         <span className="text-right">{t("status")}</span>
       </div>
 
@@ -56,15 +54,7 @@ export function ProductLedger({
                 {t("archived")}
               </span>
             )}
-            <span className="ml-auto hidden shrink-0 text-xs tabular-nums text-muted-foreground sm:inline">
-              {(() => {
-                const parts = priceRange(product);
-                return parts
-                  ? t("priceRange", { range: parts.range, count: parts.count })
-                  : t("noSizesYet");
-              })()}
-            </span>
-            <span className="flex shrink-0 items-center gap-0.5">
+            <span className="ml-auto flex shrink-0 items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => onAddVariant(product)}
@@ -137,7 +127,7 @@ function LedgerRow({ product, variant, onEdit, onDelete, onToggle }: LedgerRowPr
         ? tUnit("perPiece")
         : variant.unit_type;
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b px-4 py-2.5 text-sm transition-colors duration-150 last:border-b-0 hover:bg-accent/30 sm:grid-cols-[minmax(10rem,1.6fr)_6rem_7rem_7rem] sm:items-center">
+    <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 border-b px-4 py-2.5 text-sm transition-colors duration-150 last:border-b-0 hover:bg-accent/30 sm:grid-cols-[minmax(10rem,1.6fr)_6rem_7rem] sm:items-center">
       <button
         type="button"
         onClick={onEdit}
@@ -146,15 +136,6 @@ function LedgerRow({ product, variant, onEdit, onDelete, onToggle }: LedgerRowPr
         {variant.name}
       </button>
       <span className="order-3 text-xs text-muted-foreground sm:order-none">{unitLabel}</span>
-      <button
-        type="button"
-        onClick={onEdit}
-        className={`justify-self-end rounded px-1 font-semibold tabular-nums hover:bg-accent hover:outline-dashed hover:outline-1 hover:outline-border ${
-          unavailable ? "text-muted-foreground" : ""
-        }`}
-      >
-        {formatPrice(Number(variant.price_per_unit))}
-      </button>
       <span className="order-4 flex items-center justify-end gap-1.5 sm:order-none">
         <AvailabilitySwitch
           available={variant.is_available}

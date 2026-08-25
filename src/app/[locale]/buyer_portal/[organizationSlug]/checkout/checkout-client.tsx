@@ -20,7 +20,6 @@ import { buyerSignInAction, buyerSignUpAction } from "@/features/buyer-auth/serv
 import { getBuyerProfile } from "@/features/buyer/server/actions";
 import { AccountSection, type AccountValue } from "./account-section";
 import { checkoutStage, type CheckoutStage } from "@/features/buyer/lib/checkout-cta";
-import { cartEstimate, formatEstimate } from "@/features/buyer/lib/price-estimate";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 
@@ -185,7 +184,6 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
   const effectiveDate = groupedOptions.some(([d]) => d === activeDate) ? activeDate : (groupedOptions[0]?.[0] ?? "");
 
   const selectedOption = options.find((o) => optionKey(o) === selectedKey) ?? null;
-  const estimate = cartEstimate(items);
 
   const accountValid =
     accountMode === "signup"
@@ -623,10 +621,7 @@ export default function CheckoutClient({ organizationSlug, initialBuyer }: Check
       <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-card/[0.97] px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">{t("estimateLabel")}</p>
-            <p className="truncate font-buyer-mono text-lg font-medium">
-              {estimate ? formatEstimate(estimate) : t("estimatePlaceholder")}
-            </p>
+            <p className="truncate text-sm text-muted-foreground">{t("estimateLabel")}</p>
           </div>
           <button
             type="submit"

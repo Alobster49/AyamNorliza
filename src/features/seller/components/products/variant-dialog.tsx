@@ -62,7 +62,6 @@ export function VariantDialog({
   );
 
   const unitLabel = (u: UnitType) => (u === "per_kg" ? tUnit("perKg") : tUnit("perPiece"));
-  const priceLabel = unitType === "per_kg" ? t("priceLabelKg") : t("priceLabelPiece");
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -72,7 +71,6 @@ export function VariantDialog({
       const tracked = benchmark !== "none";
       const input = {
         name: data.get("name") as string,
-        price_per_unit: Number(data.get("price_per_unit")),
         unit_type: unitType,
         is_available: available,
         market_item_code: tracked ? Number(benchmark) : null,
@@ -121,28 +119,6 @@ export function VariantDialog({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="variant-price">{priceLabel}</Label>
-            <div className="relative">
-              <span
-                aria-hidden
-                className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-muted-foreground"
-              >
-                RM
-              </span>
-              <Input
-                id="variant-price"
-                name="price_per_unit"
-                type="number"
-                step="0.01"
-                min="0"
-                inputMode="decimal"
-                defaultValue={variant?.price_per_unit ?? ""}
-                required
-                className="pl-10 tabular-nums"
-              />
-            </div>
           </div>
           <div className="space-y-2">
             <Label>{t("benchmarkLabel")}</Label>

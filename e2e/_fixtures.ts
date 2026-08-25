@@ -34,11 +34,7 @@ export async function signIn(page: Page, email: string, password: string) {
  * Lives here rather than in each spec: three specs used to keep their own
  * copy, and every Products markup change broke the stale ones one at a time.
  */
-export async function createSellableProduct(
-  page: Page,
-  productName: string,
-  price = "15.00",
-) {
+export async function createSellableProduct(page: Page, productName: string) {
   await page.goto("/ayam-norliza-pilot/products");
   await page.getByRole("button", { name: "Add category" }).click();
   await page.getByLabel("Category Name").fill(`${productName} Category`);
@@ -59,7 +55,6 @@ export async function createSellableProduct(
   const card = page.getByRole("article").filter({ hasText: productName });
   await card.getByRole("button", { name: "Add size" }).click();
   await page.getByLabel(/name \(e\.g\., standard/i).fill("Standard");
-  await page.getByLabel(/price/i).fill(price);
   await page.getByRole("dialog").getByRole("button", { name: "Create" }).click();
   await expect(page.getByRole("dialog")).toBeHidden({ timeout: 10_000 });
 }

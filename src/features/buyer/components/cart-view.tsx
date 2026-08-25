@@ -7,12 +7,7 @@ import { Bird, Minus, Plus, Trash2 } from "lucide-react";
 import { useCart } from "./cart-context";
 import { ScaleChip } from "./scale-chip";
 import { PricingExplainerSheet } from "./pricing-explainer-sheet";
-import {
-  BUYER_FALLBACK_KEYS,
-  cartEstimate,
-  estimateRange,
-  formatEstimate,
-} from "@/features/buyer/lib/price-estimate";
+import { BUYER_FALLBACK_KEYS } from "@/features/buyer/types";
 
 export function CartView({
   organizationSlug,
@@ -24,7 +19,6 @@ export function CartView({
   const router = useRouter();
   const { items, updateLine, removeLine } = useCart();
   const [explainerOpen, setExplainerOpen] = useState(false);
-  const total = cartEstimate(items);
   const t = useTranslations("buyer.cart");
   const tPricing = useTranslations("buyer.pricing");
   const tProduct = useTranslations("buyer.product");
@@ -54,17 +48,6 @@ export function CartView({
         {items.map((item, index) => {
           const step = item.mode === "kg" ? 0.1 : 1;
           const min = item.mode === "kg" ? 0.1 : 1;
-          const lineEstimate =
-            item.pricePerUnit !== undefined && item.unitType !== undefined
-              ? estimateRange({
-                  mode: item.mode,
-                  quantity: item.quantity,
-                  sizeMinKg: item.sizeMinKg,
-                  sizeMaxKg: item.sizeMaxKg,
-                  pricePerUnit: item.pricePerUnit,
-                  unitType: item.unitType,
-                })
-              : null;
           return (
             <li key={`${item.productId}-${index}`} className="flex items-start gap-3 border-b border-dashed pb-4 last:border-0 last:pb-0">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary">
@@ -79,7 +62,7 @@ export function CartView({
                     fallback: tProduct(BUYER_FALLBACK_KEYS[item.fallback]),
                   })}
                 </p>
-                <ScaleChip estimate={lineEstimate} className="mt-1" />
+                <ScaleChip className="mt-1" />
               </div>
               <div className="flex items-center gap-1">
                 <button type="button" aria-label={t("decrease")} className="flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
@@ -104,18 +87,13 @@ export function CartView({
       </ul>
 
       <div className="flex items-center justify-between border-t pt-4">
-        <div>
-          <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            {t("estimatedTotal")}
-            <button type="button" aria-label={tPricing("whyEstimate")} className="underline decoration-dotted"
-              onClick={() => setExplainerOpen(true)}>
-              ?
-            </button>
-          </p>
-          <p className="font-buyer-mono text-xl font-medium">
-            {total ? formatEstimate(total) : "—"}
-          </p>
-        </div>
+        <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          {tPricing("afterWeighing")}
+          <button type="button" aria-label={tPricing("whyEstimate")} className="underline decoration-dotted"
+            onClick={() => setExplainerOpen(true)}>
+            ?
+          </button>
+        </p>
         <button
           type="button"
           className="rounded-full bg-primary px-6 py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97]"

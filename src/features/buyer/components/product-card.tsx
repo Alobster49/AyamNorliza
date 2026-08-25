@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { Bird } from "lucide-react";
 import { ScaleChip } from "./scale-chip";
 import { AddToCartSheet } from "./add-to-cart-sheet";
-import { estimateRange, formatRM } from "@/features/buyer/lib/price-estimate";
 import type { CartLine } from "./cart-context";
 import type { Product, ProductVariant } from "../types";
 
@@ -21,22 +20,9 @@ type ProductCardProps = {
 
 export function ProductCard({ product, variants = [], onAddToCart, showInfo, onInfo }: ProductCardProps) {
   const t = useTranslations("buyer.product");
-  const tPricing = useTranslations("buyer.pricing");
   const [open, setOpen] = useState(false);
   const available = variants.filter((v) => v.is_available);
   const primary = available[0] ?? null;
-
-  // Card-level estimate: the default 1 × 1.5–1.7 kg bird (or 1 piece/kg).
-  const estimate = primary
-    ? estimateRange({
-        mode: "piece",
-        quantity: 1,
-        sizeMinKg: 1.5,
-        sizeMaxKg: 1.7,
-        pricePerUnit: Number(primary.price_per_unit),
-        unitType: primary.unit_type,
-      })
-    : null;
 
   return (
     <article data-slot="card" className="overflow-hidden rounded-2xl border bg-card shadow-[0_2px_10px_rgba(58,49,41,0.06)]">
@@ -51,11 +37,7 @@ export function ProductCard({ product, variants = [], onAddToCart, showInfo, onI
       </div>
       <div className="space-y-3 p-4">
         <h3 className="font-buyer-display text-lg font-semibold leading-tight">{product.name}</h3>
-        <ScaleChip
-          estimate={estimate}
-          perUnitLabel={primary ? `${formatRM(Number(primary.price_per_unit))}${primary.unit_type === "per_kg" ? tPricing("perKg") : tPricing("perPiece")}` : undefined}
-          onInfo={showInfo ? onInfo : undefined}
-        />
+        <ScaleChip onInfo={showInfo ? onInfo : undefined} />
         {onAddToCart && (
           <button
             type="button"

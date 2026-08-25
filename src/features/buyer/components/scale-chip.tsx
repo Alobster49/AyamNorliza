@@ -3,38 +3,31 @@
 import { Info } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import {
-  formatEstimate,
-  formatRM,
-} from "@/features/buyer/lib/price-estimate";
-import { formatWeight } from "@/features/orders/lib/order-model";
+import { formatPrice, formatWeight } from "@/features/orders/lib/order-model";
 
 type ScaleChipProps = {
-  estimate: { min: number; max: number } | null;
-  perUnitLabel?: string;
-  final?: { total: number; weightKg?: number | null; pricePerKg?: number | null };
+  final?: { total: number; weightKg?: number | null; pricePerKg?: number | null } | null;
   onInfo?: () => void;
   className?: string;
 };
 
 /**
- * The single price object of the buy flow. Estimate state: mono "~RM …" +
- * a hairline gauge spanning the min–max estimate. Final state: solid amount
- * with the weighed breakdown in --buyer-delta. Never renders disclaimer
- * prose — the "~" and the gauge ARE the explanation (taught once by the
- * pricing explainer sheet).
+ * The single price object of the buy flow. Before confirm there is no price
+ * to show at all -- just the weight-framing message ("price after
+ * weighing"). Final state (post-confirm/close): solid amount with the
+ * weighed breakdown in --buyer-delta.
  */
-export function ScaleChip({ estimate, perUnitLabel, final, onInfo, className }: ScaleChipProps) {
+export function ScaleChip({ final, onInfo, className }: ScaleChipProps) {
   const t = useTranslations("buyer.pricing");
   if (final) {
     return (
       <div className={cn("space-y-0.5", className)}>
-        <p className="font-buyer-mono text-base font-medium">{formatRM(final.total)}</p>
+        <p className="font-buyer-mono text-base font-medium">{formatPrice(final.total)}</p>
         {final.weightKg != null && final.pricePerKg != null && (
           <p className="font-buyer-mono text-xs" style={{ color: "var(--buyer-delta)" }}>
             {t("weighed", {
               weight: formatWeight(Number(final.weightKg)),
-              pricePerKg: formatRM(Number(final.pricePerKg)),
+              pricePerKg: formatPrice(Number(final.pricePerKg)),
             })}
           </p>
         )}
@@ -42,44 +35,19 @@ export function ScaleChip({ estimate, perUnitLabel, final, onInfo, className }: 
     );
   }
 
-  if (!estimate) {
-    return (
-      <p className={cn("text-sm text-muted-foreground", className)}>{t("afterWeighing")}</p>
-    );
-  }
-
-  // Gauge domain padding: half the range width, floored at 15% of max (and
-  // an absolute 1) so a flat range still shows a visible mark.
-  const pad = Math.max((estimate.max - estimate.min) * 0.5, estimate.max * 0.15, 1);
-  const lo = estimate.min - pad;
-  const hi = estimate.max + pad;
-  const left = ((estimate.min - lo) / (hi - lo)) * 100;
-  const width = Math.max(((estimate.max - estimate.min) / (hi - lo)) * 100, 4);
-
   return (
-    <div className={cn("space-y-1", className)}>
-      <div className="flex items-baseline gap-1.5">
-        <span className="font-buyer-mono text-base font-medium">{formatEstimate(estimate)}</span>
-        {perUnitLabel && (
-          <span className="text-xs text-muted-foreground">{perUnitLabel}</span>
-        )}
-        {onInfo && (
-          <button
-            type="button"
-            onClick={onInfo}
-            aria-label={t("whyEstimate")}
-            className="text-muted-foreground transition-transform active:scale-95"
-          >
-            <Info className="h-3.5 w-3.5" />
-          </button>
-        )}
-      </div>
-      <div className="relative h-0.5 w-24 overflow-hidden rounded-full bg-border" aria-hidden>
-        <div
-          className="absolute inset-y-0 rounded-full bg-primary"
-          style={{ left: `${left}%`, width: `${width}%` }}
-        />
-      </div>
+    <div className={cn("flex items-center gap-1.5", className)}>
+      <p className="text-sm text-muted-foreground">{t("afterWeighing")}</p>
+      {onInfo && (
+        <button
+          type="button"
+          onClick={onInfo}
+          aria-label={t("whyEstimate")}
+          className="text-muted-foreground transition-transform active:scale-95"
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      )}
     </div>
   );
 }

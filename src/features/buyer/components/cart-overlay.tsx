@@ -7,13 +7,11 @@ import { useCart } from "./cart-context";
 import { useCartUi } from "./cart-ui-context";
 import { BuyerSheet } from "./buyer-sheet";
 import { CartView } from "./cart-view";
-import { cartEstimate, formatEstimate } from "@/features/buyer/lib/price-estimate";
 
 export function CartOverlay({ organizationSlug }: { organizationSlug: string }) {
   const pathname = usePathname();
   const { items } = useCart();
   const { cartOpen, openCart, closeCart } = useCartUi();
-  const total = cartEstimate(items);
   const t = useTranslations("buyer.cart");
 
   const onQuietRoute =
@@ -37,7 +35,7 @@ export function CartOverlay({ organizationSlug }: { organizationSlug: string }) 
               className="mx-auto flex w-full max-w-lg items-center justify-between rounded-full border bg-foreground px-5 py-3 text-background shadow-lg transition-transform active:scale-[0.98]"
             >
               <span className="font-buyer-mono text-sm">
-                {t("barSummary", { count: items.length, total: total ? formatEstimate(total) : "—" })}
+                {t("barSummary", { count: items.length })}
               </span>
               <span className="font-medium text-primary">{t("viewCart")}</span>
             </button>

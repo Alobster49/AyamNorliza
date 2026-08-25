@@ -1,6 +1,7 @@
 /**
- * Pure pricing/quantity formatting helpers for the catalog.
- * price_per_unit is RM per kg for per_kg variants, RM per piece otherwise.
+ * Pure pricing/quantity formatting helpers for the catalog. Prices are now
+ * negotiated per client at order-confirm time, so only display formatting
+ * (MYR amounts, quantities) and quantity validation live here.
  */
 
 import type { UnitType } from "../types";
@@ -12,11 +13,6 @@ const myr = new Intl.NumberFormat("en-MY", {
 
 export function formatPrice(amount: number): string {
   return myr.format(amount);
-}
-
-export function formatVariantPrice(pricePerUnit: number, unitType: UnitType): string {
-  const suffix = unitType === "per_kg" ? "/kg" : "each";
-  return `${formatPrice(pricePerUnit)} ${suffix}`;
 }
 
 export function formatQuantity(quantity: number, unitType: UnitType): string {

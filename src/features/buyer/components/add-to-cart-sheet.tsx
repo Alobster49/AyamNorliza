@@ -11,7 +11,7 @@ import { ScaleChip } from "./scale-chip";
 import type { CartLine } from "./cart-context";
 import type { Product, ProductVariant } from "../types";
 import { FALLBACKS, type OrderFallback, type OrderItemMode } from "@/features/orders/types";
-import { estimateRange, BUYER_FALLBACK_KEYS, formatRM } from "@/features/buyer/lib/price-estimate";
+import { BUYER_FALLBACK_KEYS } from "@/features/buyer/types";
 
 const FALLBACK_ICONS: Record<OrderFallback, typeof X> = {
   cancel: X,
@@ -30,7 +30,6 @@ type AddToCartSheetProps = {
 
 export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }: AddToCartSheetProps) {
   const t = useTranslations("buyer.product");
-  const tPricing = useTranslations("buyer.pricing");
   const available = variants.filter((v) => v.is_available);
   const [variantId, setVariantId] = useState(available[0]?.id ?? "");
   const variant = useMemo(
@@ -72,19 +71,6 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
     Number.isFinite(parsedMax) && parsedMax >= 0.1 && parsedMax <= 50 &&
     parsedMax >= parsedMin;
 
-  const estimate = useMemo(() => {
-    if (!variant) return null;
-    if (!isValid) return null;
-    return estimateRange({
-      mode,
-      quantity: parsedQuantity,
-      sizeMinKg: parsedMin,
-      sizeMaxKg: parsedMax,
-      pricePerUnit: Number(variant.price_per_unit),
-      unitType: variant.unit_type,
-    });
-  }, [variant, isValid, mode, parsedQuantity, parsedMin, parsedMax]);
-
   const step = (setter: (v: string) => void, current: string, delta: number, min: number, decimals: number) => {
     const next = Math.max(min, Math.round((Number(current) + delta) * 10 ** decimals) / 10 ** decimals);
     setter(String(next));
@@ -100,8 +86,6 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
       sizeMinKg: parsedMin,
       sizeMaxKg: parsedMax,
       fallback,
-      pricePerUnit: Number(variant.price_per_unit),
-      unitType: variant.unit_type,
     });
     onOpenChange(false);
   };
@@ -120,7 +104,7 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
                   v.id === variant?.id ? "border-primary bg-primary/15 font-medium" : "border-border"
                 }`}
               >
-                {v.name} · {formatRM(Number(v.price_per_unit))}{v.unit_type === "per_kg" ? tPricing("perKg") : ""}
+                {v.name}{v.unit_type === "per_kg" ? ` · ${t("unitKg")}` : ` · ${t("unitPiece")}`}
               </button>
             ))}
           </div>
@@ -205,7 +189,7 @@ export function AddToCartSheet({ product, variants, open, onOpenChange, onAdd }:
         </div>
 
         <div className="flex items-center justify-between border-t pt-4">
-          <ScaleChip estimate={estimate} />
+          <ScaleChip />
           <button type="button" onClick={handleAdd} disabled={!isValid}
             className="rounded-full bg-primary px-6 py-3 font-medium text-primary-foreground transition-transform active:scale-[0.97] disabled:opacity-50">
             {t("addToCart")}

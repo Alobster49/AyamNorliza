@@ -2,6 +2,18 @@
  * Buyer feature types and schemas.
  */
 
+import type { OrderFallback } from "@/features/orders/types";
+
+/** Message keys (relative to the `buyer.product` namespace) for the buyer-facing
+ *  fallback labels. FALLBACK_LABELS in orders/types.ts is shared with the seller
+ *  UI and must not change. */
+export const BUYER_FALLBACK_KEYS: Record<OrderFallback, string> = {
+  cancel: "fallback.cancel",
+  mix: "fallback.mix",
+  upsize: "fallback.upsize",
+  downsize: "fallback.downsize",
+};
+
 // Database types
 export type Buyer = {
   id: string;
@@ -37,7 +49,6 @@ export type ProductVariant = {
   organization_id: string;
   product_id: string;
   name: string;
-  price_per_unit: number;
   unit_type: "per_kg" | "per_piece";
   is_available: boolean;
 };
