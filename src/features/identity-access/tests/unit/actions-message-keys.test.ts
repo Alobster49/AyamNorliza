@@ -63,7 +63,7 @@ vi.mock("@/lib/env", () => ({
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser, requireOrgMember, PermissionError } from "@/lib/auth/require-user";
 import { requireReauth, ReauthRequiredError } from "@/lib/auth/reauth.server";
-import { adminCreateInvitation, adminUpdateMemberIdentity } from "../../server/admin-queries";
+import { adminCreateInvitation, adminUpdateMemberIdentity, adminDeleteOrgMember } from "../../server/admin-queries";
 import { mockSupabaseWithQueues, type QueryResult } from "./message-key-test-helpers";
 import {
   updateOrganizationSettingsAction,
@@ -75,6 +75,7 @@ import {
   changeMemberScopeAction,
   deactivateUserAction,
   updateMemberProfileAction,
+  removeMemberAction,
   startAccessReviewAction,
   decideReviewItemAction,
   openSupportSessionAction,
@@ -363,6 +364,51 @@ describe("updateMemberProfileAction", () => {
     vi.mocked(adminUpdateMemberIdentity).mockResolvedValue();
     const result = await updateMemberProfileAction(validInput);
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("removeMemberAction", () => {
+  const UUID = "11111111-1111-1111-1111-111111111111";
+  const validInput = { memberId: UUID, reason: "left the farm" };
+  const TARGET = (over: Partial<{ user_id: string; role: string; status: string }> = {}) => ({
+    data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "caretaker", status: "active", ...over },
+    error: null,
+  });
+
+  it("returns member.notFound for an unknown member", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.notFound");
+  });
+
+  it("returns member.cannotRemoveSelf when removing yourself", async () => {
+    setSupabase({ organization_members: [TARGET({ user_id: "user-1" })] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.cannotRemoveSelf");
+  });
+
+  it("returns member.transferOwnershipFirst for an active owner", async () => {
+    setSupabase({ organization_members: [TARGET({ role: "owner" })] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.transferOwnershipFirst");
+  });
+
+  it("returns common.forbidden when the actor lacks membership.deactivate", async () => {
+    setSupabase({ organization_members: [TARGET(), ACTIVE_MEMBER("caretaker")] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
+  });
+
+  it("removes and revokes sessions for an org_admin", async () => {
+    setSupabase({ organization_members: [TARGET(), ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminDeleteOrgMember).mockResolvedValue();
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(true);
+    expect(adminDeleteOrgMember).toHaveBeenCalledWith(UUID, expect.anything());
   });
 });
 

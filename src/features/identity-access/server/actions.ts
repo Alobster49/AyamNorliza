@@ -940,6 +940,88 @@ export async function updateMemberProfileAction(
 }
 
 // ---------------------------------------------------------------------------
+// removeMember (remove from organization; auth account survives)
+// ---------------------------------------------------------------------------
+export async function removeMemberAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ memberId: string }>> {
+  const reauth = await reauthOrError();
+  if (!reauth.ok) return reauth;
+
+  const parsed = RemoveMemberInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const user = await requireUser();
+
+  const { data: target } = await supabase
+    .from("organization_members")
+    .select("id, organization_id, user_id, role, status")
+    .eq("id", input.memberId)
+    .maybeSingle();
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
+  if (target.user_id === user.id) {
+    return err("forbidden", "You cannot remove yourself", "errors.identity.member.cannotRemoveSelf");
+  }
+  if ((target.role as string) === "owner" && target.status === "active") {
+    return err(
+      "forbidden",
+      "Transfer ownership before removing the owner",
+      "errors.identity.member.transferOwnershipFirst",
+    );
+  }
+
+  const { data: actor } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", target.organization_id)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!actor || !can(actor.role as Role, "membership.deactivate")) {
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+
+  try {
+    await adminDeleteOrgMember(target.id, reauth.ctx);
+  } catch (e) {
+    return err("internal", e instanceof Error ? e.message : "Remove failed", "errors.identity.member.removeFailed");
+  }
+
+  await adminRevokeUserSessions(target.user_id, input.reason, reauth.ctx);
+
+  await recordAudit(
+    {
+      organizationId: target.organization_id,
+      actorUserId: user.id,
+      actorRole: actor.role,
+      eventType: "identity.user_removed",
+      entityType: "organization_members",
+      entityId: target.id,
+      before: { role: target.role, status: target.status },
+      after: null,
+      reason: input.reason,
+      correlationId: reauth.ctx.correlationId,
+      source: "web",
+    },
+    reauth.ctx,
+  );
+
+  await dispatch({
+    event: "identity.user_removed",
+    organizationId: target.organization_id,
+    recipients: [target.user_id],
+    priority: "high",
+    data: { reason: input.reason },
+  });
+
+  revalidatePath(`/[organizationSlug]/settings/users`, "page");
+  return ok({ memberId: target.id });
+}
+
+// ---------------------------------------------------------------------------
 // 10. startAccessReview
 // ---------------------------------------------------------------------------
 export async function startAccessReviewAction(

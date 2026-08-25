@@ -20,6 +20,7 @@ export type NotificationEvent =
   | "identity.role_changed"
   | "identity.scope_changed"
   | "identity.user_deactivated"
+  | "identity.user_removed"
   | "identity.temporary_access_expiring"
   | "identity.break_glass_used"
   | "identity.organization_created"
@@ -43,6 +44,7 @@ export type NotificationPayload = {
 const HIGH_PRIORITY: ReadonlySet<NotificationEvent> = new Set([
   "identity.break_glass_used",
   "identity.user_deactivated",
+  "identity.user_removed",
   "identity.temporary_access_expiring",
 ]);
 
@@ -76,6 +78,8 @@ function subjectFor(p: NotificationPayload): string {
       return "Your access scope has changed";
     case "identity.user_deactivated":
       return "Account deactivated";
+    case "identity.user_removed":
+      return "Removed from organization";
     case "identity.break_glass_used":
       return "Break-glass access used";
     case "identity.temporary_access_expiring":

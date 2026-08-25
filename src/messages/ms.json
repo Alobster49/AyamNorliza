@@ -424,7 +424,9 @@
         "ownerNeedsApprover": "Perubahan pemilik memerlukan pelulus kedua",
         "transferOwnershipFirst": "Pindahkan pemilikan sebelum menyahaktifkan pemilik",
         "emailInUse": "E-mel itu sudah digunakan",
-        "updateFailed": "Tidak dapat mengemas kini ahli"
+        "updateFailed": "Tidak dapat mengemas kini ahli",
+        "cannotRemoveSelf": "Anda tidak boleh membuang akaun anda sendiri",
+        "removeFailed": "Tidak dapat membuang ahli"
       },
       "accessReview": {
         "itemNotFound": "Item semakan tidak dijumpai",
