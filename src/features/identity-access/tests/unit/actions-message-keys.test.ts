@@ -69,6 +69,7 @@ import {
   adminUpdateMemberIdentity,
   adminDeleteOrgMember,
   adminGetMemberEmails,
+  adminCreateOrgUser,
 } from "../../server/admin-queries";
 import { mockSupabaseWithQueues, type QueryResult } from "./message-key-test-helpers";
 import {
@@ -83,6 +84,7 @@ import {
   updateMemberProfileAction,
   removeMemberAction,
   sendPasswordResetAction,
+  createUserAction,
   startAccessReviewAction,
   decideReviewItemAction,
   openSupportSessionAction,
@@ -454,6 +456,60 @@ describe("sendPasswordResetAction", () => {
       "t@x.my",
       expect.objectContaining({ redirectTo: expect.stringContaining("/auth/callback?next=/set-password") }),
     );
+  });
+});
+
+describe("createUserAction", () => {
+  const validInput = {
+    organizationId: "11111111-1111-1111-1111-111111111111",
+    email: "staff@ayam.my",
+    displayName: "New Staff",
+    role: "caretaker",
+  };
+
+  it("returns common.invalidInput for a bad payload", async () => {
+    const result = await createUserAction({ ...validInput, email: "nope" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.invalidInput");
+  });
+
+  it("returns common.notMember when the caller has no active membership", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.notMember");
+  });
+
+  it("returns invite.roleCannotInvite when the caller's role can't invite", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("caretaker")] });
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.invite.roleCannotInvite");
+  });
+
+  it("returns roles.cannotGrantRole when the target role outranks the caller", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    const result = await createUserAction({ ...validInput, role: "owner" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+  });
+
+  it("returns user.emailInUse on a duplicate email", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminCreateOrgUser).mockRejectedValue(
+      Object.assign(new Error("email exists"), { code: "email_exists", status: 422 }),
+    );
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.user.emailInUse");
+  });
+
+  it("creates the user and sends a set-password email for an org_admin", async () => {
+    const supabase = setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminCreateOrgUser).mockResolvedValue({ userId: "new-user" });
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(true);
+    expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalled();
   });
 });
 

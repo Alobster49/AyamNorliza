@@ -438,6 +438,10 @@
         "noEmail": "This member has no email address",
         "resetFailed": "Could not send the reset email"
       },
+      "user": {
+        "emailInUse": "That email is already registered",
+        "createFailed": "Could not create the account"
+      },
       "accessReview": {
         "itemNotFound": "Review item not found",
         "reviewNotFound": "Review not found"

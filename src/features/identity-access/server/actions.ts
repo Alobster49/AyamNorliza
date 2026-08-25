@@ -1095,6 +1095,102 @@ export async function sendPasswordResetAction(
 }
 
 // ---------------------------------------------------------------------------
+// createUser (direct account creation; user sets password via reset email)
+// ---------------------------------------------------------------------------
+export async function createUserAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ userId: string }>> {
+  const reauth = await reauthOrError();
+  if (!reauth.ok) return reauth;
+
+  const parsed = CreateUserInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
+
+  const { data: actor, error: actorErr } = await supabase
+    .from("organization_members")
+    .select("id, role")
+    .eq("organization_id", input.organizationId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (actorErr) return err("internal", actorErr.message, "errors.identity.common.internal");
+  if (!actor) return err("forbidden", "Not a member of this organization", "errors.identity.common.notMember");
+  if (!can(actor.role as Role, "membership.invite")) {
+    return err("forbidden", "Role cannot create users", "errors.identity.invite.roleCannotInvite");
+  }
+  if (!canGrantRole(actor.role as Role, input.role)) {
+    return err(
+      "forbidden",
+      `Cannot grant role '${input.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: input.role },
+    );
+  }
+
+  let created: { userId: string };
+  try {
+    created = await adminCreateOrgUser(
+      {
+        organizationId: input.organizationId,
+        email: input.email,
+        displayName: input.displayName,
+        role: input.role,
+        invitedBy: user.id,
+      },
+      reauth.ctx,
+    );
+  } catch (e) {
+    const isDuplicate =
+      typeof e === "object" && e !== null &&
+      (("code" in e && (e as { code?: string }).code === "email_exists") ||
+        ("status" in e && (e as { status?: number }).status === 422));
+    if (isDuplicate) {
+      return err("conflict", "Email already registered", "errors.identity.user.emailInUse", {
+        email: ["errors.identity.user.emailInUse"],
+      });
+    }
+    return err("internal", e instanceof Error ? e.message : "Create failed", "errors.identity.user.createFailed");
+  }
+
+  await recordAudit(
+    {
+      organizationId: input.organizationId,
+      actorUserId: user.id,
+      actorRole: actor.role,
+      eventType: "identity.user_created",
+      entityType: "organization_members",
+      entityId: created.userId,
+      after: { email: input.email, display_name: input.displayName, role: input.role },
+      correlationId: reauth.ctx.correlationId,
+      source: "web",
+    },
+    reauth.ctx,
+  );
+
+  // Set-password email; best-effort (admin can trigger a reset later).
+  try {
+    const env = serverEnv();
+    await supabase.auth.resetPasswordForEmail(input.email, {
+      redirectTo: `${env.INVITE_BASE_URL}/auth/callback?next=/set-password`,
+    });
+  } catch {
+    // Durable account exists regardless of delivery.
+  }
+
+  revalidatePath(`/[organizationSlug]/settings/users`, "page");
+  return ok({ userId: created.userId });
+}
+
+// ---------------------------------------------------------------------------
 // 10. startAccessReview
 // ---------------------------------------------------------------------------
 export async function startAccessReviewAction(

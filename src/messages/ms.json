@@ -438,6 +438,10 @@
         "noEmail": "Ahli ini tiada alamat e-mel",
         "resetFailed": "Tidak dapat menghantar e-mel tetapan semula"
       },
+      "user": {
+        "emailInUse": "E-mel itu sudah didaftarkan",
+        "createFailed": "Tidak dapat mencipta akaun"
+      },
       "accessReview": {
         "itemNotFound": "Item semakan tidak dijumpai",
         "reviewNotFound": "Semakan tidak dijumpai"
