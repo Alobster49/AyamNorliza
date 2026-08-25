@@ -50,10 +50,12 @@ export function ReauthDialog({
       setError(result.messageKey ? resolveMessageKey(tRoot, result.messageKey) : result.message ?? t("retryFailed"));
       return;
     }
-    setPending(false);
-    onClose();
-    onSuccess();
+    // Retry the original action BEFORE closing anything: closing first
+    // made a post-reauth failure (e.g. duplicate email) vanish — both
+    // dialogs gone, no error, no change. Keep this dialog open until the
+    // retry actually succeeds.
     const retried = await retryAction();
+    setPending(false);
     if (!retried.ok) {
       // The retried action can be any sensitive identity-access mutation;
       // fall back through messageKey -> message -> a generic string so this
@@ -63,9 +65,11 @@ export function ReauthDialog({
           ? resolveMessageKey(tRoot, retried.messageKey, retried.messageParams)
           : retried.message ?? t("retryFailed"),
       );
-    } else {
-      router.refresh();
+      return;
     }
+    onClose();
+    onSuccess();
+    router.refresh();
   }
 
   return (
