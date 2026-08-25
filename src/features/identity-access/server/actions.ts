@@ -897,6 +897,19 @@ export async function updateMemberProfileAction(
   if (!actor || !can(actor.role as Role, "membership.role.change")) {
     return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
   }
+  // Role-rank guard: an org_admin must never edit the identity (email!)
+  // of a member who outranks them — an owner-email swap plus a password
+  // reset would be a full owner-account takeover, bypassing the
+  // two-person owner rule enforced elsewhere.
+  if (!canGrantRole(actor.role as Role, target.role as Role)) {
+    return err(
+      "forbidden",
+      `Cannot manage member with role '${target.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: target.role },
+    );
+  }
 
   try {
     await adminUpdateMemberIdentity(

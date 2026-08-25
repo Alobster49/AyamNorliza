@@ -358,6 +358,22 @@ describe("updateMemberProfileAction", () => {
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
   });
 
+  it("returns roles.cannotGrantRole when an org_admin edits an owner", async () => {
+    setSupabase({
+      organization_members: [
+        { data: { id: UUID, organization_id: "org-1", user_id: "u-owner", role: "owner" }, error: null },
+        ACTIVE_MEMBER("org_admin"),
+      ],
+    });
+    const result = await updateMemberProfileAction({ memberId: UUID, email: "takeover@x.my", reason: "escalation attempt" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+      expect(result.messageParams).toEqual({ role: "owner" });
+    }
+    expect(adminUpdateMemberIdentity).not.toHaveBeenCalled();
+  });
+
   it("returns member.emailInUse when the email is already registered", async () => {
     setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
     vi.mocked(adminUpdateMemberIdentity).mockRejectedValue(
