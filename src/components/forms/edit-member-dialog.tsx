@@ -50,6 +50,7 @@ export function EditMemberDialog({
     if (!result.ok) {
       if (result.code === "reauth_required") {
         onReauthNeeded(() => updateMemberProfileAction(payload));
+        onClose();
         return;
       }
       setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));

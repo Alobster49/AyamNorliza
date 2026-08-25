@@ -41,6 +41,10 @@ export function CreateUserDialog({
     if (!result.ok) {
       if (result.code === "reauth_required") {
         onReauthNeeded(() => createUserAction(payload));
+        setDisplayName("");
+        setEmail("");
+        setRole("caretaker");
+        onClose();
         return;
       }
       setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
