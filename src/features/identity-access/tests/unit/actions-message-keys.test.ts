@@ -43,6 +43,10 @@ vi.mock("../../server/admin-queries", () => ({
   adminCreateInvitation: vi.fn(),
   adminRevokeUserSessions: vi.fn(),
   adminRotateInvitationToken: vi.fn(),
+  adminUpdateMemberIdentity: vi.fn(),
+  adminDeleteOrgMember: vi.fn(),
+  adminCreateOrgUser: vi.fn(),
+  adminGetMemberEmails: vi.fn(async () => new Map()),
 }));
 vi.mock("@/lib/email/resend", () => ({ sendEmail: vi.fn() }));
 vi.mock("@/lib/email/render-invite", () => ({ renderInvite: vi.fn(() => ({ subject: "", html: "" })) }));
@@ -59,7 +63,7 @@ vi.mock("@/lib/env", () => ({
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireUser, requireOrgMember, PermissionError } from "@/lib/auth/require-user";
 import { requireReauth, ReauthRequiredError } from "@/lib/auth/reauth.server";
-import { adminCreateInvitation } from "../../server/admin-queries";
+import { adminCreateInvitation, adminUpdateMemberIdentity } from "../../server/admin-queries";
 import { mockSupabaseWithQueues, type QueryResult } from "./message-key-test-helpers";
 import {
   updateOrganizationSettingsAction,
@@ -70,6 +74,7 @@ import {
   changeMemberRoleAction,
   changeMemberScopeAction,
   deactivateUserAction,
+  updateMemberProfileAction,
   startAccessReviewAction,
   decideReviewItemAction,
   openSupportSessionAction,
@@ -315,6 +320,49 @@ describe("deactivateUserAction", () => {
     const result = await deactivateUserAction(validInput);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.transferOwnershipFirst");
+  });
+});
+
+describe("updateMemberProfileAction", () => {
+  const UUID = "11111111-1111-1111-1111-111111111111";
+  const validInput = { memberId: UUID, displayName: "New Name", reason: "correcting name" };
+  const TARGET = { data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "caretaker" }, error: null };
+
+  it("returns common.invalidInput when nothing to update", async () => {
+    const result = await updateMemberProfileAction({ memberId: UUID, reason: "no fields to change" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.invalidInput");
+  });
+
+  it("returns member.notFound for an unknown member", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await updateMemberProfileAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.notFound");
+  });
+
+  it("returns common.forbidden when the actor's role can't manage members", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("caretaker")] });
+    const result = await updateMemberProfileAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
+  });
+
+  it("returns member.emailInUse when the email is already registered", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminUpdateMemberIdentity).mockRejectedValue(
+      Object.assign(new Error("email exists"), { code: "email_exists", status: 422 }),
+    );
+    const result = await updateMemberProfileAction({ memberId: UUID, email: "dup@x.my", reason: "duplicate email" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.emailInUse");
+  });
+
+  it("succeeds for an org_admin name update", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminUpdateMemberIdentity).mockResolvedValue();
+    const result = await updateMemberProfileAction(validInput);
+    expect(result.ok).toBe(true);
   });
 });
 

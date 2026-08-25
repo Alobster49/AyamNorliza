@@ -422,7 +422,9 @@
         "notFound": "Ahli tidak dijumpai",
         "alreadyHasRole": "Ahli sudah mempunyai peranan itu",
         "ownerNeedsApprover": "Perubahan pemilik memerlukan pelulus kedua",
-        "transferOwnershipFirst": "Pindahkan pemilikan sebelum menyahaktifkan pemilik"
+        "transferOwnershipFirst": "Pindahkan pemilikan sebelum menyahaktifkan pemilik",
+        "emailInUse": "E-mel itu sudah digunakan",
+        "updateFailed": "Tidak dapat mengemas kini ahli"
       },
       "accessReview": {
         "itemNotFound": "Item semakan tidak dijumpai",

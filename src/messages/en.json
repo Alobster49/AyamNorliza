@@ -422,7 +422,9 @@
         "notFound": "Member not found",
         "alreadyHasRole": "Member already has that role",
         "ownerNeedsApprover": "Owner changes require a second approver",
-        "transferOwnershipFirst": "Transfer ownership before deactivating the owner"
+        "transferOwnershipFirst": "Transfer ownership before deactivating the owner",
+        "emailInUse": "That email is already in use",
+        "updateFailed": "Could not update the member"
       },
       "accessReview": {
         "itemNotFound": "Review item not found",
