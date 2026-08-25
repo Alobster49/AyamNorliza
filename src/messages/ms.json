@@ -825,7 +825,16 @@
       "resend": "Hantar semula",
       "revoke": "Batalkan",
       "defaultRoleChangeReason": "Perubahan peranan melalui halaman pengguna",
-      "defaultDeactivateReason": "Dinyahaktifkan daripada halaman pengguna"
+      "defaultDeactivateReason": "Dinyahaktifkan daripada halaman pengguna",
+      "createUser": "Cipta pengguna",
+      "editDetails": "Sunting",
+      "resetPassword": "Tetap semula kata laluan",
+      "removeMember": "Buang",
+      "defaultRemoveReason": "Dibuang dari halaman pengguna",
+      "confirmResetTitle": "Hantar tetapan semula kata laluan?",
+      "confirmResetDescription": "E-mel tetapan semula kata laluan akan dihantar ke {email}.",
+      "confirmRemoveTitle": "Buang ahli?",
+      "confirmRemoveDescription": "{name} akan hilang akses kepada organisasi ini. Akaun dan sejarah mereka dikekalkan."
     },
     "auditLog": {
       "filtersLabel": "Penapis",
@@ -1146,6 +1155,25 @@
       "cancel": "Batal",
       "sending": "Menghantar...",
       "sendInvite": "Hantar jemputan"
+    },
+    "editMemberDialog": {
+      "title": "Sunting ahli",
+      "nameLabel": "Nama paparan",
+      "emailLabel": "E-mel",
+      "cancel": "Batal",
+      "save": "Simpan",
+      "saving": "Menyimpan…",
+      "defaultReason": "Butiran dikemas kini dari halaman pengguna"
+    },
+    "createUserDialog": {
+      "title": "Cipta pengguna",
+      "nameLabel": "Nama paparan",
+      "emailLabel": "E-mel",
+      "roleLabel": "Peranan",
+      "setPasswordNote": "Pengguna akan menerima e-mel untuk menetapkan kata laluan mereka.",
+      "cancel": "Batal",
+      "create": "Cipta",
+      "creating": "Mencipta…"
     },
     "breakGlassDialog": {
       "title": "Buka akses break-glass",

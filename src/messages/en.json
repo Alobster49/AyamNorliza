@@ -820,7 +820,16 @@
       "resend": "Resend",
       "revoke": "Revoke",
       "defaultRoleChangeReason": "Role change via users page",
-      "defaultDeactivateReason": "Deactivated from users page"
+      "defaultDeactivateReason": "Deactivated from users page",
+      "createUser": "Create user",
+      "editDetails": "Edit",
+      "resetPassword": "Reset password",
+      "removeMember": "Remove",
+      "defaultRemoveReason": "Removed from users page",
+      "confirmResetTitle": "Send password reset?",
+      "confirmResetDescription": "A password reset email will be sent to {email}.",
+      "confirmRemoveTitle": "Remove member?",
+      "confirmRemoveDescription": "{name} will lose access to this organization. Their account and history are kept."
     },
     "auditLog": {
       "filtersLabel": "Filters",
@@ -1125,6 +1134,25 @@
       "cancel": "Cancel",
       "sending": "Sending...",
       "sendInvite": "Send invite"
+    },
+    "editMemberDialog": {
+      "title": "Edit member",
+      "nameLabel": "Display name",
+      "emailLabel": "Email",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "defaultReason": "Details updated from users page"
+    },
+    "createUserDialog": {
+      "title": "Create user",
+      "nameLabel": "Display name",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "setPasswordNote": "The user will receive an email to set their password.",
+      "cancel": "Cancel",
+      "create": "Create",
+      "creating": "Creating…"
     },
     "breakGlassDialog": {
       "title": "Open break-glass access",
