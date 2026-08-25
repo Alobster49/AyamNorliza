@@ -157,6 +157,7 @@ export function DriverDeck({
         receivedBy: receivedBy.trim() || null,
         photoPath,
         cashCollected,
+        lines: [], // Task 4 replaces this
       });
       if (!result.ok) {
         toast({

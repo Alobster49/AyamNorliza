@@ -141,6 +141,10 @@ function stopMessageKey(rawMessage: string): string {
       return "errors.drive.stop.invalidStatus";
     case "invalid_amount":
       return "errors.drive.stop.invalidAmount";
+    case "lines_incomplete":
+      return "errors.drive.stop.weightsMissing";
+    case "invalid_weight":
+      return "errors.drive.stop.invalidWeight";
     default:
       return "errors.drive.stop.internal";
   }
@@ -171,21 +175,71 @@ export async function arriveStop(organizationSlug: string, orderId: string): Pro
   return callStopRpc(organizationSlug, "driver_arrive_stop", { p_order: orderId });
 }
 
+/**
+ * `driver_start_run` errors, mapped the same way `stopMessageKey` maps stop
+ * RPC errors — see that function's comment for why the mapping lives here.
+ */
+function startRunMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.drive.run.forbidden";
+    case "not_found":
+      return "errors.drive.run.notFound";
+    case "invalid_transition":
+      return "errors.drive.run.alreadyStarted";
+    default:
+      return "errors.drive.run.internal";
+  }
+}
+
+/** The driver pulls out of the yard. Non-ready orders return to the pool. */
+export async function startRun(organizationSlug: string, runId: string): Promise<ActionResult> {
+  const ctx = await guard(organizationSlug);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("driver_start_run", { p_run: runId });
+  if (error) {
+    const mapped = mapRpcError(error.message);
+    return err(mapped.code as DriverErrorCode, mapped.message, startRunMessageKey(error.message));
+  }
+
+  revalidatePath(`/drive/${organizationSlug}`);
+  revalidatePath(`/${organizationSlug}/runs`);
+  return ok(undefined);
+}
+
+export type DeliverLineInput = {
+  itemId: string;
+  finalWeightKg: number;
+  finalPieces?: number | null;
+};
+
 export type DeliverStopInput = {
   receivedBy?: string | null;
   signaturePath?: string | null;
   photoPath?: string | null;
   cashCollected?: number | null;
+  /** One entry per live item; the weights become the billed totals. */
+  lines: DeliverLineInput[];
 };
 
-/** Goods handed over. Every proof field is optional by design. */
+/** Goods handed over and weighed. Proof fields optional; weights are not. */
 export async function deliverStop(
   organizationSlug: string,
   orderId: string,
-  proof: DeliverStopInput = {},
+  proof: DeliverStopInput,
 ): Promise<ActionResult> {
   if (proof.cashCollected !== null && proof.cashCollected !== undefined && proof.cashCollected < 0) {
     return err("validation", "Cash collected cannot be negative.", "errors.drive.stop.invalidAmount");
+  }
+  if (!proof.lines || proof.lines.length === 0) {
+    return err("validation", "Weights are required.", "errors.drive.stop.weightsMissing");
+  }
+  for (const line of proof.lines) {
+    if (!Number.isFinite(line.finalWeightKg) || line.finalWeightKg <= 0) {
+      return err("validation", "Each item needs a weight above zero.", "errors.drive.stop.invalidWeight");
+    }
   }
 
   return callStopRpc(organizationSlug, "driver_deliver_stop", {
@@ -194,6 +248,11 @@ export async function deliverStop(
     p_signature_path: proof.signaturePath ?? null,
     p_photo_path: proof.photoPath ?? null,
     p_cash_collected: proof.cashCollected ?? null,
+    p_lines: proof.lines.map((line) => ({
+      item_id: line.itemId,
+      final_weight_kg: line.finalWeightKg,
+      final_pieces: line.finalPieces ?? null,
+    })),
   });
 }
 

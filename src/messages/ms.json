@@ -480,6 +480,8 @@
         "orgNotFound": "Organisasi tidak dijumpai",
         "forbidden": "Anda tidak mempunyai akses kepada ciri ini",
         "loadFailed": "Gagal memuatkan trip",
+        "alreadyStarted": "Trip ini sudah bertolak.",
+        "notFound": "Trip tidak dijumpai.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi."
       },
       "stop": {
@@ -487,6 +489,8 @@
         "notDeparted": "Trip ini belum bertolak.",
         "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
         "invalidAmount": "Wang tunai yang dikutip tidak boleh negatif.",
+        "weightsMissing": "Masukkan berat untuk setiap item sebelum sahkan.",
+        "invalidWeight": "Setiap item perlu berat melebihi sifar.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi."
       }
     },

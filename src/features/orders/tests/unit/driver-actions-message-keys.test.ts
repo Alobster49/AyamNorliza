@@ -24,7 +24,7 @@ vi.mock("../../server/guards", async () => {
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireOrgRole, OrderPermissionError } from "../../server/guards";
-import { getDriverRun, arriveStop, deliverStop, failStop } from "../../server/driver-actions";
+import { getDriverRun, arriveStop, deliverStop, failStop, startRun } from "../../server/driver-actions";
 
 function chain(result: { data: unknown; error: unknown }) {
   const builder: Record<string, unknown> = {};
@@ -148,7 +148,10 @@ describe("deliverStop", () => {
   it("returns drive.stop.invalidAmount without calling the RPC when cash is negative", async () => {
     mockDriverGuard();
     const supabase = mockSupabaseRpc({ error: null });
-    const result = await deliverStop("ayam-norliza-pilot", "order-1", { cashCollected: -5 });
+    const result = await deliverStop("ayam-norliza-pilot", "order-1", {
+      cashCollected: -5,
+      lines: [{ itemId: "item-1", finalWeightKg: 1 }],
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidAmount");
     expect(supabase.rpc).not.toHaveBeenCalled();
@@ -157,7 +160,10 @@ describe("deliverStop", () => {
   it("returns drive.stop.invalidAmount when the RPC rejects the cash amount", async () => {
     mockDriverGuard();
     mockSupabaseRpc({ error: { message: "invalid_amount" } });
-    const result = await deliverStop("ayam-norliza-pilot", "order-1", { cashCollected: 10 });
+    const result = await deliverStop("ayam-norliza-pilot", "order-1", {
+      cashCollected: 10,
+      lines: [{ itemId: "item-1", finalWeightKg: 1 }],
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidAmount");
   });
@@ -165,14 +171,18 @@ describe("deliverStop", () => {
   it("returns drive.stop.invalidStatus when the order is already resolved", async () => {
     mockDriverGuard();
     mockSupabaseRpc({ error: { message: "invalid_status" } });
-    const result = await deliverStop("ayam-norliza-pilot", "order-1");
+    const result = await deliverStop("ayam-norliza-pilot", "order-1", {
+      lines: [{ itemId: "item-1", finalWeightKg: 1 }],
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidStatus");
   });
 
   it("returns drive.run.orgNotFound when the guard can't resolve the org", async () => {
     vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Organization not found"));
-    const result = await deliverStop("no-such-org", "order-1");
+    const result = await deliverStop("no-such-org", "order-1", {
+      lines: [{ itemId: "item-1", finalWeightKg: 1 }],
+    });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.orgNotFound");
   });
@@ -200,5 +210,73 @@ describe("failStop", () => {
     const result = await failStop("ayam-norliza-pilot", "order-1", "other");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.internal");
+  });
+});
+
+describe("startRun", () => {
+  it("maps invalid_transition to errors.drive.run.alreadyStarted", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "invalid_transition" } });
+    const result = await startRun("org-slug", "run-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.alreadyStarted");
+  });
+
+  it("calls driver_start_run and succeeds", async () => {
+    mockDriverGuard();
+    const supabase = mockSupabaseRpc({ error: null });
+    const result = await startRun("org-slug", "run-1");
+    expect(result.ok).toBe(true);
+    expect(supabase.rpc).toHaveBeenCalledWith("driver_start_run", { p_run: "run-1" });
+  });
+});
+
+describe("deliverStop weights", () => {
+  it("rejects an empty lines array before calling the RPC", async () => {
+    mockDriverGuard();
+    const supabase = mockSupabaseRpc({ error: null });
+    const result = await deliverStop("org-slug", "order-1", { lines: [] });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.weightsMissing");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-positive weight before calling the RPC", async () => {
+    mockDriverGuard();
+    const supabase = mockSupabaseRpc({ error: null });
+    const result = await deliverStop("org-slug", "order-1", {
+      lines: [{ itemId: "item-1", finalWeightKg: 0 }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidWeight");
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  });
+
+  it("passes snake_case lines to driver_deliver_stop", async () => {
+    mockDriverGuard();
+    const supabase = mockSupabaseRpc({ error: null });
+    const result = await deliverStop("org-slug", "order-1", {
+      cashCollected: 50,
+      lines: [{ itemId: "item-1", finalWeightKg: 2.35, finalPieces: 2 }],
+    });
+    expect(result.ok).toBe(true);
+    expect(supabase.rpc).toHaveBeenCalledWith("driver_deliver_stop", {
+      p_order: "order-1",
+      p_received_by: null,
+      p_signature_path: null,
+      p_photo_path: null,
+      p_cash_collected: 50,
+      p_lines: [{ item_id: "item-1", final_weight_kg: 2.35, final_pieces: 2 }],
+    });
+  });
+
+  it("maps invalid_weight RPC error to errors.drive.stop.invalidWeight", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "invalid_weight" } });
+    const result = await deliverStop("org-slug", "order-1", {
+      lines: [{ itemId: "item-1", finalWeightKg: 2 }],
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.stop.invalidWeight");
   });
 });

@@ -480,6 +480,8 @@
         "orgNotFound": "Organization not found",
         "forbidden": "You do not have access to this feature",
         "loadFailed": "Failed to load the run",
+        "alreadyStarted": "This run has already left the yard.",
+        "notFound": "Run not found.",
         "internal": "Something went wrong. Please try again."
       },
       "stop": {
@@ -487,6 +489,8 @@
         "notDeparted": "This run has not left the yard yet.",
         "invalidStatus": "This order is not in the right status for that action.",
         "invalidAmount": "Cash collected cannot be negative.",
+        "weightsMissing": "Key a weight for every item before confirming.",
+        "invalidWeight": "Each item needs a weight above zero.",
         "internal": "Something went wrong. Please try again."
       }
     },
