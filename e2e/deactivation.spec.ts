@@ -22,7 +22,7 @@ test("deactivating a user revokes their session", async ({ page, browser }) => {
   // Owner tab: deactivate that specific user (not the owner's own row).
   await signIn(page, OWNER.email, OWNER.password);
   await page.goto("/ayam-norliza-pilot/settings/users");
-  const targetRow = page.locator("table tbody tr", { hasText: TARGET.userId });
+  const targetRow = page.locator("table tbody tr", { hasText: TARGET.email });
   await targetRow.getByRole("button", { name: /deactivate/i }).click();
 
   // Deactivation is a sensitive action: complete the step-up dialog so the
@@ -34,7 +34,7 @@ test("deactivating a user revokes their session", async ({ page, browser }) => {
     .poll(
       async () => {
         await page.reload();
-        return page.locator("table tbody tr", { hasText: TARGET.userId }).innerText();
+        return page.locator("table tbody tr", { hasText: TARGET.email }).innerText();
       },
       { timeout: 20_000 },
     )
