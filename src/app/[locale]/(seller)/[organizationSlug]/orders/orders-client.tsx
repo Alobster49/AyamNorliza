@@ -111,8 +111,8 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
   const tabLabel = (tab: TabValue) => (tab === "all" ? t("tabs.all") : tStatus(tab));
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-end gap-3" data-testid="orders-toolbar">
+    <div className="flex h-[calc(100svh-4rem-1.5rem)] flex-col gap-6 md:h-[calc(100svh-7rem)]">
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-3" data-testid="orders-toolbar">
         <div className="relative w-full max-w-xs">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -155,104 +155,106 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
         </Button>
       </div>
 
-      {orders.length === 0 ? (
-        <HenEmptyState
-          title={t("empty.title")}
-          subtitle={t("empty.subtitle")}
-          className="min-h-[50vh]"
-        />
-      ) : view === "board" ? (
-        visibleBase.length === 0 ? (
-          <div className="flex min-h-[40vh] items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
-            {t("table.empty")}
-          </div>
-        ) : (
-          <OrdersBoard
-            organizationSlug={organizationSlug}
-            orders={visibleBase}
-            callerRole={callerRole}
-            onOrderStatusChange={(orderId, status) =>
-              setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)))
-            }
-            today={today}
+      <div className="min-h-0 flex-1">
+        {orders.length === 0 ? (
+          <HenEmptyState
+            title={t("empty.title")}
+            subtitle={t("empty.subtitle")}
+            className="h-full"
           />
-        )
-      ) : (
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
-          <TabsList>
-            {TABS.map((tab) => (
-              <TabsTrigger key={tab} value={tab}>
-                {tabLabel(tab)}
-                <Badge variant="secondary" className="ml-1.5">
-                  {counts[tab]}
-                </Badge>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          <TabsContent value={activeTab}>
-            <div className="min-h-[calc(100vh-13rem)] rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("table.headers.order")}</TableHead>
-                    <TableHead>{t("table.headers.customer")}</TableHead>
-                    <TableHead>{t("table.headers.zone")}</TableHead>
-                    <TableHead>{t("table.headers.status")}</TableHead>
-                    <TableHead>{t("table.headers.deliveryDate")}</TableHead>
-                    <TableHead className="text-right">{t("table.headers.total")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleOrders.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
-                        {t("table.empty")}
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    visibleOrders.map((order) => {
-                      const risk = isAtRisk(order, today);
-                      return (
-                        <TableRow
-                          key={order.id}
-                          className="cursor-pointer"
-                          onClick={() => router.push(`/${organizationSlug}/orders/${order.id}`)}
-                        >
-                          <TableCell className="font-mono text-sm">{order.id.slice(0, 8)}</TableCell>
-                          <TableCell>{order.customer?.name ?? tCard("unknownCustomer")}</TableCell>
-                          <TableCell>{order.zone?.name ?? "-"}</TableCell>
-                          <TableCell>
-                            <Badge className={ORDER_STATUS_COLORS[order.status]}>
-                              {tStatus(order.status)}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(order.delivery_date)}
-                            {risk && (
-                              <Badge variant="destructive" className="ml-2 text-[10px]">
-                                {t(`atRisk.${risk}`)}
-                              </Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right font-medium tabular-nums">
-                            {(() => {
-                              const amount = displayAmount(order);
-                              if (amount.kind === "total") return formatPrice(amount.amount);
-                              if (amount.kind === "unweighed") return tCard("unweighed");
-                              return "—";
-                            })()}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  )}
-                </TableBody>
-              </Table>
+        ) : view === "board" ? (
+          visibleBase.length === 0 ? (
+            <div className="flex h-full items-center justify-center rounded-xl border border-dashed text-sm text-muted-foreground">
+              {t("table.empty")}
             </div>
-          </TabsContent>
-        </Tabs>
-      )}
+          ) : (
+            <OrdersBoard
+              organizationSlug={organizationSlug}
+              orders={visibleBase}
+              callerRole={callerRole}
+              onOrderStatusChange={(orderId, status) =>
+                setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)))
+              }
+              today={today}
+            />
+          )
+        ) : (
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as TabValue)}>
+            <TabsList>
+              {TABS.map((tab) => (
+                <TabsTrigger key={tab} value={tab}>
+                  {tabLabel(tab)}
+                  <Badge variant="secondary" className="ml-1.5">
+                    {counts[tab]}
+                  </Badge>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+
+            <TabsContent value={activeTab}>
+              <div className="min-h-[calc(100vh-13rem)] rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t("table.headers.order")}</TableHead>
+                      <TableHead>{t("table.headers.customer")}</TableHead>
+                      <TableHead>{t("table.headers.zone")}</TableHead>
+                      <TableHead>{t("table.headers.status")}</TableHead>
+                      <TableHead>{t("table.headers.deliveryDate")}</TableHead>
+                      <TableHead className="text-right">{t("table.headers.total")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visibleOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="py-8 text-center text-muted-foreground">
+                          {t("table.empty")}
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      visibleOrders.map((order) => {
+                        const risk = isAtRisk(order, today);
+                        return (
+                          <TableRow
+                            key={order.id}
+                            className="cursor-pointer"
+                            onClick={() => router.push(`/${organizationSlug}/orders/${order.id}`)}
+                          >
+                            <TableCell className="font-mono text-sm">{order.id.slice(0, 8)}</TableCell>
+                            <TableCell>{order.customer?.name ?? tCard("unknownCustomer")}</TableCell>
+                            <TableCell>{order.zone?.name ?? "-"}</TableCell>
+                            <TableCell>
+                              <Badge className={ORDER_STATUS_COLORS[order.status]}>
+                                {tStatus(order.status)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {formatDate(order.delivery_date)}
+                              {risk && (
+                                <Badge variant="destructive" className="ml-2 text-[10px]">
+                                  {t(`atRisk.${risk}`)}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right font-medium tabular-nums">
+                              {(() => {
+                                const amount = displayAmount(order);
+                                if (amount.kind === "total") return formatPrice(amount.amount);
+                                if (amount.kind === "unweighed") return tCard("unweighed");
+                                return "—";
+                              })()}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        )}
+      </div>
     </div>
   );
 }

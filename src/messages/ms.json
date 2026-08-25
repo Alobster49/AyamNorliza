@@ -1755,12 +1755,6 @@
         "action": "Sahkan",
         "busy": "Mengesahkan…",
         "success": "Pesanan disahkan"
-      },
-      "bulk": {
-        "select": "Pilih",
-        "exit": "Selesai",
-        "confirmN": "Sahkan {count} pesanan",
-        "summary": "{confirmed} disahkan, {failed} gagal"
       }
     },
     "station": {
@@ -1965,6 +1959,7 @@
         "blocksCustomerOrders": "{count, plural, other {# menyekat pesanan pelanggan}}",
         "fix": "Betulkan",
         "ariaLabel": "Kesediaan persediaan",
+        "bellAriaLabel": "{count, plural, =0 {Kesediaan persediaan: sedia} other {Kesediaan persediaan: # isu}}",
         "issues": {
           "noFacility": {
             "title": "Tiada alamat kilang ditetapkan",

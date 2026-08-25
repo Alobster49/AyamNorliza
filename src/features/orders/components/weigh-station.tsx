@@ -38,7 +38,7 @@ export function WeighStation({ state, dispatch, className }: WeighStationProps) 
   return (
     <div className={cn("min-h-0 flex-1 overflow-hidden rounded-lg border", className)}>
       {line ? (
-        <div className="flex h-full">
+        <div className="flex h-full w-full min-w-0">
           <QueueRail
             queue={state.queue}
             confirmed={state.confirmed}

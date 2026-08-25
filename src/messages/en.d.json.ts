@@ -1737,12 +1737,6 @@ declare const messages: {
         "action": "Confirm",
         "busy": "Confirming…",
         "success": "Order confirmed"
-      },
-      "bulk": {
-        "select": "Select",
-        "exit": "Done",
-        "confirmN": "Confirm {count, plural, one {# order} other {# orders}}",
-        "summary": "{confirmed} confirmed, {failed} failed"
       }
     },
     "station": {
@@ -1947,6 +1941,7 @@ declare const messages: {
         "blocksCustomerOrders": "{count, plural, one {# blocks customer orders} other {# block customer orders}}",
         "fix": "Fix",
         "ariaLabel": "Setup readiness",
+        "bellAriaLabel": "{count, plural, =0 {Setup readiness: ready} one {Setup readiness: # issue} other {Setup readiness: # issues}}",
         "issues": {
           "noFacility": {
             "title": "No factory address set",

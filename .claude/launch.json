@@ -5,7 +5,8 @@
       "name": "ayamnorliza-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 9999
+      "port": 9999,
+      "autoPort": true
     },
     {
       "name": "ayamnorliza-dev-alt",
