@@ -552,6 +552,7 @@ declare const messages: {
   "dashboard": {
     "sections": {
       "sales": "Sales",
+      "fulfillment": "Fulfillment",
       "accessControl": "Access control",
       "warehouse": "Warehouse",
       "system": "System"

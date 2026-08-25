@@ -549,6 +549,7 @@
   "dashboard": {
     "sections": {
       "sales": "Jualan",
+      "fulfillment": "Logistik",
       "accessControl": "Kawalan akses",
       "warehouse": "Gudang",
       "system": "Sistem"
