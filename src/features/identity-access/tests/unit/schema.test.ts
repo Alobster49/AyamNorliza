@@ -8,6 +8,10 @@ import {
   InviteUserInput,
   OpenBreakGlassInput,
   OpenSupportSessionInput,
+  UpdateMemberProfileInput,
+  SendPasswordResetInput,
+  RemoveMemberInput,
+  CreateUserInput,
 } from "@/features/identity-access/schema";
 
 describe("CreateOrganizationInput", () => {
@@ -140,5 +144,67 @@ describe("AcceptInvitationInput", () => {
   it("requires a token", () => {
     expect(AcceptInvitationInput.safeParse({ token: "x" }).success).toBe(false);
     expect(AcceptInvitationInput.safeParse({ token: "a".repeat(40) }).success).toBe(true);
+  });
+});
+
+const UUID = "11111111-1111-1111-1111-111111111111";
+
+describe("UpdateMemberProfileInput", () => {
+  it("accepts a name-only update", () => {
+    expect(
+      UpdateMemberProfileInput.safeParse({ memberId: UUID, displayName: "Mak Norliza", reason: "fix name" }).success,
+    ).toBe(true);
+  });
+  it("accepts an email-only update", () => {
+    expect(
+      UpdateMemberProfileInput.safeParse({ memberId: UUID, email: "new@ayam.my", reason: "typo" }).success,
+    ).toBe(true);
+  });
+  it("rejects when neither displayName nor email is given", () => {
+    expect(UpdateMemberProfileInput.safeParse({ memberId: UUID, reason: "noop" }).success).toBe(false);
+  });
+  it("rejects an invalid email", () => {
+    expect(
+      UpdateMemberProfileInput.safeParse({ memberId: UUID, email: "not-an-email", reason: "x" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("SendPasswordResetInput", () => {
+  it("accepts a member id", () => {
+    expect(SendPasswordResetInput.safeParse({ memberId: UUID }).success).toBe(true);
+  });
+  it("rejects a non-uuid", () => {
+    expect(SendPasswordResetInput.safeParse({ memberId: "nope" }).success).toBe(false);
+  });
+});
+
+describe("RemoveMemberInput", () => {
+  it("requires a reason", () => {
+    expect(RemoveMemberInput.safeParse({ memberId: UUID }).success).toBe(false);
+    expect(RemoveMemberInput.safeParse({ memberId: UUID, reason: "left the farm" }).success).toBe(true);
+  });
+});
+
+describe("CreateUserInput", () => {
+  it("accepts a full payload", () => {
+    expect(
+      CreateUserInput.safeParse({
+        organizationId: UUID,
+        email: "staff@ayam.my",
+        displayName: "New Staff",
+        role: "caretaker",
+      }).success,
+    ).toBe(true);
+  });
+  it("rejects an unknown role", () => {
+    expect(
+      CreateUserInput.safeParse({
+        organizationId: UUID,
+        email: "staff@ayam.my",
+        displayName: "New Staff",
+        role: "superhero",
+      }).success,
+    ).toBe(false);
   });
 });
