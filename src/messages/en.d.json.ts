@@ -1196,6 +1196,8 @@ declare const messages: {
       "cantOpenTitle": "Can't open this invoice",
       "notDeliveredTitle": "Not delivered yet",
       "notDeliveredDescription": "The invoice appears once the delivery is recorded.",
+      "pendingSettlementTitle": "Awaiting final weights",
+      "pendingSettlementDescription": "This order was closed by the office without door weights. Ask the office for the settled invoice.",
       "invoiceNumber": "Invoice #{number}",
       "headers": { "item": "Item", "weight": "Weight", "pricePerKg": "Price/kg", "lineTotal": "Total" },
       "itemFallback": "Item",
@@ -1680,7 +1682,7 @@ declare const messages: {
         "delivered": "{count, plural, one {# delivered} other {# delivered}}",
         "couldNotDeliver": "{count, plural, one {# could not be delivered} other {# could not be delivered}}",
         "wrapUp": "Head back to the yard and hand in {amount}.",
-        "invoiceHint": "Open any delivered stop in the list above for its invoice."
+        "invoiceHint": "Open any delivered stop below for its invoice."
       },
       "retryLabel": "Retry · {reason}",
       "atDoor": "At the door",

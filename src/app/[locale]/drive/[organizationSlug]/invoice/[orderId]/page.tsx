@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getDriverInvoice } from "@/features/orders/server/driver-actions";
 import { formatPrice, formatWeight } from "@/features/orders/lib/order-model";
+import { formatDateTimeInTimeZone } from "@/lib/time/org-date";
 import { PrintButton } from "./print-button";
 
 export default async function DriverInvoicePage({
@@ -25,7 +26,7 @@ export default async function DriverInvoicePage({
     );
   }
 
-  const { organizationName, order, deliveredAttempt } = result.data;
+  const { organizationName, organizationTimeZone, order, deliveredAttempt } = result.data;
 
   if (order.status !== "delivered" && order.status !== "closed") {
     return (
@@ -37,6 +38,20 @@ export default async function DriverInvoicePage({
   }
 
   const items = order.items.filter((item) => !item.is_cancelled);
+
+  // The office's close-run sweep can mark an order delivered without door
+  // weights (no driver ever ran it). Every cell would render "-" and the
+  // grand total would read as a real (usually zero) amount, so show a
+  // friendly state instead of a misleading invoice.
+  const hasSettlement = items.length > 0 && items.some((item) => item.final_weight_kg !== null);
+  if (!hasSettlement) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
+        <h1 className="text-lg font-semibold">{t("pendingSettlementTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{t("pendingSettlementDescription")}</p>
+      </main>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-4">
@@ -101,7 +116,9 @@ export default async function DriverInvoicePage({
       <div className="text-xs text-muted-foreground">
         {deliveredAttempt && (
           <p>
-            {t("deliveredAt", { time: new Date(deliveredAttempt.attempted_at).toLocaleString() })}
+            {t("deliveredAt", {
+              time: formatDateTimeInTimeZone(deliveredAttempt.attempted_at, organizationTimeZone),
+            })}
             {deliveredAttempt.received_by ? ` · ${t("receivedBy", { name: deliveredAttempt.received_by })}` : ""}
           </p>
         )}

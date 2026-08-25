@@ -49,6 +49,50 @@ function Bar({ pct }: { pct: number }) {
   );
 }
 
+/** Every stop on the run, with an Invoice link for the delivered ones. Shared by
+ * the in-progress "whole route" details and the finished screen -- the finished
+ * screen has no `<details>` to nest inside, so it renders the same list bare. */
+function StopList({
+  stops,
+  organizationSlug,
+  t,
+}: {
+  stops: DriverStop[];
+  organizationSlug: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <ul className="divide-y">
+      {stops.map((item) => (
+        <li key={item.orderId} className="flex items-center justify-between gap-3 px-4 py-2">
+          <span className="min-w-0 text-sm">
+            <span className="mr-1.5 text-xs tabular-nums text-muted-foreground">{item.sequence}</span>
+            {item.customerName}
+          </span>
+          {item.outcome === "delivered" ? (
+            <Link
+              href={`/drive/${organizationSlug}/invoice/${item.orderId}`}
+              className="shrink-0 text-[11px] font-medium underline underline-offset-2"
+            >
+              {t("stopStatus.invoice")}
+            </Link>
+          ) : (
+            <span className="shrink-0 text-[11px] text-muted-foreground">
+              {item.outcome === "failed"
+                ? t("stopStatus.failed")
+                : item.outcome === "cancelled"
+                  ? t("stopStatus.cancelled")
+                  : item.atStop
+                    ? t("stopStatus.hereNow")
+                    : t("stopStatus.toDo")}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function DriverDeck({
   organizationSlug,
   organizationId,
@@ -265,7 +309,7 @@ export function DriverDeck({
       </header>
 
       {!stop ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+        <div className="flex flex-1 flex-col items-center gap-3 overflow-y-auto px-4 py-6 text-center">
           <p className="text-lg font-semibold">{t("finished.title")}</p>
           <p className="text-sm text-muted-foreground">
             {t("finished.delivered", { count: deck.delivered })}
@@ -273,6 +317,9 @@ export function DriverDeck({
             {t("finished.wrapUp", { amount: formatPrice(deck.cashCollected) })}
           </p>
           <p className="text-xs text-muted-foreground">{t("finished.invoiceHint")}</p>
+          <section className="w-full overflow-hidden rounded-xl border bg-card text-left">
+            <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
+          </section>
         </div>
       ) : (
         <main className="flex flex-1 flex-col gap-3 p-3">
@@ -401,34 +448,9 @@ export function DriverDeck({
             <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium">
               {t("wholeRun.summary", { delivered: deck.delivered, total: deck.total })}
             </summary>
-            <ul className="divide-y border-t">
-              {deck.stops.map((item) => (
-                <li key={item.orderId} className="flex items-center justify-between gap-3 px-4 py-2">
-                  <span className="min-w-0 text-sm">
-                    <span className="mr-1.5 text-xs tabular-nums text-muted-foreground">{item.sequence}</span>
-                    {item.customerName}
-                  </span>
-                  {item.outcome === "delivered" ? (
-                    <Link
-                      href={`/drive/${organizationSlug}/invoice/${item.orderId}`}
-                      className="shrink-0 text-[11px] font-medium underline underline-offset-2"
-                    >
-                      {t("stopStatus.invoice")}
-                    </Link>
-                  ) : (
-                    <span className="shrink-0 text-[11px] text-muted-foreground">
-                      {item.outcome === "failed"
-                        ? t("stopStatus.failed")
-                        : item.outcome === "cancelled"
-                          ? t("stopStatus.cancelled")
-                          : item.atStop
-                            ? t("stopStatus.hereNow")
-                            : t("stopStatus.toDo")}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <div className="border-t">
+              <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
+            </div>
           </details>
         </main>
       )}

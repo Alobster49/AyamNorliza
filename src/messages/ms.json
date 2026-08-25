@@ -1214,6 +1214,8 @@
       "cantOpenTitle": "Tidak dapat buka invois ini",
       "notDeliveredTitle": "Belum dihantar",
       "notDeliveredDescription": "Invois akan muncul selepas penghantaran direkodkan.",
+      "pendingSettlementTitle": "Menunggu berat akhir",
+      "pendingSettlementDescription": "Pesanan ini ditutup oleh pejabat tanpa berat di pintu. Hubungi pejabat untuk invois muktamad.",
       "invoiceNumber": "Invois #{number}",
       "headers": { "item": "Item", "weight": "Berat", "pricePerKg": "Harga/kg", "lineTotal": "Jumlah" },
       "itemFallback": "Item",
@@ -1698,7 +1700,7 @@
         "delivered": "{count, plural, other {# dihantar}}",
         "couldNotDeliver": "{count, plural, other {# tidak dapat dihantar}}",
         "wrapUp": "Pulang ke garaj dan serahkan {amount}.",
-        "invoiceHint": "Buka mana-mana hantaran selesai dalam senarai di atas untuk invoisnya."
+        "invoiceHint": "Buka mana-mana hantaran selesai di bawah untuk invoisnya."
       },
       "retryLabel": "Cuba lagi · {reason}",
       "atDoor": "Di pintu",

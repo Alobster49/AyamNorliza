@@ -259,6 +259,7 @@ export async function deliverStop(
 
 export type DriverInvoicePayload = {
   organizationName: string;
+  organizationTimeZone: string;
   order: OrderWithItems;
   deliveredAttempt: DeliveryAttempt | null;
 };
@@ -276,7 +277,7 @@ export async function getDriverInvoice(
 
   const supabase = await createSupabaseServerClient();
   const [{ data: org }, { data: order, error }] = await Promise.all([
-    supabase.from("organizations").select("name").eq("id", ctx.orgId).single(),
+    supabase.from("organizations").select("name, default_time_zone").eq("id", ctx.orgId).single(),
     supabase
       .from("orders")
       .select(
@@ -303,6 +304,7 @@ export async function getDriverInvoice(
 
   return ok({
     organizationName: org?.name ?? organizationSlug,
+    organizationTimeZone: org?.default_time_zone ?? "UTC",
     order: order as OrderWithItems,
     deliveredAttempt: attempts.at(-1) ?? null,
   });
