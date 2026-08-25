@@ -82,6 +82,14 @@ declare const messages: {
       "expired": "This invitation link has expired. Ask your organization owner to send a new one.",
       "failureTitle": "Could not accept invitation"
     },
+    "setPassword": {
+      "title": "Set a new password",
+      "passwordLabel": "New password",
+      "confirmLabel": "Confirm password",
+      "submit": "Save password",
+      "saving": "Saving…",
+      "mismatch": "Passwords do not match"
+    },
     "errors": {
       "invalidCredentials": "That email and password combination did not match.",
       "rateLimited": "Too many attempts. Try again in a few minutes.",
@@ -425,7 +433,17 @@ declare const messages: {
         "notFound": "Member not found",
         "alreadyHasRole": "Member already has that role",
         "ownerNeedsApprover": "Owner changes require a second approver",
-        "transferOwnershipFirst": "Transfer ownership before deactivating the owner"
+        "transferOwnershipFirst": "Transfer ownership before deactivating the owner",
+        "emailInUse": "That email is already in use",
+        "updateFailed": "Could not update the member",
+        "cannotRemoveSelf": "You cannot remove your own account",
+        "removeFailed": "Could not remove the member",
+        "noEmail": "This member has no email address",
+        "resetFailed": "Could not send the reset email"
+      },
+      "user": {
+        "emailInUse": "That email is already registered",
+        "createFailed": "Could not create the account"
       },
       "accessReview": {
         "itemNotFound": "Review item not found",
@@ -793,6 +811,7 @@ declare const messages: {
     "usersPage": {
       "inviteUser": "Invite user",
       "membersHeading": "Members ({count})",
+      "unknownUser": "Unknown user",
       "colUser": "User",
       "colRole": "Role",
       "colStatus": "Status",
@@ -804,7 +823,16 @@ declare const messages: {
       "resend": "Resend",
       "revoke": "Revoke",
       "defaultRoleChangeReason": "Role change via users page",
-      "defaultDeactivateReason": "Deactivated from users page"
+      "defaultDeactivateReason": "Deactivated from users page",
+      "createUser": "Create user",
+      "editDetails": "Edit",
+      "resetPassword": "Reset password",
+      "removeMember": "Remove",
+      "defaultRemoveReason": "Removed from users page",
+      "confirmResetTitle": "Send password reset?",
+      "confirmResetDescription": "A password reset email will be sent to {email}.",
+      "confirmRemoveTitle": "Remove member?",
+      "confirmRemoveDescription": "{name} will lose access to this organization. Their account and history are kept."
     },
     "auditLog": {
       "filtersLabel": "Filters",
@@ -1110,6 +1138,25 @@ declare const messages: {
       "sending": "Sending...",
       "sendInvite": "Send invite"
     },
+    "editMemberDialog": {
+      "title": "Edit member",
+      "nameLabel": "Display name",
+      "emailLabel": "Email",
+      "cancel": "Cancel",
+      "save": "Save",
+      "saving": "Saving…",
+      "defaultReason": "Details updated from users page"
+    },
+    "createUserDialog": {
+      "title": "Create user",
+      "nameLabel": "Display name",
+      "emailLabel": "Email",
+      "roleLabel": "Role",
+      "setPasswordNote": "The user will receive an email to set their password.",
+      "cancel": "Cancel",
+      "create": "Create",
+      "creating": "Creating…"
+    },
     "breakGlassDialog": {
       "title": "Open break-glass access",
       "description": "This grants you short-window elevated access. Owners are notified within 60 seconds.",
@@ -1141,6 +1188,10 @@ declare const messages: {
     "invite": {
       "subject": "You are invited to {organizationName}",
       "bodyHtml": "<p>{inviterName} invited you to join <strong>{organizationName}</strong> as <strong>{role}</strong>.</p><p>This invitation expires {expiresAt}.</p><p><a>Accept invitation</a></p>"
+    },
+    "passwordReset": {
+      "subject": "Set your {organizationName} password",
+      "bodyHtml": "<p>An administrator at <strong>{organizationName}</strong> requested a password reset for your account.</p><p><a>Set a new password</a></p><p>If you didn't expect this, you can safely ignore this email.</p>"
     },
     "mfaEnrolled": {
       "subject": "Two-factor authentication enabled",

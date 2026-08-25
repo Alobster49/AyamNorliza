@@ -66,6 +66,7 @@ import {
 import { groupOwnerEmailsByLocale } from "./break-glass-recipients";
 import { sendEmail } from "@/lib/email/resend";
 import { renderInvite } from "@/lib/email/render-invite";
+import { renderPasswordReset } from "@/lib/email/render-password-reset";
 import { renderBreakGlassUsed } from "@/lib/email/render-break-glass";
 import { serverEnv } from "@/lib/env";
 import { DEFAULT_LOCALE, isSupportedLocale, type AppLocale } from "@/lib/i18n/locales";
@@ -1070,11 +1071,32 @@ export async function sendPasswordResetAction(
   const email = emails.get(target.user_id);
   if (!email) return err("conflict", "Member has no email", "errors.identity.member.noEmail");
 
+  // Admin-triggered reset: `resetPasswordForEmail` on this cookie-backed
+  // PKCE client would bind the code_verifier to the ADMIN's browser, so
+  // the link would always fail in the TARGET's browser. Instead generate
+  // a recovery token_hash (service role) and email a `/auth/confirm`
+  // link the target's own browser can verify via `verifyOtp`.
   const env = serverEnv();
-  const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${env.INVITE_BASE_URL}/auth/callback?next=/set-password`,
-  });
-  if (resetErr) return err("internal", resetErr.message, "errors.identity.member.resetFailed");
+  try {
+    const { hashedToken } = await admin.generateRecoveryLink(email);
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name, default_locale")
+      .eq("id", target.organization_id)
+      .single();
+    const { subject, html } = renderPasswordReset({
+      organizationName: org?.name ?? "AyamNorliza",
+      resetUrl: `${env.INVITE_BASE_URL}/auth/confirm?token_hash=${hashedToken}&type=recovery&next=/set-password`,
+      locale: resolveLocale(org?.default_locale),
+    });
+    await sendEmail({ to: [email], subject, html });
+  } catch (e) {
+    return err(
+      "internal",
+      e instanceof Error ? e.message : "Could not send the reset email",
+      "errors.identity.member.resetFailed",
+    );
+  }
 
   const ctx = await ctxFor(user.id);
   await admin.insertAuthSecurityEvent(
@@ -1190,11 +1212,23 @@ export async function createUserAction(
   );
 
   // Set-password email; best-effort (admin can trigger a reset later).
+  // Same admin-reset pattern as sendPasswordResetAction: a recovery
+  // token_hash link works in the new user's browser, where a PKCE
+  // `resetPasswordForEmail` from this admin-scoped client would not.
   try {
     const env = serverEnv();
-    await supabase.auth.resetPasswordForEmail(input.email, {
-      redirectTo: `${env.INVITE_BASE_URL}/auth/callback?next=/set-password`,
+    const { hashedToken } = await admin.generateRecoveryLink(input.email);
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name, default_locale")
+      .eq("id", input.organizationId)
+      .single();
+    const { subject, html } = renderPasswordReset({
+      organizationName: org?.name ?? "AyamNorliza",
+      resetUrl: `${env.INVITE_BASE_URL}/auth/confirm?token_hash=${hashedToken}&type=recovery&next=/set-password`,
+      locale: resolveLocale(org?.default_locale),
     });
+    await sendEmail({ to: [input.email], subject, html });
   } catch {
     // Durable account exists regardless of delivery.
   }

@@ -38,7 +38,12 @@ vi.mock("@/lib/auth/reauth.server", async () => {
 });
 
 vi.mock("@/lib/audit/events", () => ({ recordAudit: vi.fn() }));
-vi.mock("@/lib/supabase/admin", () => ({ admin: { insertAuthSecurityEvent: vi.fn() } }));
+vi.mock("@/lib/supabase/admin", () => ({
+  admin: {
+    insertAuthSecurityEvent: vi.fn(),
+    generateRecoveryLink: vi.fn(async () => ({ hashedToken: "hash-1" })),
+  },
+}));
 vi.mock("@/lib/notifications/dispatch", () => ({ dispatch: vi.fn() }));
 vi.mock("../../server/admin-queries", () => ({
   adminCreateInvitation: vi.fn(),
@@ -51,6 +56,7 @@ vi.mock("../../server/admin-queries", () => ({
 }));
 vi.mock("@/lib/email/resend", () => ({ sendEmail: vi.fn() }));
 vi.mock("@/lib/email/render-invite", () => ({ renderInvite: vi.fn(() => ({ subject: "", html: "" })) }));
+vi.mock("@/lib/email/render-password-reset", () => ({ renderPasswordReset: vi.fn(() => ({ subject: "", html: "" })) }));
 vi.mock("@/lib/email/render-break-glass", () => ({ renderBreakGlassUsed: vi.fn(() => ({ subject: "", html: "" })) }));
 vi.mock("@/lib/env", () => ({
   serverEnv: vi.fn(() => ({
@@ -62,6 +68,8 @@ vi.mock("@/lib/env", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { admin } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/resend";
 import { requireUser, requireOrgMember, PermissionError } from "@/lib/auth/require-user";
 import { requireReauth, ReauthRequiredError } from "@/lib/auth/reauth.server";
 import {
@@ -463,15 +471,22 @@ describe("sendPasswordResetAction", () => {
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.noEmail");
   });
 
-  it("sends the reset email for an org_admin", async () => {
-    const supabase = setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+  it("sends the reset email for an org_admin via an admin recovery link", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
     vi.mocked(adminGetMemberEmails).mockResolvedValue(new Map([["u-target", "t@x.my"]]));
     const result = await sendPasswordResetAction({ memberId: UUID });
     expect(result.ok).toBe(true);
-    expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalledWith(
-      "t@x.my",
-      expect.objectContaining({ redirectTo: expect.stringContaining("/auth/callback?next=/set-password") }),
-    );
+    expect(admin.generateRecoveryLink).toHaveBeenCalledWith("t@x.my");
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: ["t@x.my"] }));
+  });
+
+  it("returns member.resetFailed when the recovery link cannot be generated", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminGetMemberEmails).mockResolvedValue(new Map([["u-target", "t@x.my"]]));
+    vi.mocked(admin.generateRecoveryLink).mockRejectedValueOnce(new Error("gotrue down"));
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.resetFailed");
   });
 });
 
@@ -521,11 +536,20 @@ describe("createUserAction", () => {
   });
 
   it("creates the user and sends a set-password email for an org_admin", async () => {
-    const supabase = setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
     vi.mocked(adminCreateOrgUser).mockResolvedValue({ userId: "new-user" });
     const result = await createUserAction(validInput);
     expect(result.ok).toBe(true);
-    expect(supabase.auth.resetPasswordForEmail).toHaveBeenCalled();
+    expect(admin.generateRecoveryLink).toHaveBeenCalledWith("staff@ayam.my");
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: ["staff@ayam.my"] }));
+  });
+
+  it("still succeeds when the set-password email fails (best-effort)", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminCreateOrgUser).mockResolvedValue({ userId: "new-user" });
+    vi.mocked(admin.generateRecoveryLink).mockRejectedValueOnce(new Error("gotrue down"));
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(true);
   });
 });
 

@@ -1207,6 +1207,10 @@
       "subject": "Anda dijemput ke {organizationName}",
       "bodyHtml": "<p>{inviterName} menjemput anda menyertai <strong>{organizationName}</strong> sebagai <strong>{role}</strong>.</p><p>Jemputan ini luput pada {expiresAt}.</p><p><a>Terima jemputan</a></p>"
     },
+    "passwordReset": {
+      "subject": "Tetapkan kata laluan {organizationName} anda",
+      "bodyHtml": "<p>Pentadbir di <strong>{organizationName}</strong> meminta penetapan semula kata laluan untuk akaun anda.</p><p><a>Tetapkan kata laluan baharu</a></p><p>Jika anda tidak menjangka e-mel ini, anda boleh mengabaikannya dengan selamat.</p>"
+    },
     "mfaEnrolled": {
       "subject": "Pengesahan dua faktor diaktifkan",
       "bodyHtml": "<p>Pengesahan dua faktor telah diaktifkan pada akaun AyamNorliza anda.</p><p>Jika ini bukan anda, hubungi pemilik organisasi anda dengan segera.</p>"

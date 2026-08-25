@@ -1186,6 +1186,10 @@
       "subject": "You are invited to {organizationName}",
       "bodyHtml": "<p>{inviterName} invited you to join <strong>{organizationName}</strong> as <strong>{role}</strong>.</p><p>This invitation expires {expiresAt}.</p><p><a>Accept invitation</a></p>"
     },
+    "passwordReset": {
+      "subject": "Set your {organizationName} password",
+      "bodyHtml": "<p>An administrator at <strong>{organizationName}</strong> requested a password reset for your account.</p><p><a>Set a new password</a></p><p>If you didn't expect this, you can safely ignore this email.</p>"
+    },
     "mfaEnrolled": {
       "subject": "Two-factor authentication enabled",
       "bodyHtml": "<p>Two-factor authentication was enabled on your AyamNorliza account.</p><p>If this was not you, contact your organization owner immediately.</p>"
