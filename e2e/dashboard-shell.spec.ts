@@ -13,13 +13,13 @@ test("dashboard shell exposes sidebar navigation and account actions", async ({
 
   await expect(page.getByRole("button", { name: /^access control$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^sales$/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^fulfillment$/i })).toBeVisible();
 
-  // Sidebar renders one open submenu per top-level nav group. The order
-  // module (Task 11) added a second group ("Sales") alongside the
-  // pre-existing "Access control" group, so both are open by default.
+  // Sidebar renders one open submenu per top-level nav group: Sales,
+  // Fulfillment, and Access control are all open by default.
   const sidebar = page.locator('[data-slot="sidebar"]');
   const openSectionSubmenus = sidebar.locator('[data-sidebar="menu-sub"]');
-  await expect(openSectionSubmenus).toHaveCount(2);
+  await expect(openSectionSubmenus).toHaveCount(3);
 
   await expect(page.getByRole("link", { name: /^organization$/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /^users$/i })).toBeVisible();
