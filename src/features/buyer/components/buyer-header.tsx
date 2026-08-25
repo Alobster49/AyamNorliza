@@ -9,11 +9,11 @@ import {
   User,
   LogOut,
   Package,
-  ShoppingBag,
   Menu,
   X,
 } from "lucide-react";
 import { LocaleSwitcher } from "@/components/shared/locale-switcher";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -47,19 +47,16 @@ export function BuyerHeader({
   const tNav = useTranslations("buyer.nav");
   const tCommon = useTranslations("common");
 
-  const navItems = [
-    { href: `/buyer_portal/${organizationSlug}/shop`, label: tNav("shop"), icon: ShoppingBag },
-    ...(isLoggedIn
-      ? [
-          { href: `/buyer_portal/${organizationSlug}/orders`, label: tNav("orders"), icon: Package },
-          {
-            href: `/buyer_portal/${organizationSlug}/profile`,
-            label: tNav("profile"),
-            icon: User,
-          },
-        ]
-      : []),
-  ];
+  const navItems = isLoggedIn
+    ? [
+        { href: `/buyer_portal/${organizationSlug}/orders`, label: tNav("orders"), icon: Package },
+        {
+          href: `/buyer_portal/${organizationSlug}/profile`,
+          label: tNav("profile"),
+          icon: User,
+        },
+      ]
+    : [];
 
   async function handleSignOut() {
     await buyerSignOutAction();
@@ -69,19 +66,16 @@ export function BuyerHeader({
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
+      <div className="flex h-16 w-full items-center justify-between px-4">
         {/* Logo */}
-        <Link href={`/buyer_portal/${organizationSlug}/shop`} className="flex items-center gap-2">
+        <Link href={`/buyer_portal/${organizationSlug}/shop`} className="flex items-center">
           <Image
             src="/logo-nb-poultry.webp"
-            alt="NB Poultry Processing Industries"
+            alt={t("brand")}
             width={36}
             height={36}
             className="h-9 w-9 rounded-lg object-contain"
           />
-          <span className="hidden font-semibold sm:inline-block">
-            {t("brand")}
-          </span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -105,6 +99,7 @@ export function BuyerHeader({
         {/* Right side actions */}
         <div className="flex items-center gap-2">
           <LocaleSwitcher />
+          <ThemeToggle />
 
           {/* Cart button - always visible */}
           <Button variant="ghost" size="icon" onClick={openCart} className="relative">

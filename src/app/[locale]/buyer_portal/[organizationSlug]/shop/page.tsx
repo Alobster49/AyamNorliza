@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { getPublicCatalog, getOrganizationBySlug } from "@/features/buyer/server/actions";
 import { ShopClient } from "./product-grid";
@@ -47,22 +48,22 @@ export default async function ShopPage({ params }: ShopPageProps) {
 
   return (
     <div className="space-y-12">
-      <section className="relative overflow-hidden rounded-3xl border bg-card px-6 py-14 sm:px-12 sm:py-20">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 85% 20%, var(--primary) 0, transparent 45%)",
-          }}
-        />
-        <p className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-          {org?.name ? t("farmEyebrow", { name: org.name }) : t("farmEyebrowFallback")}
-        </p>
-        <h1 className="font-buyer-display mt-3 max-w-2xl text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl">
-          {t("heroTitle")}
+      <section className="relative overflow-hidden rounded-3xl border bg-card px-6 py-6 text-center sm:px-12 sm:py-8">
+        <h1 className="flex justify-center">
+          <Image
+            src="/logo-ayam-norliza.png"
+            alt={org?.name ? t("farmEyebrow", { name: org.name }) : t("farmEyebrowFallback")}
+            width={2479}
+            height={870}
+            priority
+            className="h-28 w-auto sm:h-40"
+          />
         </h1>
-        <p className="mt-4 max-w-xl text-lg text-muted-foreground">{t("heroBody")}</p>
+        <div aria-hidden className="mx-auto mt-4 h-[3px] w-14 rounded-full bg-primary" />
+        <p className="mt-3 text-[13px] uppercase tracking-[0.22em] text-muted-foreground">
+          Bersih <span className="text-primary">·</span> Segar{" "}
+          <span className="text-primary">·</span> Suci <span className="text-primary">·</span> Halal
+        </p>
       </section>
 
       <ShopClient categories={categories} />

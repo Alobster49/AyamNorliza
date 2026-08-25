@@ -52,12 +52,7 @@ export function ShopClient({ categories }: { categories: CatalogWithProducts[] }
 
       {visible.map((category) => (
         <section key={category.id} className="space-y-4">
-          <div className="flex items-baseline justify-between">
-            <h2 className="font-buyer-display text-2xl font-semibold">{category.name}</h2>
-            {category.description && (
-              <p className="hidden text-sm text-muted-foreground sm:block">{category.description}</p>
-            )}
-          </div>
+          <h2 className="font-buyer-display text-2xl font-semibold">{category.name}</h2>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {category.products.map((product) => (
               <ProductCard

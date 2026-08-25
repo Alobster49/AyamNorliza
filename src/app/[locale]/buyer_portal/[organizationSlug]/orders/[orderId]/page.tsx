@@ -94,7 +94,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
           </div>
 
           {order.status === "cancelled" && order.notes && (
-            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800">
+            <div className="rounded-lg bg-red-50 p-4 text-sm text-red-800 dark:bg-red-950/40 dark:text-red-200">
               <p className="font-medium">{t("cancelledNotice")}</p>
               <p className="mt-1 whitespace-pre-line">{order.notes}</p>
             </div>
@@ -135,7 +135,7 @@ export default async function OrderDetailPage({ params }: OrderDetailPageProps) 
                       <div className="mt-2 flex flex-wrap gap-2">
                         <Badge variant="outline">{tProduct(BUYER_FALLBACK_KEYS[item.fallback])}</Badge>
                         {fallbackNote && (
-                          <Badge className="bg-amber-100 text-amber-800">
+                          <Badge className="bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-200">
                             {t("fallbackUsed", { note: fallbackNote })}
                           </Badge>
                         )}

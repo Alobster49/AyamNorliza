@@ -1,25 +1,9 @@
-import { Fraunces, Schibsted_Grotesk, IBM_Plex_Mono } from "next/font/google";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SupabaseSessionProvider } from "@/components/providers/supabase-session-provider";
 import { BuyerHeader } from "@/features/buyer/components/buyer-header";
 import { CartProvider } from "@/features/buyer/components/cart-context";
 import { CartUiProvider } from "@/features/buyer/components/cart-ui-context";
 import { CartOverlay } from "@/features/buyer/components/cart-overlay";
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  axes: ["opsz"],
-  variable: "--font-buyer-display",
-});
-const schibsted = Schibsted_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-buyer-ui",
-});
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  variable: "--font-buyer-mono",
-});
 
 type BuyerLayoutProps = {
   children: React.ReactNode;
@@ -51,9 +35,7 @@ export default async function BuyerLayout({ children, params }: BuyerLayoutProps
     <SupabaseSessionProvider>
       <CartProvider>
         <CartUiProvider>
-          <div
-            className={`buyer-theme min-h-screen ${fraunces.variable} ${schibsted.variable} ${plexMono.variable}`}
-          >
+          <div className="buyer-theme min-h-screen">
             <BuyerHeader
               organizationSlug={organizationSlug}
               buyerName={buyerName}

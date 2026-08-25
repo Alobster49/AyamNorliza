@@ -150,42 +150,67 @@
  * ------------------------------------------------------------------------- */
 .buyer-theme {
   color-scheme: light;
-  font-family: var(--font-buyer-ui), ui-sans-serif, system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "Segoe UI", Roboto, ui-sans-serif, sans-serif;
 
-  --background: oklch(0.97 0.015 78);
-  --foreground: oklch(0.24 0.02 55);
-  --card: oklch(0.985 0.012 78);
-  --card-foreground: oklch(0.24 0.02 55);
-  --popover: oklch(0.985 0.012 78);
-  --popover-foreground: oklch(0.24 0.02 55);
-  --primary: oklch(0.74 0.16 76);
-  --primary-foreground: oklch(0.24 0.02 55);
-  --secondary: oklch(0.93 0.02 78);
-  --secondary-foreground: oklch(0.24 0.02 55);
-  --muted: oklch(0.93 0.02 78);
-  --muted-foreground: oklch(0.45 0.025 60);
-  --accent: oklch(0.93 0.02 78);
-  --accent-foreground: oklch(0.24 0.02 55);
-  --border: oklch(0.24 0.02 55 / 14%);
-  --input: oklch(0.24 0.02 55 / 18%);
-  --ring: oklch(0.74 0.16 76);
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.24 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.24 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.24 0 0);
+  --primary: oklch(0.55 0.22 27);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.965 0 0);
+  --secondary-foreground: oklch(0.24 0 0);
+  --muted: oklch(0.965 0 0);
+  --muted-foreground: oklch(0.5 0 0);
+  --accent: oklch(0.965 0 0);
+  --accent-foreground: oklch(0.24 0 0);
+  --border: oklch(0.24 0 0 / 10%);
+  --input: oklch(0.24 0 0 / 14%);
+  --ring: oklch(0.55 0.22 27);
 
-  /* Reserved roles — see Global Constraints. */
-  --buyer-delta: oklch(0.57 0.18 28);
+  /* Reserved roles — see Global Constraints. Delta is neutral so it never
+     competes with the red primary. */
+  --buyer-delta: oklch(0.5 0 0);
   --buyer-confirmed: oklch(0.56 0.09 145);
 
   background-color: var(--background);
   color: var(--foreground);
-  /* 3% paper grain, no asset. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* Dark variant — html-level .dark class (next-themes) flips the scope. */
+.dark .buyer-theme {
+  color-scheme: dark;
+
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.96 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.96 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.96 0 0);
+  --primary: oklch(0.6 0.21 27);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.26 0 0);
+  --secondary-foreground: oklch(0.96 0 0);
+  --muted: oklch(0.26 0 0);
+  --muted-foreground: oklch(0.7 0 0);
+  --accent: oklch(0.26 0 0);
+  --accent-foreground: oklch(0.96 0 0);
+  --border: oklch(1 0 0 / 12%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.6 0.21 27);
+
+  --buyer-delta: oklch(0.7 0 0);
+  --buyer-confirmed: oklch(0.7 0.11 145);
 }
 
 .font-buyer-display {
-  font-family: var(--font-buyer-display), Georgia, "Times New Roman", serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, ui-sans-serif, sans-serif;
 }
 
 .font-buyer-mono {
-  font-family: var(--font-buyer-mono), ui-monospace, SFMono-Regular, monospace;
+  font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
   font-variant-numeric: tabular-nums;
 }
 
