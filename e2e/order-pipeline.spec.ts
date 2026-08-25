@@ -123,6 +123,8 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   await expect(page.getByRole("button", { name: "Confirm order" })).toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: "Not available" }).click();
   await expect(page.getByText("Resulting fallback: Mix sizes")).toBeVisible();
+  // The surviving (mix-fallback) line needs its deal price keyed at confirm.
+  await fieldAfterLabel(page, "Price / kg (RM)").fill("12.50");
   await page.getByRole("button", { name: "Confirm order" }).click();
   await expect(
     page.locator('[data-slot="badge"]').filter({ hasText: "Confirmed" }).first(),
