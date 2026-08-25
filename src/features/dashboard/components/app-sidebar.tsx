@@ -14,6 +14,7 @@ import {
   Settings,
   ShieldCheck,
   ShoppingCart,
+  Truck,
   UserRound,
   Warehouse,
   type LucideIcon,
@@ -66,6 +67,7 @@ type AppSidebarProps = {
 
 const groupIcons: Record<string, LucideIcon> = {
   "Access control": ShieldCheck,
+  Fulfillment: Truck,
   Sales: ShoppingCart,
   Warehouse: Warehouse,
   System: Database,
