@@ -2,7 +2,15 @@ import { notFound } from "next/navigation";
 import { getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
 import { requireOrgMember } from "@/lib/auth/require-user";
-import { getOrganizationBySlug, listMembers, listInvitations, listMemberScopes } from "@/features/identity-access/server/queries";
+import {
+  getOrganizationBySlug,
+  listMembers,
+  listInvitations,
+  listMemberScopes,
+  listProfilesByUserIds,
+} from "@/features/identity-access/server/queries";
+import { adminGetMemberEmails } from "@/features/identity-access/server/admin-queries";
+import { mergeMemberDirectory } from "@/features/identity-access/directory";
 import { UsersPageClient } from "@/features/identity-access/components/users-page-client";
 
 export default async function UsersSettingsPage({
@@ -23,6 +31,12 @@ export default async function UsersSettingsPage({
     listMemberScopes(org.id),
     getTranslations("settings.users"),
   ]);
+  const userIds = Array.from(new Set(members.map((m) => m.userId)));
+  const [displayNames, emails] = await Promise.all([
+    listProfilesByUserIds(userIds),
+    adminGetMemberEmails(userIds),
+  ]);
+  const memberRows = mergeMemberDirectory(members, displayNames, emails);
 
   return (
     <section>
@@ -30,7 +44,7 @@ export default async function UsersSettingsPage({
       <UsersPageClient
         organizationId={org.id}
         organizationSlug={org.slug}
-        members={members}
+        members={memberRows}
         invitations={invitations}
         scopes={scopes}
       />

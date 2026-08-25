@@ -5,21 +5,28 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { InviteUserDialog } from "@/components/forms/invite-user-dialog";
+import { EditMemberDialog } from "@/components/forms/edit-member-dialog";
+import { CreateUserDialog } from "@/components/forms/create-user-dialog";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import {
   resendInvitationAction,
   revokeInvitationAction,
   changeMemberRoleAction,
   deactivateUserAction,
+  sendPasswordResetAction,
+  removeMemberAction,
+  type ActionResult,
 } from "@/features/identity-access/server/actions";
 import { ROLES } from "@/lib/auth/permissions";
 import { roleLabelKey } from "@/features/access-control/components/role-label";
-import type { Invitation, MemberScope, OrganizationMember } from "../types";
+import type { Invitation, MemberScope } from "../types";
+import type { MemberDirectoryRow } from "../directory";
 import { ReauthDialog } from "@/components/forms/reauth-dialog";
 
 export function UsersPageClient(props: {
   organizationId: string;
   organizationSlug: string;
-  members: OrganizationMember[];
+  members: MemberDirectoryRow[];
   invitations: Invitation[];
   scopes: MemberScope[];
 }) {
@@ -30,19 +37,15 @@ export function UsersPageClient(props: {
   const tStatus = useTranslations("identity.memberStatus");
   const tInvitationStatus = useTranslations("identity.invitationStatus");
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<MemberDirectoryRow | null>(null);
+  const [resetTarget, setResetTarget] = useState<MemberDirectoryRow | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<MemberDirectoryRow | null>(null);
   const [reauthOpen, setReauthOpen] = useState(false);
-  const [pendingAction, setPendingAction] = useState<null | (() => Promise<{
-    ok: boolean;
-    code?: string;
-    message?: string;
-    messageKey?: string;
-    messageParams?: Record<string, string | number>;
-  }>)>(null);
+  const [pendingAction, setPendingAction] = useState<null | (() => Promise<ActionResult<unknown>>)>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function reauthThen(
-    retry: () => Promise<{ ok: boolean; code?: string; message?: string; messageKey?: string; messageParams?: Record<string, string | number> }>,
-  ) {
+  async function reauthThen(retry: () => Promise<ActionResult<unknown>>) {
     setPendingAction(() => retry);
     setReauthOpen(true);
   }
@@ -87,6 +90,26 @@ export function UsersPageClient(props: {
     router.refresh();
   }
 
+  async function sendReset(member: MemberDirectoryRow) {
+    setError(null);
+    const result = await sendPasswordResetAction({ memberId: member.id });
+    if (!result.ok) showError(result);
+  }
+
+  async function removeMember(member: MemberDirectoryRow) {
+    setError(null);
+    const result = await removeMemberAction({ memberId: member.id, reason: t("defaultRemoveReason") });
+    if (!result.ok) {
+      if (result.code === "reauth_required") {
+        await reauthThen(() => removeMemberAction({ memberId: member.id, reason: t("defaultRemoveReason") }));
+        return;
+      }
+      showError(result);
+      return;
+    }
+    router.refresh();
+  }
+
   async function resend(invitationId: string) {
     const result = await resendInvitationAction({ invitationId });
     if (!result.ok) showError(result);
@@ -107,6 +130,9 @@ export function UsersPageClient(props: {
         <button type="button" onClick={() => setInviteOpen(true)}>
           {t("inviteUser")}
         </button>
+        <button type="button" onClick={() => setCreateOpen(true)}>
+          {t("createUser")}
+        </button>
       </div>
       {error ? <p role="alert">{error}</p> : null}
 
@@ -124,7 +150,13 @@ export function UsersPageClient(props: {
         <tbody>
           {props.members.map((m) => (
             <tr key={m.id}>
-              <td><code>{m.userId}</code></td>
+              <td>
+                <div title={m.userId}>
+                  <strong>{m.displayName ?? t("unknownUser")}</strong>
+                  <br />
+                  <span className="text-muted-foreground">{m.email ?? "—"}</span>
+                </div>
+              </td>
               <td>
                 <select defaultValue={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
                   {ROLES.map((r) => (
@@ -139,11 +171,14 @@ export function UsersPageClient(props: {
                 {props.scopes.filter((s) => s.organizationMemberId === m.id).length}
               </td>
               <td>
+                <button type="button" onClick={() => setEditing(m)}>{t("editDetails")}</button>
+                <button type="button" onClick={() => setResetTarget(m)}>{t("resetPassword")}</button>
                 {m.status === "active" ? (
                   <button type="button" onClick={() => deactivate(m.id)}>
                     {t("deactivate")}
                   </button>
                 ) : null}
+                <button type="button" onClick={() => setRemoveTarget(m)}>{t("removeMember")}</button>
               </td>
             </tr>
           ))}
@@ -191,6 +226,39 @@ export function UsersPageClient(props: {
         organizationId={props.organizationId}
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
+      />
+      <CreateUserDialog
+        organizationId={props.organizationId}
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onReauthNeeded={(retry) => reauthThen(retry)}
+      />
+      <EditMemberDialog
+        member={editing}
+        onClose={() => setEditing(null)}
+        onReauthNeeded={(retry) => reauthThen(retry)}
+      />
+      <ConfirmDialog
+        open={resetTarget !== null}
+        onOpenChange={(open) => !open && setResetTarget(null)}
+        title={t("confirmResetTitle")}
+        description={t("confirmResetDescription", { email: resetTarget?.email ?? "" })}
+        confirmLabel={t("resetPassword")}
+        onConfirm={async () => {
+          if (resetTarget) await sendReset(resetTarget);
+        }}
+      />
+      <ConfirmDialog
+        open={removeTarget !== null}
+        onOpenChange={(open) => !open && setRemoveTarget(null)}
+        title={t("confirmRemoveTitle")}
+        description={t("confirmRemoveDescription", {
+          name: removeTarget?.displayName ?? removeTarget?.email ?? "",
+        })}
+        confirmLabel={t("removeMember")}
+        onConfirm={async () => {
+          if (removeTarget) await removeMember(removeTarget);
+        }}
       />
       <ReauthDialog
         open={reauthOpen}

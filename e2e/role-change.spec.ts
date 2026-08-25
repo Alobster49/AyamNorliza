@@ -7,7 +7,7 @@ test("owner changes a member role and sees an audit row", async ({ page }) => {
   // Target the seeded non-owner member explicitly: row order is not stable
   // (the seed has two owners), and changing an owner's role is rejected as
   // needing a second approver.
-  const targetRow = page.locator("table tbody tr", { hasText: TARGET.userId });
+  const targetRow = page.locator("table tbody tr", { hasText: TARGET.email });
   const select = targetRow.locator("td select");
   await expect(select).toBeVisible({ timeout: 10_000 });
   // Pick whichever of the two roles the member is not currently in, so the

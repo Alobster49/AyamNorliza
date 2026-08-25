@@ -79,6 +79,14 @@
       "expired": "Pautan jemputan ini sudah tamat tempoh. Minta pemilik organisasi hantar yang baharu.",
       "failureTitle": "Tidak dapat menerima jemputan"
     },
+    "setPassword": {
+      "title": "Tetapkan kata laluan baharu",
+      "passwordLabel": "Kata laluan baharu",
+      "confirmLabel": "Sahkan kata laluan",
+      "submit": "Simpan kata laluan",
+      "saving": "Menyimpan…",
+      "mismatch": "Kata laluan tidak sepadan"
+    },
     "errors": {
       "invalidCredentials": "E-mel dan kata laluan itu tidak sepadan.",
       "rateLimited": "Terlalu banyak cubaan. Cuba lagi dalam beberapa minit.",
@@ -422,7 +430,17 @@
         "notFound": "Ahli tidak dijumpai",
         "alreadyHasRole": "Ahli sudah mempunyai peranan itu",
         "ownerNeedsApprover": "Perubahan pemilik memerlukan pelulus kedua",
-        "transferOwnershipFirst": "Pindahkan pemilikan sebelum menyahaktifkan pemilik"
+        "transferOwnershipFirst": "Pindahkan pemilikan sebelum menyahaktifkan pemilik",
+        "emailInUse": "E-mel itu sudah digunakan",
+        "updateFailed": "Tidak dapat mengemas kini ahli",
+        "cannotRemoveSelf": "Anda tidak boleh membuang akaun anda sendiri",
+        "removeFailed": "Tidak dapat membuang ahli",
+        "noEmail": "Ahli ini tiada alamat e-mel",
+        "resetFailed": "Tidak dapat menghantar e-mel tetapan semula"
+      },
+      "user": {
+        "emailInUse": "E-mel itu sudah didaftarkan",
+        "createFailed": "Tidak dapat mencipta akaun"
       },
       "accessReview": {
         "itemNotFound": "Item semakan tidak dijumpai",
@@ -795,6 +813,7 @@
     "usersPage": {
       "inviteUser": "Jemput pengguna",
       "membersHeading": "Ahli ({count})",
+      "unknownUser": "Pengguna tidak dikenali",
       "colUser": "Pengguna",
       "colRole": "Peranan",
       "colStatus": "Status",
@@ -806,7 +825,16 @@
       "resend": "Hantar semula",
       "revoke": "Batalkan",
       "defaultRoleChangeReason": "Perubahan peranan melalui halaman pengguna",
-      "defaultDeactivateReason": "Dinyahaktifkan daripada halaman pengguna"
+      "defaultDeactivateReason": "Dinyahaktifkan daripada halaman pengguna",
+      "createUser": "Cipta pengguna",
+      "editDetails": "Sunting",
+      "resetPassword": "Tetap semula kata laluan",
+      "removeMember": "Buang",
+      "defaultRemoveReason": "Dibuang dari halaman pengguna",
+      "confirmResetTitle": "Hantar tetapan semula kata laluan?",
+      "confirmResetDescription": "E-mel tetapan semula kata laluan akan dihantar ke {email}.",
+      "confirmRemoveTitle": "Buang ahli?",
+      "confirmRemoveDescription": "{name} akan hilang akses kepada organisasi ini. Akaun dan sejarah mereka dikekalkan."
     },
     "auditLog": {
       "filtersLabel": "Penapis",
@@ -1128,6 +1156,25 @@
       "sending": "Menghantar...",
       "sendInvite": "Hantar jemputan"
     },
+    "editMemberDialog": {
+      "title": "Sunting ahli",
+      "nameLabel": "Nama paparan",
+      "emailLabel": "E-mel",
+      "cancel": "Batal",
+      "save": "Simpan",
+      "saving": "Menyimpan…",
+      "defaultReason": "Butiran dikemas kini dari halaman pengguna"
+    },
+    "createUserDialog": {
+      "title": "Cipta pengguna",
+      "nameLabel": "Nama paparan",
+      "emailLabel": "E-mel",
+      "roleLabel": "Peranan",
+      "setPasswordNote": "Pengguna akan menerima e-mel untuk menetapkan kata laluan mereka.",
+      "cancel": "Batal",
+      "create": "Cipta",
+      "creating": "Mencipta…"
+    },
     "breakGlassDialog": {
       "title": "Buka akses break-glass",
       "description": "Ini memberi anda akses tinggi untuk tempoh singkat. Pemilik akan dimaklumkan dalam masa 60 saat.",
@@ -1159,6 +1206,10 @@
     "invite": {
       "subject": "Anda dijemput ke {organizationName}",
       "bodyHtml": "<p>{inviterName} menjemput anda menyertai <strong>{organizationName}</strong> sebagai <strong>{role}</strong>.</p><p>Jemputan ini luput pada {expiresAt}.</p><p><a>Terima jemputan</a></p>"
+    },
+    "passwordReset": {
+      "subject": "Tetapkan kata laluan {organizationName} anda",
+      "bodyHtml": "<p>Pentadbir di <strong>{organizationName}</strong> meminta penetapan semula kata laluan untuk akaun anda.</p><p><a>Tetapkan kata laluan baharu</a></p><p>Jika anda tidak menjangka e-mel ini, anda boleh mengabaikannya dengan selamat.</p>"
     },
     "mfaEnrolled": {
       "subject": "Pengesahan dua faktor diaktifkan",

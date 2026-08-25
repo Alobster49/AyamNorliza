@@ -105,6 +105,19 @@ export async function listMembers(
   return rows.filter((r) => matchingIds.has(r.userId));
 }
 
+export async function listProfilesByUserIds(
+  userIds: string[],
+): Promise<Map<string, string | null>> {
+  if (userIds.length === 0) return new Map();
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id, display_name")
+    .in("user_id", userIds);
+  if (error) throw error;
+  return new Map((data ?? []).map((p) => [p.user_id, p.display_name ?? null]));
+}
+
 export async function listMemberScopes(organizationId: string): Promise<MemberScope[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase

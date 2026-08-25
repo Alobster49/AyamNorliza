@@ -38,14 +38,25 @@ vi.mock("@/lib/auth/reauth.server", async () => {
 });
 
 vi.mock("@/lib/audit/events", () => ({ recordAudit: vi.fn() }));
+vi.mock("@/lib/supabase/admin", () => ({
+  admin: {
+    insertAuthSecurityEvent: vi.fn(),
+    generateRecoveryLink: vi.fn(async () => ({ hashedToken: "hash-1" })),
+  },
+}));
 vi.mock("@/lib/notifications/dispatch", () => ({ dispatch: vi.fn() }));
 vi.mock("../../server/admin-queries", () => ({
   adminCreateInvitation: vi.fn(),
   adminRevokeUserSessions: vi.fn(),
   adminRotateInvitationToken: vi.fn(),
+  adminUpdateMemberIdentity: vi.fn(),
+  adminDeleteOrgMember: vi.fn(),
+  adminCreateOrgUser: vi.fn(),
+  adminGetMemberEmails: vi.fn(async () => new Map()),
 }));
 vi.mock("@/lib/email/resend", () => ({ sendEmail: vi.fn() }));
 vi.mock("@/lib/email/render-invite", () => ({ renderInvite: vi.fn(() => ({ subject: "", html: "" })) }));
+vi.mock("@/lib/email/render-password-reset", () => ({ renderPasswordReset: vi.fn(() => ({ subject: "", html: "" })) }));
 vi.mock("@/lib/email/render-break-glass", () => ({ renderBreakGlassUsed: vi.fn(() => ({ subject: "", html: "" })) }));
 vi.mock("@/lib/env", () => ({
   serverEnv: vi.fn(() => ({
@@ -57,9 +68,17 @@ vi.mock("@/lib/env", () => ({
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { admin } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/resend";
 import { requireUser, requireOrgMember, PermissionError } from "@/lib/auth/require-user";
 import { requireReauth, ReauthRequiredError } from "@/lib/auth/reauth.server";
-import { adminCreateInvitation } from "../../server/admin-queries";
+import {
+  adminCreateInvitation,
+  adminUpdateMemberIdentity,
+  adminDeleteOrgMember,
+  adminGetMemberEmails,
+  adminCreateOrgUser,
+} from "../../server/admin-queries";
 import { mockSupabaseWithQueues, type QueryResult } from "./message-key-test-helpers";
 import {
   updateOrganizationSettingsAction,
@@ -70,6 +89,10 @@ import {
   changeMemberRoleAction,
   changeMemberScopeAction,
   deactivateUserAction,
+  updateMemberProfileAction,
+  removeMemberAction,
+  sendPasswordResetAction,
+  createUserAction,
   startAccessReviewAction,
   decideReviewItemAction,
   openSupportSessionAction,
@@ -315,6 +338,218 @@ describe("deactivateUserAction", () => {
     const result = await deactivateUserAction(validInput);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.transferOwnershipFirst");
+  });
+});
+
+describe("updateMemberProfileAction", () => {
+  const UUID = "11111111-1111-1111-1111-111111111111";
+  const validInput = { memberId: UUID, displayName: "New Name", reason: "correcting name" };
+  const TARGET = { data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "caretaker" }, error: null };
+
+  it("returns common.invalidInput when nothing to update", async () => {
+    const result = await updateMemberProfileAction({ memberId: UUID, reason: "no fields to change" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.invalidInput");
+  });
+
+  it("returns member.notFound for an unknown member", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await updateMemberProfileAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.notFound");
+  });
+
+  it("returns common.forbidden when the actor's role can't manage members", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("caretaker")] });
+    const result = await updateMemberProfileAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
+  });
+
+  it("returns roles.cannotGrantRole when an org_admin edits an owner", async () => {
+    setSupabase({
+      organization_members: [
+        { data: { id: UUID, organization_id: "org-1", user_id: "u-owner", role: "owner" }, error: null },
+        ACTIVE_MEMBER("org_admin"),
+      ],
+    });
+    const result = await updateMemberProfileAction({ memberId: UUID, email: "takeover@x.my", reason: "escalation attempt" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+      expect(result.messageParams).toEqual({ role: "owner" });
+    }
+    expect(adminUpdateMemberIdentity).not.toHaveBeenCalled();
+  });
+
+  it("returns member.emailInUse when the email is already registered", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminUpdateMemberIdentity).mockRejectedValue(
+      Object.assign(new Error("email exists"), { code: "email_exists", status: 422 }),
+    );
+    const result = await updateMemberProfileAction({ memberId: UUID, email: "dup@x.my", reason: "duplicate email" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.emailInUse");
+  });
+
+  it("succeeds for an org_admin name update", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminUpdateMemberIdentity).mockResolvedValue();
+    const result = await updateMemberProfileAction(validInput);
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("removeMemberAction", () => {
+  const UUID = "11111111-1111-1111-1111-111111111111";
+  const validInput = { memberId: UUID, reason: "left the farm" };
+  const TARGET = (over: Partial<{ user_id: string; role: string; status: string }> = {}) => ({
+    data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "caretaker", status: "active", ...over },
+    error: null,
+  });
+
+  it("returns member.notFound for an unknown member", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.notFound");
+  });
+
+  it("returns member.cannotRemoveSelf when removing yourself", async () => {
+    setSupabase({ organization_members: [TARGET({ user_id: "user-1" })] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.cannotRemoveSelf");
+  });
+
+  it("returns member.transferOwnershipFirst for an active owner", async () => {
+    setSupabase({ organization_members: [TARGET({ role: "owner" })] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.transferOwnershipFirst");
+  });
+
+  it("returns common.forbidden when the actor lacks membership.deactivate", async () => {
+    setSupabase({ organization_members: [TARGET(), ACTIVE_MEMBER("caretaker")] });
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
+  });
+
+  it("removes and revokes sessions for an org_admin", async () => {
+    setSupabase({ organization_members: [TARGET(), ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminDeleteOrgMember).mockResolvedValue();
+    const result = await removeMemberAction(validInput);
+    expect(result.ok).toBe(true);
+    expect(adminDeleteOrgMember).toHaveBeenCalledWith(UUID, expect.anything());
+  });
+});
+
+describe("sendPasswordResetAction", () => {
+  const UUID = "11111111-1111-1111-1111-111111111111";
+  const TARGET = { data: { id: UUID, organization_id: "org-1", user_id: "u-target" }, error: null };
+
+  it("returns member.notFound for an unknown member", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.notFound");
+  });
+
+  it("returns common.forbidden when the actor cannot invite", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("caretaker")] });
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
+  });
+
+  it("returns member.noEmail when the target has no auth email", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminGetMemberEmails).mockResolvedValue(new Map([["u-target", null]]));
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.noEmail");
+  });
+
+  it("sends the reset email for an org_admin via an admin recovery link", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminGetMemberEmails).mockResolvedValue(new Map([["u-target", "t@x.my"]]));
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(true);
+    expect(admin.generateRecoveryLink).toHaveBeenCalledWith("t@x.my");
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: ["t@x.my"] }));
+  });
+
+  it("returns member.resetFailed when the recovery link cannot be generated", async () => {
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminGetMemberEmails).mockResolvedValue(new Map([["u-target", "t@x.my"]]));
+    vi.mocked(admin.generateRecoveryLink).mockRejectedValueOnce(new Error("gotrue down"));
+    const result = await sendPasswordResetAction({ memberId: UUID });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.resetFailed");
+  });
+});
+
+describe("createUserAction", () => {
+  const validInput = {
+    organizationId: "11111111-1111-1111-1111-111111111111",
+    email: "staff@ayam.my",
+    displayName: "New Staff",
+    role: "caretaker",
+  };
+
+  it("returns common.invalidInput for a bad payload", async () => {
+    const result = await createUserAction({ ...validInput, email: "nope" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.invalidInput");
+  });
+
+  it("returns common.notMember when the caller has no active membership", async () => {
+    setSupabase({ organization_members: [{ data: null, error: null }] });
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.notMember");
+  });
+
+  it("returns invite.roleCannotInvite when the caller's role can't invite", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("caretaker")] });
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.invite.roleCannotInvite");
+  });
+
+  it("returns roles.cannotGrantRole when the target role outranks the caller", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    const result = await createUserAction({ ...validInput, role: "owner" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+  });
+
+  it("returns user.emailInUse on a duplicate email", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminCreateOrgUser).mockRejectedValue(
+      Object.assign(new Error("email exists"), { code: "email_exists", status: 422 }),
+    );
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.user.emailInUse");
+  });
+
+  it("creates the user and sends a set-password email for an org_admin", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminCreateOrgUser).mockResolvedValue({ userId: "new-user" });
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(true);
+    expect(admin.generateRecoveryLink).toHaveBeenCalledWith("staff@ayam.my");
+    expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({ to: ["staff@ayam.my"] }));
+  });
+
+  it("still succeeds when the set-password email fails (best-effort)", async () => {
+    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    vi.mocked(adminCreateOrgUser).mockResolvedValue({ userId: "new-user" });
+    vi.mocked(admin.generateRecoveryLink).mockRejectedValueOnce(new Error("gotrue down"));
+    const result = await createUserAction(validInput);
+    expect(result.ok).toBe(true);
   });
 });
 

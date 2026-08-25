@@ -122,6 +122,38 @@ export const DeactivateUserInput = z.object({
 });
 export type DeactivateUserInput = z.infer<typeof DeactivateUserInput>;
 
+export const UpdateMemberProfileInput = z
+  .object({
+    memberId: uuid,
+    displayName: z.string().min(1).max(150).optional(),
+    email: z.string().email().max(254).optional(),
+    reason: reasonSchema,
+  })
+  .refine((v) => v.displayName !== undefined || v.email !== undefined, {
+    message: "Provide a display name or an email to update",
+  });
+export type UpdateMemberProfileInput = z.infer<typeof UpdateMemberProfileInput>;
+
+export const SendPasswordResetInput = z.object({
+  memberId: uuid,
+});
+export type SendPasswordResetInput = z.infer<typeof SendPasswordResetInput>;
+
+export const RemoveMemberInput = z.object({
+  memberId: uuid,
+  reason: reasonSchema,
+});
+export type RemoveMemberInput = z.infer<typeof RemoveMemberInput>;
+
+export const CreateUserInput = z.object({
+  organizationId: uuid,
+  email: z.string().email().max(254),
+  displayName: z.string().min(1).max(150),
+  role: z.enum(ROLES),
+  clientOperationId: uuid.optional(),
+});
+export type CreateUserInput = z.infer<typeof CreateUserInput>;
+
 // ---------------------------------------------------------------------------
 // Access reviews
 // ---------------------------------------------------------------------------

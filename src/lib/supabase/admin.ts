@@ -85,6 +85,49 @@ export const admin = {
   },
 
   /**
+   * Change a user's login email. Admin path: the change takes effect
+   * immediately (no confirmation email round-trip) because the actor is
+   * an org admin correcting staff data, not the user self-serving.
+   */
+  async updateUserEmail(userId: string, email: string) {
+    const c = client();
+    const { error } = await c.auth.admin.updateUserById(userId, {
+      email,
+      email_confirm: true,
+    });
+    if (error) throw error;
+  },
+
+  /**
+   * Generate a recovery (password-reset) link for a user and return its
+   * hashed token. Admin-triggered resets must NOT use the cookie-backed
+   * PKCE `resetPasswordForEmail`: the code_verifier would live in the
+   * ADMIN's browser session while the link opens in the TARGET's browser,
+   * so the exchange always fails. The hashed token instead goes into a
+   * `/auth/confirm?token_hash=...` link that the target's own
+   * request-scoped client verifies via `verifyOtp`.
+   */
+  async generateRecoveryLink(email: string): Promise<{ hashedToken: string }> {
+    const c = client();
+    const { data, error } = await c.auth.admin.generateLink({ type: "recovery", email });
+    if (error) throw error;
+    const hashedToken = data.properties?.hashed_token;
+    if (!hashedToken) throw new Error("generateRecoveryLink: no hashed_token returned");
+    return { hashedToken };
+  },
+
+  /**
+   * Delete an organization membership row (remove-from-org). No RLS
+   * DELETE policy exists on organization_members by design; the DB
+   * trigger still refuses to delete an active owner.
+   */
+  async deleteOrgMember(memberId: string, _ctx: AdminContext) {
+    const c = client();
+    const { error } = await c.from("organization_members").delete().eq("id", memberId);
+    if (error) throw error;
+  },
+
+  /**
    * Resolve auth emails for a set of user ids. Emails live only on
    * `auth.users`, which RLS-scoped clients cannot read — the break-glass
    * owner notification uses this to turn membership `user_id`s into

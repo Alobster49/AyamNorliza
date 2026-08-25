@@ -48,16 +48,25 @@ import {
   ResendInvitationInput,
   RevokeInvitationInput,
   StartAccessReviewInput,
+  UpdateMemberProfileInput,
+  SendPasswordResetInput,
+  RemoveMemberInput,
+  CreateUserInput,
   UpdateOrganizationInput,
 } from "../schema";
 import {
   adminCreateInvitation,
   adminRevokeUserSessions,
   adminRotateInvitationToken,
+  adminUpdateMemberIdentity,
+  adminDeleteOrgMember,
+  adminCreateOrgUser,
+  adminGetMemberEmails,
 } from "./admin-queries";
 import { groupOwnerEmailsByLocale } from "./break-glass-recipients";
 import { sendEmail } from "@/lib/email/resend";
 import { renderInvite } from "@/lib/email/render-invite";
+import { renderPasswordReset } from "@/lib/email/render-password-reset";
 import { renderBreakGlassUsed } from "@/lib/email/render-break-glass";
 import { serverEnv } from "@/lib/env";
 import { DEFAULT_LOCALE, isSupportedLocale, type AppLocale } from "@/lib/i18n/locales";
@@ -853,6 +862,379 @@ export async function deactivateUserAction(
 
   revalidatePath(`/[organizationSlug]/settings/users`, "page");
   return ok({ userId: target.user_id });
+}
+
+// ---------------------------------------------------------------------------
+// updateMemberProfile
+// ---------------------------------------------------------------------------
+export async function updateMemberProfileAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ memberId: string }>> {
+  const reauth = await reauthOrError();
+  if (!reauth.ok) return reauth;
+
+  const parsed = UpdateMemberProfileInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const user = await requireUser();
+
+  const { data: target } = await supabase
+    .from("organization_members")
+    .select("id, organization_id, user_id, role")
+    .eq("id", input.memberId)
+    .maybeSingle();
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
+
+  const { data: actor } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", target.organization_id)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!actor || !can(actor.role as Role, "membership.role.change")) {
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+  // Role-rank guard: an org_admin must never edit the identity (email!)
+  // of a member who outranks them — an owner-email swap plus a password
+  // reset would be a full owner-account takeover, bypassing the
+  // two-person owner rule enforced elsewhere.
+  if (!canGrantRole(actor.role as Role, target.role as Role)) {
+    return err(
+      "forbidden",
+      `Cannot manage member with role '${target.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: target.role },
+    );
+  }
+
+  try {
+    await adminUpdateMemberIdentity(
+      { userId: target.user_id, displayName: input.displayName, email: input.email },
+      reauth.ctx,
+    );
+  } catch (e) {
+    const isDuplicate =
+      typeof e === "object" && e !== null &&
+      (("code" in e && (e as { code?: string }).code === "email_exists") ||
+        ("status" in e && (e as { status?: number }).status === 422));
+    if (isDuplicate) {
+      return err("conflict", "Email already in use", "errors.identity.member.emailInUse", {
+        email: ["errors.identity.member.emailInUse"],
+      });
+    }
+    return err("internal", e instanceof Error ? e.message : "Update failed", "errors.identity.member.updateFailed");
+  }
+
+  await recordAudit(
+    {
+      organizationId: target.organization_id,
+      actorUserId: user.id,
+      actorRole: actor.role,
+      eventType: "identity.member_profile_updated",
+      entityType: "organization_members",
+      entityId: target.id,
+      after: {
+        ...(input.displayName !== undefined ? { display_name: input.displayName } : {}),
+        ...(input.email !== undefined ? { email: input.email } : {}),
+      },
+      reason: input.reason,
+      correlationId: reauth.ctx.correlationId,
+      source: "web",
+    },
+    reauth.ctx,
+  );
+
+  revalidatePath(`/[organizationSlug]/settings/users`, "page");
+  return ok({ memberId: target.id });
+}
+
+// ---------------------------------------------------------------------------
+// removeMember (remove from organization; auth account survives)
+// ---------------------------------------------------------------------------
+export async function removeMemberAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ memberId: string }>> {
+  const reauth = await reauthOrError();
+  if (!reauth.ok) return reauth;
+
+  const parsed = RemoveMemberInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const user = await requireUser();
+
+  const { data: target } = await supabase
+    .from("organization_members")
+    .select("id, organization_id, user_id, role, status")
+    .eq("id", input.memberId)
+    .maybeSingle();
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
+  if (target.user_id === user.id) {
+    return err("forbidden", "You cannot remove yourself", "errors.identity.member.cannotRemoveSelf");
+  }
+  if ((target.role as string) === "owner" && target.status === "active") {
+    return err(
+      "forbidden",
+      "Transfer ownership before removing the owner",
+      "errors.identity.member.transferOwnershipFirst",
+    );
+  }
+
+  const { data: actor } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", target.organization_id)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!actor || !can(actor.role as Role, "membership.deactivate")) {
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+
+  try {
+    await adminDeleteOrgMember(target.id, reauth.ctx);
+  } catch (e) {
+    return err("internal", e instanceof Error ? e.message : "Remove failed", "errors.identity.member.removeFailed");
+  }
+
+  await adminRevokeUserSessions(target.user_id, input.reason, reauth.ctx);
+
+  await recordAudit(
+    {
+      organizationId: target.organization_id,
+      actorUserId: user.id,
+      actorRole: actor.role,
+      eventType: "identity.user_removed",
+      entityType: "organization_members",
+      entityId: target.id,
+      before: { role: target.role, status: target.status },
+      after: null,
+      reason: input.reason,
+      correlationId: reauth.ctx.correlationId,
+      source: "web",
+    },
+    reauth.ctx,
+  );
+
+  await dispatch({
+    event: "identity.user_removed",
+    organizationId: target.organization_id,
+    recipients: [target.user_id],
+    priority: "high",
+    data: { reason: input.reason },
+  });
+
+  revalidatePath(`/[organizationSlug]/settings/users`, "page");
+  return ok({ memberId: target.id });
+}
+
+// ---------------------------------------------------------------------------
+// sendPasswordReset (admin-triggered recovery email; no reauth needed)
+// ---------------------------------------------------------------------------
+export async function sendPasswordResetAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ memberId: string }>> {
+  const parsed = SendPasswordResetInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const user = await requireUser();
+
+  const { data: target } = await supabase
+    .from("organization_members")
+    .select("id, organization_id, user_id")
+    .eq("id", input.memberId)
+    .maybeSingle();
+  if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
+
+  const { data: actor } = await supabase
+    .from("organization_members")
+    .select("role")
+    .eq("organization_id", target.organization_id)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!actor || !can(actor.role as Role, "membership.invite")) {
+    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+
+  const emails = await adminGetMemberEmails([target.user_id]);
+  const email = emails.get(target.user_id);
+  if (!email) return err("conflict", "Member has no email", "errors.identity.member.noEmail");
+
+  // Admin-triggered reset: `resetPasswordForEmail` on this cookie-backed
+  // PKCE client would bind the code_verifier to the ADMIN's browser, so
+  // the link would always fail in the TARGET's browser. Instead generate
+  // a recovery token_hash (service role) and email a `/auth/confirm`
+  // link the target's own browser can verify via `verifyOtp`.
+  const env = serverEnv();
+  try {
+    const { hashedToken } = await admin.generateRecoveryLink(email);
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name, default_locale")
+      .eq("id", target.organization_id)
+      .single();
+    const { subject, html } = renderPasswordReset({
+      organizationName: org?.name ?? "AyamNorliza",
+      resetUrl: `${env.INVITE_BASE_URL}/auth/confirm?token_hash=${hashedToken}&type=recovery&next=/set-password`,
+      locale: resolveLocale(org?.default_locale),
+    });
+    await sendEmail({ to: [email], subject, html });
+  } catch (e) {
+    return err(
+      "internal",
+      e instanceof Error ? e.message : "Could not send the reset email",
+      "errors.identity.member.resetFailed",
+    );
+  }
+
+  const ctx = await ctxFor(user.id);
+  await admin.insertAuthSecurityEvent(
+    {
+      userId: target.user_id,
+      organizationId: target.organization_id,
+      eventType: "password_reset",
+      ip: null,
+      userAgent: null,
+      geoCountry: null,
+      metadata: { triggered_by: user.id },
+    },
+    ctx,
+  );
+  await recordAudit(
+    {
+      organizationId: target.organization_id,
+      actorUserId: user.id,
+      actorRole: actor.role,
+      eventType: "identity.password_reset_sent",
+      entityType: "organization_members",
+      entityId: target.id,
+      after: { email_sent: true },
+      correlationId: ctx.correlationId,
+      source: "web",
+    },
+    ctx,
+  );
+
+  return ok({ memberId: target.id });
+}
+
+// ---------------------------------------------------------------------------
+// createUser (direct account creation; user sets password via reset email)
+// ---------------------------------------------------------------------------
+export async function createUserAction(
+  rawInput: unknown,
+): Promise<ActionResult<{ userId: string }>> {
+  const reauth = await reauthOrError();
+  if (!reauth.ok) return reauth;
+
+  const parsed = CreateUserInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
+
+  const { data: actor, error: actorErr } = await supabase
+    .from("organization_members")
+    .select("id, role")
+    .eq("organization_id", input.organizationId)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (actorErr) return err("internal", actorErr.message, "errors.identity.common.internal");
+  if (!actor) return err("forbidden", "Not a member of this organization", "errors.identity.common.notMember");
+  if (!can(actor.role as Role, "membership.invite")) {
+    return err("forbidden", "Role cannot create users", "errors.identity.invite.roleCannotInvite");
+  }
+  if (!canGrantRole(actor.role as Role, input.role)) {
+    return err(
+      "forbidden",
+      `Cannot grant role '${input.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: input.role },
+    );
+  }
+
+  let created: { userId: string };
+  try {
+    created = await adminCreateOrgUser(
+      {
+        organizationId: input.organizationId,
+        email: input.email,
+        displayName: input.displayName,
+        role: input.role,
+        invitedBy: user.id,
+      },
+      reauth.ctx,
+    );
+  } catch (e) {
+    const isDuplicate =
+      typeof e === "object" && e !== null &&
+      (("code" in e && (e as { code?: string }).code === "email_exists") ||
+        ("status" in e && (e as { status?: number }).status === 422));
+    if (isDuplicate) {
+      return err("conflict", "Email already registered", "errors.identity.user.emailInUse", {
+        email: ["errors.identity.user.emailInUse"],
+      });
+    }
+    return err("internal", e instanceof Error ? e.message : "Create failed", "errors.identity.user.createFailed");
+  }
+
+  await recordAudit(
+    {
+      organizationId: input.organizationId,
+      actorUserId: user.id,
+      actorRole: actor.role,
+      eventType: "identity.user_created",
+      entityType: "organization_members",
+      entityId: created.userId,
+      after: { email: input.email, display_name: input.displayName, role: input.role },
+      correlationId: reauth.ctx.correlationId,
+      source: "web",
+    },
+    reauth.ctx,
+  );
+
+  // Set-password email; best-effort (admin can trigger a reset later).
+  // Same admin-reset pattern as sendPasswordResetAction: a recovery
+  // token_hash link works in the new user's browser, where a PKCE
+  // `resetPasswordForEmail` from this admin-scoped client would not.
+  try {
+    const env = serverEnv();
+    const { hashedToken } = await admin.generateRecoveryLink(input.email);
+    const { data: org } = await supabase
+      .from("organizations")
+      .select("name, default_locale")
+      .eq("id", input.organizationId)
+      .single();
+    const { subject, html } = renderPasswordReset({
+      organizationName: org?.name ?? "AyamNorliza",
+      resetUrl: `${env.INVITE_BASE_URL}/auth/confirm?token_hash=${hashedToken}&type=recovery&next=/set-password`,
+      locale: resolveLocale(org?.default_locale),
+    });
+    await sendEmail({ to: [input.email], subject, html });
+  } catch {
+    // Durable account exists regardless of delivery.
+  }
+
+  revalidatePath(`/[organizationSlug]/settings/users`, "page");
+  return ok({ userId: created.userId });
 }
 
 // ---------------------------------------------------------------------------
