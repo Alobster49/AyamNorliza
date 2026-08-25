@@ -1200,7 +1200,8 @@
       "grandTotal": "Grand total",
       "deliveredAt": "Delivered {time}",
       "receivedBy": "received by {name}",
-      "footerNote": "Weighed at delivery. Thank you!"
+      "footerNote": "Weighed at delivery. Thank you!",
+      "printButton": "Print invoice"
     }
   },
   "email": {

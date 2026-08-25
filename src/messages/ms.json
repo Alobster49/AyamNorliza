@@ -1221,7 +1221,8 @@
       "grandTotal": "Jumlah besar",
       "deliveredAt": "Dihantar {time}",
       "receivedBy": "diterima oleh {name}",
-      "footerNote": "Ditimbang semasa penghantaran. Terima kasih!"
+      "footerNote": "Ditimbang semasa penghantaran. Terima kasih!",
+      "printButton": "Cetak invois"
     }
   },
   "email": {
