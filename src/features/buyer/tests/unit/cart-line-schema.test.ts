@@ -11,21 +11,16 @@ const V2_LINE = {
   fallback: "cancel",
 };
 
-describe("parseStoredCart after optional price fields", () => {
-  it("still accepts stored v2 lines without price fields", () => {
+describe("parseStoredCart backward compatibility", () => {
+  it("still accepts stored v2 lines", () => {
     expect(parseStoredCart(JSON.stringify([V2_LINE]))).toHaveLength(1);
   });
-  it("accepts lines with the new optional price fields", () => {
+  it("accepts legacy lines that still carry the now-removed price fields, dropping them silently", () => {
     const parsed = parseStoredCart(
       JSON.stringify([{ ...V2_LINE, pricePerUnit: 9.9, unitType: "per_kg" }]),
     );
     expect(parsed).toHaveLength(1);
-    expect(parsed[0]!.pricePerUnit).toBe(9.9);
-    expect(parsed[0]!.unitType).toBe("per_kg");
-  });
-  it("drops a line with a non-positive price", () => {
-    expect(
-      parseStoredCart(JSON.stringify([{ ...V2_LINE, pricePerUnit: 0, unitType: "per_kg" }])),
-    ).toHaveLength(0);
+    expect(parsed[0]).not.toHaveProperty("pricePerUnit");
+    expect(parsed[0]).not.toHaveProperty("unitType");
   });
 });
