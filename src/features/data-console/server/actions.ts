@@ -75,13 +75,27 @@ export async function seedDemoData(
   const ctx = await guardOwner(organizationSlug);
   if (!ctx) return { ok: false, code: "forbidden", message: "Owner only." };
 
+  // Resetting a password revokes that account's sessions, so realigning the
+  // seeder's own login would sign them out of the page they just clicked
+  // Seed on. Their account already exists (they are signed in as it), so
+  // skip the password step for it and only re-assert profile + membership.
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user: actingUser },
+  } = await supabase.auth.getUser();
+  const actingEmail = actingUser?.email?.toLowerCase() ?? null;
+
+  const driverUserIds: string[] = [];
   try {
     for (const account of CONSOLE_ACCOUNTS) {
-      const userId = await admin.ensureUserWithPassword({
-        email: account.email,
-        password: CONSOLE_PASSWORD,
-        displayName: account.displayName,
-      });
+      const isSelf = account.email.toLowerCase() === actingEmail;
+      const userId = isSelf
+        ? ctx.userId
+        : await admin.ensureUserWithPassword({
+            email: account.email,
+            password: CONSOLE_PASSWORD,
+            displayName: account.displayName,
+          });
       await admin.upsertProfileAndMembership({
         userId,
         displayName: account.displayName,
@@ -89,6 +103,7 @@ export async function seedDemoData(
         role: account.role,
         invitedBy: ctx.userId,
       });
+      if (account.role === "driver") driverUserIds.push(userId);
     }
   } catch (e) {
     const detail = e instanceof Error ? e.message : "";
@@ -99,7 +114,6 @@ export async function seedDemoData(
     };
   }
 
-  const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("admin_seed_demo_data", {
     p_organization_id: ctx.orgId,
   });
@@ -112,6 +126,26 @@ export async function seedDemoData(
     };
   }
   const summary = (data ?? {}) as Record<string, number>;
+
+  // Hand the seeded runs to the seeded drivers, round-robin. The SQL seed
+  // cannot do this itself -- it never sees the auth user ids -- and a run
+  // with no driver leaves the driver deck empty, which is the one screen a
+  // driver login exists to open. A failure here is not fatal: the data is
+  // already seeded and the office can assign a driver by hand.
+  if (driverUserIds.length > 0) {
+    const { data: runs } = await supabase
+      .from("delivery_runs")
+      .select("id")
+      .eq("organization_id", ctx.orgId)
+      .neq("status", "completed")
+      .order("run_date", { ascending: true });
+    for (const [i, run] of (runs ?? []).entries()) {
+      await supabase.rpc("dispatch_assign_driver", {
+        p_run: run.id,
+        p_driver: driverUserIds[i % driverUserIds.length],
+      });
+    }
+  }
 
   const auditCtx = ctxFor(ctx.userId);
   await recordAudit(

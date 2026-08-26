@@ -12,30 +12,63 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { CONSOLE_ACCOUNTS } from "@/features/data-console/lib/accounts";
 import { loginAction } from "@/features/identity-access/server/auth-actions";
 import { toLocaleAgnostic } from "@/lib/auth/next-path";
 import { cn } from "@/lib/utils";
 
 /**
- * Optional local-only quick-fill logins for the dev login form.
+ * Local-only quick-fill logins for the dev login form.
  *
- * Credentials are read from the environment (`.env.local`, which is
- * gitignored) and the whole block is compiled out of production builds --
- * these values must never be committed. Format:
+ * Two sources, both compiled out of production builds by the
+ * `NODE_ENV === "production"` guard, so neither the seeded password nor any
+ * personal credential can reach a shipped bundle:
  *
- *   NEXT_PUBLIC_DEV_LOGINS="Owner:owner@example.com:password,Admin:a@b.c:pw"
+ * 1. The data console's seeded accounts -- one per role the app gates on --
+ *    which all share the seeded password. Picking one fills the form, so
+ *    switching between owner / seller / warehouse / driver during
+ *    development is two clicks instead of retyping an email each time.
+ * 2. `NEXT_PUBLIC_DEV_LOGINS`, read from `.env.local` (gitignored) for any
+ *    extra account that is not seeded. Format:
+ *
+ *      NEXT_PUBLIC_DEV_LOGINS="Owner:owner@example.com:password,Admin:a@b.c:pw"
+ *
+ * The password is written as a literal here rather than imported so that
+ * dead-code elimination drops it entirely; it mirrors `CONSOLE_PASSWORD` in
+ * `features/data-console/server/actions.ts`.
  */
 const devLogins =
   process.env.NODE_ENV === "production"
     ? []
-    : (process.env.NEXT_PUBLIC_DEV_LOGINS ?? "")
-        .split(",")
-        .map((entry) => entry.split(":"))
-        .filter(
-          (parts): parts is [string, string, string] => parts.length === 3,
-        )
-        .map(([label, email, password]) => ({ label, email, password }));
+    : [
+        ...CONSOLE_ACCOUNTS.map((account) => ({
+          label: account.displayName,
+          role: account.role as string,
+          email: account.email,
+          password: "password123",
+        })),
+        ...(process.env.NEXT_PUBLIC_DEV_LOGINS ?? "")
+          .split(",")
+          .map((entry) => entry.split(":"))
+          .filter(
+            (parts): parts is [string, string, string] => parts.length === 3,
+          )
+          .map(([label, email, password]) => ({
+            label,
+            role: "custom",
+            email,
+            password,
+          })),
+      ];
 
 export function LoginForm({
   next,
@@ -51,6 +84,7 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -136,22 +170,47 @@ export function LoginForm({
         {error ? <FieldError>{error}</FieldError> : null}
         {devLogins.length > 0 ? (
           <Field>
-            <div className="flex gap-2">
-              {devLogins.map((login) => (
-                <Button
-                  key={login.label}
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setEmail(login.email);
-                    setPassword(login.password);
-                  }}
-                  className="flex-1 text-xs"
-                >
-                  Dev: {login.label}
+            <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline" className="w-full text-xs">
+                  Dev: pick an account
                 </Button>
-              ))}
-            </div>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-sm">
+                <DialogHeader>
+                  <DialogTitle>Dev sign-in</DialogTitle>
+                  <DialogDescription>
+                    Fills the form with a seeded account. Local builds only —
+                    run Seed demo data first if a login is rejected.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex flex-col gap-1">
+                  {devLogins.map((login) => (
+                    <button
+                      key={login.email}
+                      type="button"
+                      onClick={() => {
+                        setEmail(login.email);
+                        setPassword(login.password);
+                        setError(null);
+                        setPickerOpen(false);
+                      }}
+                      className="flex items-center justify-between gap-3 rounded-md border border-transparent px-3 py-2 text-left text-sm hover:border-border hover:bg-muted"
+                    >
+                      <span className="flex flex-col">
+                        <span className="font-medium">{login.label}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {login.email}
+                        </span>
+                      </span>
+                      <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                        {login.role}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </DialogContent>
+            </Dialog>
           </Field>
         ) : null}
         <Field>
