@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Users are NEVER deleted: `auth.users`, `organization_members`, `profiles`, `buyers`, `invitations`, and audit tables survive a clear.
-- Console accounts after seed: `badrol@gmail.com` role `owner`, `hafizzudinsamad@gmail.com` role `org_admin`, both password `Password123!` (accepted risk, committed to repo).
+- Console accounts after seed: `badrol@gmail.com` role `owner`, `hafizzudinsamad@gmail.com` role `org_admin`, both password `password123` (accepted risk, committed to repo).
 - RPC auth: caller must be an **active `owner` member** of the target org — checked inside each RPC via `public.has_org_role(p_organization_id, array['owner'])`; failure raises `errcode 'P0001', message 'forbidden'`.
 - Seed UUIDs are deterministic with prefix `dd000000-0000-0000-0000-…` so re-seeding is idempotent.
 - Product images served statically from `public/product/` via `products.image_url`.
@@ -777,7 +777,7 @@ import { CONSOLE_ACCOUNTS } from "../lib/accounts";
 
 // Committed on purpose: pilot-only demo logins, accepted risk documented in
 // docs/superpowers/specs/2026-08-22-data-console-design.md.
-const CONSOLE_PASSWORD = "Password123!";
+const CONSOLE_PASSWORD = "password123";
 
 export type ActionResult<T> =
   | { ok: true; data: T }
@@ -1039,7 +1039,7 @@ Fill in the JSX with the project's card/button/input components and styling conv
 Start the dev server via the launch config (Browser pane, `preview_start` with the configured name — never Bash). Log in as the local owner (`owner@gmail.com` / `test-only-password-12-chars` from `supabase/seed.sql`), open `/{org-slug}/data-console`:
 1. Sidebar shows "System → Data console" for the owner.
 2. Clear button disabled until `PADAM SEMUA` typed; after clearing, products page is empty but login still works.
-3. Seed: success message with counts; products page shows 13 products **with images rendering** (this catches any image-path typo); orders kanban, tasks, dispatch, loading, runs pages all show data; login as `badrol@gmail.com` / `Password123!` works.
+3. Seed: success message with counts; products page shows 13 products **with images rendering** (this catches any image-path typo); orders kanban, tasks, dispatch, loading, runs pages all show data; login as `badrol@gmail.com` / `password123` works.
 4. Log in as a non-owner (e.g. seed a seller or use the buyer) — `/data-console` 404s and no sidebar entry.
 
 - [ ] **Step 8: Quality gates**

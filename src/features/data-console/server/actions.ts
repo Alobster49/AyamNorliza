@@ -10,7 +10,7 @@ import { CONSOLE_ACCOUNTS } from "../lib/accounts";
 
 // Committed on purpose: pilot-only demo logins, accepted risk documented in
 // docs/superpowers/specs/2026-08-22-data-console-design.md.
-const CONSOLE_PASSWORD = "Password123!";
+const CONSOLE_PASSWORD = "password123";
 
 export type ActionResult<T> =
   | { ok: true; data: T }

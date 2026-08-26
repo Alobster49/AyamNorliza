@@ -14,8 +14,8 @@ Users are never deleted. Two known logins must always exist after seeding:
 
 | Email | Role | Password |
 |---|---|---|
-| `badrol@gmail.com` | `owner` | `Password123!` |
-| `hafizzudinsamad@gmail.com` | `org_admin` | `Password123!` |
+| `badrol@gmail.com` | `owner` | `password123` |
+| `hafizzudinsamad@gmail.com` | `org_admin` | `password123` |
 
 ## Non-goals
 
@@ -156,6 +156,6 @@ looks fresh no matter when seeding runs.
 - The page and both RPCs work **in production** for owner logins. A stolen
   owner session can wipe live data. Mitigation: type-to-confirm phrase, and
   the wipe is org-scoped — other tenants are untouched.
-- `Password123!` for both accounts is committed to the repo. Anyone with repo
+- `password123` for both accounts is committed to the repo. Anyone with repo
   access can log into production as owner. Flagged and accepted by Hafiz for
   this pilot; revisit before real customer data lands.
