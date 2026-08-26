@@ -63,6 +63,43 @@ function timeFormatterFor(timeZone: string): Intl.DateTimeFormat {
   return formatter;
 }
 
+const dateTimeFormatters = new Map<string, Intl.DateTimeFormat>();
+
+function dateTimeFormatterFor(timeZone: string): Intl.DateTimeFormat {
+  const cached = dateTimeFormatters.get(timeZone);
+  if (cached) return cached;
+
+  const options: Intl.DateTimeFormatOptions = {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  };
+  let formatter: Intl.DateTimeFormat;
+  try {
+    formatter = new Intl.DateTimeFormat("en-US", { ...options, timeZone });
+  } catch {
+    // Same fallback as the other formatters: a junk timezone value should
+    // degrade to UTC, not take the page down.
+    formatter = new Intl.DateTimeFormat("en-US", { ...options, timeZone: "UTC" });
+  }
+
+  dateTimeFormatters.set(timeZone, formatter);
+  return formatter;
+}
+
+/**
+ * A timestamp (e.g. a `delivery_attempts.attempted_at`) rendered on the
+ * depot's own wall clock instead of the server's. `new Date(iso).toLocaleString()`
+ * uses the server's runtime locale/zone, which drifts from the depot the same
+ * way the date helpers above do.
+ */
+export function formatDateTimeInTimeZone(iso: string, timeZone: string): string {
+  return dateTimeFormatterFor(timeZone).format(new Date(iso));
+}
+
 /**
  * Wall-clock minutes since midnight in `timeZone` right now. Pairs with
  * `todayInTimeZone` for "now" markers on day views: comparing the depot's

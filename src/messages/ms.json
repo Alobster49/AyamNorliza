@@ -480,6 +480,8 @@
         "orgNotFound": "Organisasi tidak dijumpai",
         "forbidden": "Anda tidak mempunyai akses kepada ciri ini",
         "loadFailed": "Gagal memuatkan trip",
+        "alreadyStarted": "Trip ini sudah bertolak.",
+        "notFound": "Trip tidak dijumpai.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi."
       },
       "stop": {
@@ -487,7 +489,13 @@
         "notDeparted": "Trip ini belum bertolak.",
         "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
         "invalidAmount": "Wang tunai yang dikutip tidak boleh negatif.",
+        "weightsMissing": "Masukkan berat untuk setiap item sebelum sahkan.",
+        "invalidWeight": "Setiap item perlu berat melebihi sifar.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi."
+      },
+      "invoice": {
+        "loadFailed": "Gagal memuatkan invois.",
+        "notFound": "Pesanan tidak dijumpai."
       }
     },
     "orders": {
@@ -1201,7 +1209,23 @@
   "drive": {
     "cantOpenRunTitle": "Tidak dapat membuka trip",
     "noRunTitle": "Tiada trip untuk anda hari ini",
-    "noRunDescription": "Pejabat belum menetapkan anda pada mana-mana lori. Halaman ini akan memaparkan trip sebaik sahaja ia ditetapkan."
+    "noRunDescription": "Pejabat belum menetapkan anda pada mana-mana lori. Halaman ini akan memaparkan trip sebaik sahaja ia ditetapkan.",
+    "invoice": {
+      "cantOpenTitle": "Tidak dapat buka invois ini",
+      "notDeliveredTitle": "Belum dihantar",
+      "notDeliveredDescription": "Invois akan muncul selepas penghantaran direkodkan.",
+      "pendingSettlementTitle": "Menunggu berat akhir",
+      "pendingSettlementDescription": "Pesanan ini ditutup oleh pejabat tanpa berat di pintu. Hubungi pejabat untuk invois muktamad.",
+      "invoiceNumber": "Invois #{number}",
+      "headers": { "item": "Item", "weight": "Berat", "pricePerKg": "Harga/kg", "lineTotal": "Jumlah" },
+      "itemFallback": "Item",
+      "pieces": "{count} ekor",
+      "grandTotal": "Jumlah besar",
+      "deliveredAt": "Dihantar {time}",
+      "receivedBy": "diterima oleh {name}",
+      "footerNote": "Ditimbang semasa penghantaran. Terima kasih!",
+      "printButton": "Cetak invois"
+    }
   },
   "email": {
     "invite": {
@@ -1675,12 +1699,17 @@
         "title": "Semua perhentian selesai.",
         "delivered": "{count, plural, other {# dihantar}}",
         "couldNotDeliver": "{count, plural, other {# tidak dapat dihantar}}",
-        "wrapUp": "Pulang ke garaj dan serahkan {amount}."
+        "wrapUp": "Pulang ke garaj dan serahkan {amount}.",
+        "invoiceHint": "Buka mana-mana hantaran selesai di bawah untuk invoisnya."
       },
       "retryLabel": "Cuba lagi · {reason}",
       "atDoor": "Di pintu",
       "dwellMinutes": "{count, plural, other {# min}}",
       "itemCount": "{count, plural, other {# item}}",
+      "startRun": {
+        "hint": "Semak laluan di bawah, kemudian bertolak.",
+        "button": "Mula hantar"
+      },
       "actions": {
         "call": "Panggil",
         "navigate": "Navigasi",
@@ -1700,7 +1729,8 @@
         "failed": "Gagal",
         "cancelled": "Dibatalkan",
         "hereNow": "Di sini sekarang",
-        "toDo": "Belum selesai"
+        "toDo": "Belum selesai",
+        "invoice": "Invois"
       },
       "deliverSheet": {
         "title": "Bukti penghantaran",
@@ -1712,7 +1742,12 @@
         "photoUploading": "Memuat naik…",
         "photoReplace": "Foto dilampirkan · ganti",
         "photoTake": "Ambil foto",
-        "confirm": "Sahkan penghantaran"
+        "confirm": "Sahkan penghantaran",
+        "itemFallback": "Item",
+        "weightPlaceholder": "Berat (kg)",
+        "weightPlaceholderKg": "Ditimbang {weight} kg di gudang",
+        "piecesPlaceholder": "{count} ekor",
+        "liveTotal": "Jumlah kutipan"
       },
       "failSheet": {
         "subtitle": "{name} · pesanan kekal terbuka, pejabat sudah dimaklumkan",
@@ -1730,7 +1765,10 @@
         "deliverFailedTitle": "Tidak dapat merekod penghantaran",
         "deliveredTitle": "Sampai kepada {name}",
         "failFailedTitle": "Tidak dapat melaporkan perhentian",
-        "reportedTitle": "Dilaporkan kepada pejabat"
+        "reportedTitle": "Dilaporkan kepada pejabat",
+        "startRunFailedTitle": "Tidak dapat mulakan trip",
+        "startedTitle": "Trip bermula. Pandu selamat.",
+        "weightsMissingTitle": "Berat belum diisi"
       }
     },
     "client": {

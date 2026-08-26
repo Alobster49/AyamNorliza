@@ -13,6 +13,7 @@ import type {
   DeliveryRun,
   Truck,
   OrderWithItems,
+  DeliveryAttempt,
 } from "../types";
 
 type DriverErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
@@ -141,6 +142,10 @@ function stopMessageKey(rawMessage: string): string {
       return "errors.drive.stop.invalidStatus";
     case "invalid_amount":
       return "errors.drive.stop.invalidAmount";
+    case "lines_incomplete":
+      return "errors.drive.stop.weightsMissing";
+    case "invalid_weight":
+      return "errors.drive.stop.invalidWeight";
     default:
       return "errors.drive.stop.internal";
   }
@@ -171,21 +176,71 @@ export async function arriveStop(organizationSlug: string, orderId: string): Pro
   return callStopRpc(organizationSlug, "driver_arrive_stop", { p_order: orderId });
 }
 
+/**
+ * `driver_start_run` errors, mapped the same way `stopMessageKey` maps stop
+ * RPC errors — see that function's comment for why the mapping lives here.
+ */
+function startRunMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.drive.run.forbidden";
+    case "not_found":
+      return "errors.drive.run.notFound";
+    case "invalid_transition":
+      return "errors.drive.run.alreadyStarted";
+    default:
+      return "errors.drive.run.internal";
+  }
+}
+
+/** The driver pulls out of the yard. Non-ready orders return to the pool. */
+export async function startRun(organizationSlug: string, runId: string): Promise<ActionResult> {
+  const ctx = await guard(organizationSlug);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("driver_start_run", { p_run: runId });
+  if (error) {
+    const mapped = mapRpcError(error.message);
+    return err(mapped.code as DriverErrorCode, mapped.message, startRunMessageKey(error.message));
+  }
+
+  revalidatePath(`/drive/${organizationSlug}`);
+  revalidatePath(`/${organizationSlug}/runs`);
+  return ok(undefined);
+}
+
+export type DeliverLineInput = {
+  itemId: string;
+  finalWeightKg: number;
+  finalPieces?: number | null;
+};
+
 export type DeliverStopInput = {
   receivedBy?: string | null;
   signaturePath?: string | null;
   photoPath?: string | null;
   cashCollected?: number | null;
+  /** One entry per live item; the weights become the billed totals. */
+  lines: DeliverLineInput[];
 };
 
-/** Goods handed over. Every proof field is optional by design. */
+/** Goods handed over and weighed. Proof fields optional; weights are not. */
 export async function deliverStop(
   organizationSlug: string,
   orderId: string,
-  proof: DeliverStopInput = {},
+  proof: DeliverStopInput,
 ): Promise<ActionResult> {
   if (proof.cashCollected !== null && proof.cashCollected !== undefined && proof.cashCollected < 0) {
     return err("validation", "Cash collected cannot be negative.", "errors.drive.stop.invalidAmount");
+  }
+  if (!proof.lines || proof.lines.length === 0) {
+    return err("validation", "Weights are required.", "errors.drive.stop.weightsMissing");
+  }
+  for (const line of proof.lines) {
+    if (!Number.isFinite(line.finalWeightKg) || line.finalWeightKg <= 0) {
+      return err("validation", "Each item needs a weight above zero.", "errors.drive.stop.invalidWeight");
+    }
   }
 
   return callStopRpc(organizationSlug, "driver_deliver_stop", {
@@ -194,6 +249,64 @@ export async function deliverStop(
     p_signature_path: proof.signaturePath ?? null,
     p_photo_path: proof.photoPath ?? null,
     p_cash_collected: proof.cashCollected ?? null,
+    p_lines: proof.lines.map((line) => ({
+      item_id: line.itemId,
+      final_weight_kg: line.finalWeightKg,
+      final_pieces: line.finalPieces ?? null,
+    })),
+  });
+}
+
+export type DriverInvoicePayload = {
+  organizationName: string;
+  organizationTimeZone: string;
+  order: OrderWithItems;
+  deliveredAttempt: DeliveryAttempt | null;
+};
+
+/**
+ * One delivered order, priced by the weights keyed at the door. RLS scopes
+ * drivers to their own runs' orders; the office sees its whole org.
+ */
+export async function getDriverInvoice(
+  organizationSlug: string,
+  orderId: string,
+): Promise<ActionResult<DriverInvoicePayload>> {
+  const ctx = await guard(organizationSlug);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
+
+  const supabase = await createSupabaseServerClient();
+  const [{ data: org }, { data: order, error }] = await Promise.all([
+    supabase.from("organizations").select("name, default_time_zone").eq("id", ctx.orgId).single(),
+    supabase
+      .from("orders")
+      .select(
+        `
+        *,
+        zone:delivery_zones(*),
+        slot:delivery_slots(*),
+        customer:customers(id, name, phone),
+        items:order_items(*, product:products(id, name, image_url)),
+        attempts:delivery_attempts(*)
+      `,
+      )
+      .eq("id", orderId)
+      .eq("organization_id", ctx.orgId)
+      .maybeSingle(),
+  ]);
+
+  if (error) return err("internal", "Failed to load the invoice", "errors.drive.invoice.loadFailed");
+  if (!order) return err("not_found", "Order not found", "errors.drive.invoice.notFound");
+
+  const attempts = ((order.attempts ?? []) as DeliveryAttempt[])
+    .filter((attempt) => attempt.outcome === "delivered")
+    .sort((a, b) => a.attempted_at.localeCompare(b.attempted_at));
+
+  return ok({
+    organizationName: org?.name ?? organizationSlug,
+    organizationTimeZone: org?.default_time_zone ?? "UTC",
+    order: order as OrderWithItems,
+    deliveredAttempt: attempts.at(-1) ?? null,
   });
 }
 

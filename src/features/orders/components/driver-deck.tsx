@@ -2,12 +2,14 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   arriveStop,
   deliverStop,
   failStop,
   getDriverRun,
+  startRun,
 } from "@/features/orders/server/driver-actions";
 import {
   DELIVERY_FAILURE_REASON_KEY,
@@ -17,7 +19,7 @@ import {
   type DeliveryNextAction,
   type RunWithOrders,
 } from "@/features/orders/types";
-import { buildDriverDeck, type DriverStop } from "@/features/orders/lib/driver-run-model";
+import { buildDriverDeck, linesTotal, type DriverStop } from "@/features/orders/lib/driver-run-model";
 import { formatPrice, formatWeight } from "@/features/orders/lib/order-model";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +49,50 @@ function Bar({ pct }: { pct: number }) {
   );
 }
 
+/** Every stop on the run, with an Invoice link for the delivered ones. Shared by
+ * the in-progress "whole route" details and the finished screen -- the finished
+ * screen has no `<details>` to nest inside, so it renders the same list bare. */
+function StopList({
+  stops,
+  organizationSlug,
+  t,
+}: {
+  stops: DriverStop[];
+  organizationSlug: string;
+  t: ReturnType<typeof useTranslations>;
+}) {
+  return (
+    <ul className="divide-y">
+      {stops.map((item) => (
+        <li key={item.orderId} className="flex items-center justify-between gap-3 px-4 py-2">
+          <span className="min-w-0 text-sm">
+            <span className="mr-1.5 text-xs tabular-nums text-muted-foreground">{item.sequence}</span>
+            {item.customerName}
+          </span>
+          {item.outcome === "delivered" ? (
+            <Link
+              href={`/drive/${organizationSlug}/invoice/${item.orderId}`}
+              className="shrink-0 text-[11px] font-medium underline underline-offset-2"
+            >
+              {t("stopStatus.invoice")}
+            </Link>
+          ) : (
+            <span className="shrink-0 text-[11px] text-muted-foreground">
+              {item.outcome === "failed"
+                ? t("stopStatus.failed")
+                : item.outcome === "cancelled"
+                  ? t("stopStatus.cancelled")
+                  : item.atStop
+                    ? t("stopStatus.hereNow")
+                    : t("stopStatus.toDo")}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function DriverDeck({
   organizationSlug,
   organizationId,
@@ -65,6 +111,8 @@ export function DriverDeck({
   const [busy, startTransition] = useTransition();
   const [receivedBy, setReceivedBy] = useState("");
   const [cash, setCash] = useState("");
+  const [weights, setWeights] = useState<Record<string, string>>({});
+  const [pieces, setPieces] = useState<Record<string, string>>({});
   const [photoPath, setPhotoPath] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [reason, setReason] = useState<DeliveryFailureReason | null>(null);
@@ -74,6 +122,17 @@ export function DriverDeck({
 
   const deck = useMemo(() => buildDriverDeck(run), [run]);
   const stop = deck.current;
+
+  const weightEntries = (stop?.items ?? []).map((item) => {
+    const raw = weights[item.itemId]?.trim() ?? "";
+    const parsed = raw === "" ? null : Number(raw);
+    const valid = parsed !== null && Number.isFinite(parsed) && parsed > 0;
+    return { item, raw, weightKg: valid ? parsed : null, valid };
+  });
+  const allWeightsValid = weightEntries.length > 0 && weightEntries.every((entry) => entry.valid);
+  const liveTotal = linesTotal(
+    weightEntries.map((entry) => ({ weightKg: entry.weightKg, pricePerKg: entry.item.pricePerKg })),
+  );
 
   async function refresh() {
     // Always by id: the office opens a driver's deck with ?run=, and a lookup
@@ -103,6 +162,24 @@ export function DriverDeck({
     setReason(null);
     setNote("");
     setNextAction("retry_today");
+    setWeights({});
+    setPieces({});
+  }
+
+  function handleStartRun() {
+    startTransition(async () => {
+      const result = await startRun(organizationSlug, run.id);
+      if (!result.ok) {
+        toast({
+          title: t("toast.startRunFailedTitle"),
+          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({ title: t("toast.startedTitle") });
+      await refresh();
+    });
   }
 
   function handleArrive() {
@@ -151,12 +228,29 @@ export function DriverDeck({
       });
       return;
     }
+    if (!allWeightsValid) {
+      toast({
+        title: t("toast.weightsMissingTitle"),
+        description: tRoot("errors.drive.stop.weightsMissing" as never),
+        variant: "destructive",
+      });
+      return;
+    }
 
     startTransition(async () => {
       const result = await deliverStop(organizationSlug, stop.orderId, {
         receivedBy: receivedBy.trim() || null,
         photoPath,
         cashCollected,
+        lines: weightEntries.map(({ item, weightKg }) => {
+          const piecesRaw = pieces[item.itemId]?.trim() ?? "";
+          const parsedPieces = piecesRaw === "" ? null : Number.parseInt(piecesRaw, 10);
+          return {
+            itemId: item.itemId,
+            finalWeightKg: weightKg as number,
+            finalPieces: parsedPieces !== null && Number.isInteger(parsedPieces) && parsedPieces >= 0 ? parsedPieces : null,
+          };
+        }),
       });
       if (!result.ok) {
         toast({
@@ -215,13 +309,17 @@ export function DriverDeck({
       </header>
 
       {!stop ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center">
+        <div className="flex flex-1 flex-col items-center gap-3 overflow-y-auto px-4 py-6 text-center">
           <p className="text-lg font-semibold">{t("finished.title")}</p>
           <p className="text-sm text-muted-foreground">
             {t("finished.delivered", { count: deck.delivered })}
             {deck.failed > 0 ? `, ${t("finished.couldNotDeliver", { count: deck.failed })}` : ""}.{" "}
             {t("finished.wrapUp", { amount: formatPrice(deck.cashCollected) })}
           </p>
+          <p className="text-xs text-muted-foreground">{t("finished.invoiceHint")}</p>
+          <section className="w-full overflow-hidden rounded-xl border bg-card text-left">
+            <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
+          </section>
         </div>
       ) : (
         <main className="flex flex-1 flex-col gap-3 p-3">
@@ -295,30 +393,39 @@ export function DriverDeck({
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-2 p-4">
-              {!stop.atStop ? (
-                <Button size="lg" className="h-12 w-full text-base" disabled={busy} onClick={handleArrive}>
-                  {t("actions.imAtDoor")}
+            {deck.runStatus === "planned" ? (
+              <div className="flex flex-col gap-2 p-4">
+                <p className="text-center text-xs text-muted-foreground">{t("startRun.hint")}</p>
+                <Button size="lg" className="h-12 w-full text-base" disabled={busy} onClick={handleStartRun}>
+                  {t("startRun.button")}
                 </Button>
-              ) : (
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2 p-4">
+                {!stop.atStop ? (
+                  <Button size="lg" className="h-12 w-full text-base" disabled={busy} onClick={handleArrive}>
+                    {t("actions.imAtDoor")}
+                  </Button>
+                ) : (
+                  <Button
+                    size="lg"
+                    className="h-12 w-full bg-emerald-600 text-base hover:bg-emerald-700"
+                    disabled={busy}
+                    onClick={() => setSheet("deliver")}
+                  >
+                    {t("actions.delivered")}
+                  </Button>
+                )}
                 <Button
-                  size="lg"
-                  className="h-12 w-full bg-emerald-600 text-base hover:bg-emerald-700"
+                  variant="outline"
+                  className="h-11 w-full"
                   disabled={busy}
-                  onClick={() => setSheet("deliver")}
+                  onClick={() => setSheet("fail")}
                 >
-                  {t("actions.delivered")}
+                  {t("actions.cantDeliver")}
                 </Button>
-              )}
-              <Button
-                variant="outline"
-                className="h-11 w-full"
-                disabled={busy}
-                onClick={() => setSheet("fail")}
-              >
-                {t("actions.cantDeliver")}
-              </Button>
-            </div>
+              </div>
+            )}
           </section>
 
           {/* Next stop peek */}
@@ -341,27 +448,9 @@ export function DriverDeck({
             <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium">
               {t("wholeRun.summary", { delivered: deck.delivered, total: deck.total })}
             </summary>
-            <ul className="divide-y border-t">
-              {deck.stops.map((item) => (
-                <li key={item.orderId} className="flex items-center justify-between gap-3 px-4 py-2">
-                  <span className="min-w-0 text-sm">
-                    <span className="mr-1.5 text-xs tabular-nums text-muted-foreground">{item.sequence}</span>
-                    {item.customerName}
-                  </span>
-                  <span className="shrink-0 text-[11px] text-muted-foreground">
-                    {item.outcome === "delivered"
-                      ? t("stopStatus.dropped")
-                      : item.outcome === "failed"
-                        ? t("stopStatus.failed")
-                        : item.outcome === "cancelled"
-                          ? t("stopStatus.cancelled")
-                          : item.atStop
-                            ? t("stopStatus.hereNow")
-                            : t("stopStatus.toDo")}
-                  </span>
-                </li>
-              ))}
-            </ul>
+            <div className="border-t">
+              <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
+            </div>
           </details>
         </main>
       )}
@@ -377,6 +466,46 @@ export function DriverDeck({
             </p>
 
             <div className="flex flex-col gap-3">
+              {weightEntries.map(({ item, raw }) => (
+                <label key={item.itemId} className="flex flex-col gap-1 text-xs font-medium">
+                  <span>
+                    {item.productName ?? t("deliverSheet.itemFallback")}
+                    {item.pricePerKg !== null ? ` · ${formatPrice(item.pricePerKg)}/kg` : ""}
+                  </span>
+                  <div className="flex gap-2">
+                    <Input
+                      value={raw}
+                      onChange={(event) =>
+                        setWeights((prev) => ({ ...prev, [item.itemId]: event.target.value }))
+                      }
+                      inputMode="decimal"
+                      placeholder={
+                        item.warehouseWeightKg !== null
+                          ? t("deliverSheet.weightPlaceholderKg", { weight: item.warehouseWeightKg })
+                          : t("deliverSheet.weightPlaceholder")
+                      }
+                      className="h-11 flex-[2]"
+                    />
+                    {item.mode === "piece" && (
+                      <Input
+                        value={pieces[item.itemId] ?? ""}
+                        onChange={(event) =>
+                          setPieces((prev) => ({ ...prev, [item.itemId]: event.target.value }))
+                        }
+                        inputMode="numeric"
+                        placeholder={t("deliverSheet.piecesPlaceholder", { count: item.quantity })}
+                        className="h-11 flex-1"
+                      />
+                    )}
+                  </div>
+                </label>
+              ))}
+
+              <div className="flex items-center justify-between rounded-xl bg-accent/40 px-3 py-2">
+                <span className="text-xs font-medium">{t("deliverSheet.liveTotal")}</span>
+                <span className="text-base font-semibold tabular-nums">{formatPrice(liveTotal)}</span>
+              </div>
+
               <label className="flex flex-col gap-1 text-xs font-medium">
                 {t("deliverSheet.receivedByLabel")}
                 <Input
@@ -393,7 +522,7 @@ export function DriverDeck({
                   value={cash}
                   onChange={(event) => setCash(event.target.value)}
                   inputMode="decimal"
-                  placeholder={formatPrice(stop.amount)}
+                  placeholder={formatPrice(liveTotal)}
                   className="h-11"
                 />
               </label>
@@ -433,7 +562,7 @@ export function DriverDeck({
                 <Button
                   className="h-11 flex-[2] bg-emerald-600 hover:bg-emerald-700"
                   onClick={handleDeliver}
-                  disabled={busy || photoBusy}
+                  disabled={busy || photoBusy || !allWeightsValid}
                 >
                   {t("deliverSheet.confirm")}
                 </Button>

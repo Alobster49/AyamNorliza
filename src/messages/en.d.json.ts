@@ -483,6 +483,8 @@ declare const messages: {
         "orgNotFound": "Organization not found",
         "forbidden": "You do not have access to this feature",
         "loadFailed": "Failed to load the run",
+        "alreadyStarted": "This run has already left the yard.",
+        "notFound": "Run not found.",
         "internal": "Something went wrong. Please try again."
       },
       "stop": {
@@ -490,7 +492,13 @@ declare const messages: {
         "notDeparted": "This run has not left the yard yet.",
         "invalidStatus": "This order is not in the right status for that action.",
         "invalidAmount": "Cash collected cannot be negative.",
+        "weightsMissing": "Key a weight for every item before confirming.",
+        "invalidWeight": "Each item needs a weight above zero.",
         "internal": "Something went wrong. Please try again."
+      },
+      "invoice": {
+        "loadFailed": "Failed to load the invoice.",
+        "notFound": "Order not found."
       }
     },
     "orders": {
@@ -1183,7 +1191,23 @@ declare const messages: {
   "drive": {
     "cantOpenRunTitle": "Can't open the run",
     "noRunTitle": "No run for you today",
-    "noRunDescription": "The office has not put you on a truck yet. This page will show the run as soon as they do."
+    "noRunDescription": "The office has not put you on a truck yet. This page will show the run as soon as they do.",
+    "invoice": {
+      "cantOpenTitle": "Can't open this invoice",
+      "notDeliveredTitle": "Not delivered yet",
+      "notDeliveredDescription": "The invoice appears once the delivery is recorded.",
+      "pendingSettlementTitle": "Awaiting final weights",
+      "pendingSettlementDescription": "This order was closed by the office without door weights. Ask the office for the settled invoice.",
+      "invoiceNumber": "Invoice #{number}",
+      "headers": { "item": "Item", "weight": "Weight", "pricePerKg": "Price/kg", "lineTotal": "Total" },
+      "itemFallback": "Item",
+      "pieces": "{count} pcs",
+      "grandTotal": "Grand total",
+      "deliveredAt": "Delivered {time}",
+      "receivedBy": "received by {name}",
+      "footerNote": "Weighed at delivery. Thank you!",
+      "printButton": "Print invoice"
+    }
   },
   "email": {
     "invite": {
@@ -1657,12 +1681,17 @@ declare const messages: {
         "title": "Every stop is done.",
         "delivered": "{count, plural, one {# delivered} other {# delivered}}",
         "couldNotDeliver": "{count, plural, one {# could not be delivered} other {# could not be delivered}}",
-        "wrapUp": "Head back to the yard and hand in {amount}."
+        "wrapUp": "Head back to the yard and hand in {amount}.",
+        "invoiceHint": "Open any delivered stop below for its invoice."
       },
       "retryLabel": "Retry · {reason}",
       "atDoor": "At the door",
       "dwellMinutes": "{count, plural, one {# min} other {# min}}",
       "itemCount": "{count, plural, one {# item} other {# items}}",
+      "startRun": {
+        "hint": "Check the route below, then pull out.",
+        "button": "Start delivering"
+      },
       "actions": {
         "call": "Call",
         "navigate": "Navigate",
@@ -1682,7 +1711,8 @@ declare const messages: {
         "failed": "Failed",
         "cancelled": "Cancelled",
         "hereNow": "Here now",
-        "toDo": "To do"
+        "toDo": "To do",
+        "invoice": "Invoice"
       },
       "deliverSheet": {
         "title": "Proof of delivery",
@@ -1694,7 +1724,12 @@ declare const messages: {
         "photoUploading": "Uploading…",
         "photoReplace": "Photo attached · replace",
         "photoTake": "Take a photo",
-        "confirm": "Confirm delivery"
+        "confirm": "Confirm delivery",
+        "itemFallback": "Item",
+        "weightPlaceholder": "Weight (kg)",
+        "weightPlaceholderKg": "Weighed {weight} kg at the warehouse",
+        "piecesPlaceholder": "{count} pcs",
+        "liveTotal": "Total to collect"
       },
       "failSheet": {
         "subtitle": "{name} · the order stays open, the office is told now",
@@ -1712,7 +1747,10 @@ declare const messages: {
         "deliverFailedTitle": "Could not record the delivery",
         "deliveredTitle": "Delivered to {name}",
         "failFailedTitle": "Could not report the stop",
-        "reportedTitle": "Reported to the office"
+        "reportedTitle": "Reported to the office",
+        "startRunFailedTitle": "Could not start the run",
+        "startedTitle": "Run started. Drive safe.",
+        "weightsMissingTitle": "Weights missing"
       }
     },
     "client": {

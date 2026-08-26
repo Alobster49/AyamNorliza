@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { DeliveryAttempt, OrderWithItems, RunStopEvent, RunWithOrders } from "../../types";
+import type { DeliveryAttempt, OrderItemWithProduct, OrderWithItems, RunStopEvent, RunWithOrders } from "../../types";
 import {
   buildDriverDeck,
   dwellMinutes,
   isAtStop,
   lastAttempt,
+  linesTotal,
   stopOutcome,
 } from "../../lib/driver-run-model";
 
@@ -253,5 +254,136 @@ describe("buildDriverDeck", () => {
     expect(deck.current).toBeNull();
     expect(deck.stops).toEqual([]);
     expect(deck.finished).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// deck items and run status
+// ---------------------------------------------------------------------------
+
+describe("deck items and run status", () => {
+  it("exposes runStatus and per-stop items with price and warehouse weight", () => {
+    const item: OrderItemWithProduct = {
+      id: uuid(),
+      order_id: "o",
+      product_id: "p-1",
+      mode: "kg",
+      quantity: 2,
+      size_min_kg: 1,
+      size_max_kg: 3,
+      fallback: "cancel",
+      fallback_applied: null,
+      is_cancelled: false,
+      warehouse_weight_kg: 2.1,
+      warehouse_pieces: null,
+      final_weight_kg: null,
+      final_pieces: null,
+      price_per_kg: 12,
+      line_total: null,
+      created_at: "",
+      updated_at: "",
+      version: 1,
+      product: { id: "p-1", name: "Ayam Super", image_url: null },
+    };
+    const order = makeOrder({ items: [item] });
+    const run = makeRun({ status: "planned" }, [order]);
+    const deck = buildDriverDeck(run);
+    expect(deck.runStatus).toBe("planned");
+    const stop = deck.stops[0];
+    expect(stop).toBeDefined();
+    if (!stop) return;
+    expect(stop.items).toEqual([
+      {
+        itemId: item.id,
+        productName: "Ayam Super",
+        mode: "kg",
+        quantity: 2,
+        warehouseWeightKg: 2.1,
+        pricePerKg: 12,
+      },
+    ]);
+  });
+
+  it("excludes cancelled items", () => {
+    const liveItem: OrderItemWithProduct = {
+      id: uuid(),
+      order_id: "o",
+      product_id: "p-1",
+      mode: "kg",
+      quantity: 2,
+      size_min_kg: 1,
+      size_max_kg: 3,
+      fallback: "cancel",
+      fallback_applied: null,
+      is_cancelled: false,
+      warehouse_weight_kg: 2.1,
+      warehouse_pieces: null,
+      final_weight_kg: null,
+      final_pieces: null,
+      price_per_kg: 12,
+      line_total: null,
+      created_at: "",
+      updated_at: "",
+      version: 1,
+      product: { id: "p-1", name: "Ayam Super", image_url: null },
+    };
+    const cancelledItem: OrderItemWithProduct = {
+      id: uuid(),
+      order_id: "o",
+      product_id: "p-2",
+      mode: "piece",
+      quantity: 1,
+      size_min_kg: 1,
+      size_max_kg: 3,
+      fallback: "cancel",
+      fallback_applied: null,
+      is_cancelled: true,
+      warehouse_weight_kg: null,
+      warehouse_pieces: null,
+      final_weight_kg: null,
+      final_pieces: null,
+      price_per_kg: null,
+      line_total: null,
+      created_at: "",
+      updated_at: "",
+      version: 1,
+      product: { id: "p-2", name: "Cancelled Product", image_url: null },
+    };
+    const order = makeOrder({ items: [liveItem, cancelledItem] });
+    const run = makeRun({}, [order]);
+    const deck = buildDriverDeck(run);
+    const stop = deck.stops[0];
+    expect(stop).toBeDefined();
+    if (!stop) return;
+    expect(stop.items).toHaveLength(1);
+    const firstItem = stop.items[0];
+    expect(firstItem).toBeDefined();
+    if (!firstItem) return;
+    expect(firstItem.itemId).toBe(liveItem.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// linesTotal
+// ---------------------------------------------------------------------------
+
+describe("linesTotal", () => {
+  it("sums weight × price and rounds to 2 dp", () => {
+    expect(
+      linesTotal([
+        { weightKg: 2.335, pricePerKg: 12 },
+        { weightKg: 1, pricePerKg: 10.5 },
+      ]),
+    ).toBe(38.52);
+  });
+
+  it("skips entries missing weight or price", () => {
+    expect(
+      linesTotal([
+        { weightKg: null, pricePerKg: 12 },
+        { weightKg: 2, pricePerKg: null },
+        { weightKg: 3, pricePerKg: 10 },
+      ]),
+    ).toBe(30);
   });
 });
