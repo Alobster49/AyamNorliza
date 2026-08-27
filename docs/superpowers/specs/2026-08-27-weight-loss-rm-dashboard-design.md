@@ -49,13 +49,14 @@ figures (`lostKg`, `lostRm`) are loss-only and can be larger.
 
 Extend `InsightsPayload`/`InsightsViewModel` weight types with the fields
 above (`WeightByProduct` gains `lostKg`/`lostRm`; new `WeightByOrder` type).
-`leakagePct` computation unchanged (still `diffKg / warehouseKg`). Pure
-pass-through mapping; unit tests updated.
+`leakagePct` (net) kept for continuity; new `lossPct = lostKg / warehouseKg`
+drives the headline so it cannot go negative when gains outweigh losses.
+Pure pass-through mapping otherwise; unit tests updated.
 
 ### UI (`insights-row.tsx` → `WeightCard`)
 
 - Headline: "≈ MYR X lost — Y kg given away (Z%)" using `lostRm`, `lostKg`,
-  `leakagePct`.
+  `lossPct` (falls back to the old kg-only summary when `lostRm` is 0).
 - Per-product list: each row shows RM lost + kg lost.
 - New "By order" section: rows `#SHORTID · customer · date` with RM lost
   right-aligned; whole row links to

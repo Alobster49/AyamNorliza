@@ -4,7 +4,25 @@ import type { MarketSuggestion } from "@/features/market/types";
 
 const payload: InsightsPayload = {
   pricing: [{ name: "Whole Chicken", kg: 100, revenue: 1000, realizedPerKg: 10 }],
-  weight: { warehouseKg: 105, finalKg: 100, diffKg: 5, byProduct: [] },
+  weight: {
+    warehouseKg: 105,
+    finalKg: 100,
+    diffKg: 5,
+    lostKg: 6,
+    lostRm: 60,
+    byProduct: [
+      { name: "Whole Chicken", warehouseKg: 105, finalKg: 100, diffKg: 5, lostKg: 6, lostRm: 60 },
+    ],
+    byOrder: [
+      {
+        orderId: "11111111-aaaa-bbbb-cccc-000000000001",
+        customerName: "Kedai A",
+        deliveryDate: "2026-08-20",
+        lostKg: 6,
+        lostRm: 60,
+      },
+    ],
+  },
   retention: { active: 10, newCustomers: 4, returning: 6, silent: [] },
   delivery: { attempts: 20, failed: 2, byZone: [], slotOrders: 30, slotCapacity: 60 },
 };
@@ -44,5 +62,23 @@ describe("buildInsightsViewModel", () => {
 
   it("computes weight leakage percentage", () => {
     expect(vm.weight.leakagePct).toBeCloseTo((5 / 105) * 100);
+  });
+
+  it("computes loss percentage from loss-only kg", () => {
+    expect(vm.weight.lossPct).toBeCloseTo((6 / 105) * 100);
+  });
+
+  it("passes loss figures and by-order rows through", () => {
+    expect(vm.weight.lostRm).toBe(60);
+    expect(vm.weight.byOrder[0]!.customerName).toBe("Kedai A");
+    expect(vm.weight.byProduct[0]!.lostRm).toBe(60);
+  });
+
+  it("keeps lossPct at zero when nothing was weighed", () => {
+    const empty = buildInsightsViewModel(
+      { ...payload, weight: { ...payload.weight, warehouseKg: 0, lostKg: 0 } },
+      [],
+    );
+    expect(empty.weight.lossPct).toBe(0);
   });
 });

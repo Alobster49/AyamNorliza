@@ -1,20 +1,42 @@
 import type { MarketSuggestion } from "@/features/market/types";
 
 export type PricingRow = { name: string; kg: number; revenue: number; realizedPerKg: number | null };
-export type WeightByProduct = { name: string; warehouseKg: number; finalKg: number; diffKg: number };
+export type WeightByProduct = {
+  name: string;
+  warehouseKg: number;
+  finalKg: number;
+  diffKg: number;
+  lostKg: number;
+  lostRm: number;
+};
+export type WeightByOrder = {
+  orderId: string;
+  customerName: string;
+  deliveryDate: string;
+  lostKg: number;
+  lostRm: number;
+};
 export type SilentCustomer = { name: string; lastOrderDate: string; lifetimeRevenue: number };
 export type ZoneQuality = { zone: string; total: number; failed: number };
 
 export type InsightsPayload = {
   pricing: PricingRow[];
-  weight: { warehouseKg: number; finalKg: number; diffKg: number; byProduct: WeightByProduct[] };
+  weight: {
+    warehouseKg: number;
+    finalKg: number;
+    diffKg: number;
+    lostKg: number;
+    lostRm: number;
+    byProduct: WeightByProduct[];
+    byOrder: WeightByOrder[];
+  };
   retention: { active: number; newCustomers: number; returning: number; silent: SilentCustomer[] };
   delivery: { attempts: number; failed: number; byZone: ZoneQuality[]; slotOrders: number; slotCapacity: number };
 };
 
 export type InsightsViewModel = {
   pricing: Array<PricingRow & { marketBase: number | null; gapPct: number | null }>;
-  weight: InsightsPayload["weight"] & { leakagePct: number };
+  weight: InsightsPayload["weight"] & { leakagePct: number; lossPct: number };
   retention: InsightsPayload["retention"];
   delivery: InsightsPayload["delivery"] & { failureRate: number; slotFillPct: number | null };
 };
@@ -54,6 +76,12 @@ export function buildInsightsViewModel(
       leakagePct:
         payload.weight.warehouseKg > 0
           ? (payload.weight.diffKg / payload.weight.warehouseKg) * 100
+          : 0,
+      // Loss-only share of allocated weight — unlike leakagePct it cannot go
+      // negative when gain items outweigh losses.
+      lossPct:
+        payload.weight.warehouseKg > 0
+          ? (payload.weight.lostKg / payload.weight.warehouseKg) * 100
           : 0,
     },
     retention: payload.retention,
