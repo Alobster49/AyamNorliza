@@ -1,6 +1,7 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -65,11 +66,13 @@ function PricingCard({ vm }: { vm: InsightsViewModel }) {
   );
 }
 
-function WeightCard({ vm }: { vm: InsightsViewModel }) {
+function WeightCard({ vm, organizationSlug }: { vm: InsightsViewModel; organizationSlug: string }) {
   const t = useTranslations("analytics.insights.weight");
   const format = useFormatter();
   const kg = (n: number) => format.number(n, { maximumFractionDigits: 1 });
-  const hasLeakage = vm.weight.diffKg > 0;
+  const money = (n: number) => format.number(n, { style: "currency", currency: "MYR" });
+  const pct = (n: number) => format.number(n / 100, { style: "percent", maximumFractionDigits: 1 });
+  const hasLeakage = vm.weight.lostKg > 0 || vm.weight.diffKg > 0;
   return (
     <Card>
       <CardHeader>
@@ -79,19 +82,48 @@ function WeightCard({ vm }: { vm: InsightsViewModel }) {
         {hasLeakage ? (
           <>
             <p className="text-sm">
-              {t("summary", {
-                diff: kg(vm.weight.diffKg),
-                pct: format.number(vm.weight.leakagePct / 100, { style: "percent", maximumFractionDigits: 1 }),
-              })}
+              {vm.weight.lostRm > 0
+                ? t("lostSummary", {
+                    rm: money(vm.weight.lostRm),
+                    diff: kg(vm.weight.lostKg),
+                    pct: pct(vm.weight.lossPct),
+                  })
+                : t("summary", { diff: kg(vm.weight.diffKg), pct: pct(vm.weight.leakagePct) })}
             </p>
             <ul className="flex flex-col gap-1">
               {vm.weight.byProduct.map((p) => (
                 <li key={p.name} className="flex items-center justify-between text-sm">
                   <span>{p.name}</span>
-                  <span className="tabular-nums text-muted-foreground">{kg(p.diffKg)}</span>
+                  <span className="tabular-nums text-muted-foreground">
+                    {t("rowLoss", { rm: money(p.lostRm), kg: kg(p.lostKg) })}
+                  </span>
                 </li>
               ))}
             </ul>
+            {vm.weight.byOrder.length > 0 && (
+              <div className="flex flex-col gap-1">
+                <p className="text-xs font-medium text-muted-foreground">{t("byOrderTitle")}</p>
+                <ul className="flex flex-col gap-1">
+                  {vm.weight.byOrder.map((o) => (
+                    <li key={o.orderId}>
+                      <Link
+                        href={`/${organizationSlug}/orders/${o.orderId}`}
+                        className="flex items-center justify-between gap-2 text-sm hover:underline"
+                      >
+                        <span className="truncate">
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {o.orderId.slice(0, 8)}
+                          </span>{" "}
+                          {o.customerName} ·{" "}
+                          {format.dateTime(new Date(o.deliveryDate), { dateStyle: "medium" })}
+                        </span>
+                        <span className="shrink-0 tabular-nums">{money(o.lostRm)}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </>
         ) : (
           <p className="text-sm text-muted-foreground">{t("none")}</p>
@@ -190,14 +222,20 @@ function DeliveryCard({ vm }: { vm: InsightsViewModel }) {
   );
 }
 
-export function InsightsRow({ vm }: { vm: InsightsViewModel }) {
+export function InsightsRow({
+  vm,
+  organizationSlug,
+}: {
+  vm: InsightsViewModel;
+  organizationSlug: string;
+}) {
   const t = useTranslations("analytics.insights");
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-medium text-muted-foreground">{t("title")}</h2>
       <div className="grid gap-4 md:grid-cols-2">
         <PricingCard vm={vm} />
-        <WeightCard vm={vm} />
+        <WeightCard vm={vm} organizationSlug={organizationSlug} />
         <RetentionCard vm={vm} />
         <DeliveryCard vm={vm} />
       </div>

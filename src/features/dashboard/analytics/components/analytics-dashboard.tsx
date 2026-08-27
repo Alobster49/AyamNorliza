@@ -141,7 +141,11 @@ export function AnalyticsDashboard({
           </div>
         </>
       )}
-      {insightsError || !insightsVm ? <SectionError /> : <InsightsRow vm={insightsVm} />}
+      {insightsError || !insightsVm ? (
+        <SectionError />
+      ) : (
+        <InsightsRow vm={insightsVm} organizationSlug={organizationSlug} />
+      )}
       {!salesError && salesVm && <TopLists vm={salesVm} />}
       {today ? <TodayStrip payload={today} /> : <SectionError />}
       {adminSummary && <AdminPanel summary={adminSummary} organizationSlug={organizationSlug} />}

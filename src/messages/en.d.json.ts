@@ -668,6 +668,9 @@ declare const messages: {
       "weight": {
         "title": "Weight leakage",
         "summary": "{diff} kg given away ({pct} of allocated weight)",
+        "lostSummary": "≈ {rm} lost — {diff} kg given away ({pct} of allocated weight)",
+        "rowLoss": "{rm} · {kg} kg",
+        "byOrderTitle": "Top orders by loss",
         "none": "No leakage recorded in this period."
       },
       "retention": {

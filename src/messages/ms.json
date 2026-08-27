@@ -670,6 +670,9 @@
       "weight": {
         "title": "Susut berat",
         "summary": "{diff} kg terlebih bagi ({pct} daripada berat diperuntuk)",
+        "lostSummary": "≈ {rm} hilang — {diff} kg terlebih bagi ({pct} daripada berat diperuntuk)",
+        "rowLoss": "{rm} · {kg} kg",
+        "byOrderTitle": "Pesanan dengan kerugian tertinggi",
         "none": "Tiada susut berat dalam tempoh ini."
       },
       "retention": {
