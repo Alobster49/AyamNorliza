@@ -210,6 +210,43 @@ export async function startRun(organizationSlug: string, runId: string): Promise
   return ok(undefined);
 }
 
+/**
+ * `driver_finish_run` errors. Same mapping shape as `startRunMessageKey`.
+ */
+function finishRunMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.drive.run.forbidden";
+    case "not_found":
+      return "errors.drive.run.notFound";
+    case "invalid_transition":
+      return "errors.drive.run.notDeparted";
+    default:
+      return "errors.drive.run.internal";
+  }
+}
+
+/**
+ * The driver closes the run. Stops that never ended delivered go back to the
+ * unassigned pool for the office to re-plan -- unlike the office's own
+ * `set_run_status`, nothing is swept to "delivered" on the way out.
+ */
+export async function finishRun(organizationSlug: string, runId: string): Promise<ActionResult> {
+  const ctx = await guard(organizationSlug);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("driver_finish_run", { p_run: runId });
+  if (error) {
+    const mapped = mapRpcError(error.message);
+    return err(mapped.code as DriverErrorCode, mapped.message, finishRunMessageKey(error.message));
+  }
+
+  revalidatePath(`/drive/${organizationSlug}`);
+  revalidatePath(`/${organizationSlug}/runs`);
+  return ok(undefined);
+}
+
 export type DeliverLineInput = {
   itemId: string;
   finalWeightKg: number;

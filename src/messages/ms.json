@@ -482,7 +482,8 @@
         "loadFailed": "Gagal memuatkan trip",
         "alreadyStarted": "Trip ini sudah bertolak.",
         "notFound": "Trip tidak dijumpai.",
-        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+        "internal": "Sesuatu tidak kena. Sila cuba lagi.",
+        "notDeparted": "Trip ini tidak berada di jalan."
       },
       "stop": {
         "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
@@ -1691,7 +1692,6 @@
       "header": {
         "stopOf": "Perhentian {sequence} daripada {total}",
         "runFinished": "Trip selesai",
-        "cash": "Tunai",
         "remaining": "{count, plural, other {# lagi}}",
         "toSortOut": "{count, plural, other {# perlu diselesaikan}}"
       },
@@ -1699,8 +1699,16 @@
         "title": "Semua perhentian selesai.",
         "delivered": "{count, plural, other {# dihantar}}",
         "couldNotDeliver": "{count, plural, other {# tidak dapat dihantar}}",
-        "wrapUp": "Pulang ke garaj dan serahkan {amount}.",
-        "invoiceHint": "Buka mana-mana hantaran selesai di bawah untuk invoisnya."
+        "wrapUp": "Pulang ke garaj.",
+        "invoiceHint": "Buka mana-mana hantaran selesai di bawah untuk invoisnya.",
+        "closeHint": "Tiada apa-apa lagi dalam lori? Tutup trip dan pejabat akan uruskan seterusnya."
+      },
+      "closeRun": {
+        "button": "Tutup trip",
+        "endEarly": "Tamatkan trip awal",
+        "confirmTitle": "Tutup trip ini?",
+        "confirmDone": "Trip ini sudah selesai. Menutupnya memberitahu pejabat anda sudah balik.",
+        "confirmRemaining": "{count, plural, one {# hentian tidak dihantar. Ia dikembalikan kepada pejabat untuk dirancang semula.} other {# hentian tidak dihantar. Ia dikembalikan kepada pejabat untuk dirancang semula.}}"
       },
       "retryLabel": "Cuba lagi · {reason}",
       "atDoor": "Di pintu",
@@ -1737,7 +1745,6 @@
         "subtitle": "{name} · semua ini pilihan",
         "receivedByLabel": "Diterima oleh",
         "receivedByPlaceholder": "Nama orang yang menerima",
-        "cashLabel": "Tunai dikutip",
         "photoLabel": "Foto di pintu",
         "photoUploading": "Memuat naik…",
         "photoReplace": "Foto dilampirkan · ganti",
@@ -1760,11 +1767,11 @@
         "refreshFailedTitle": "Tidak dapat menyegarkan trip",
         "arriveFailedTitle": "Tidak dapat merekod ketibaan",
         "photoFailedTitle": "Foto gagal dimuat naik",
-        "cashInvalidTitle": "Semak jumlah tunai",
-        "cashInvalidDescription": "Masukkan nombor, atau biarkan kosong.",
         "deliverFailedTitle": "Tidak dapat merekod penghantaran",
         "deliveredTitle": "Sampai kepada {name}",
         "failFailedTitle": "Tidak dapat melaporkan perhentian",
+        "finishFailedTitle": "Tidak dapat menutup trip",
+        "finishedTitle": "Trip ditutup",
         "reportedTitle": "Dilaporkan kepada pejabat",
         "startRunFailedTitle": "Tidak dapat mulakan trip",
         "startedTitle": "Trip bermula. Pandu selamat.",

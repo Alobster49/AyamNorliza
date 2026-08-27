@@ -482,7 +482,8 @@
         "loadFailed": "Failed to load the run",
         "alreadyStarted": "This run has already left the yard.",
         "notFound": "Run not found.",
-        "internal": "Something went wrong. Please try again."
+        "internal": "Something went wrong. Please try again.",
+        "notDeparted": "This run is not out on the road."
       },
       "stop": {
         "forbidden": "You do not have permission to do that.",
@@ -1670,7 +1671,6 @@
       "header": {
         "stopOf": "Stop {sequence} of {total}",
         "runFinished": "Run finished",
-        "cash": "Cash",
         "remaining": "{count, plural, one {# left} other {# left}}",
         "toSortOut": "{count, plural, one {# to sort out} other {# to sort out}}"
       },
@@ -1678,8 +1678,16 @@
         "title": "Every stop is done.",
         "delivered": "{count, plural, one {# delivered} other {# delivered}}",
         "couldNotDeliver": "{count, plural, one {# could not be delivered} other {# could not be delivered}}",
-        "wrapUp": "Head back to the yard and hand in {amount}.",
-        "invoiceHint": "Open any delivered stop below for its invoice."
+        "wrapUp": "Head back to the yard.",
+        "invoiceHint": "Open any delivered stop below for its invoice.",
+        "closeHint": "Nothing left on the truck? Close the run and the office takes it from here."
+      },
+      "closeRun": {
+        "button": "Close run",
+        "endEarly": "End run early",
+        "confirmTitle": "Close this run?",
+        "confirmDone": "The run is finished. Closing it tells the office you are back.",
+        "confirmRemaining": "{count, plural, one {# stop was not delivered. It goes back to the office to re-plan.} other {# stops were not delivered. They go back to the office to re-plan.}}"
       },
       "retryLabel": "Retry · {reason}",
       "atDoor": "At the door",
@@ -1716,7 +1724,6 @@
         "subtitle": "{name} · all of this is optional",
         "receivedByLabel": "Received by",
         "receivedByPlaceholder": "Name of whoever took it",
-        "cashLabel": "Cash collected",
         "photoLabel": "Photo at the door",
         "photoUploading": "Uploading…",
         "photoReplace": "Photo attached · replace",
@@ -1739,11 +1746,11 @@
         "refreshFailedTitle": "Could not refresh the run",
         "arriveFailedTitle": "Could not record arrival",
         "photoFailedTitle": "Photo did not upload",
-        "cashInvalidTitle": "Check the cash amount",
-        "cashInvalidDescription": "Enter a number, or leave it blank.",
         "deliverFailedTitle": "Could not record the delivery",
         "deliveredTitle": "Delivered to {name}",
         "failFailedTitle": "Could not report the stop",
+        "finishFailedTitle": "Could not close the run",
+        "finishedTitle": "Run closed",
         "reportedTitle": "Reported to the office",
         "startRunFailedTitle": "Could not start the run",
         "startedTitle": "Run started. Drive safe.",

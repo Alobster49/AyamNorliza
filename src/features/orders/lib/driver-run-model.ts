@@ -104,6 +104,7 @@ export type DriverStop = {
   atStop: boolean;
   dwellMinutes: number | null;
   lastFailureReason: DeliveryAttempt["reason"];
+  lastNextAction: DeliveryAttempt["next_action"];
   items: StopItem[];
 };
 
@@ -145,6 +146,7 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
     atStop: isAtStop(order),
     dwellMinutes: dwellMinutes(order, now),
     lastFailureReason: lastAttempt(order)?.reason ?? null,
+    lastNextAction: lastAttempt(order)?.next_action ?? null,
     items: (order.items ?? [])
       .filter((item) => !item.is_cancelled)
       .map((item) => ({
@@ -157,17 +159,21 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
       })),
   }));
 
-  // Standing at a stop beats route order: that is where the driver actually is.
+  // A reported failure is not the driver's problem again right now. Untouched
+  // stops come first in route order; a stop the driver said to retry at the
+  // end of the run queues behind them. One moved to tomorrow or sent back to
+  // the yard leaves today's queue entirely -- the office owns it from there.
+  const pending = stops.filter((stop) => stop.outcome === "pending");
+  const retryLater = stops.filter((stop) => stop.outcome === "failed" && stop.lastNextAction === "retry_today");
+  const queue = [...pending, ...retryLater];
+
+  // Standing at a stop beats the queue: that is where the driver actually is.
   const current =
     stops.find((stop) => stop.atStop && stop.outcome !== "delivered" && stop.outcome !== "cancelled") ??
-    stops.find((stop) => stop.outcome === "pending" || stop.outcome === "failed") ??
+    queue.at(0) ??
     null;
 
-  const next = current
-    ? (stops
-        .slice(stops.indexOf(current) + 1)
-        .find((stop) => stop.outcome === "pending" || stop.outcome === "failed") ?? null)
-    : null;
+  const next = current ? (queue.find((stop) => stop.orderId !== current.orderId) ?? null) : null;
 
   const delivered = stops.filter((stop) => stop.outcome === "delivered").length;
   const failed = stops.filter((stop) => stop.outcome === "failed").length;

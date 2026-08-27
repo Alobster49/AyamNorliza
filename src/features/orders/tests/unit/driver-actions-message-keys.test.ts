@@ -30,6 +30,7 @@ import {
   deliverStop,
   failStop,
   startRun,
+  finishRun,
   getDriverInvoice,
 } from "../../server/driver-actions";
 
@@ -235,6 +236,32 @@ describe("startRun", () => {
     const result = await startRun("org-slug", "run-1");
     expect(result.ok).toBe(true);
     expect(supabase.rpc).toHaveBeenCalledWith("driver_start_run", { p_run: "run-1" });
+  });
+});
+
+describe("finishRun", () => {
+  it("maps invalid_transition to errors.drive.run.notDeparted", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "invalid_transition" } });
+    const result = await finishRun("org-slug", "run-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.notDeparted");
+  });
+
+  it("maps forbidden to errors.drive.run.forbidden", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "forbidden" } });
+    const result = await finishRun("org-slug", "run-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.forbidden");
+  });
+
+  it("calls driver_finish_run and succeeds", async () => {
+    mockDriverGuard();
+    const supabase = mockSupabaseRpc({ error: null });
+    const result = await finishRun("org-slug", "run-1");
+    expect(result.ok).toBe(true);
+    expect(supabase.rpc).toHaveBeenCalledWith("driver_finish_run", { p_run: "run-1" });
   });
 });
 

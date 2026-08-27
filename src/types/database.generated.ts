@@ -2018,6 +2018,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      driver_finish_run: { Args: { p_run: string }; Returns: undefined }
       driver_run_ids: { Args: never; Returns: string[] }
       driver_start_run: { Args: { p_run: string }; Returns: undefined }
       effective_capabilities:

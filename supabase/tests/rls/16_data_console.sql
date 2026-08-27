@@ -126,8 +126,8 @@ select results_eq(
        (select count(*) from public.orders where organization_id = 'dc000000-0000-0000-0000-00000000000a'),
        (select count(*) from public.delivery_runs where organization_id = 'dc000000-0000-0000-0000-00000000000a')
   $$,
-  $$ values (13::bigint, 11::bigint, 15::bigint, 2::bigint) $$,
-  'seed row counts (10 demo customers + 1 relinked buyer customer)');
+  $$ values (13::bigint, 11::bigint, 64::bigint, 23::bigint) $$,
+  'seed row counts (10 demo customers + 1 relinked buyer customer; 15 live + 49 history orders, 2 live + 21 history runs)');
 
 -- 12: seeding twice is idempotent.
 select pg_temp.impersonate('dc000000-0000-0000-0000-000000000001');

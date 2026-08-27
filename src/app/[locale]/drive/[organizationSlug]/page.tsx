@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { getDriverRun } from "@/features/orders/server/driver-actions";
 import { DriverDeck } from "@/features/orders/components/driver-deck";
+import { DriverSignOutButton } from "@/features/orders/components/driver-sign-out";
 
 export default async function DrivePage({
   params,
@@ -26,6 +27,7 @@ export default async function DrivePage({
         {/* `messageKey` is a dynamic full path (e.g. "errors.drive.run.loadFailed");
             next-intl's typed `t()` only accepts literal keys, so this is cast at the call site. */}
         <p className="text-sm text-muted-foreground">{tRoot(result.messageKey as never)}</p>
+        <DriverSignOutButton className="mt-2" />
       </main>
     );
   }
@@ -37,6 +39,7 @@ export default async function DrivePage({
         <p className="text-sm text-muted-foreground">
           {t("noRunDescription")}
         </p>
+        <DriverSignOutButton className="mt-2" />
       </main>
     );
   }

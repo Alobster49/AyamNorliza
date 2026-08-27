@@ -11,7 +11,8 @@ import { SupabaseSessionProvider } from "@/components/providers/supabase-session
  * The driver deck lives outside the seller shell on purpose. A driver has no
  * sidebar, no org navigation and no business seeing one — this route is the
  * whole application as far as they are concerned, and it has to survive being
- * opened one-handed in a truck.
+ * opened one-handed in a truck. The column widens on tablet/desktop so the
+ * office can drive the same screen from a laptop without a phone-sized strip.
  */
 export default async function DriveLayout({
   children,
@@ -41,7 +42,9 @@ export default async function DriveLayout({
 
   return (
     <SupabaseSessionProvider>
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background">{children}</div>
+      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background sm:max-w-3xl lg:max-w-6xl">
+        {children}
+      </div>
     </SupabaseSessionProvider>
   );
 }

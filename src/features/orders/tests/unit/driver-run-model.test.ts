@@ -231,6 +231,22 @@ describe("buildDriverDeck", () => {
     expect(deck.current?.outcome).toBe("failed");
   });
 
+  it("moves on to the next untouched stop after a failure, and comes back at the end", () => {
+    const a = makeOrder({ run_sequence: 1, attempts: [attempt({ next_action: "retry_today" })] });
+    const b = makeOrder({ run_sequence: 2 });
+    const deck = buildDriverDeck(makeRun({}, [a, b]));
+    expect(deck.current?.orderId).toBe(b.id);
+    expect(deck.next?.orderId).toBe(a.id);
+  });
+
+  it("drops a stop moved to tomorrow or sent back to the yard out of today's queue", () => {
+    const a = makeOrder({ run_sequence: 1, attempts: [attempt({ next_action: "move_tomorrow" })] });
+    const b = makeOrder({ run_sequence: 2, attempts: [attempt({ next_action: "return_to_yard" })] });
+    const deck = buildDriverDeck(makeRun({}, [a, b]));
+    expect(deck.current).toBeNull();
+    expect(deck.finished).toBe(true);
+  });
+
   it("reports the run as finished when every stop has an outcome", () => {
     const a = makeOrder({ run_sequence: 1, status: "delivered" });
     const b = makeOrder({ run_sequence: 2, status: "cancelled" });

@@ -8,7 +8,7 @@
 
 begin;
 
-select plan(14);
+select plan(17);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (inserted as postgres, which bypasses RLS)
@@ -72,6 +72,7 @@ insert into public.orders (id, organization_id, customer_id, created_by, source,
 values
   ('f0000000-0000-0000-0000-000000000021', 'f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000005', 'f0000000-0000-0000-0000-000000000001', 'manual', 'ready', 'f0000000-0000-0000-0000-000000000006', '1 Door Street', current_date + 1, 'f0000000-0000-0000-0000-000000000008', 'f0000000-0000-0000-0000-000000000007', 'f0000000-0000-0000-0000-000000000010', 'manual', 486.00),
   ('f0000000-0000-0000-0000-000000000022', 'f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000005', 'f0000000-0000-0000-0000-000000000001', 'manual', 'ready', 'f0000000-0000-0000-0000-000000000006', '2 Door Street', current_date + 1, 'f0000000-0000-0000-0000-000000000008', 'f0000000-0000-0000-0000-000000000007', 'f0000000-0000-0000-0000-000000000010', 'manual', 264.00),
+  ('f0000000-0000-0000-0000-000000000024', 'f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000005', 'f0000000-0000-0000-0000-000000000001', 'manual', 'ready', 'f0000000-0000-0000-0000-000000000006', '4 Door Street', current_date + 1, 'f0000000-0000-0000-0000-000000000008', 'f0000000-0000-0000-0000-000000000007', 'f0000000-0000-0000-0000-000000000010', 'manual', 0),
   ('f0000000-0000-0000-0000-000000000023', 'f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000005', 'f0000000-0000-0000-0000-000000000001', 'manual', 'ready', 'f0000000-0000-0000-0000-000000000006', '3 Door Street', current_date + 2, 'f0000000-0000-0000-0000-000000000008', 'f0000000-0000-0000-0000-000000000007', 'f0000000-0000-0000-0000-000000000011', 'manual', 100.00)
 on conflict (id) do nothing;
 
@@ -79,7 +80,9 @@ on conflict (id) do nothing;
 insert into public.order_items (id, order_id, product_id, mode, quantity, size_min_kg, size_max_kg, fallback, price_per_kg)
 values
   ('f0000000-0000-0000-0000-000000000041', 'f0000000-0000-0000-0000-000000000021', 'f0000000-0000-0000-0000-000000000001', 'kg', 20, 1.0, 2.0, 'mix', 24.30),
-  ('f0000000-0000-0000-0000-000000000042', 'f0000000-0000-0000-0000-000000000022', 'f0000000-0000-0000-0000-000000000001', 'kg', 11, 1.0, 2.0, 'mix', 24.00)
+  ('f0000000-0000-0000-0000-000000000042', 'f0000000-0000-0000-0000-000000000022', 'f0000000-0000-0000-0000-000000000001', 'kg', 11, 1.0, 2.0, 'mix', 24.00),
+  -- No price: an order confirmed before price-at-confirm (20260826000001).
+  ('f0000000-0000-0000-0000-000000000044', 'f0000000-0000-0000-0000-000000000024', 'f0000000-0000-0000-0000-000000000001', 'kg', 9, 1.0, 2.0, 'mix', null)
 on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------
@@ -137,10 +140,18 @@ select lives_ok(
 
 reset role;
 
+-- The door weights are the settlement: every live line has a final weight and
+-- a price, so the order closes here rather than waiting for the office.
 select results_eq(
   $$ select status::text from public.orders where id = 'f0000000-0000-0000-0000-000000000021' $$,
-  $$ values ('delivered') $$,
-  'delivering a stop moves the order to delivered'
+  $$ values ('closed') $$,
+  'delivering a fully priced stop closes the order at the door'
+);
+
+select isnt(
+  (select closed_at from public.orders where id = 'f0000000-0000-0000-0000-000000000021'),
+  null::timestamptz,
+  'a driver-closed order is stamped closed_at'
 );
 
 select results_eq(
@@ -206,6 +217,30 @@ select results_eq(
   $$ select status::text from public.orders where id = 'f0000000-0000-0000-0000-000000000022' $$,
   $$ values ('ready') $$,
   'a failed stop does not cancel the order -- it is still owed to the customer'
+);
+
+-- ---------------------------------------------------------------------------
+-- 5b. A stop whose line carries no price cannot settle itself: the driver's
+-- weights are recorded, but the order waits at 'delivered' for the office.
+-- ---------------------------------------------------------------------------
+set local role authenticated;
+set local "request.jwt.claim.sub" to 'f0000000-0000-0000-0000-000000000002';
+
+select lives_ok(
+  $$ select public.driver_deliver_stop(
+       'f0000000-0000-0000-0000-000000000024',
+       null, null, null, null,
+       '[{"item_id": "f0000000-0000-0000-0000-000000000044", "final_weight_kg": 9, "final_pieces": null}]'::jsonb
+     ) $$,
+  'the driver can deliver a stop whose line has no price'
+);
+
+reset role;
+
+select results_eq(
+  $$ select status::text from public.orders where id = 'f0000000-0000-0000-0000-000000000024' $$,
+  $$ values ('delivered') $$,
+  'an unpriced stop stops at delivered for the office to settle'
 );
 
 -- ---------------------------------------------------------------------------

@@ -133,10 +133,12 @@ select is(
   'a failed stop loses its load mark when it comes off the run'
 );
 
+-- Fully priced door weights close the order outright (20260827000002), so the
+-- office close finds nothing left to sweep here.
 select is(
   (select status::text from public.orders where id = 'f9000000-0000-0000-0000-000000000022'),
-  'delivered',
-  'a stop the driver actually delivered stays delivered'
+  'closed',
+  'a stop the driver settled at the door is already closed'
 );
 
 select is(

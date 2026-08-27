@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   arriveStop,
   deliverStop,
   failStop,
+  finishRun,
   getDriverRun,
   startRun,
 } from "@/features/orders/server/driver-actions";
@@ -21,6 +22,8 @@ import {
 } from "@/features/orders/types";
 import { buildDriverDeck, linesTotal, type DriverStop } from "@/features/orders/lib/driver-run-model";
 import { formatPrice, formatWeight } from "@/features/orders/lib/order-model";
+import { DriverSignOutButton } from "@/features/orders/components/driver-sign-out";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -106,11 +109,11 @@ export function DriverDeck({
   const t = useTranslations("orders.driverDeck");
   const tStatus = useTranslations("status.delivery");
   const tRoot = useTranslations();
+  const router = useRouter();
   const [run, setRun] = useState(initialRun);
   const [sheet, setSheet] = useState<Sheet>("none");
   const [busy, startTransition] = useTransition();
   const [receivedBy, setReceivedBy] = useState("");
-  const [cash, setCash] = useState("");
   const [weights, setWeights] = useState<Record<string, string>>({});
   const [pieces, setPieces] = useState<Record<string, string>>({});
   const [photoPath, setPhotoPath] = useState<string | null>(null);
@@ -119,6 +122,19 @@ export function DriverDeck({
   const [nextAction, setNextAction] = useState<DeliveryNextAction>("retry_today");
   const [note, setNote] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  // The whole-route list is a closed disclosure on a phone (screen real estate)
+  // but there is room for it beside the stop on desktop, so open it there.
+  // Starts closed so the server and first client render agree.
+  const [openRoute, setOpenRoute] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 1024px)");
+    const sync = (event: MediaQueryList | MediaQueryListEvent) => setOpenRoute(event.matches);
+    sync(query);
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   const deck = useMemo(() => buildDriverDeck(run), [run]);
   const stop = deck.current;
@@ -157,7 +173,6 @@ export function DriverDeck({
   function resetSheet() {
     setSheet("none");
     setReceivedBy("");
-    setCash("");
     setPhotoPath(null);
     setReason(null);
     setNote("");
@@ -180,6 +195,24 @@ export function DriverDeck({
       toast({ title: t("toast.startedTitle") });
       await refresh();
     });
+  }
+
+  /** Close the run from the truck. Stops that were never delivered go back to
+   * the office pool -- the driver is saying "I am done", not "everything I did
+   * not touch went out". */
+  async function handleFinishRun() {
+    const result = await finishRun(organizationSlug, run.id);
+    if (!result.ok) {
+      toast({
+        title: t("toast.finishFailedTitle"),
+        description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({ title: t("toast.finishedTitle") });
+    router.replace(`/drive/${organizationSlug}`);
+    router.refresh();
   }
 
   function handleArrive() {
@@ -218,16 +251,6 @@ export function DriverDeck({
 
   function handleDeliver() {
     if (!stop) return;
-    const trimmedCash = cash.trim();
-    const cashCollected = trimmedCash === "" ? null : Number(trimmedCash);
-    if (cashCollected !== null && (Number.isNaN(cashCollected) || cashCollected < 0)) {
-      toast({
-        title: t("toast.cashInvalidTitle"),
-        description: t("toast.cashInvalidDescription"),
-        variant: "destructive",
-      });
-      return;
-    }
     if (!allWeightsValid) {
       toast({
         title: t("toast.weightsMissingTitle"),
@@ -241,7 +264,8 @@ export function DriverDeck({
       const result = await deliverStop(organizationSlug, stop.orderId, {
         receivedBy: receivedBy.trim() || null,
         photoPath,
-        cashCollected,
+        // Cash is settled in the office, not at the door: the driver never keys it.
+        cashCollected: null,
         lines: weightEntries.map(({ item, weightKg }) => {
           const piecesRaw = pieces[item.itemId]?.trim() ?? "";
           const parsedPieces = piecesRaw === "" ? null : Number.parseInt(piecesRaw, 10);
@@ -287,9 +311,9 @@ export function DriverDeck({
   return (
     <div className="flex min-h-dvh flex-col">
       {/* Run header */}
-      <header className="sticky top-0 z-10 border-b bg-background/85 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b bg-background/85 px-4 py-3 backdrop-blur sm:px-6">
         <div className="flex items-start justify-between gap-3">
-          <div>
+          <div className="min-w-0">
             <h1 className="text-base font-semibold">
               {stop ? t("header.stopOf", { sequence: stop.sequence, total: deck.total }) : t("header.runFinished")}
             </h1>
@@ -298,10 +322,7 @@ export function DriverDeck({
               {deck.failed > 0 ? ` · ${t("header.toSortOut", { count: deck.failed })}` : ""}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">{t("header.cash")}</p>
-            <p className="text-sm font-semibold tabular-nums">{formatPrice(deck.cashCollected)}</p>
-          </div>
+          <DriverSignOutButton />
         </div>
         <div className="mt-2">
           <Bar pct={deck.progressPct} />
@@ -309,20 +330,33 @@ export function DriverDeck({
       </header>
 
       {!stop ? (
-        <div className="flex flex-1 flex-col items-center gap-3 overflow-y-auto px-4 py-6 text-center">
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-3 overflow-y-auto px-4 py-6 text-center sm:py-10">
           <p className="text-lg font-semibold">{t("finished.title")}</p>
           <p className="text-sm text-muted-foreground">
             {t("finished.delivered", { count: deck.delivered })}
             {deck.failed > 0 ? `, ${t("finished.couldNotDeliver", { count: deck.failed })}` : ""}.{" "}
-            {t("finished.wrapUp", { amount: formatPrice(deck.cashCollected) })}
+            {t("finished.wrapUp")}
           </p>
           <p className="text-xs text-muted-foreground">{t("finished.invoiceHint")}</p>
+          {deck.runStatus === "departed" && (
+            <div className="flex w-full flex-col items-center gap-1.5">
+              <Button
+                size="lg"
+                className="h-12 w-full max-w-sm text-base"
+                disabled={busy}
+                onClick={() => setConfirmClose(true)}
+              >
+                {t("closeRun.button")}
+              </Button>
+              <p className="text-xs text-muted-foreground">{t("finished.closeHint")}</p>
+            </div>
+          )}
           <section className="w-full overflow-hidden rounded-xl border bg-card text-left">
             <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
           </section>
         </div>
       ) : (
-        <main className="flex flex-1 flex-col gap-3 p-3">
+        <main className="flex flex-1 flex-col gap-3 p-3 sm:p-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6 lg:p-6">
           {/* The stop */}
           <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
             <div className="flex flex-col gap-3 border-b bg-accent/30 p-4">
@@ -428,38 +462,74 @@ export function DriverDeck({
             )}
           </section>
 
-          {/* Next stop peek */}
-          {deck.next && (
-            <section className="rounded-xl border bg-muted/40 px-4 py-2.5">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("next.label")}</p>
-              <p className="text-sm font-medium">
-                {deck.next.sequence} · {deck.next.customerName}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {deck.next.zoneName}
-                {deck.next.weightKg > 0 ? ` · ${formatWeight(deck.next.weightKg)}` : ""}
-                {deck.next.window ? ` · ${deck.next.window.start}–${deck.next.window.end}` : ""}
-              </p>
-            </section>
-          )}
+          {/* Orientation rail: on phones it stacks under the stop, on desktop it
+              sits beside it so the driver never scrolls past the actions. */}
+          <aside className="flex flex-col gap-3">
+            {/* Next stop peek */}
+            {deck.next && (
+              <section className="rounded-xl border bg-muted/40 px-4 py-2.5">
+                <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{t("next.label")}</p>
+                <p className="text-sm font-medium">
+                  {deck.next.sequence} · {deck.next.customerName}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {deck.next.zoneName}
+                  {deck.next.weightKg > 0 ? ` · ${formatWeight(deck.next.weightKg)}` : ""}
+                  {deck.next.window ? ` · ${deck.next.window.start}–${deck.next.window.end}` : ""}
+                </p>
+              </section>
+            )}
 
-          {/* Whole route, for orientation */}
-          <details className="rounded-xl border bg-card">
-            <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium">
-              {t("wholeRun.summary", { delivered: deck.delivered, total: deck.total })}
-            </summary>
-            <div className="border-t">
-              <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
-            </div>
-          </details>
+            {/* Whole route, for orientation */}
+            <details
+              className="rounded-xl border bg-card"
+              open={openRoute}
+              onToggle={(event) => setOpenRoute(event.currentTarget.open)}
+            >
+              <summary className="cursor-pointer px-4 py-2.5 text-sm font-medium">
+                {t("wholeRun.summary", { delivered: deck.delivered, total: deck.total })}
+              </summary>
+              <div className="border-t">
+                <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
+              </div>
+            </details>
+
+            {deck.runStatus === "departed" && (
+              <Button
+                variant="outline"
+                className="h-11 w-full"
+                disabled={busy}
+                onClick={() => setConfirmClose(true)}
+              >
+                {t("closeRun.endEarly")}
+              </Button>
+            )}
+          </aside>
         </main>
       )}
 
+      <ConfirmDialog
+        open={confirmClose}
+        onOpenChange={setConfirmClose}
+        title={t("closeRun.confirmTitle")}
+        description={
+          deck.remaining > 0
+            ? t("closeRun.confirmRemaining", { count: deck.remaining })
+            : t("closeRun.confirmDone")
+        }
+        confirmLabel={t("closeRun.button")}
+        onConfirm={handleFinishRun}
+      />
+
       {/* Proof of delivery */}
       {sheet === "deliver" && stop && (
-        <div className="fixed inset-0 z-20 flex items-end bg-black/40" role="dialog" aria-modal="true">
-          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4">
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted" />
+        <div
+          className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-6"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4 sm:max-w-lg sm:rounded-2xl sm:border">
+            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted sm:hidden" />
             <h2 className="text-base font-semibold">{t("deliverSheet.title")}</h2>
             <p className="mb-3 text-xs text-muted-foreground">
               {t("deliverSheet.subtitle", { name: stop.customerName })}
@@ -516,17 +586,6 @@ export function DriverDeck({
                 />
               </label>
 
-              <label className="flex flex-col gap-1 text-xs font-medium">
-                {t("deliverSheet.cashLabel")}
-                <Input
-                  value={cash}
-                  onChange={(event) => setCash(event.target.value)}
-                  inputMode="decimal"
-                  placeholder={formatPrice(liveTotal)}
-                  className="h-11"
-                />
-              </label>
-
               <div className="flex flex-col gap-1 text-xs font-medium">
                 {t("deliverSheet.photoLabel")}
                 <input
@@ -574,9 +633,13 @@ export function DriverDeck({
 
       {/* Failure report */}
       {sheet === "fail" && stop && (
-        <div className="fixed inset-0 z-20 flex items-end bg-black/40" role="dialog" aria-modal="true">
-          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4">
-            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted" />
+        <div
+          className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-6"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4 sm:max-w-lg sm:rounded-2xl sm:border">
+            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted sm:hidden" />
             <h2 className="text-base font-semibold">{t("actions.cantDeliver")}</h2>
             <p className="mb-3 text-xs text-muted-foreground">
               {t("failSheet.subtitle", { name: stop.customerName })}
