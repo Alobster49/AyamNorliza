@@ -9,8 +9,10 @@
  * - `inventory` is what Warehouse tasks needs (STAFF_ROLES).
  * - Loading and Dispatch gate on DISPATCH_ROLES (owner/org_admin/seller/
  *   logistics), so those are reached with the owner or seller login.
- * - the two drivers exist so a seeded run can be handed to one of them and
- *   the other still shows an empty deck.
+ * - the two drivers exist so seeded runs can be split across them: the
+ *   round-robin in seedDemoData hands out every non-completed run in
+ *   run_date order, and the seed now creates two live runs today so both
+ *   decks have stops -- useful for watching realtime updates across drivers.
  */
 export const CONSOLE_ACCOUNTS = [
   { email: "owner@gmail.com", displayName: "CEO Badrol", role: "owner" },
