@@ -3,7 +3,7 @@
 
 begin;
 
-select plan(10);
+select plan(14);
 
 -- ---------------------------------------------------------------------------
 -- Fixtures (as postgres, bypasses RLS)
@@ -91,6 +91,13 @@ on conflict (id) do nothing;
 update public.order_items set warehouse_weight_kg = 5.400
 where id = 'd1000000-0000-0000-0000-000000000020';
 
+-- Gain item: door weight ABOVE warehouse weight; must not offset losses.
+insert into public.order_items (id, order_id, product_id, mode, quantity, size_min_kg, size_max_kg,
+                                fallback, warehouse_weight_kg, final_weight_kg, price_per_kg)
+values ('d1000000-0000-0000-0000-000000000021', 'd1000000-0000-0000-0000-000000000010',
+        'd1000000-0000-0000-0000-000000000006', 'kg', 2, 1.0, 2.0, 'mix', 2.000, 2.500, 10.00)
+on conflict (id) do nothing;
+
 insert into public.delivery_attempts (id, organization_id, run_id, order_id, outcome, reason,
                                       next_action, recorded_by)
 values ('d1000000-0000-0000-0000-000000000050', 'd1000000-0000-0000-0000-00000000000a',
@@ -168,8 +175,32 @@ select ok(
 select is(
   (select public.get_dashboard_insights('d1000000-0000-0000-0000-00000000000a',
      (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date) -> 'weight' ->> 'diffKg')::numeric,
+  -0.100::numeric,
+  'net diff still nets gains against losses');
+
+select is(
+  (select public.get_dashboard_insights('d1000000-0000-0000-0000-00000000000a',
+     (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date) -> 'weight' ->> 'lostKg')::numeric,
   0.400::numeric,
-  'weight leakage is warehouse minus final');
+  'lostKg counts losses only, ignores the gain item');
+
+select is(
+  (select public.get_dashboard_insights('d1000000-0000-0000-0000-00000000000a',
+     (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date) -> 'weight' ->> 'lostRm')::numeric,
+  8.00::numeric,
+  'lostRm = 0.4 kg x RM20/kg');
+
+select is(
+  jsonb_array_length(
+    (select public.get_dashboard_insights('d1000000-0000-0000-0000-00000000000a',
+       (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date) -> 'weight' -> 'byOrder')),
+  1, 'one order carries the loss');
+
+select is(
+  (select public.get_dashboard_insights('d1000000-0000-0000-0000-00000000000a',
+     (now() at time zone 'Asia/Kuala_Lumpur')::date - 6, (now() at time zone 'Asia/Kuala_Lumpur')::date) -> 'weight' -> 'byOrder' -> 0 ->> 'lostRm')::numeric,
+  8.00::numeric,
+  'byOrder row is valued at RM8 for Dash Customer order');
 
 select * from finish();
 rollback;
