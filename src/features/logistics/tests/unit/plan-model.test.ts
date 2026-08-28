@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DispatchBoardData, DispatchTicket } from "../../types";
-import { draftPlan, orderWeightKg, totalWeightKg } from "../../lib/plan-model";
+import { draftPlan, orderWeightKg, projectLoad, totalWeightKg } from "../../lib/plan-model";
 
 const DATE = "2026-08-20";
 const WEEKDAY = new Date(2026, 7, 20).getDay();
@@ -118,5 +118,39 @@ describe("orderWeightKg", () => {
     });
     expect(orderWeightKg(t)).toBe(17);
     expect(totalWeightKg([t, t])).toBe(34);
+  });
+});
+
+describe("projectLoad", () => {
+  const weighed = (kg: number) =>
+    order({ items: [{ quantity: 1, warehouse_weight_kg: null, warehouse_pieces: null, final_weight_kg: kg, is_cancelled: false }] });
+
+  it("projects against capacity and stays ok under 90%", () => {
+    const p = projectLoad(weighed(100), { tickets: [weighed(165)], truck: { capacity_kg: 800 } });
+    expect(p.addKg).toBe(100);
+    expect(p.projectedKg).toBe(265);
+    expect(p.pct).toBeCloseTo(33.125);
+    expect(p.tone).toBe("ok");
+  });
+
+  it("warns from 90% and flags over 100%", () => {
+    const base = { tickets: [weighed(700)], truck: { capacity_kg: 800 } };
+    expect(projectLoad(weighed(20), base).tone).toBe("warn");
+    expect(projectLoad(weighed(101), base).tone).toBe("over");
+    // Exactly full is a warning, not an overload.
+    expect(projectLoad(weighed(100), base).tone).toBe("warn");
+  });
+
+  it("has no percentage without a truck capacity", () => {
+    const p = projectLoad(weighed(50), { tickets: [], truck: { capacity_kg: null } });
+    expect(p.pct).toBeNull();
+    expect(p.tone).toBe("ok");
+    expect(p.projectedKg).toBe(50);
+  });
+
+  it("keeps addKg null for an unweighed order but still totals the rest", () => {
+    const p = projectLoad(order(), { tickets: [weighed(165)], truck: { capacity_kg: 800 } });
+    expect(p.addKg).toBeNull();
+    expect(p.projectedKg).toBe(165);
   });
 });

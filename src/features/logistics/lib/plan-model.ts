@@ -45,6 +45,31 @@ export function totalWeightKg(tickets: DispatchTicket[]): number {
   return tickets.reduce((sum, t) => sum + (orderWeightKg(t) ?? 0), 0);
 }
 
+/**
+ * What a truck's load becomes if this ticket lands on it. `pct` is null when
+ * the truck has no capacity_kg to project against; `addKg` is null when the
+ * order has no recorded weight yet (projection then assumes 0 for the total
+ * but the UI should say the weight is unknown rather than show "+0 kg").
+ */
+export type LoadProjection = {
+  addKg: number | null;
+  projectedKg: number;
+  pct: number | null;
+  tone: "ok" | "warn" | "over";
+};
+
+export function projectLoad(
+  ticket: DispatchTicket,
+  target: { tickets: DispatchTicket[]; truck: { capacity_kg: number | null } },
+): LoadProjection {
+  const addKg = orderWeightKg(ticket);
+  const projectedKg = totalWeightKg(target.tickets) + (addKg ?? 0);
+  const cap = target.truck.capacity_kg;
+  const pct = cap !== null && cap > 0 ? (projectedKg / cap) * 100 : null;
+  const tone = pct === null ? "ok" : pct > 100 ? "over" : pct >= 90 ? "warn" : "ok";
+  return { addKg, projectedKg, pct, tone };
+}
+
 export function draftPlan(data: DispatchBoardData, date: string): PlanDraft {
   const slotStartById = new Map(data.slots.map((s) => [s.id, s.start_time]));
   const zoneNameById = new Map(data.zones.map((z) => [z.id, z.name]));
