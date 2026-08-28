@@ -1693,6 +1693,8 @@
       "customer": {
         "title": "Pelanggan",
         "searchPlaceholder": "Cari mengikut nama atau telefon...",
+        "searching": "Mencari…",
+        "noResults": "Tiada pelanggan sepadan \"{query}\"",
         "newCustomer": "Pelanggan baharu",
         "name": "Nama *",
         "phone": "Telefon *",
@@ -2420,16 +2422,38 @@
       "departedNotice": "Trak ini sudah bertolak — muatan ditutup.",
       "allLoaded": "Semua dimuatkan"
     },
-    "idle": {
-      "title": "Trak tanpa muatan"
+    "trucks": {
+      "title": "Trak",
+      "tabLoading": "Memuat",
+      "tabDone": "Siap",
+      "tabAll": "Semua",
+      "noLoad": "Tiada muatan",
+      "emptyTab": "Tiada trak di sini.",
+      "selectAria": "Tunjuk manifes untuk {truck}"
+    },
+    "manifest": {
+      "searchPlaceholder": "Cari pelanggan…",
+      "zoneLabel": "Zon",
+      "zoneAll": "Semua zon",
+      "colSeq": "#",
+      "colCustomer": "Pelanggan",
+      "colZone": "Zon",
+      "colWindow": "Slot",
+      "colWeight": "Berat",
+      "colStatus": "Status",
+      "colAction": "Tindakan",
+      "statusQueued": "Menunggu",
+      "statusOnBoard": "Dimuatkan",
+      "load": "Muat",
+      "drops": "{count, plural, other {# penghantaran}}",
+      "noResults": "Tiada pesanan sepadan dengan tapisan."
     },
     "toast": {
       "couldNotUpdateTitle": "Tidak dapat kemas kini",
       "loadedTitle": "{name} dimuatkan"
     },
     "summary": {
-      "loadedAcross": "{done} daripada {total} dimuatkan merentasi {count, plural, other {# trak}}",
-      "swipeHint": "Leret untuk trak seterusnya"
+      "loadedAcross": "{done} daripada {total} dimuatkan merentasi {count, plural, other {# trak}}"
     }
   }
 }

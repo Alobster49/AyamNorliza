@@ -55,7 +55,7 @@ function LocaleSwitcherControl() {
     <div
       role="group"
       aria-label={t("changeLanguage")}
-      className="inline-flex items-center rounded-md border p-0.5"
+      className="inline-flex h-11 shrink-0 items-center gap-0.5 rounded-2xl border bg-muted/40 p-0.5 sm:h-8"
     >
       {SUPPORTED_LOCALES.map((locale) => {
         const isActive = locale === activeLocale;
@@ -71,9 +71,9 @@ function LocaleSwitcherControl() {
             title={LOCALE_LABELS[locale]}
             onClick={() => selectLocale(locale)}
             className={cn(
-              "rounded px-3 py-3 text-xs font-medium transition-colors disabled:opacity-60 sm:px-2 sm:py-1",
+              "inline-flex h-full items-center justify-center rounded-[14px] px-3 text-xs font-medium transition-all outline-none select-none focus-visible:ring-3 focus-visible:ring-ring/30 disabled:opacity-60 sm:px-2.5",
               isActive
-                ? "bg-primary text-primary-foreground"
+                ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
@@ -91,12 +91,12 @@ function LocaleSwitcherFallback() {
     <div
       role="group"
       aria-hidden="true"
-      className="inline-flex items-center rounded-md border p-0.5"
+      className="inline-flex h-11 shrink-0 items-center gap-0.5 rounded-2xl border bg-muted/40 p-0.5 sm:h-8"
     >
       {SUPPORTED_LOCALES.map((locale) => (
         <span
           key={locale}
-          className="rounded px-3 py-3 text-xs font-medium text-muted-foreground opacity-60 sm:px-2 sm:py-1"
+          className="inline-flex h-full items-center justify-center rounded-[14px] px-3 text-xs font-medium text-muted-foreground opacity-60 sm:px-2.5"
         >
           {LOCALE_SHORT_LABELS[locale]}
         </span>

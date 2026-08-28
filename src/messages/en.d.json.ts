@@ -1696,6 +1696,8 @@ declare const messages: {
       "customer": {
         "title": "Customer",
         "searchPlaceholder": "Search by name or phone...",
+        "searching": "Searching…",
+        "noResults": "No customers match \"{query}\"",
         "newCustomer": "New customer",
         "name": "Name *",
         "phone": "Phone *",
@@ -2423,16 +2425,38 @@ declare const messages: {
       "departedNotice": "This truck has departed — loading is closed.",
       "allLoaded": "All loaded"
     },
-    "idle": {
-      "title": "Idle trucks"
+    "trucks": {
+      "title": "Trucks",
+      "tabLoading": "Loading",
+      "tabDone": "Done",
+      "tabAll": "All",
+      "noLoad": "No load",
+      "emptyTab": "No trucks here.",
+      "selectAria": "Show manifest for {truck}"
+    },
+    "manifest": {
+      "searchPlaceholder": "Search customer…",
+      "zoneLabel": "Zone",
+      "zoneAll": "All zones",
+      "colSeq": "#",
+      "colCustomer": "Customer",
+      "colZone": "Zone",
+      "colWindow": "Window",
+      "colWeight": "Weight",
+      "colStatus": "Status",
+      "colAction": "Action",
+      "statusQueued": "Queued",
+      "statusOnBoard": "On board",
+      "load": "Load",
+      "drops": "{count, plural, one {# drop} other {# drops}}",
+      "noResults": "No orders match your filter."
     },
     "toast": {
       "couldNotUpdateTitle": "Could not update",
       "loadedTitle": "{name} loaded"
     },
     "summary": {
-      "loadedAcross": "{done} of {total} loaded across {count, plural, one {# truck} other {# trucks}}",
-      "swipeHint": "Swipe for the next truck"
+      "loadedAcross": "{done} of {total} loaded across {count, plural, one {# truck} other {# trucks}}"
     }
   }
 };

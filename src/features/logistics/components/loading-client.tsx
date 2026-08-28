@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
-import { Check } from "lucide-react";
+import { useCallback, useMemo, useRef, useState, type ComponentProps } from "react";
+import { Check, Search } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { DispatchBoardData } from "../types";
@@ -9,6 +9,18 @@ import { buildLoadBoard, type LoadJob, type LoadLane } from "../lib/loading-mode
 import { getDispatchBoard, setOrderLoaded } from "../server/dispatch-actions";
 import { Link } from "@/i18n/navigation";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Table, TableBody, TableHead, TableHeader } from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToastAction } from "@/components/ui/toast";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -17,31 +29,47 @@ function kg(value: number): string {
   return value.toFixed(1);
 }
 
-/** Spring shared by every layout move on the board (matches cart-overlay). */
+/** Spring shared by every layout move on the manifest (matches cart-overlay). */
 const laneSpring = { type: "spring", bounce: 0, duration: 0.35 } as const;
 
-/** Conic-gradient progress ring — done count over total for one truck. */
-function ProgressRing({ done, total }: { done: number; total: number }) {
-  const deg = total > 0 ? (done / total) * 360 : 0;
-  const complete = total > 0 && done === total;
+type TruckTab = "loading" | "done" | "all";
+type LaneStatus = "loading" | "done" | "idle";
+
+function laneStatus(lane: LoadLane): LaneStatus {
+  if (lane.totalCount === 0) return "idle";
+  if (lane.departed || lane.doneCount === lane.totalCount) return "done";
+  return "loading";
+}
+
+/** Loaded and planned widths against capacity (or against the day's load). */
+function lanePcts(lane: LoadLane): { loadedPct: number; plannedPct: number } {
+  const hasCap = lane.capacityKg !== null && lane.capacityKg > 0;
+  const loadedPct = hasCap
+    ? (lane.loadedPct ?? 0)
+    : lane.totalKg > 0
+      ? (lane.loadedKg / lane.totalKg) * 100
+      : 0;
+  return { loadedPct, plannedPct: hasCap ? (lane.plannedPct ?? 0) : 100 };
+}
+
+function LaneBar({ lane, className }: { lane: LoadLane; className?: string }) {
+  const { loadedPct, plannedPct } = lanePcts(lane);
   return (
-    <div
-      aria-hidden
-      className="load-ring grid size-14 shrink-0 place-items-center rounded-full"
-      style={
-        {
-          "--ring-deg": `${deg}deg`,
-          "--ring-color": complete ? "var(--color-success)" : "var(--primary)",
-        } as CSSProperties
-      }
-    >
-      <div className="grid size-11 place-items-center rounded-full bg-card text-xs font-semibold tabular-nums">
-        {complete ? (
-          <Check className="size-5 animate-in fade-in zoom-in-75 duration-300 text-[color:var(--color-success)] motion-reduce:animate-none" />
-        ) : (
-          `${done}/${total}`
+    <div className={cn("flex h-1.5 overflow-hidden rounded-full bg-muted", className)}>
+      <div
+        className={cn(
+          "h-full transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
+          lane.overCapacity ? "bg-destructive" : "bg-primary",
         )}
-      </div>
+        style={{ width: `${loadedPct}%` }}
+      />
+      <div
+        className={cn(
+          "h-full transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
+          lane.overCapacity ? "bg-destructive/30" : "bg-primary/25",
+        )}
+        style={{ width: `${Math.max(0, plannedPct - loadedPct)}%` }}
+      />
     </div>
   );
 }
@@ -49,32 +77,9 @@ function ProgressRing({ done, total }: { done: number; total: number }) {
 /** Loaded weight, then the rest of the day's load, against truck capacity. */
 function CapacityBar({ lane }: { lane: LoadLane }) {
   const t = useTranslations("loadingBoard.capacity");
-  const hasCap = lane.capacityKg !== null && lane.capacityKg > 0;
-  const loadedPct = hasCap
-    ? (lane.loadedPct ?? 0)
-    : lane.totalKg > 0
-      ? (lane.loadedKg / lane.totalKg) * 100
-      : 0;
-  const plannedPct = hasCap ? (lane.plannedPct ?? 0) : 100;
-
   return (
     <div className="mt-1.5">
-      <div className="flex h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className={cn(
-            "h-full transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
-            lane.overCapacity ? "bg-destructive" : "bg-primary",
-          )}
-          style={{ width: `${loadedPct}%` }}
-        />
-        <div
-          className={cn(
-            "h-full transition-[width] duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
-            lane.overCapacity ? "bg-destructive/30" : "bg-primary/25",
-          )}
-          style={{ width: `${Math.max(0, plannedPct - loadedPct)}%` }}
-        />
-      </div>
+      <LaneBar lane={lane} />
       <p className="mt-1 text-xs tabular-nums text-muted-foreground">
         {t("onBoard", { loaded: kg(lane.loadedKg), total: kg(lane.totalKg) })}
         {lane.capacityKg !== null ? (
@@ -91,103 +96,219 @@ function CapacityBar({ lane }: { lane: LoadLane }) {
   );
 }
 
-function JobCard({
+function TruckStatusChip({ lane }: { lane: LoadLane }) {
+  const t = useTranslations("loadingBoard.trucks");
+  const tStatusRun = useTranslations("status.run");
+  const status = laneStatus(lane);
+  if (status === "idle") {
+    return <Badge variant="outline">{t("noLoad")}</Badge>;
+  }
+  if (status === "done") {
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 border-[color:var(--color-success)]/40 tabular-nums text-[color:var(--color-success)]"
+      >
+        <Check aria-hidden />
+        {lane.departed ? tStatusRun("departed") : `${lane.doneCount}/${lane.totalCount}`}
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="tabular-nums">
+      {lane.doneCount}/{lane.totalCount}
+    </Badge>
+  );
+}
+
+function TruckNavButton({
+  lane,
+  selected,
+  onSelect,
+}: {
+  lane: LoadLane;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const t = useTranslations("loadingBoard.trucks");
+  const status = laneStatus(lane);
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={selected ? "true" : undefined}
+      aria-label={t("selectAria", { truck: lane.truck.name })}
+      className={cn(
+        "w-60 shrink-0 snap-start rounded-xl border bg-card p-3 text-left transition-[border-color,background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100 md:w-full",
+        selected ? "border-primary/60 ring-1 ring-primary/30" : "hover:border-primary/40",
+        status === "idle" && "opacity-70",
+      )}
+    >
+      <span className="flex items-center justify-between gap-2">
+        <span className="min-w-0 truncate text-sm font-semibold">{lane.truck.name}</span>
+        <TruckStatusChip lane={lane} />
+      </span>
+      <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
+        {lane.truck.code} · {lane.bayName}
+      </span>
+      {lane.totalCount > 0 ? (
+        <>
+          <LaneBar lane={lane} className="mt-2" />
+          <span className="mt-1 block text-[11px] tabular-nums text-muted-foreground">
+            {kg(lane.loadedKg)} / {kg(lane.totalKg)} kg
+          </span>
+        </>
+      ) : null}
+    </button>
+  );
+}
+
+function StatusBadge({
   job,
   isNext,
+  organizationSlug,
+}: {
+  job: LoadJob;
+  isNext: boolean;
+  organizationSlug: string;
+}) {
+  const t = useTranslations("loadingBoard.manifest");
+  const tJob = useTranslations("loadingBoard.job");
+  if (job.loaded) {
+    return (
+      <Badge
+        variant="outline"
+        className="gap-1 border-[color:var(--color-success)]/40 text-[color:var(--color-success)]"
+      >
+        <Check aria-hidden />
+        {t("statusOnBoard")}
+      </Badge>
+    );
+  }
+  if (!job.weighed) {
+    return (
+      <Badge
+        asChild
+        variant="outline"
+        className="border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950"
+      >
+        <Link href={`/${organizationSlug}/tasks?order=${job.ticket.id}`}>
+          {tJob("notWeighedYet")}
+        </Link>
+      </Badge>
+    );
+  }
+  if (isNext) return <Badge>{tJob("next")}</Badge>;
+  return <Badge variant="outline">{t("statusQueued")}</Badge>;
+}
+
+function ManifestRow({
+  job,
+  isNext,
+  departed,
   disabled,
   organizationSlug,
   onToggle,
 }: {
   job: LoadJob;
   isNext: boolean;
+  departed: boolean;
   disabled: boolean;
   organizationSlug: string;
   onToggle: (loaded: boolean) => void;
 }) {
-  const t = useTranslations("loadingBoard.job");
+  const t = useTranslations("loadingBoard.manifest");
+  const tJob = useTranslations("loadingBoard.job");
   const tPlan = useTranslations("logistics.dispatch.plan");
+  const reduceMotion = useReducedMotion();
   const name = job.ticket.customer?.name ?? tPlan("orderFallback");
+  const zoneName = job.ticket.zone?.name ?? null;
   const hasWeight = job.weightKg !== null;
 
-  if (job.loaded) {
-    return (
-      <button
-        type="button"
-        disabled={disabled}
-        aria-label={t("undoLoadingAria", { name })}
-        onClick={() => onToggle(false)}
-        className="flex w-full items-center gap-3 rounded-xl border border-dashed p-3 text-left opacity-60 transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.99] disabled:pointer-events-none motion-reduce:transition-none motion-reduce:active:scale-100"
-      >
-        <span className="grid size-6 shrink-0 place-items-center rounded-md bg-muted text-[11px] font-semibold tabular-nums text-muted-foreground">
-          {job.dropNumber}
-        </span>
-        <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground line-through">{name}</span>
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {hasWeight ? `${kg(job.weightKg!)} kg` : "—"}
-        </span>
-        <span className="shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-          {t("undo")}
-        </span>
-      </button>
-    );
-  }
-
   return (
-    <div
-      className={cn(
-        "rounded-xl border bg-card shadow-sm transition-colors",
-        isNext ? "border-primary ring-2 ring-primary/25" : "hover:border-primary/40",
-      )}
+    <motion.tr
+      layout={!reduceMotion}
+      transition={laneSpring}
+      className={cn("border-b transition-colors", isNext ? "bg-primary/5" : "hover:bg-muted/30")}
     >
-      <button
-        type="button"
-        disabled={disabled || !job.weighed}
-        aria-label={job.weighed ? t("markLoadedAria", { name }) : t("notWeighedYet")}
-        onClick={() => onToggle(true)}
-        className="grid min-h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 rounded-xl p-3 text-left transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.98] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
-      >
+      <td className="p-2 align-middle">
         <span
           className={cn(
-            "row-span-2 grid size-7 place-items-center rounded-md text-xs font-semibold tabular-nums",
+            "grid size-6 place-items-center rounded-md text-[11px] font-semibold tabular-nums",
             isNext ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
           )}
         >
           {job.dropNumber}
         </span>
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-[15px] font-semibold leading-tight">{name}</span>
-          {isNext ? (
-            <span className="shrink-0 rounded-md bg-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-foreground">
-              {t("next")}
-            </span>
-          ) : null}
-        </span>
-        <span className="row-span-2 text-right text-lg font-semibold tabular-nums leading-none">
-          {hasWeight ? kg(job.weightKg!) : "—"}
-          <span className="block text-[10px] font-medium tracking-wide text-muted-foreground">KG</span>
-        </span>
-        <span className="truncate text-xs text-muted-foreground">
-          {job.ticket.zone?.name ? `${job.ticket.zone.name} · ` : ""}
-          {job.slotStart ? `${job.slotStart} · ` : ""}
-          {t("dropOf", { drop: job.dropNumber, total: job.totalDrops })}
-        </span>
-      </button>
-
-      {!job.weighed ? (
-        <Link
-          href={`/${organizationSlug}/tasks?order=${job.ticket.id}`}
-          className="mx-3 mb-3 flex min-h-11 items-center justify-between gap-2 rounded-lg bg-amber-100 px-3 text-[11px] font-semibold uppercase tracking-wide text-amber-800 transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"
+      </td>
+      <td className="w-full max-w-0 p-2 align-middle">
+        <span
+          className={cn(
+            "block truncate text-sm font-medium",
+            job.loaded && "text-muted-foreground line-through",
+          )}
         >
-          <span>{t("notWeighedYet")}</span>
-          <span aria-hidden>{t("weighNow")}</span>
-          <span className="sr-only">{t("weighNowAria", { name })}</span>
-        </Link>
-      ) : null}
-    </div>
+          {name}
+        </span>
+        <span className="block truncate text-[11px] text-muted-foreground lg:hidden">
+          {zoneName ? `${zoneName} · ` : ""}
+          {job.slotStart ? `${job.slotStart} · ` : ""}
+          {tJob("dropOf", { drop: job.dropNumber, total: job.totalDrops })}
+        </span>
+        {!job.loaded && !job.weighed && !departed ? (
+          <Link
+            href={`/${organizationSlug}/tasks?order=${job.ticket.id}`}
+            className="mt-0.5 inline-block text-[11px] font-semibold text-amber-700 underline-offset-2 hover:underline dark:text-amber-300 sm:hidden"
+          >
+            {tJob("notWeighedYet")} — {tJob("weighNow")}
+            <span className="sr-only">{tJob("weighNowAria", { name })}</span>
+          </Link>
+        ) : null}
+      </td>
+      <td className="hidden p-2 align-middle text-sm whitespace-nowrap text-muted-foreground lg:table-cell">
+        {zoneName ?? "—"}
+      </td>
+      <td className="hidden p-2 align-middle text-sm tabular-nums whitespace-nowrap text-muted-foreground lg:table-cell">
+        {job.slotStart ?? "—"}
+      </td>
+      <td
+        className={cn(
+          "p-2 text-right align-middle text-sm font-semibold tabular-nums whitespace-nowrap",
+          job.loaded && "font-normal text-muted-foreground line-through",
+        )}
+      >
+        {hasWeight ? `${kg(job.weightKg!)} kg` : "—"}
+      </td>
+      <td className="hidden p-2 align-middle sm:table-cell">
+        <StatusBadge job={job} isNext={isNext} organizationSlug={organizationSlug} />
+      </td>
+      <td className="p-2 text-right align-middle">
+        {departed ? null : job.loaded ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={disabled}
+            aria-label={tJob("undoLoadingAria", { name })}
+            onClick={() => onToggle(false)}
+          >
+            {tJob("undo")}
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            disabled={disabled || !job.weighed}
+            aria-label={job.weighed ? tJob("markLoadedAria", { name }) : tJob("notWeighedYet")}
+            onClick={() => onToggle(true)}
+          >
+            {t("load")}
+          </Button>
+        )}
+      </td>
+    </motion.tr>
   );
 }
 
-function Lane({
+function Manifest({
   lane,
   pendingIds,
   organizationSlug,
@@ -198,82 +319,147 @@ function Lane({
   organizationSlug: string;
   onToggle: (orderId: string, loaded: boolean) => void;
 }) {
-  const t = useTranslations("loadingBoard.lane");
+  const t = useTranslations("loadingBoard.manifest");
+  const tLane = useTranslations("loadingBoard.lane");
+  const tEmpty = useTranslations("loadingBoard.empty");
   const tStatusRun = useTranslations("status.run");
-  const reduceMotion = useReducedMotion();
+  const [query, setQuery] = useState("");
+  const [zone, setZone] = useState("all");
+
+  const zones = useMemo(() => {
+    const names = new Set<string>();
+    for (const job of lane.jobs) if (job.ticket.zone?.name) names.add(job.ticket.zone.name);
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [lane.jobs]);
+  const activeZone = zones.includes(zone) ? zone : "all";
+
+  const rows = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return lane.jobs.filter((job) => {
+      if (activeZone !== "all" && job.ticket.zone?.name !== activeZone) return false;
+      if (!needle) return true;
+      return (job.ticket.customer?.name ?? "").toLowerCase().includes(needle);
+    });
+  }, [lane.jobs, query, activeZone]);
+
   const allLoaded = !lane.departed && lane.totalCount > 0 && lane.doneCount === lane.totalCount;
 
   return (
     <section
-      className="flex w-[86vw] max-w-sm shrink-0 snap-start flex-col rounded-2xl border bg-muted/30 md:w-auto md:min-w-80 md:max-w-md md:flex-1 md:shrink"
-      aria-label={t("ariaLabel", { truck: lane.truck.name, done: lane.doneCount, total: lane.totalCount })}
+      className="min-w-0"
+      aria-label={tLane("ariaLabel", {
+        truck: lane.truck.name,
+        done: lane.doneCount,
+        total: lane.totalCount,
+      })}
     >
-      <header className="flex items-center gap-3 border-b p-3">
-        <ProgressRing done={lane.doneCount} total={lane.totalCount} />
-        <div className="min-w-0 flex-1">
+      <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+        <div className="min-w-0">
           <h2 className="truncate text-base font-semibold leading-tight">{lane.truck.name}</h2>
           <p className="truncate text-xs text-muted-foreground">
             {lane.truck.code} · {lane.bayName}
             {lane.departed ? ` · ${tStatusRun("departed")}` : ""}
+            {" · "}
+            {t("drops", { count: lane.totalCount })}
           </p>
-          <CapacityBar lane={lane} />
         </div>
+        {allLoaded ? (
+          <p className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--color-success)] animate-in fade-in duration-300 motion-reduce:animate-none">
+            <Check aria-hidden className="size-3.5" />
+            {tLane("allLoaded")}
+          </p>
+        ) : null}
       </header>
+      {lane.totalCount > 0 ? <CapacityBar lane={lane} /> : null}
 
       {lane.departed ? (
-        <p className="p-4 text-sm text-muted-foreground">{t("departedNotice")}</p>
+        <p className="mt-3 text-sm text-muted-foreground">{tLane("departedNotice")}</p>
+      ) : null}
+
+      {lane.totalCount === 0 ? (
+        <HenEmptyState title={tEmpty("noLoadTitle")} subtitle={tEmpty("subtitle")} className="py-14" />
       ) : (
-        <div className="flex flex-col gap-2 p-2">
-          {allLoaded ? (
-            <p className="flex items-center gap-1.5 px-1.5 pt-1 text-xs font-medium text-[color:var(--color-success)] animate-in fade-in duration-300 motion-reduce:animate-none">
-              <Check aria-hidden className="size-3.5" />
-              {t("allLoaded")}
-            </p>
+        <>
+          {lane.jobs.length > 1 ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <div className="relative w-full max-w-60">
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder={t("searchPlaceholder")}
+                  aria-label={t("searchPlaceholder")}
+                  className="pl-8"
+                />
+              </div>
+              {zones.length > 1 ? (
+                <Select value={activeZone} onValueChange={setZone}>
+                  <SelectTrigger size="sm" aria-label={t("zoneLabel")} className="w-auto min-w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">{t("zoneAll")}</SelectItem>
+                    {zones.map((name) => (
+                      <SelectItem key={name} value={name}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : null}
+            </div>
           ) : null}
-          {lane.jobs.map((job) => (
-            <motion.div key={job.ticket.id} layout={!reduceMotion} transition={laneSpring}>
-              <JobCard
-                job={job}
-                isNext={job.ticket.id === lane.nextJobId}
-                disabled={pendingIds.has(job.ticket.id)}
-                organizationSlug={organizationSlug}
-                onToggle={(loaded) => onToggle(job.ticket.id, loaded)}
-              />
-            </motion.div>
-          ))}
-        </div>
+
+          <div className="mt-3 rounded-xl border">
+            <Table>
+              <TableHeader>
+                <TableRowPlain>
+                  <TableHead className="w-10 px-2">{t("colSeq")}</TableHead>
+                  <TableHead className="px-2">{t("colCustomer")}</TableHead>
+                  <TableHead className="hidden px-2 lg:table-cell">{t("colZone")}</TableHead>
+                  <TableHead className="hidden px-2 lg:table-cell">{t("colWindow")}</TableHead>
+                  <TableHead className="px-2 text-right">{t("colWeight")}</TableHead>
+                  <TableHead className="hidden px-2 sm:table-cell">{t("colStatus")}</TableHead>
+                  <TableHead className="px-2 text-right">
+                    <span className="sr-only">{t("colAction")}</span>
+                  </TableHead>
+                </TableRowPlain>
+              </TableHeader>
+              <TableBody>
+                {rows.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-6 text-center text-sm text-muted-foreground">
+                      {t("noResults")}
+                    </td>
+                  </tr>
+                ) : (
+                  rows.map((job) => (
+                    <ManifestRow
+                      key={job.ticket.id}
+                      job={job}
+                      isNext={job.ticket.id === lane.nextJobId}
+                      departed={lane.departed}
+                      disabled={pendingIds.has(job.ticket.id)}
+                      organizationSlug={organizationSlug}
+                      onToggle={(loaded) => onToggle(job.ticket.id, loaded)}
+                    />
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </section>
   );
 }
 
-/** Trucks on the board with nothing assigned — parked as a quiet strip so
- *  they never crowd out the lanes that have real work. */
-function IdleStrip({ lanes }: { lanes: LoadLane[] }) {
-  const t = useTranslations("loadingBoard.idle");
-  const tStatusRun = useTranslations("status.run");
-  if (lanes.length === 0) return null;
-  return (
-    <section className="flex flex-col gap-2" aria-label={t("title")}>
-      <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {t("title")}
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        {lanes.map((lane) => (
-          <div
-            key={lane.truck.id}
-            className="flex items-baseline gap-2 rounded-lg border border-dashed bg-muted/30 px-3 py-2"
-          >
-            <span className="text-sm font-medium">{lane.truck.name}</span>
-            <span className="text-xs text-muted-foreground">
-              {lane.truck.code} · {lane.bayName}
-              {lane.departed ? ` · ${tStatusRun("departed")}` : ""}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
+/** Header row without the hover/selected styling of TableRow. */
+function TableRowPlain(props: ComponentProps<"tr">) {
+  return <tr className="border-b" {...props} />;
 }
 
 export function LoadingClient({
@@ -289,6 +475,7 @@ export function LoadingClient({
   const tEmpty = useTranslations("loadingBoard.empty");
   const tToast = useTranslations("loadingBoard.toast");
   const tSummary = useTranslations("loadingBoard.summary");
+  const tTrucks = useTranslations("loadingBoard.trucks");
   const tLogistics = useTranslations("logistics");
   const tPlan = useTranslations("logistics.dispatch.plan");
   const tSetupToasts = useTranslations("logistics.setup.toasts");
@@ -373,23 +560,43 @@ export function LoadingClient({
 
   const lanes = useMemo(() => buildLoadBoard(data, date), [data, date]);
 
-  // Lanes with work first (bay order preserved), departed lanes after them,
-  // idle trucks off the board entirely.
-  const { boardLanes, idleLanes } = useMemo(() => {
-    const working = lanes.filter((lane) => lane.totalCount > 0 && !lane.departed);
-    const departed = lanes.filter((lane) => lane.totalCount > 0 && lane.departed);
-    const idle = lanes.filter((lane) => lane.totalCount === 0);
-    return { boardLanes: [...working, ...departed], idleLanes: idle };
+  const counts = useMemo(() => {
+    const byStatus = { loading: 0, done: 0, idle: 0 };
+    for (const lane of lanes) byStatus[laneStatus(lane)] += 1;
+    return byStatus;
   }, [lanes]);
 
-  const totals = useMemo(
-    () =>
-      boardLanes.reduce(
-        (acc, lane) => ({ done: acc.done + lane.doneCount, total: acc.total + lane.totalCount }),
-        { done: 0, total: 0 },
-      ),
-    [boardLanes],
-  );
+  // Sidebar selection: default to the first truck still loading, else first.
+  const [tabChoice, setTabChoice] = useState<TruckTab | null>(null);
+  const tab: TruckTab = tabChoice ?? (counts.loading > 0 ? "loading" : "all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected =
+    lanes.find((lane) => lane.truck.id === selectedId) ??
+    lanes.find((lane) => laneStatus(lane) === "loading") ??
+    lanes[0] ??
+    null;
+
+  const navLanes = useMemo(() => {
+    // Working trucks first, then done, then idle — bay order preserved inside.
+    const order: LaneStatus[] = ["loading", "done", "idle"];
+    const sorted = [...lanes].sort(
+      (a, b) => order.indexOf(laneStatus(a)) - order.indexOf(laneStatus(b)),
+    );
+    if (tab === "all") return sorted;
+    return sorted.filter((lane) => laneStatus(lane) === tab);
+  }, [lanes, tab]);
+
+  const totals = useMemo(() => {
+    const working = lanes.filter((lane) => lane.totalCount > 0);
+    return working.reduce(
+      (acc, lane) => ({
+        done: acc.done + lane.doneCount,
+        total: acc.total + lane.totalCount,
+        trucks: acc.trucks + 1,
+      }),
+      { done: 0, total: 0, trucks: 0 },
+    );
+  }, [lanes]);
 
   const nameFor = useCallback(
     (orderId: string) =>
@@ -428,7 +635,7 @@ export function LoadingClient({
           <p className="text-xs text-muted-foreground">{dateLabel}</p>
           {totals.total > 0 ? (
             <p role="status" aria-live="polite" className="text-xs tabular-nums text-muted-foreground">
-              {tSummary("loadedAcross", { done: totals.done, total: totals.total, count: boardLanes.length })}
+              {tSummary("loadedAcross", { done: totals.done, total: totals.total, count: totals.trucks })}
             </p>
           ) : null}
         </div>
@@ -445,27 +652,51 @@ export function LoadingClient({
         ) : null}
       </header>
 
-      {boardLanes.length === 0 ? (
+      {totals.total === 0 ? (
         <HenEmptyState title={tEmpty("noLoadTitle")} subtitle={tEmpty("subtitle")} className="py-14" />
       ) : (
-        <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-3 md:snap-none">
-          {boardLanes.map((lane) => (
-            <Lane
-              key={lane.truck.id}
-              lane={lane}
+        <div className="flex flex-col gap-4 md:grid md:grid-cols-[264px_minmax(0,1fr)] md:items-start md:gap-6">
+          <nav aria-label={tTrucks("title")} className="flex flex-col gap-2">
+            <Tabs value={tab} onValueChange={(value) => setTabChoice(value as TruckTab)}>
+              <TabsList className="w-full">
+                <TabsTrigger value="loading" className="flex-1 tabular-nums">
+                  {tTrucks("tabLoading")} · {counts.loading}
+                </TabsTrigger>
+                <TabsTrigger value="done" className="flex-1 tabular-nums">
+                  {tTrucks("tabDone")} · {counts.done}
+                </TabsTrigger>
+                <TabsTrigger value="all" className="flex-1 tabular-nums">
+                  {tTrucks("tabAll")} · {lanes.length}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+            {navLanes.length === 0 ? (
+              <p className="px-1 py-2 text-xs text-muted-foreground">{tTrucks("emptyTab")}</p>
+            ) : (
+              <div className="-mx-1 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0">
+                {navLanes.map((lane) => (
+                  <TruckNavButton
+                    key={lane.truck.id}
+                    lane={lane}
+                    selected={selected?.truck.id === lane.truck.id}
+                    onSelect={() => setSelectedId(lane.truck.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </nav>
+
+          {selected ? (
+            <Manifest
+              key={selected.truck.id}
+              lane={selected}
               pendingIds={pendingIds}
               organizationSlug={organizationSlug}
               onToggle={(orderId, loaded) => toggle(orderId, loaded, nameFor(orderId))}
             />
-          ))}
+          ) : null}
         </div>
       )}
-
-      {boardLanes.length > 1 ? (
-        <p className="-mt-2 text-center text-xs text-muted-foreground md:hidden">{tSummary("swipeHint")}</p>
-      ) : null}
-
-      <IdleStrip lanes={idleLanes} />
     </div>
   );
 }

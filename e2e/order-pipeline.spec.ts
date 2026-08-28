@@ -159,6 +159,9 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   const runDate = await shiftOrderToToday(orderId);
 
   await page.goto("/ayam-norliza-pilot/loading");
+  // The loading page is a truck sidebar + one manifest: pick this test's
+  // truck first, then mark the order loaded inside its manifest.
+  await page.getByRole("button", { name: `Show manifest for ${truckName}` }).click();
   await page.getByRole("button", { name: `Mark ${customerName} loaded` }).click();
 
   await page.goto("/ayam-norliza-pilot/runs");

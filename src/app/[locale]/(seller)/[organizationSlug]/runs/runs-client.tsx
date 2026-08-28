@@ -26,8 +26,10 @@ import { shiftIsoDate, todayInTimeZone } from "@/lib/time/org-date";
 import { useTranslations } from "next-intl";
 import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
+import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useToast } from "@/hooks/use-toast";
 
 const TONE_CLASS: Record<string, string> = {
@@ -101,35 +103,55 @@ function Bar({ pct, tone = "bg-primary" }: { pct: number; tone?: string }) {
 // Needs a human
 // ---------------------------------------------------------------------------
 
-function AlertBlock({ alerts, onJump }: { alerts: BoardAlert[]; onJump: (runId: string) => void }) {
+/** Bell that only appears when a run needs a human; the list lives in a popover. */
+function AlertBell({ alerts, onJump }: { alerts: BoardAlert[]; onJump: (runId: string) => void }) {
   const t = useTranslations("deliveryRuns.needsHuman");
+  const [open, setOpen] = useState(false);
   if (alerts.length === 0) return null;
   return (
-    <section
-      aria-label={t("ariaLabel")}
-      className="animate-panel-in rounded-lg border border-destructive/50 bg-destructive/5 p-3"
-    >
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-destructive">
-        {t("heading", { count: alerts.length })}
-      </p>
-      <ul className="flex flex-col gap-1.5">
-        {alerts.map((alert, index) => (
-          <li key={`${alert.runId}-${alert.kind}-${index}`}>
-            <button
-              type="button"
-              onClick={() => onJump(alert.runId)}
-              className="w-full rounded-md px-1 py-0.5 text-left text-sm transition-colors duration-150 hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-destructive"
-            >
-              <span className="font-medium">{alert.truckLabel}</span>
-              <span className="text-muted-foreground">
-                {" "}
-                — {resolveMessageKey(t, `messages.${alert.kind}`, alert.params)}
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={t("heading", { count: alerts.length })}
+          className="relative animate-in fade-in zoom-in-95 duration-300 motion-reduce:animate-none"
+        >
+          <Bell aria-hidden className="size-4 text-destructive" />
+          <span
+            aria-hidden
+            className="absolute -right-1 -top-1 grid size-4 place-items-center rounded-full bg-destructive text-[10px] font-bold tabular-nums text-white"
+          >
+            {alerts.length}
+          </span>
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80 p-3" aria-label={t("ariaLabel")}>
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-destructive">
+          {t("heading", { count: alerts.length })}
+        </p>
+        <ul className="flex flex-col gap-1.5">
+          {alerts.map((alert, index) => (
+            <li key={`${alert.runId}-${alert.kind}-${index}`}>
+              <button
+                type="button"
+                onClick={() => {
+                  onJump(alert.runId);
+                  setOpen(false);
+                }}
+                className="w-full rounded-md px-1 py-0.5 text-left text-sm transition-colors duration-150 hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-destructive"
+              >
+                <span className="font-medium">{alert.truckLabel}</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  — {resolveMessageKey(t, `messages.${alert.kind}`, alert.params)}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -670,6 +692,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-start justify-end gap-3">
+        <AlertBell alerts={alerts} onJump={setSelectedId} />
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -703,8 +726,6 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
           />
         </div>
       </div>
-
-      <AlertBlock alerts={alerts} onJump={setSelectedId} />
 
       {runs.length === 0 ? (
         loading ? (

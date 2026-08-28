@@ -84,6 +84,11 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
 
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerResults, setCustomerResults] = useState<Customer[]>([]);
+  const [customerSearching, setCustomerSearching] = useState(false);
+  // Debounce timer + monotonic id so a slow, stale search response can never
+  // overwrite the results of a newer query (or repopulate a cleared box).
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchSeqRef = useRef(0);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [newCustomerMode, setNewCustomerMode] = useState(false);
   const [newCustomer, setNewCustomer] = useState({
@@ -127,18 +132,28 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     })();
   }, [organizationId, organizationSlug]);
 
-  const handleCustomerSearch = async (query: string) => {
+  const handleCustomerSearch = (query: string) => {
     setCustomerSearch(query);
-    if (query.length < 2) {
+    const seq = ++searchSeqRef.current;
+    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+    const trimmed = query.trim();
+    if (trimmed.length < 1) {
       setCustomerResults([]);
+      setCustomerSearching(false);
       return;
     }
-    try {
-      const results = await searchCustomers(organizationId, query);
-      setCustomerResults(results);
-    } catch (error) {
-      console.error(error);
-    }
+    setCustomerSearching(true);
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await searchCustomers(organizationId, trimmed);
+        if (searchSeqRef.current !== seq) return;
+        setCustomerResults(results);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (searchSeqRef.current === seq) setCustomerSearching(false);
+      }
+    }, 250);
   };
 
   /**
@@ -526,15 +541,22 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                     placeholder={t("customer.searchPlaceholder")}
                     value={customerSearch}
                     onChange={(e) => handleCustomerSearch(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Escape") {
+                        setCustomerSearch("");
+                        setCustomerResults([]);
+                        setCustomerSearching(false);
+                      }
+                    }}
                     className="pl-9"
                   />
-                  {customerResults.length > 0 && (
-                    <div className="absolute z-10 mt-1 w-full rounded-md border bg-background shadow-lg">
+                  {customerSearch.trim().length > 0 && (
+                    <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-2xl border bg-background shadow-lg">
                       {customerResults.map((customer) => (
                         <button
                           key={customer.id}
                           type="button"
-                          className="block w-full px-4 py-2 text-left hover:bg-muted"
+                          className="block w-full px-4 py-2.5 text-left transition-colors hover:bg-muted"
                           onClick={() => {
                             void applyCustomer(customer);
                             setCustomerSearch("");
@@ -545,6 +567,13 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
                           <div className="text-sm text-muted-foreground">{customer.phone}</div>
                         </button>
                       ))}
+                      {customerResults.length === 0 && (
+                        <div className="px-4 py-3 text-sm text-muted-foreground">
+                          {customerSearching
+                            ? t("customer.searching")
+                            : t("customer.noResults", { query: customerSearch.trim() })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

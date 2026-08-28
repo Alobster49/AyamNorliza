@@ -69,9 +69,6 @@ export function OrderCardContent({
               </span>
             );
           }
-          if (amount.kind === "unweighed") {
-            return <span className="ml-auto text-xs text-muted-foreground">{t("unweighed")}</span>;
-          }
           return null;
         })()}
       </div>
