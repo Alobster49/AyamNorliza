@@ -284,6 +284,34 @@ describe("departureCheck", () => {
     const run = makeRun({ status: "departed" }, [makeOrder({ loaded_at: null })]);
     expect(departureCheck(run).canDepart).toBe(true);
   });
+
+  // driver_start_run gates on status = 'ready', not on weighed lines: an order
+  // whose weights are keyed while the warehouse task is still open is loaded,
+  // weighed, and still refused. The office keeps its leave-it-behind escape.
+  it("blocks the driver on an order that is loaded and weighed but not ready", () => {
+    const run = makeRun({}, [
+      makeOrder({
+        status: "confirmed",
+        items: [makeItem({ warehouse_weight_kg: 3.2 })],
+        customer: { id: "c2", name: "Warung Cik Ros", phone: "0111" },
+      }),
+    ]);
+    expect(departureCheck(run, "driver").canDepart).toBe(false);
+    expect(departureCheck(run, "driver").unweighed.map((o) => o.label)).toEqual(["Warung Cik Ros"]);
+    expect(departureCheck(run, "office").canDepart).toBe(true);
+  });
+
+  it("lets the driver depart once every live order is ready and signed off", () => {
+    const run = makeRun({}, [makeOrder(), makeOrder({ status: "cancelled", loaded_at: null })]);
+    expect(departureCheck(run, "driver").canDepart).toBe(true);
+  });
+
+  it("names an unloaded order once, in the unloaded bucket only", () => {
+    const run = makeRun({}, [makeOrder({ status: "confirmed", loaded_at: null })]);
+    const check = departureCheck(run, "driver");
+    expect(check.unloaded).toHaveLength(1);
+    expect(check.unweighed).toHaveLength(0);
+  });
 });
 
 describe("departureImpact", () => {

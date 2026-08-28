@@ -169,20 +169,38 @@ export type DepartureCheck = {
 };
 
 /**
+ * Which RPC is about to run — the two enforce different rules, so a screen
+ * that mirrors the wrong one either blocks a legal departure or offers a
+ * button the database always refuses.
+ */
+export type DepartureAudience = "office" | "driver";
+
+/**
  * A truck must not leave the yard holding orders the loading screen never
  * signed off, or lines nobody weighed. A run that already departed is past
  * the gate — re-checking it would only strand it.
+ *
+ * The driver deck must be read against `driver_start_run`, which refuses
+ * unless EVERY non-cancelled order on the run is 'ready' AND signed off:
+ * the driver has no "leave it behind" dialog, so nothing is dropped for
+ * them. Weighed lines are not the test — 'ready' is what the warehouse task
+ * sets, and an order whose lines are keyed while its task is still open is
+ * loaded, weighed, and still refused by the RPC.
  */
-export function departureCheck(run: RunWithOrders): DepartureCheck {
+export function departureCheck(
+  run: RunWithOrders,
+  audience: DepartureAudience = "office",
+): DepartureCheck {
   if (run.status !== "planned") return { canDepart: true, unloaded: [], unweighed: [] };
 
   const live = run.orders.filter(isLiveOrder);
-  const unloaded = live
-    .filter((o) => o.loaded_at === null)
-    .map((o) => ({ orderId: o.id, label: customerName(o) }));
+  const label = (o: OrderWithItems) => ({ orderId: o.id, label: customerName(o) });
+  const unloaded = live.filter((o) => o.loaded_at === null).map(label);
+  // An order already named as unloaded is not named twice.
   const unweighed = live
-    .filter(hasUnweighedLine)
-    .map((o) => ({ orderId: o.id, label: customerName(o) }));
+    .filter((o) => o.loaded_at !== null)
+    .filter((o) => (audience === "driver" ? o.status !== "ready" : hasUnweighedLine(o)))
+    .map(label);
 
   return { canDepart: unloaded.length === 0 && unweighed.length === 0, unloaded, unweighed };
 }
