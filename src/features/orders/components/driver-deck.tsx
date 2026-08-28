@@ -21,11 +21,13 @@ import {
   type RunWithOrders,
 } from "@/features/orders/types";
 import { buildDriverDeck, linesTotal, type DriverStop } from "@/features/orders/lib/driver-run-model";
+import { departureCheck } from "@/features/orders/lib/run-board-model";
 import { formatPrice, formatWeight } from "@/features/orders/lib/order-model";
 import { DriverSignOutButton } from "@/features/orders/components/driver-sign-out";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MessageCircle, Navigation, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Sheet = "none" | "deliver" | "fail";
@@ -58,10 +60,13 @@ function Bar({ pct }: { pct: number }) {
 function StopList({
   stops,
   organizationSlug,
+  showUnloaded = false,
   t,
 }: {
   stops: DriverStop[];
   organizationSlug: string;
+  /** Tag stops the loading screen has not signed off. Only useful pre-departure. */
+  showUnloaded?: boolean;
   t: ReturnType<typeof useTranslations>;
 }) {
   return (
@@ -75,19 +80,27 @@ function StopList({
           {item.outcome === "delivered" ? (
             <Link
               href={`/drive/${organizationSlug}/invoice/${item.orderId}`}
-              className="shrink-0 text-[11px] font-medium underline underline-offset-2"
+              className="-my-2 shrink-0 rounded-md p-2 text-[11px] font-medium underline underline-offset-2"
             >
               {t("stopStatus.invoice")}
             </Link>
           ) : (
-            <span className="shrink-0 text-[11px] text-muted-foreground">
+            <span
+              className={`shrink-0 text-[11px] ${
+                showUnloaded && item.outcome === "pending" && !item.loaded
+                  ? "font-medium text-amber-600 dark:text-amber-400"
+                  : "text-muted-foreground"
+              }`}
+            >
               {item.outcome === "failed"
                 ? t("stopStatus.failed")
                 : item.outcome === "cancelled"
                   ? t("stopStatus.cancelled")
                   : item.atStop
                     ? t("stopStatus.hereNow")
-                    : t("stopStatus.toDo")}
+                    : showUnloaded && !item.loaded
+                      ? t("stopStatus.notLoaded")
+                      : t("stopStatus.toDo")}
             </span>
           )}
         </li>
@@ -136,8 +149,35 @@ export function DriverDeck({
     return () => query.removeEventListener("change", sync);
   }, []);
 
+  // A driver on a phone dismisses by tapping the backdrop; Escape is for the
+  // office opening the same deck with ?run= on a laptop.
+  useEffect(() => {
+    if (sheet === "none") return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") resetSheet();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sheet]);
+
   const deck = useMemo(() => buildDriverDeck(run), [run]);
   const stop = deck.current;
+  // Read against driver_start_run, not the office depart: this screen has no
+  // "leave it behind" dialog, so every stop must be ready and signed off.
+  const gate = useMemo(() => departureCheck(run, "driver"), [run]);
+
+  // While the run is still in the yard the loading bay is the one moving
+  // state forward, so poll — the deck unblocks itself when they finish.
+  useEffect(() => {
+    if (run.status !== "planned") return;
+    const id = window.setInterval(() => {
+      void getDriverRun(organizationSlug, run.id).then((result) => {
+        // Errors stay silent: a toast every poll tick would bury the screen.
+        if (result.ok && result.data.run) setRun(result.data.run);
+      });
+    }, 15_000);
+    return () => window.clearInterval(id);
+  }, [organizationSlug, run.id, run.status]);
 
   const weightEntries = (stop?.items ?? []).map((item) => {
     const raw = weights[item.itemId]?.trim() ?? "";
@@ -322,7 +362,7 @@ export function DriverDeck({
               {deck.failed > 0 ? ` · ${t("header.toSortOut", { count: deck.failed })}` : ""}
             </p>
           </div>
-          <DriverSignOutButton />
+          <DriverSignOutButton className="h-11 min-w-11" />
         </div>
         <div className="mt-2">
           <Bar pct={deck.progressPct} />
@@ -356,9 +396,15 @@ export function DriverDeck({
           </section>
         </div>
       ) : (
-        <main className="flex flex-1 flex-col gap-3 p-3 sm:p-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6 lg:p-6">
+        <main
+          className={
+            "flex flex-1 flex-col gap-3 p-3 sm:p-4 lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-6 lg:p-6 " +
+            // Clear the fixed action bar so the route list is never trapped under it.
+            (deck.runStatus === "planned" ? "" : "max-lg:pb-36")
+          }
+        >
           {/* The stop */}
-          <section className="overflow-hidden rounded-2xl border bg-card shadow-sm">
+          <section className="overflow-hidden rounded-2xl border bg-card shadow-sm lg:col-start-1 lg:row-start-1">
             <div className="flex flex-col gap-3 border-b bg-accent/30 p-4">
               <div className="flex flex-wrap items-center gap-2">
                 {stop.window && (
@@ -398,18 +444,20 @@ export function DriverDeck({
                 <a
                   href={stop.phone ? `tel:${stop.phone}` : undefined}
                   aria-disabled={!stop.phone}
-                  className={`flex min-h-11 flex-col items-center justify-center rounded-xl border bg-background text-xs font-medium ${
+                  className={`flex min-h-14 flex-col items-center justify-center rounded-xl border bg-background text-xs font-medium ${
                     stop.phone ? "" : "pointer-events-none opacity-40"
                   }`}
                 >
+                  <Phone className="mb-1 h-4 w-4" aria-hidden="true" />
                   {t("actions.call")}
                 </a>
                 <a
                   href={mapsHref(stop)}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex min-h-11 flex-col items-center justify-center rounded-xl border bg-background text-xs font-medium"
+                  className="flex min-h-14 flex-col items-center justify-center rounded-xl border bg-background text-xs font-medium"
                 >
+                  <Navigation className="mb-1 h-4 w-4" aria-hidden="true" />
                   {t("actions.navigate")}
                 </a>
                 <a
@@ -417,25 +465,59 @@ export function DriverDeck({
                   aria-disabled={!stop.phone}
                   target="_blank"
                   rel="noreferrer"
-                  className={`flex min-h-11 flex-col items-center justify-center rounded-xl border bg-background text-xs font-medium ${
+                  className={`flex min-h-14 flex-col items-center justify-center rounded-xl border bg-background text-xs font-medium ${
                     stop.phone ? "" : "pointer-events-none opacity-40"
                   }`}
                 >
+                  <MessageCircle className="mb-1 h-4 w-4" aria-hidden="true" />
                   {t("actions.whatsapp")}
                 </a>
               </div>
             </div>
 
             {/* Actions */}
-            {deck.runStatus === "planned" ? (
+            {deck.runStatus === "planned" && (
               <div className="flex flex-col gap-2 p-4">
-                <p className="text-center text-xs text-muted-foreground">{t("startRun.hint")}</p>
-                <Button size="lg" className="h-12 w-full text-base" disabled={busy} onClick={handleStartRun}>
+                {gate.canDepart ? (
+                  <p className="text-center text-xs text-muted-foreground">{t("startRun.hint")}</p>
+                ) : (
+                  <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-3 text-xs text-amber-900 dark:border-amber-700/60 dark:bg-amber-950 dark:text-amber-200">
+                    <p className="font-semibold">{t("startRun.blockedTitle")}</p>
+                    {gate.unloaded.length > 0 && (
+                      <p className="mt-1">
+                        {t("startRun.blockedNotLoaded", {
+                          count: gate.unloaded.length,
+                          list: gate.unloaded.map((o) => o.label).join(", "),
+                        })}
+                      </p>
+                    )}
+                    {gate.unweighed.length > 0 && (
+                      <p className="mt-1">
+                        {t("startRun.blockedUnweighed", {
+                          list: gate.unweighed.map((o) => o.label).join(", "),
+                        })}
+                      </p>
+                    )}
+                    <p className="mt-1 text-amber-700 dark:text-amber-300">{t("startRun.blockedHint")}</p>
+                  </div>
+                )}
+                <Button
+                  size="lg"
+                  className="h-12 w-full text-base"
+                  disabled={busy || !gate.canDepart}
+                  onClick={handleStartRun}
+                >
                   {t("startRun.button")}
                 </Button>
               </div>
-            ) : (
-              <div className="flex flex-col gap-2 p-4">
+            )}
+          </section>
+
+          {/* The two calls a driver makes at every door. On a phone they are
+              pinned above the thumb — a long address or note used to push them
+              below the fold, which is the one place scrolling is unacceptable. */}
+          {deck.runStatus !== "planned" && (
+            <div className="fixed inset-x-0 bottom-0 z-20 flex flex-col gap-2 border-t bg-background/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur lg:static lg:z-auto lg:col-start-1 lg:row-start-2 lg:rounded-2xl lg:border lg:bg-card lg:p-4 lg:backdrop-blur-none">
                 {!stop.atStop ? (
                   <Button size="lg" className="h-12 w-full text-base" disabled={busy} onClick={handleArrive}>
                     {t("actions.imAtDoor")}
@@ -458,13 +540,12 @@ export function DriverDeck({
                 >
                   {t("actions.cantDeliver")}
                 </Button>
-              </div>
-            )}
-          </section>
+            </div>
+          )}
 
           {/* Orientation rail: on phones it stacks under the stop, on desktop it
               sits beside it so the driver never scrolls past the actions. */}
-          <aside className="flex flex-col gap-3">
+          <aside className="flex flex-col gap-3 lg:col-start-2 lg:row-start-1 lg:row-span-2">
             {/* Next stop peek */}
             {deck.next && (
               <section className="rounded-xl border bg-muted/40 px-4 py-2.5">
@@ -490,7 +571,12 @@ export function DriverDeck({
                 {t("wholeRun.summary", { delivered: deck.delivered, total: deck.total })}
               </summary>
               <div className="border-t">
-                <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
+                <StopList
+                  stops={deck.stops}
+                  organizationSlug={organizationSlug}
+                  showUnloaded={deck.runStatus === "planned"}
+                  t={t}
+                />
               </div>
             </details>
 
@@ -524,11 +610,15 @@ export function DriverDeck({
       {/* Proof of delivery */}
       {sheet === "deliver" && stop && (
         <div
-          className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-6"
+          className="fixed inset-0 z-30 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-6"
           role="dialog"
           aria-modal="true"
+          // Tapping the strip of backdrop above the sheet dismisses it, like Escape does.
+          onClick={(event) => {
+            if (event.target === event.currentTarget) resetSheet();
+          }}
         >
-          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4 sm:max-w-lg sm:rounded-2xl sm:border">
+          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-2xl sm:border sm:pb-4">
             <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted sm:hidden" />
             <h2 className="text-base font-semibold">{t("deliverSheet.title")}</h2>
             <p className="mb-3 text-xs text-muted-foreground">
@@ -634,11 +724,15 @@ export function DriverDeck({
       {/* Failure report */}
       {sheet === "fail" && stop && (
         <div
-          className="fixed inset-0 z-20 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-6"
+          className="fixed inset-0 z-30 flex items-end bg-black/40 sm:items-center sm:justify-center sm:p-6"
           role="dialog"
           aria-modal="true"
+          // Tapping the strip of backdrop above the sheet dismisses it, like Escape does.
+          onClick={(event) => {
+            if (event.target === event.currentTarget) resetSheet();
+          }}
         >
-          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4 sm:max-w-lg sm:rounded-2xl sm:border">
+          <div className="max-h-[90dvh] w-full overflow-y-auto rounded-t-2xl border-t bg-background p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-2xl sm:border sm:pb-4">
             <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted sm:hidden" />
             <h2 className="text-base font-semibold">{t("actions.cantDeliver")}</h2>
             <p className="mb-3 text-xs text-muted-foreground">

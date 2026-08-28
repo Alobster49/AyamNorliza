@@ -29,6 +29,16 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   cancelled: "border-transparent bg-[var(--status-cancelled-soft)] text-[var(--status-cancelled-text)]",
 };
 
+/** Solid status swatch — for dots and rails, where the soft badge fill is too faint. */
+export const ORDER_STATUS_DOT: Record<OrderStatus, string> = {
+  pending: "bg-[var(--status-pending)]",
+  confirmed: "bg-[var(--status-confirmed)]",
+  ready: "bg-[var(--status-ready)]",
+  delivered: "bg-[var(--status-delivered)]",
+  closed: "bg-[var(--status-closed)]",
+  cancelled: "bg-[var(--status-cancelled)]",
+};
+
 // ---------------------------------------------------------------------------
 // Order item mode + fallback
 // ---------------------------------------------------------------------------
