@@ -253,4 +253,16 @@ set customer_id = '30000000-0000-0000-0000-0000000000aa'
 where id = (select id from auth.users where email = 'buyer@ayam-norliza-pilot.example')
   and customer_id is null;
 
+-- ---------------------------------------------------------------------------
+-- Demo invoice letterhead (20260828000001). Local-only sample values so the
+-- driver invoice shows the full Malaysian layout; production gets the real
+-- business details entered by the office.
+-- ---------------------------------------------------------------------------
+update public.organizations
+set registration_no = '202303123456 (003456789-K)',
+    address = 'No. 12, Jalan Industri 3, Kawasan Perindustrian, 83000 Batu Pahat, Johor',
+    phone = '013-7778899',
+    email = 'ayamnorliza@gmail.com'
+where slug = 'ayam-norliza-pilot';
+
 commit;

@@ -28,8 +28,15 @@ import { PATHNAME_HEADER } from "../next-path";
 import { requireUserOrRedirect } from "../require-user";
 
 function mockRequest({
-  userId = null as string | null,
-  pathname = null as string | null,
+  userId = null,
+  pathname = null,
+  aalCurrentLevel = "aal1",
+  aalNextLevel = aalCurrentLevel,
+}: {
+  userId?: string | null;
+  pathname?: string | null;
+  aalCurrentLevel?: string | null;
+  aalNextLevel?: string | null;
 }) {
   vi.mocked(createSupabaseServerClient).mockResolvedValue({
     auth: {
@@ -37,6 +44,12 @@ function mockRequest({
         data: { user: userId ? { id: userId } : null },
         error: userId ? null : { message: "no session" },
       }),
+      mfa: {
+        getAuthenticatorAssuranceLevel: vi.fn().mockResolvedValue({
+          data: { currentLevel: aalCurrentLevel, nextLevel: aalNextLevel },
+          error: null,
+        }),
+      },
     },
   } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>);
 
@@ -47,9 +60,12 @@ function mockRequest({
 }
 
 /** Runs the guard and returns the URL it redirected to. */
-async function redirectTarget(fallback?: string): Promise<string> {
+async function redirectTarget(
+  fallback?: string,
+  options?: { requireAal2?: boolean },
+): Promise<string> {
   try {
-    await requireUserOrRedirect(fallback);
+    await requireUserOrRedirect(fallback, options);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     if (message.startsWith("REDIRECT:")) return message.slice("REDIRECT:".length);
@@ -108,5 +124,36 @@ describe("requireUserOrRedirect", () => {
   it("redirects to bare /en/login when there is no usable destination", async () => {
     mockRequest({ pathname: null });
     await expect(redirectTarget()).resolves.toBe("/en/login");
+  });
+
+  describe("requireAal2", () => {
+    it("does not check MFA at all when the option is omitted (default behaviour)", async () => {
+      mockRequest({ userId: "user-1", pathname: "/acme/orders", aalCurrentLevel: "aal1", aalNextLevel: "aal2" });
+      // A signed-in user with a pending step-up must still pass through
+      // every existing caller that hasn't opted in - the /mfa/challenge page
+      // itself, the buyer/drive shells, auth pages, etc.
+      await expect(requireUserOrRedirect("/acme")).resolves.toMatchObject({ id: "user-1" });
+    });
+
+    it("lets an aal2-stepped-up session through", async () => {
+      mockRequest({ userId: "user-1", pathname: "/acme/orders", aalCurrentLevel: "aal2", aalNextLevel: "aal2" });
+      await expect(
+        requireUserOrRedirect("/acme", { requireAal2: true }),
+      ).resolves.toMatchObject({ id: "user-1" });
+    });
+
+    it("lets a session with no enrolled factor through (nothing to step up to)", async () => {
+      mockRequest({ userId: "user-1", pathname: "/acme/orders", aalCurrentLevel: "aal1", aalNextLevel: "aal1" });
+      await expect(
+        requireUserOrRedirect("/acme", { requireAal2: true }),
+      ).resolves.toMatchObject({ id: "user-1" });
+    });
+
+    it("redirects a pending step-up to the challenge screen, carrying the same return path", async () => {
+      mockRequest({ userId: "user-1", pathname: "/acme/orders/123", aalCurrentLevel: "aal1", aalNextLevel: "aal2" });
+      await expect(redirectTarget("/acme", { requireAal2: true })).resolves.toBe(
+        "/en/mfa/challenge?next=%2Facme%2Forders%2F123",
+      );
+    });
   });
 });

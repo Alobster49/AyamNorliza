@@ -2,21 +2,18 @@
 
 import { useDraggable } from "@dnd-kit/core";
 import { useTranslations, useFormatter } from "next-intl";
-import { Phone, MessageCircle } from "lucide-react";
 import type { OrderListItem } from "@/features/orders/types";
 import { formatPrice } from "@/features/orders/lib/order-model";
-import { displayAmount, waLink } from "@/features/orders/lib/board-view-model";
+import { displayAmount } from "@/features/orders/lib/board-view-model";
 import { Badge } from "@/components/ui/badge";
 
 /** Presentational card body — shared by the board card and the DragOverlay preview. */
 export function OrderCardContent({
   order,
   risk,
-  actions,
 }: {
   order: OrderListItem;
   risk?: "overdue" | "dueToday" | null;
-  actions?: React.ReactNode;
 }) {
   const t = useTranslations("orders.card");
   const tList = useTranslations("orders.client");
@@ -26,57 +23,23 @@ export function OrderCardContent({
 
   return (
     <div
-      className={`space-y-2 rounded-lg border bg-card p-3 shadow-sm ${
-        risk === "overdue"
+      className={`space-y-1.5 rounded-lg border bg-card p-2.5 shadow-sm sm:space-y-2 sm:p-3 ${
+        risk === "overdue" || risk === "dueToday"
           ? "border-l-4 border-l-[var(--status-cancelled)]"
-          : risk === "dueToday"
-            ? "border-l-4 border-l-[var(--status-confirmed)]"
-            : ""
+          : ""
       }`}
     >
       <div className="flex items-center justify-between">
         <span className="font-mono text-xs text-muted-foreground">{order.id.slice(0, 8)}</span>
-        <div className="flex items-center gap-0.5">
-          <Badge variant="outline" className="text-[10px] capitalize">
-            {t(`source.${order.source}`)}
-          </Badge>
-          {order.customer?.phone && (
-            <span className="flex items-center gap-0.5">
-              <a
-                href={`tel:${order.customer.phone}`}
-                aria-label={t("call", { name: order.customer.name })}
-                className="rounded p-1.5 text-muted-foreground hover:text-foreground"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
-                <Phone className="h-3.5 w-3.5" />
-              </a>
-              <a
-                href={waLink(order.customer.phone)}
-                target="_blank"
-                rel="noreferrer"
-                aria-label={t("whatsapp", { name: order.customer.name })}
-                className="rounded p-1.5 text-muted-foreground hover:text-foreground"
-                onClick={(e) => e.stopPropagation()}
-                onPointerDown={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-              </a>
-            </span>
-          )}
-        </div>
+        <Badge variant="outline" className="text-[10px] capitalize">
+          {t(`source.${order.source}`)}
+        </Badge>
       </div>
       <div className="text-sm font-medium leading-snug">{order.customer?.name ?? t("unknownCustomer")}</div>
       {order.notes && (
         <p className="line-clamp-2 text-xs text-muted-foreground">{order.notes}</p>
       )}
-      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+      <div className="flex flex-wrap items-center gap-1.5 pt-0.5 sm:pt-1">
         {order.zone?.name && (
           <Badge variant="secondary" className="text-[10px]">
             {order.zone.name}
@@ -99,15 +62,19 @@ export function OrderCardContent({
         ) : null}
         {(() => {
           const amount = displayAmount(order);
-          if (amount.kind === "none") return null;
-          return amount.kind === "total" ? (
-            <span className="ml-auto text-sm font-semibold tabular-nums">{formatPrice(amount.amount)}</span>
-          ) : (
-            <span className="ml-auto text-[10px] italic text-muted-foreground">{t("unweighed")}</span>
-          );
+          if (amount.kind === "total") {
+            return (
+              <span className="ml-auto text-sm font-semibold tabular-nums">
+                {formatPrice(amount.amount)}
+              </span>
+            );
+          }
+          if (amount.kind === "unweighed") {
+            return <span className="ml-auto text-xs text-muted-foreground">{t("unweighed")}</span>;
+          }
+          return null;
         })()}
       </div>
-      {actions && <div className="pt-1">{actions}</div>}
     </div>
   );
 }
@@ -117,7 +84,6 @@ export function OrderCard({
   onOpen,
   ariaLabel,
   risk,
-  actions,
   refused,
   onRefuseEnd,
 }: {
@@ -125,7 +91,6 @@ export function OrderCard({
   onOpen: () => void;
   ariaLabel: string;
   risk?: "overdue" | "dueToday" | null;
-  actions?: React.ReactNode;
   refused: boolean;
   onRefuseEnd: () => void;
 }) {
@@ -161,7 +126,7 @@ export function OrderCard({
         (refused ? " animate-refuse-shake" : "")
       }
     >
-      <OrderCardContent order={order} risk={risk} actions={actions} />
+      <OrderCardContent order={order} risk={risk} />
     </div>
   );
 }

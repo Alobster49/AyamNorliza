@@ -6,6 +6,9 @@ import { useRouter } from "@/i18n/navigation";
 import { startMfaEnrollAction, verifyMfaChallengeAction, unenrollMfaAction } from "@/features/identity-access/server/auth-actions";
 import { toLocaleAgnostic } from "@/lib/auth/next-path";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 
 export interface EnrolledFactor {
   factorId: string;
@@ -67,25 +70,37 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
   }
 
   return (
-    <section className="mfa-enroll">
-      <h2>{t("title")}</h2>
+    <section className="mfa-enroll flex w-full max-w-xs flex-col gap-5 rounded-lg border border-border bg-card p-6 shadow-sm">
+      <h2 className="text-lg font-semibold">{t("title")}</h2>
       {enrolled ? (
-        <div>
-          <p>{t("qrInstructions")}</p>
+        <FieldGroup>
+          <p className="text-sm text-muted-foreground">{t("qrInstructions")}</p>
           {enrolled.qrCode ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img alt={t("qrAlt")} src={enrolled.qrCode} width={180} height={180} />
+            <img
+              alt={t("qrAlt")}
+              src={enrolled.qrCode}
+              width={180}
+              height={180}
+              className="mx-auto size-[180px] rounded-md border border-border"
+            />
           ) : null}
-          {enrolled.secret ? <code>{enrolled.secret}</code> : null}
+          {enrolled.secret ? (
+            <code className="block break-all rounded-md bg-muted px-3 py-2 text-center text-xs">
+              {enrolled.secret}
+            </code>
+          ) : null}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               verify();
             }}
+            className="flex flex-col gap-4"
           >
-            <label>
-              {t("codeLabel")}
-              <input
+            <Field>
+              <FieldLabel htmlFor="mfa-code">{t("codeLabel")}</FieldLabel>
+              <Input
+                id="mfa-code"
                 inputMode="numeric"
                 pattern="\d{6}"
                 required
@@ -93,44 +108,57 @@ export function MfaEnrollCard({ isOptional = false, nextPath = "/" }: MfaEnrollC
                 onChange={(e) => setCode(e.target.value)}
                 maxLength={6}
               />
-            </label>
-            {error ? <p role="alert">{error}</p> : null}
-            <button type="submit" disabled={pending || code.length !== 6}>
-              {pending ? t("submitting") : t("submit")}
-            </button>
-            {isOptional && (
-              <button
-                type="button"
-                className="btn-secondary"
-                onClick={skip}
-                disabled={pending}
+            </Field>
+            {error ? <FieldError>{error}</FieldError> : null}
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button
+                type="submit"
+                disabled={pending || code.length !== 6}
+                className="flex-1"
               >
-                {t("cancel")}
-              </button>
-            )}
+                {pending ? t("submitting") : t("submit")}
+              </Button>
+              {isOptional && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={skip}
+                  disabled={pending}
+                  className="flex-1"
+                >
+                  {t("cancel")}
+                </Button>
+              )}
+            </div>
           </form>
-        </div>
+        </FieldGroup>
       ) : (
-        <div>
-          <p>
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-muted-foreground">
             {isOptional
               ? t("notEnrolledOptional")
               : t("notEnrolledRequired")}
           </p>
-          {error ? <p role="alert">{error}</p> : null}
-          <div className="mfa-enroll__actions">
-            <button type="button" onClick={enroll} disabled={pending}>
+          {error ? <FieldError>{error}</FieldError> : null}
+          <div className="mfa-enroll__actions flex flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              onClick={enroll}
+              disabled={pending}
+              className="flex-1"
+            >
               {pending ? t("setupPending") : t("setup")}
-            </button>
+            </Button>
             {isOptional && (
-              <button
+              <Button
                 type="button"
-                className="btn-secondary"
+                variant="ghost"
                 onClick={skip}
                 disabled={pending}
+                className="flex-1"
               >
                 {t("skip")}
-              </button>
+              </Button>
             )}
           </div>
         </div>

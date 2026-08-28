@@ -32,13 +32,16 @@ function mockSupabase({
     error: null as { message: string } | null,
   },
   aalLevel = "aal1",
+  aalNextLevel = aalLevel,
 }: {
   signInResult?: { data: { user: { id: string } | null }; error: { message: string } | null };
   aalLevel?: string;
+  /** Defaults to `aalLevel` - i.e. no factor enrolled, nothing to step up to. */
+  aalNextLevel?: string;
 } = {}) {
   const signInWithPassword = vi.fn(() => Promise.resolve(signInResult));
   const getAuthenticatorAssuranceLevel = vi.fn(() =>
-    Promise.resolve({ data: { currentLevel: aalLevel }, error: null }),
+    Promise.resolve({ data: { currentLevel: aalLevel, nextLevel: aalNextLevel }, error: null }),
   );
   const supabase = {
     auth: {
@@ -101,7 +104,36 @@ describe("loginAction", () => {
 
     expect(result).toEqual({
       ok: true,
-      data: { requiresMfa: true, redirectTo: "/ayam-norliza-pilot/products" },
+      data: { mfaChallengeRequired: false, redirectTo: "/ayam-norliza-pilot/products" },
     });
+  });
+});
+
+describe("loginAction mfaChallengeRequired", () => {
+  it("is false for an account with no MFA factor (aal1, nothing to step up to)", async () => {
+    mockSupabase({ aalLevel: "aal1", aalNextLevel: "aal1" });
+
+    const result = await loginAction(validInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.mfaChallengeRequired).toBe(false);
+  });
+
+  it("is true for an account with a verified factor whose session hasn't stepped up yet", async () => {
+    mockSupabase({ aalLevel: "aal1", aalNextLevel: "aal2" });
+
+    const result = await loginAction(validInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.mfaChallengeRequired).toBe(true);
+  });
+
+  it("is false once the session has already stepped up to aal2", async () => {
+    mockSupabase({ aalLevel: "aal2", aalNextLevel: "aal2" });
+
+    const result = await loginAction(validInput);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data.mfaChallengeRequired).toBe(false);
   });
 });

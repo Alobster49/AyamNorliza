@@ -206,6 +206,13 @@ describe("stopOutcome", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildDriverDeck", () => {
+  it("exposes whether each stop was signed off by the loading screen", () => {
+    const a = makeOrder({ run_sequence: 1 });
+    const b = makeOrder({ run_sequence: 2, loaded_at: null, loaded_by: null });
+    const deck = buildDriverDeck(makeRun({}, [a, b]));
+    expect(deck.stops.map((stop) => stop.loaded)).toEqual([true, false]);
+  });
+
   it("puts the stop the driver is standing at first, whatever its sequence", () => {
     const a = makeOrder({ run_sequence: 1 });
     const b = makeOrder({ run_sequence: 2, stop_events: [event("arrive", "2026-08-21T04:00:00Z")] });

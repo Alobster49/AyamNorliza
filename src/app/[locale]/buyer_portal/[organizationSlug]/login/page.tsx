@@ -83,6 +83,7 @@ function LoginPageInner({ params }: LoginPageProps) {
     const result = await buyerSignInAction({
       email: loginData.email,
       password: loginData.password,
+      organizationSlug,
     });
 
     setLoading(false);

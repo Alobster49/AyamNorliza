@@ -50,22 +50,26 @@ import {
   verifyMfaChallengeAction,
   unenrollMfaAction,
   signUpAction,
+  setPasswordAction,
 } from "../../server/auth-actions";
 
 function mockSupabase({
   userId = "user-1" as string | null,
   signInResult = { data: { user: { id: "user-1" } as { id: string } | null }, error: null as { message: string } | null },
   signUpResult = undefined as { data: unknown; error: { message: string; code?: string } | null } | undefined,
+  updateUserResult = { error: null as { message: string } | null },
 }: {
   userId?: string | null;
   signInResult?: { data: { user: { id: string } | null }; error: { message: string } | null };
   signUpResult?: { data: unknown; error: { message: string; code?: string } | null };
+  updateUserResult?: { error: { message: string } | null };
 } = {}) {
   const supabase = {
     auth: {
       getUser: vi.fn().mockResolvedValue({ data: { user: userId ? { id: userId, email: "a@b.com" } : null }, error: null }),
       signInWithPassword: vi.fn(() => Promise.resolve(signInResult)),
       signUp: vi.fn(() => Promise.resolve(signUpResult ?? { data: { user: null, session: null }, error: null })),
+      updateUser: vi.fn(() => Promise.resolve(updateUserResult)),
       mfa: { getAuthenticatorAssuranceLevel: vi.fn(() => Promise.resolve({ data: { currentLevel: "aal1" }, error: null })) },
     },
   };
@@ -207,5 +211,36 @@ describe("signUpAction", () => {
     const result = await signUpAction(validInput);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.auth.signupFailed");
+  });
+});
+
+describe("setPasswordAction", () => {
+  it("returns auth.invalidSetPassword for a password under 12 characters", async () => {
+    // Bug B: only an HTML minLength=8 used to guard this from the browser -
+    // the same 12-char policy signup enforces must also apply here.
+    const result = await setPasswordAction({ password: "short7cha" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.auth.invalidSetPassword");
+  });
+
+  it("returns common.unauthenticated when signed out", async () => {
+    mockSupabase({ userId: null });
+    const result = await setPasswordAction({ password: "a-valid-12-char-password" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.unauthenticated");
+  });
+
+  it("returns auth.setPasswordFailed when Supabase's updateUser call errors", async () => {
+    mockSupabase({ updateUserResult: { error: { message: "weak password" } } });
+    const result = await setPasswordAction({ password: "a-valid-12-char-password" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.auth.setPasswordFailed");
+  });
+
+  it("succeeds for a signed-in user with a valid password", async () => {
+    const supabase = mockSupabase();
+    const result = await setPasswordAction({ password: "a-valid-12-char-password" });
+    expect(result.ok).toBe(true);
+    expect(supabase.auth.updateUser).toHaveBeenCalledWith({ password: "a-valid-12-char-password" });
   });
 });

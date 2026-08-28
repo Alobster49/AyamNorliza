@@ -12,7 +12,9 @@ export default async function CheckoutPage({ params }: CheckoutPageProps) {
   // ShopPage for why every page needs this, not just the layout.
   setRequestLocale(locale);
   // No redirect wall: anonymous buyers create their account inside checkout.
-  const buyer = await getBuyerFromSession();
+  // Slug cross-check so an Org A buyer on Org B's checkout is treated as
+  // anonymous instead of having their Org A identity prefilled.
+  const buyer = await getBuyerFromSession(organizationSlug);
   return (
     <CheckoutClient
       organizationSlug={organizationSlug}

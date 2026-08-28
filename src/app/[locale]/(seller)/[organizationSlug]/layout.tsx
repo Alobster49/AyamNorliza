@@ -20,7 +20,7 @@ export default async function SellerLayout({
   params: Promise<{ organizationSlug: string }>;
 }) {
   const { organizationSlug } = await params;
-  const user = await requireUserOrRedirect(`/${organizationSlug}`);
+  const user = await requireUserOrRedirect(`/${organizationSlug}`, { requireAal2: true });
 
   // Check if user has seller role
   const supabase = await createClient();

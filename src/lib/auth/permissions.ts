@@ -96,12 +96,9 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
   farm_manager: new Set<Capability>([
     "membership.invite",
     "membership.scope.change",
-    "access_review.run",
-    "audit.read",
     "step_up.reauth",
   ]),
   supervisor: new Set<Capability>([
-    "audit.read",
     "step_up.reauth",
   ]),
   caretaker: new Set<Capability>([]),
@@ -109,13 +106,17 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
     "step_up.reauth",
   ]),
   biosecurity_qa: new Set<Capability>([
-    "audit.read",
     "step_up.reauth",
   ]),
   maintenance: new Set<Capability>(["step_up.reauth"]),
   inventory: new Set<Capability>(["step_up.reauth"]),
   logistics: new Set<Capability>(["step_up.reauth"]),
-  auditor: new Set<Capability>(["audit.read", "audit_log.read"]),
+  // `audit.read`/`audit_log.read` are owner/org_admin-only in RLS
+  // (audit_log_select_admin, supabase/migrations/20260624000002_id_access_rls.sql).
+  // A dedicated `auditor` role previously held both, but that granted a
+  // capability the database silently ignored (empty results instead of an
+  // error) — removed so the capability matrix matches enforcement.
+  auditor: new Set<Capability>([]),
   support: new Set<Capability>([]),
 };
 

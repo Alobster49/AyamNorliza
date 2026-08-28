@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildBoardView, compatibleTruckIds } from "../../lib/dispatch-board-model";
+import { buildBoardView, compatibleTruckIds, hasUnloadedReadyTickets } from "../../lib/dispatch-board-model";
 import type { Bay, DispatchBoardData, DispatchTicket, DispatchTruck } from "../../types";
 
 const DATE = "2026-08-14"; // Friday, weekday 5
@@ -145,5 +145,22 @@ describe("compatibleTruckIds", () => {
   it("returns an empty set when the postcode matches no zone", () => {
     const t = { ...ticket("o-1", "t-1", "none"), postcode: "50000" };
     expect(compatibleTruckIds(t, data())).toEqual(new Set());
+  });
+});
+
+describe("hasUnloadedReadyTickets", () => {
+  it("is true when a 'ready' ticket was never signed off by the loading screen", () => {
+    const tickets = [{ ...ticket("o-1", "t-1", "manual", "ready"), loaded_at: null }];
+    expect(hasUnloadedReadyTickets(tickets)).toBe(true);
+  });
+
+  it("is false once every 'ready' ticket is loaded", () => {
+    const tickets = [{ ...ticket("o-1", "t-1", "manual", "ready"), loaded_at: "2026-08-28T00:00:00Z" }];
+    expect(hasUnloadedReadyTickets(tickets)).toBe(false);
+  });
+
+  it("ignores unloaded tickets that are not yet 'ready' -- the office's own escape hatch drops those instead", () => {
+    const tickets = [{ ...ticket("o-1", "t-1", "manual", "confirmed"), loaded_at: null }];
+    expect(hasUnloadedReadyTickets(tickets)).toBe(false);
   });
 });

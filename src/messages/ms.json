@@ -71,6 +71,15 @@
       "removeButton": "Buang aplikasi pengesah",
       "removing": "Membuang..."
     },
+    "mfaChallenge": {
+      "pageTitle": "Sahkan identiti anda - AyamNorliza",
+      "title": "Sahkan identiti anda",
+      "subtitle": "Masukkan kod 6 digit dari aplikasi pengesah anda untuk selesaikan log masuk.",
+      "codeLabel": "Kod",
+      "submit": "Sahkan",
+      "submitting": "Sedang sahkan...",
+      "hint": "Kehilangan akses ke aplikasi pengesah anda? Hubungi pemilik organisasi anda."
+    },
     "invite": {
       "title": "Terima jemputan anda",
       "subtitle": "Tetapkan kata laluan untuk sertai {organizationName}.",
@@ -471,7 +480,9 @@
         "invalidSignup": "Pendaftaran tidak sah",
         "signupFailed": "Tidak dapat mencipta akaun anda. Sila cuba lagi.",
         "alreadyRegistered": "E-mel ini telah didaftarkan.",
-        "mfaVerifyFailed": "Kod pengesahan tidak sepadan. Sila cuba lagi."
+        "mfaVerifyFailed": "Kod pengesahan tidak sepadan. Sila cuba lagi.",
+        "invalidSetPassword": "Kata laluan mesti sekurang-kurangnya 12 aksara.",
+        "setPasswordFailed": "Tidak dapat menetapkan kata laluan baharu anda. Sila cuba lagi."
       }
     },
     "drive": {
@@ -483,7 +494,8 @@
         "alreadyStarted": "Trip ini sudah bertolak.",
         "notFound": "Trip tidak dijumpai.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi.",
-        "notDeparted": "Trip ini tidak berada di jalan."
+        "notDeparted": "Trip ini tidak berada di jalan.",
+        "notLoaded": "Trak belum siap dimuatkan. Bahagian pemuatan perlu selesaikan semua hentian dahulu."
       },
       "stop": {
         "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
@@ -580,7 +592,8 @@
       "fulfillment": "Logistik",
       "accessControl": "Kawalan akses",
       "warehouse": "Gudang",
-      "system": "Sistem"
+      "system": "Sistem",
+      "account": "Akaun"
     },
     "pages": {
       "dashboard": "Papan pemuka",
@@ -599,7 +612,8 @@
       "accessReviews": "Semakan akses",
       "supportSessions": "Sesi sokongan",
       "auditLog": "Log audit",
-      "dataConsole": "Konsol data"
+      "dataConsole": "Konsol data",
+      "accountSecurity": "Keselamatan saya"
     },
     "fallbackUserName": "Ahli pasukan",
     "sidebar": {
@@ -632,7 +646,8 @@
     },
     "funnel": {
       "title": "Corong pesanan",
-      "cancellationRate": "Kadar batal"
+      "cancellationRate": "Kadar batal",
+      "total": "Jumlah pesanan"
     },
     "sectionError": "Bahagian ini gagal dimuatkan.",
     "empty": "Belum ada data untuk tempoh ini.",
@@ -648,15 +663,6 @@
         "marketStale": "Harga pasaran tidak dikemas kini 3+ hari"
       }
     },
-    "admin": {
-      "title": "Pentadbiran",
-      "activeMembers": "Ahli aktif",
-      "pendingInvitations": "Jemputan menunggu",
-      "openAccessReviews": "Semakan akses terbuka",
-      "activeSupportSessions": "Sesi sokongan aktif",
-      "priorities": "Perlu perhatian",
-      "allClear": "Tiada apa yang perlu perhatian."
-    },
     "insights": {
       "title": "Cara nak improve",
       "pricing": {
@@ -671,8 +677,14 @@
         "title": "Susut berat",
         "summary": "{diff} kg terlebih bagi ({pct} daripada berat diperuntuk)",
         "lostSummary": "≈ {rm} hilang — {diff} kg terlebih bagi ({pct} daripada berat diperuntuk)",
-        "rowLoss": "{rm} · {kg} kg",
-        "byOrderTitle": "Pesanan dengan kerugian tertinggi",
+        "tabRm": "RM",
+        "tabKg": "Kg",
+        "earned": "Diperoleh",
+        "lost": "Hilang",
+        "chargedKg": "Dicaj",
+        "givenKg": "Terlebih bagi",
+        "couldHaveEarned": "Sepatutnya diperoleh",
+        "deliveredKg": "Dihantar",
         "none": "Tiada susut berat dalam tempoh ini."
       },
       "retention": {
@@ -769,6 +781,8 @@
     "accessReviews": {
       "startReview": "Mula semakan suku tahunan",
       "starting": "Memulakan...",
+      "reviewerLabel": "Pemeriksa",
+      "noMembers": "Tiada ahli tersedia",
       "reviewHeading": "Semakan {id} - {status}",
       "due": "Tarikh akhir: {date}",
       "colMember": "Ahli",
@@ -840,6 +854,7 @@
       "defaultRoleChangeReason": "Perubahan peranan melalui halaman pengguna",
       "defaultDeactivateReason": "Dinyahaktifkan daripada halaman pengguna",
       "createUser": "Cipta pengguna",
+      "viewDetails": "Lihat butiran",
       "editDetails": "Sunting",
       "resetPassword": "Tetap semula kata laluan",
       "removeMember": "Buang",
@@ -861,6 +876,10 @@
       "clear": "Kosongkan ({count})",
       "showing": "Memaparkan {shown} daripada {total} peristiwa",
       "appendOnlyNote": "Tambah sahaja · tidak boleh diubah · terkini dahulu",
+      "pagePrev": "Sebelum",
+      "pageNext": "Seterusnya",
+      "pageIndicator": "Halaman {page} daripada {totalPages}",
+      "filterScopeHint": "(carian hanya untuk halaman ini)",
       "today": "Hari ini",
       "yesterday": "Semalam",
       "eventCount": "{count, plural, other {# peristiwa}}",
@@ -1221,13 +1240,26 @@
       "pendingSettlementTitle": "Menunggu berat akhir",
       "pendingSettlementDescription": "Pesanan ini ditutup oleh pejabat tanpa berat di pintu. Hubungi pejabat untuk invois muktamad.",
       "invoiceNumber": "Invois #{number}",
-      "headers": { "item": "Item", "weight": "Berat", "pricePerKg": "Harga/kg", "lineTotal": "Jumlah" },
+      "backToRun": "Kembali ke trip",
+      "title": "INVOIS",
+      "regNo": "No. Pendaftaran: {number}",
+      "dateLabel": "Tarikh: {date}",
+      "billTo": "Kepada",
+      "headers": {
+        "no": "Bil.",
+        "item": "Item",
+        "weight": "Berat",
+        "pricePerKg": "Harga/kg",
+        "lineTotal": "Jumlah"
+      },
       "itemFallback": "Item",
       "pieces": "{count} ekor",
       "grandTotal": "Jumlah besar",
+      "cashCollected": "Tunai diterima",
       "deliveredAt": "Dihantar {time}",
       "receivedBy": "diterima oleh {name}",
       "footerNote": "Ditimbang semasa penghantaran. Terima kasih!",
+      "computerGenerated": "Invois ini dijana oleh komputer. Tandatangan tidak diperlukan.",
       "printButton": "Cetak invois"
     }
   },
@@ -1453,9 +1485,7 @@
         "portal": "Portal",
         "manual": "Manual"
       },
-      "unweighed": "Belum ditimbang",
-      "call": "Telefon {name}",
-      "whatsapp": "WhatsApp {name}"
+      "unweighed": "Belum ditimbang"
     },
     "journey": {
       "ariaLabel": "Kemajuan pesanan: langkah {step} daripada {total}",
@@ -1719,7 +1749,11 @@
       "itemCount": "{count, plural, other {# item}}",
       "startRun": {
         "hint": "Semak laluan di bawah, kemudian bertolak.",
-        "button": "Mula hantar"
+        "button": "Mula hantar",
+        "blockedTitle": "Trak masih dimuatkan",
+        "blockedNotLoaded": "{count, plural, other {# hentian belum dimuat ke atas trak}}: {list}.",
+        "blockedUnweighed": "Belum ditimbang: {list}.",
+        "blockedHint": "Bahagian pemuatan akan selesaikannya — skrin ini dikemas kini sendiri."
       },
       "actions": {
         "call": "Panggil",
@@ -1741,6 +1775,7 @@
         "cancelled": "Dibatalkan",
         "hereNow": "Di sini sekarang",
         "toDo": "Belum selesai",
+        "notLoaded": "Belum dimuatkan",
         "invoice": "Invois"
       },
       "deliverSheet": {
@@ -1821,6 +1856,8 @@
     "board": {
       "newOrder": "Pesanan baharu",
       "addToPending": "Tambah pesanan baharu",
+      "columnNav": "Lompat ke lajur",
+      "dragHint": "Tahan kad untuk memindahkannya ke lajur lain.",
       "empty": {
         "pending": "Belum ada pesanan baru",
         "confirmed": "Tiada yang disahkan",
@@ -1854,11 +1891,6 @@
         "over": "Di atas {column}",
         "dropped": "Dilepaskan di {column}",
         "cancelled": "Pergerakan dibatalkan"
-      },
-      "quickConfirm": {
-        "action": "Sahkan",
-        "busy": "Mengesahkan…",
-        "success": "Pesanan disahkan"
       }
     },
     "station": {
@@ -2266,6 +2298,7 @@
     "previousDay": "Hari sebelum",
     "nextDay": "Hari seterusnya",
     "today": "Hari ini",
+    "backToToday": "Kembali ke hari ini",
     "trucksRunningToday": "Trak yang beroperasi hari ini",
     "toasts": {
       "couldNotLoadRuns": "Tidak dapat memuatkan trip",

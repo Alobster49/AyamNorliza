@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { setPasswordAction } from "@/features/identity-access/server/auth-actions";
 
 export function SetPasswordForm() {
   const t = useTranslations("auth.setPassword");
+  const tRoot = useTranslations();
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -21,11 +22,14 @@ export function SetPasswordForm() {
       return;
     }
     setPending(true);
-    const supabase = createSupabaseBrowserClient();
-    const { error: updateError } = await supabase.auth.updateUser({ password });
+    // Server-validated (12 chars min, same policy as signup) - the
+    // `minLength={12}` below is a UX nicety only, never the real guard.
+    const result = await setPasswordAction({ password });
     setPending(false);
-    if (updateError) {
-      setError(updateError.message);
+    if (!result.ok) {
+      // `messageKey` is a dynamic full path (e.g. "errors.identity.auth.invalidSetPassword");
+      // next-intl's typed `t()` only accepts literal keys, so this is cast at the call site.
+      setError(tRoot(result.messageKey as never));
       return;
     }
     router.replace("/");
@@ -38,7 +42,7 @@ export function SetPasswordForm() {
         <input
           type="password"
           required
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -49,7 +53,7 @@ export function SetPasswordForm() {
         <input
           type="password"
           required
-          minLength={8}
+          minLength={12}
           autoComplete="new-password"
           value={confirm}
           onChange={(e) => setConfirm(e.target.value)}

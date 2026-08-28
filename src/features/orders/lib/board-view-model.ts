@@ -12,9 +12,26 @@ export type AmountDisplay =
   | { kind: "none" };
 
 /**
- * total_amount is only written by close_order — every earlier status holds 0.
- * Rendering that 0 as "RM 0.00" reads as a pricing bug, so open orders show
- * an unweighed hint instead and cancelled orders show nothing.
+ * total_amount is only reliably final once an order is "closed" — that
+ * status is reachable only through close_order or through
+ * driver_deliver_stop settling every line (see
+ * 20260827000002_driver_deliver_closes_order.sql), both of which require
+ * every non-cancelled line to have a final weight *and* a price.
+ *
+ * "delivered" does NOT give that guarantee, from two different paths:
+ *   - driver_deliver_stop leaves an order at "delivered" (instead of
+ *     promoting it to "closed") exactly when at least one non-cancelled line
+ *     still has price_per_kg null — total_amount sums only the priced
+ *     lines, so it understates the real total.
+ *   - the office's "complete run" bulk sweep (set_run_status, see
+ *     20260823000003_run_complete_skips_failed_stops.sql) flips ready orders
+ *     straight to "delivered" without touching total_amount at all, so it
+ *     can still be sitting at its 0 default.
+ *
+ * Either way, rendering total_amount for a "delivered" order can show a
+ * wrong or stale RM figure as if it were final. So only "closed" shows a
+ * total; every other open status (including "delivered") shows the
+ * unweighed hint, and cancelled orders show nothing.
  */
 export function displayAmount(
   order: Pick<OrderListItem, "status" | "total_amount">,

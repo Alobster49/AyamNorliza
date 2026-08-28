@@ -647,14 +647,30 @@ export async function changeMemberRoleAction(
   if (((target as { role: string }).role) === input.newRole) {
     return err("conflict", "Member already has that role", "errors.identity.member.alreadyHasRole");
   }
-  // Plan §6: "high-risk changes require second approver".
+  // Plan §6: "high-risk changes require second approver". A change that
+  // grants or revokes the `owner` role needs a second *owner* to approve
+  // it — see the role-rank guard comment on `updateMemberProfileAction`
+  // below ("the only path back is a second owner acting"). The approver
+  // must be a real, active, distinct owner of this organization: passing
+  // any non-empty `approverUserId` must never be sufficient.
   const targetRole: string = (target as { role: string }).role;
   const newRole: string = input.newRole;
-  const needsApprover =
-    (newRole === "owner" || (targetRole === "owner" && newRole !== "owner")) &&
-    !input.approverUserId;
-  if (needsApprover) {
-    return err("forbidden", "Owner changes require a second approver", "errors.identity.member.ownerNeedsApprover");
+  const isOwnerChange = newRole === "owner" || (targetRole === "owner" && newRole !== "owner");
+  if (isOwnerChange) {
+    let approver: { role: string } | null = null;
+    if (input.approverUserId && input.approverUserId !== user.id) {
+      const { data } = await supabase
+        .from("organization_members")
+        .select("role")
+        .eq("organization_id", target.organization_id)
+        .eq("user_id", input.approverUserId)
+        .eq("status", "active")
+        .maybeSingle();
+      approver = data as { role: string } | null;
+    }
+    if (!approver || approver.role !== "owner") {
+      return err("forbidden", "Owner changes require a second approver", "errors.identity.member.ownerNeedsApprover");
+    }
   }
 
   const { data: updated, error } = await supabase
@@ -674,7 +690,10 @@ export async function changeMemberRoleAction(
       entityType: "organization_members",
       entityId: updated.id,
       before: { role: target.role },
-      after: { role: updated.role },
+      after: {
+        role: updated.role,
+        ...(isOwnerChange && input.approverUserId ? { approver_user_id: input.approverUserId } : {}),
+      },
       reason: input.reason,
       correlationId: reauth.ctx.correlationId,
       source: "web",

@@ -18,6 +18,7 @@ export default async function AuditLogPage({
     source?: string;
     query?: string;
     row?: string;
+    page?: string;
   }>;
 }) {
   const { organizationSlug } = await params;
@@ -27,11 +28,21 @@ export default async function AuditLogPage({
   if (!org) notFound();
   const t = await getTranslations("settings.auditLog");
 
+  // Page size of 50 keeps each fetch light while still giving a
+  // reasonably chunky page of history; older events remain reachable
+  // via the prev/next controls instead of being permanently hidden
+  // past the old hard 200-row cutoff.
+  const PAGE_SIZE = 50;
+  const parsedPage = Number.parseInt(sp.page ?? "1", 10);
+  const page = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const offset = (page - 1) * PAGE_SIZE;
+
   const { rows, total } = await listAuditLog({
     organizationId: org.id,
     eventType: sp.eventType,
     entityType: sp.entityType,
-    limit: 200,
+    limit: PAGE_SIZE,
+    offset,
   });
 
   const eventTypes = Array.from(
@@ -85,6 +96,11 @@ export default async function AuditLogPage({
           source: sp.source ?? "",
           query: sp.query ?? "",
           rowId: sp.row ?? "",
+        }}
+        pagination={{
+          page,
+          pageSize: PAGE_SIZE,
+          total,
         }}
       />
     </section>

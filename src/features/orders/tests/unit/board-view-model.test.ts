@@ -6,7 +6,7 @@ const listItem = (over: Partial<OrderListItem>): OrderListItem =>
   ({ id: "x", status: "pending", delivery_date: "2026-08-24", total_amount: 0, ...over }) as OrderListItem;
 
 describe("displayAmount", () => {
-  it("shows the total only for closed orders", () => {
+  it("shows the total for closed orders", () => {
     expect(displayAmount({ status: "closed", total_amount: 187.2 })).toEqual({
       kind: "total",
       amount: 187.2,
@@ -14,9 +14,21 @@ describe("displayAmount", () => {
   });
 
   it("marks every open status as unweighed (total is 0 until close_order)", () => {
-    for (const status of ["pending", "confirmed", "ready", "delivered"] as const) {
+    for (const status of ["pending", "confirmed", "ready"] as const) {
       expect(displayAmount({ status, total_amount: 0 })).toEqual({ kind: "unweighed" });
     }
+  });
+
+  it("marks delivered as unweighed even when total_amount already has a (possibly partial) value — driver_deliver_stop only leaves an order at delivered when some line is still unpriced, understating the sum", () => {
+    expect(displayAmount({ status: "delivered", total_amount: 187.2 })).toEqual({
+      kind: "unweighed",
+    });
+  });
+
+  it("marks delivered as unweighed when total_amount is still the untouched 0 default — the office's run-complete sweep flips ready orders to delivered without computing a total at all", () => {
+    expect(displayAmount({ status: "delivered", total_amount: 0 })).toEqual({
+      kind: "unweighed",
+    });
   });
 
   it("shows nothing for cancelled orders", () => {

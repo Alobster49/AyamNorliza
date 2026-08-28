@@ -34,31 +34,33 @@ export function SupportSessionsClient(props: {
         onClose={() => setOpen(false)}
         onSaved={() => { setOpen(false); router.refresh(); }}
       /> : null}
-      <table className="data-table">
-        <thead>
-          <tr><th>{t("colPurpose")}</th><th>{t("colTechnician")}</th><th>{t("colWindow")}</th><th>{t("colStatus")}</th><th>{t("colActions")}</th></tr>
-        </thead>
-        <tbody>
-          {props.sessions.map((s) => (
-            <tr key={s.id}>
-              <td>{s.purpose}</td>
-              <td><code>{s.technicianId}</code></td>
-              <td>
-                {t("window", {
-                  start: format.dateTime(new Date(s.startsAt), { dateStyle: "medium", timeStyle: "short" }),
-                  end: format.dateTime(new Date(s.endsAt), { dateStyle: "medium", timeStyle: "short" }),
-                })}
-              </td>
-              <td>{t(`status.${STATUS_KEYS[s.status]}`)}</td>
-              <td>
-                {s.status === "active" || s.status === "scheduled" ? (
-                  <EndButton sessionId={s.id} onDone={() => router.refresh()} onError={setError} />
-                ) : null}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr><th>{t("colPurpose")}</th><th>{t("colTechnician")}</th><th>{t("colWindow")}</th><th>{t("colStatus")}</th><th>{t("colActions")}</th></tr>
+          </thead>
+          <tbody>
+            {props.sessions.map((s) => (
+              <tr key={s.id}>
+                <td>{s.purpose}</td>
+                <td><code>{s.technicianId}</code></td>
+                <td>
+                  {t("window", {
+                    start: format.dateTime(new Date(s.startsAt), { dateStyle: "medium", timeStyle: "short" }),
+                    end: format.dateTime(new Date(s.endsAt), { dateStyle: "medium", timeStyle: "short" }),
+                  })}
+                </td>
+                <td>{t(`status.${STATUS_KEYS[s.status]}`)}</td>
+                <td>
+                  {s.status === "active" || s.status === "scheduled" ? (
+                    <EndButton sessionId={s.id} onDone={() => router.refresh()} onError={setError} />
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -132,7 +134,11 @@ function OpenDialog({
       <form onSubmit={onSubmit} className="dialog">
         <h2>{t("dialogTitle")}</h2>
         <label>{t("sponsorLabel")}
-          <select value={sponsorId} onChange={(e) => setSponsorId(e.target.value)}>
+          <select
+            className="w-full min-w-0"
+            value={sponsorId}
+            onChange={(e) => setSponsorId(e.target.value)}
+          >
             {members.map((m) => <option key={m.id} value={m.userId}>{m.userId} ({m.role})</option>)}
           </select>
         </label>

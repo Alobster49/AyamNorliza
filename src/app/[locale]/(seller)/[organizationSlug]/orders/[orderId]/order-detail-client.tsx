@@ -733,6 +733,7 @@ function ClosedPanel({
 }) {
   const { toast } = useToast();
   const t = useTranslations("orders.detail.closed");
+  const tUnits = useTranslations("orders.units");
   const tReopen = useTranslations("orders.dialogs.reopen");
   const tError = useTranslations("orders");
   const tRoot = useTranslations();
@@ -783,36 +784,58 @@ function ClosedPanel({
         <div className="border-b px-4 py-3">
           <h2 className="font-semibold">{t("weightLog")}</h2>
         </div>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("colKind")}</TableHead>
-              <TableHead>{t("colWeight")}</TableHead>
-              <TableHead>{t("colPieces")}</TableHead>
-              <TableHead>{t("colRecordedAt")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(order.weight_log ?? []).length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={4} className="text-center text-muted-foreground">
-                  {t("noWeightLog")}
-                </TableCell>
-              </TableRow>
-            ) : (
-              order.weight_log!.map((log) => (
-                <TableRow key={log.id}>
-                  <TableCell className="capitalize">{t(`weightLogKind.${log.kind}`)}</TableCell>
-                  <TableCell>{formatWeight(log.weight_kg)}</TableCell>
-                  <TableCell>{log.pieces ?? "-"}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format.dateTime(new Date(log.recorded_at), { dateStyle: "medium", timeStyle: "short" })}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        {(order.weight_log ?? []).length === 0 ? (
+          <p className="p-4 text-center text-sm text-muted-foreground">{t("noWeightLog")}</p>
+        ) : (
+          <>
+            {/* Mobile: stacked rows — a 4-column table with a full datetime has no room on a phone. */}
+            <ul className="divide-y sm:hidden">
+              {order.weight_log!.map((log) => (
+                <li key={log.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                  <div>
+                    <div className="font-medium capitalize">{t(`weightLogKind.${log.kind}`)}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {format.dateTime(new Date(log.recorded_at), { dateStyle: "medium", timeStyle: "short" })}
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="font-medium tabular-nums">{formatWeight(log.weight_kg)}</div>
+                    {log.pieces != null && (
+                      <div className="text-xs text-muted-foreground">
+                        {tUnits("pieces", { count: log.pieces })}
+                      </div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden sm:block">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t("colKind")}</TableHead>
+                    <TableHead>{t("colWeight")}</TableHead>
+                    <TableHead>{t("colPieces")}</TableHead>
+                    <TableHead>{t("colRecordedAt")}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {order.weight_log!.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="capitalize">{t(`weightLogKind.${log.kind}`)}</TableCell>
+                      <TableCell>{formatWeight(log.weight_kg)}</TableCell>
+                      <TableCell>{log.pieces ?? "-"}</TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {format.dateTime(new Date(log.recorded_at), { dateStyle: "medium", timeStyle: "short" })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+        )}
       </div>
 
       {canReopen && (

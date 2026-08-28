@@ -579,7 +579,6 @@ type RunsClientProps = {
 export function RunsClient({ organizationSlug, initialDate, timeZone, initialRuns }: RunsClientProps) {
   const { toast } = useToast();
   const t = useTranslations("deliveryRuns");
-  const tPages = useTranslations("dashboard.pages");
   const tEmpty = useTranslations("deliveryRuns.empty");
   const [date, setDate] = useState(initialDate);
   const [runs, setRuns] = useState(initialRuns);
@@ -670,11 +669,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">{tPages("deliveryRuns")}</h1>
-          <p className="text-muted-foreground">{t("subheading")}</p>
-        </div>
+      <div className="flex flex-wrap items-start justify-end gap-3">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -687,9 +682,10 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
           <Button
             variant={isToday ? "default" : "outline"}
             size="sm"
+            aria-current={isToday ? "date" : undefined}
             onClick={() => handleDateChange(todayInTimeZone(timeZone))}
           >
-            {t("today")}
+            {isToday ? t("today") : t("backToToday")}
           </Button>
           <Button
             variant="outline"
@@ -728,7 +724,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
           }`}
         >
           <div
-            className="-mx-1 flex snap-x snap-proximity gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0"
+            className="-mx-1 flex snap-x snap-proximity gap-2 overflow-x-auto p-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:p-0"
             role="tablist"
             aria-label={t("trucksRunningToday")}
           >

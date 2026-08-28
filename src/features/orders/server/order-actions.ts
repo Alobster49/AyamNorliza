@@ -589,6 +589,14 @@ export async function setRunStatus(
   });
 
   if (error) {
+    if (error.message.includes("not_loaded")) {
+      return err(
+        "conflict",
+        "The truck is not fully loaded yet. The loading bay has to sign every stop off first.",
+        undefined,
+        "errors.drive.run.notLoaded",
+      );
+    }
     const mapped = mapRpcError(error.message);
     return err(mapped.code as OrderErrorCode, mapped.message);
   }

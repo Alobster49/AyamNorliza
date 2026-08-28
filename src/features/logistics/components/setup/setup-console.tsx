@@ -429,7 +429,7 @@ export function SetupConsole({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("searchPlaceholder")}
-            className="min-h-11 pl-9 lg:min-h-10"
+            className="min-h-11 truncate pl-9 lg:min-h-10"
             aria-label={t("searchAriaLabel")}
           />
         </div>

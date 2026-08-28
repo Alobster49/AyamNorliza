@@ -1,177 +1,151 @@
 "use client";
 
 import { useFormatter, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label, PolarRadiusAxis, RadialBar, RadialBarChart } from "recharts";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  type ChartConfig,
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { InsightsViewModel } from "../insights-model";
 
-function PricingCard({ vm }: { vm: InsightsViewModel }) {
-  const t = useTranslations("analytics.insights.pricing");
-  const format = useFormatter();
-  const money = (n: number) => format.number(n, { style: "currency", currency: "MYR" });
+function LeakageChart({
+  config,
+  data,
+  keys,
+  centerValue,
+  centerLabel,
+}: {
+  config: ChartConfig;
+  data: Record<string, number>;
+  keys: [string, string];
+  centerValue: string;
+  centerLabel: string;
+}) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">{t("title")}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("product")}</TableHead>
-              <TableHead className="text-right">{t("realized")}</TableHead>
-              <TableHead className="text-right">{t("market")}</TableHead>
-              <TableHead className="text-right">{t("gap")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {vm.pricing.map((row) => (
-              <TableRow key={row.name}>
-                <TableCell>{row.name}</TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.realizedPerKg !== null ? money(row.realizedPerKg) : "—"}
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
-                  {row.marketBase !== null ? money(row.marketBase) : "—"}
-                </TableCell>
-                <TableCell
-                  className={`text-right tabular-nums ${
-                    row.gapPct === null
-                      ? "text-muted-foreground"
-                      : row.gapPct < 0
-                        ? "text-red-600"
-                        : "text-emerald-600"
-                  }`}
-                >
-                  {row.gapPct !== null ? (
-                    format.number(row.gapPct / 100, { style: "percent", maximumFractionDigits: 1 })
-                  ) : (
-                    <span className="text-muted-foreground">{t("noMarket")}</span>
-                  )}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-2">
+      <ChartContainer config={config} className="mx-auto aspect-[2/1] w-full max-w-[300px]">
+        <RadialBarChart data={[data]} cy="100%" startAngle={180} endAngle={0} innerRadius={70} outerRadius={120}>
+        <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+        <PolarRadiusAxis tick={false} tickLine={false} axisLine={false}>
+          <Label
+            content={({ viewBox }) => {
+              if (!viewBox || !("cx" in viewBox) || !("cy" in viewBox)) return null;
+              const cx = viewBox.cx ?? 0;
+              const cy = viewBox.cy ?? 0;
+              return (
+                <text x={cx} y={cy} textAnchor="middle">
+                  <tspan x={cx} y={cy - 28} className="fill-foreground text-xl font-bold">
+                    {centerValue}
+                  </tspan>
+                  <tspan x={cx} y={cy - 8} className="fill-muted-foreground text-xs">
+                    {centerLabel}
+                  </tspan>
+                </text>
+              );
+            }}
+          />
+        </PolarRadiusAxis>
+          <RadialBar
+            dataKey={keys[0]}
+            stackId="a"
+            cornerRadius={5}
+            fill={`var(--color-${keys[0]})`}
+            className="stroke-transparent stroke-2"
+          />
+          <RadialBar
+            dataKey={keys[1]}
+            stackId="a"
+            minPointSize={8}
+            cornerRadius={5}
+            fill={`var(--color-${keys[1]})`}
+            className="stroke-transparent stroke-2"
+          />
+        </RadialBarChart>
+      </ChartContainer>
+      <div className="flex justify-center gap-4 text-xs text-muted-foreground">
+        {keys.map((key) => (
+          <span key={key} className="flex items-center gap-1.5">
+            <span
+              className="size-2.5 rounded-[2px]"
+              style={{ backgroundColor: (config[key] as { color?: string })?.color }}
+            />
+            {config[key]?.label}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function WeightCard({ vm, organizationSlug }: { vm: InsightsViewModel; organizationSlug: string }) {
+function WeightCard({ vm, earnedRm }: { vm: InsightsViewModel; earnedRm: number }) {
   const t = useTranslations("analytics.insights.weight");
   const format = useFormatter();
   const kg = (n: number) => format.number(n, { maximumFractionDigits: 1 });
   const money = (n: number) => format.number(n, { style: "currency", currency: "MYR" });
   const pct = (n: number) => format.number(n / 100, { style: "percent", maximumFractionDigits: 1 });
   const hasLeakage = vm.weight.lostKg > 0 || vm.weight.diffKg > 0;
+  const rmConfig = {
+    earned: { label: t("earned"), color: "var(--chart-1)" },
+    lost: { label: t("lost"), color: "var(--chart-4)" },
+  } satisfies ChartConfig;
+  const kgConfig = {
+    charged: { label: t("chargedKg"), color: "var(--chart-1)" },
+    given: { label: t("givenKg"), color: "var(--chart-4)" },
+  } satisfies ChartConfig;
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">{t("title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-2">
-        {hasLeakage ? (
-          <>
-            <p className="text-sm">
-              {vm.weight.lostRm > 0
-                ? t("lostSummary", {
-                    rm: money(vm.weight.lostRm),
-                    diff: kg(vm.weight.lostKg),
-                    pct: pct(vm.weight.lossPct),
-                  })
-                : t("summary", { diff: kg(vm.weight.diffKg), pct: pct(vm.weight.leakagePct) })}
-            </p>
-            <ul className="flex flex-col gap-1">
-              {vm.weight.byProduct.map((p) => (
-                <li key={p.name} className="flex items-center justify-between text-sm">
-                  <span>{p.name}</span>
-                  <span className="tabular-nums text-muted-foreground">
-                    {t("rowLoss", { rm: money(p.lostRm), kg: kg(p.lostKg) })}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            {vm.weight.byOrder.length > 0 && (
-              <div className="flex flex-col gap-1">
-                <p className="text-xs font-medium text-muted-foreground">{t("byOrderTitle")}</p>
-                <ul className="flex flex-col gap-1">
-                  {vm.weight.byOrder.map((o) => (
-                    <li key={o.orderId}>
-                      <Link
-                        href={`/${organizationSlug}/orders/${o.orderId}`}
-                        className="flex items-center justify-between gap-2 text-sm hover:underline"
-                      >
-                        <span className="truncate">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            {o.orderId.slice(0, 8)}
-                          </span>{" "}
-                          {o.customerName} ·{" "}
-                          {format.dateTime(new Date(o.deliveryDate), { dateStyle: "medium" })}
-                        </span>
-                        <span className="shrink-0 tabular-nums">{money(o.lostRm)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </>
-        ) : (
-          <p className="text-sm text-muted-foreground">{t("none")}</p>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-function RetentionCard({ vm }: { vm: InsightsViewModel }) {
-  const t = useTranslations("analytics.insights.retention");
-  const format = useFormatter();
-  const money = (n: number) => format.number(n, { style: "currency", currency: "MYR" });
-  const stats = [
-    { key: "active", label: t("active"), value: vm.retention.active },
-    { key: "new", label: t("new"), value: vm.retention.newCustomers },
-    { key: "returning", label: t("returning"), value: vm.retention.returning },
-  ] as const;
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium">{t("title")}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          {stats.map((s) => (
-            <div key={s.key} className="rounded-md border p-2">
-              <p className="text-xs text-muted-foreground">{s.label}</p>
-              <p className="text-lg font-semibold tabular-nums">{format.number(s.value)}</p>
-            </div>
-          ))}
-        </div>
-        <p className="text-xs font-medium text-muted-foreground">{t("silentTitle")}</p>
-        {vm.retention.silent.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("noneSilent")}</p>
-        ) : (
-          <ul className="flex flex-col gap-1">
-            {vm.retention.silent.map((c) => (
-              <li key={c.name} className="flex items-center justify-between text-sm">
-                <span>{c.name}</span>
-                <span className="text-muted-foreground">
-                  {format.dateTime(new Date(c.lastOrderDate), { dateStyle: "medium" })} · {money(c.lifetimeRevenue)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
+      <Tabs defaultValue="rm" className="gap-(--card-spacing)">
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">{t("title")}</CardTitle>
+          {hasLeakage && (
+            <CardAction>
+              <TabsList>
+                <TabsTrigger value="rm">{t("tabRm")}</TabsTrigger>
+                <TabsTrigger value="kg">{t("tabKg")}</TabsTrigger>
+              </TabsList>
+            </CardAction>
+          )}
+        </CardHeader>
+        <CardContent className="flex flex-col gap-2">
+          {hasLeakage ? (
+            <>
+              <p className="text-sm">
+                {vm.weight.lostRm > 0
+                  ? t("lostSummary", {
+                      rm: money(vm.weight.lostRm),
+                      diff: kg(vm.weight.lostKg),
+                      pct: pct(vm.weight.lossPct),
+                    })
+                  : t("summary", { diff: kg(vm.weight.diffKg), pct: pct(vm.weight.leakagePct) })}
+              </p>
+              <TabsContent value="rm">
+                <LeakageChart
+                  config={rmConfig}
+                  data={{ earned: earnedRm, lost: vm.weight.lostRm }}
+                  keys={["earned", "lost"]}
+                  centerValue={money(earnedRm + vm.weight.lostRm)}
+                  centerLabel={t("couldHaveEarned")}
+                />
+              </TabsContent>
+              <TabsContent value="kg">
+                <LeakageChart
+                  config={kgConfig}
+                  data={{ charged: vm.weight.finalKg, given: vm.weight.lostKg }}
+                  keys={["charged", "given"]}
+                  centerValue={`${kg(vm.weight.warehouseKg)} kg`}
+                  centerLabel={t("deliveredKg")}
+                />
+              </TabsContent>
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("none")}</p>
+          )}
+        </CardContent>
+      </Tabs>
     </Card>
   );
 }
@@ -224,19 +198,26 @@ function DeliveryCard({ vm }: { vm: InsightsViewModel }) {
 
 export function InsightsRow({
   vm,
-  organizationSlug,
+  earnedRm,
 }: {
   vm: InsightsViewModel;
-  organizationSlug: string;
+  organizationSlug?: string;
+  /**
+   * Org-wide realized revenue for the range (e.g. `salesVm.revenue.value`).
+   * `vm.pricing` is capped to the top 10 products by the RPC, so it
+   * understates earned RM for orgs with more products — falls back to the
+   * capped sum only when the real total isn't available (e.g. sales fetch
+   * failed independently of insights).
+   */
+  earnedRm?: number;
 }) {
   const t = useTranslations("analytics.insights");
+  const resolvedEarnedRm = earnedRm ?? vm.pricing.reduce((sum, row) => sum + row.revenue, 0);
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-sm font-medium text-muted-foreground">{t("title")}</h2>
       <div className="grid gap-4 md:grid-cols-2">
-        <PricingCard vm={vm} />
-        <WeightCard vm={vm} organizationSlug={organizationSlug} />
-        <RetentionCard vm={vm} />
+        <WeightCard vm={vm} earnedRm={resolvedEarnedRm} />
         <DeliveryCard vm={vm} />
       </div>
     </div>

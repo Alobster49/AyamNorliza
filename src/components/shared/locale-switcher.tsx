@@ -71,7 +71,7 @@ function LocaleSwitcherControl() {
             title={LOCALE_LABELS[locale]}
             onClick={() => selectLocale(locale)}
             className={cn(
-              "rounded px-2 py-1 text-xs font-medium transition-colors disabled:opacity-60",
+              "rounded px-3 py-3 text-xs font-medium transition-colors disabled:opacity-60 sm:px-2 sm:py-1",
               isActive
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground",
@@ -96,7 +96,7 @@ function LocaleSwitcherFallback() {
       {SUPPORTED_LOCALES.map((locale) => (
         <span
           key={locale}
-          className="rounded px-2 py-1 text-xs font-medium text-muted-foreground opacity-60"
+          className="rounded px-3 py-3 text-xs font-medium text-muted-foreground opacity-60 sm:px-2 sm:py-1"
         >
           {LOCALE_SHORT_LABELS[locale]}
         </span>

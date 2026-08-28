@@ -34,7 +34,9 @@ function ProductsTable({ rows }: { rows: TopProduct[] }) {
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.name}>
-            <TableCell>{row.name}</TableCell>
+            <TableCell className="max-w-32 truncate sm:max-w-none" title={row.name}>
+              {row.name}
+            </TableCell>
             <TableCell className="text-right tabular-nums">
               {format.number(row.kg, { maximumFractionDigits: 1 })}
             </TableCell>
@@ -64,7 +66,9 @@ function PartyTable({ rows }: { rows: TopParty[] }) {
       <TableBody>
         {rows.map((row) => (
           <TableRow key={row.name}>
-            <TableCell>{row.name}</TableCell>
+            <TableCell className="max-w-32 truncate sm:max-w-none" title={row.name}>
+              {row.name}
+            </TableCell>
             <TableCell className="text-right tabular-nums">{format.number(row.orders)}</TableCell>
             <TableCell className="text-right tabular-nums">
               {format.number(row.revenue, { style: "currency", currency: "MYR" })}

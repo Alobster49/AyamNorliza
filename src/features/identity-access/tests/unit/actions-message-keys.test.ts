@@ -317,6 +317,91 @@ describe("changeMemberRoleAction", () => {
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.ownerNeedsApprover");
   });
+
+  // The following demote-an-owner scenarios (target role "owner", newRole
+  // "caretaker" from validInput) are the confirmed exploit path: an
+  // org_admin's canGrantRole check passes for "caretaker" (rank <= org_admin),
+  // so these reach the approver gate the same way the reported bug did.
+
+  it("returns member.ownerNeedsApprover when demoting an owner without an approver", async () => {
+    setSupabase({
+      organization_members: [
+        { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
+        ACTIVE_MEMBER("org_admin"),
+      ],
+    });
+    const result = await changeMemberRoleAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.ownerNeedsApprover");
+  });
+
+  it("returns member.ownerNeedsApprover when approverUserId is not a real, active member of the org", async () => {
+    setSupabase({
+      organization_members: [
+        { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
+        ACTIVE_MEMBER("org_admin"),
+        { data: null, error: null }, // approver lookup: no matching active member
+      ],
+    });
+    const result = await changeMemberRoleAction({
+      ...validInput,
+      approverUserId: "22222222-2222-2222-2222-222222222222",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.ownerNeedsApprover");
+  });
+
+  it("returns member.ownerNeedsApprover when approverUserId is the acting user themselves", async () => {
+    const callerId = "22222222-2222-2222-2222-222222222222";
+    vi.mocked(requireUser).mockResolvedValue({ id: callerId, email: "a@b.com" } as never);
+    setSupabase(
+      {
+        organization_members: [
+          { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
+          ACTIVE_MEMBER("org_admin"),
+        ],
+      },
+      callerId,
+    );
+    const result = await changeMemberRoleAction({
+      ...validInput,
+      approverUserId: callerId, // same as the acting user
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.ownerNeedsApprover");
+  });
+
+  it("returns member.ownerNeedsApprover when approverUserId is a real member who is not an owner", async () => {
+    setSupabase({
+      organization_members: [
+        { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
+        ACTIVE_MEMBER("org_admin"),
+        { data: { role: "org_admin" }, error: null }, // approver lookup: active but not an owner
+      ],
+    });
+    const result = await changeMemberRoleAction({
+      ...validInput,
+      approverUserId: "22222222-2222-2222-2222-222222222222",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.ownerNeedsApprover");
+  });
+
+  it("succeeds when approverUserId is a real, active, distinct owner", async () => {
+    setSupabase({
+      organization_members: [
+        { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
+        ACTIVE_MEMBER("org_admin"),
+        { data: { role: "owner" }, error: null }, // approver lookup: active owner
+        { data: { id: "m-1", role: "caretaker" }, error: null }, // the update itself
+      ],
+    });
+    const result = await changeMemberRoleAction({
+      ...validInput,
+      approverUserId: "22222222-2222-2222-2222-222222222222",
+    });
+    expect(result.ok).toBe(true);
+  });
 });
 
 describe("changeMemberScopeAction", () => {

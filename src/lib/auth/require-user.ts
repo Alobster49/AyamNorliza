@@ -60,10 +60,27 @@ async function returnPathFor(fallback?: string): Promise<string | null> {
  * `nextPath` is only a fallback now - the real page comes from the middleware
  * header, so a session that expires on `/acme/orders/123` returns there
  * after signing in rather than to the org landing page.
+ *
+ * `options.requireAal2` adds a second, server-side gate on top of "is signed
+ * in": an account with a verified TOTP factor whose session hasn't stepped
+ * up past aal1 yet is bounced to `/mfa/challenge` instead of being allowed
+ * through. Without this, MFA enforcement lived only in the login form's
+ * client-side navigation - a request that skipped that redirect (a stale
+ * tab, a direct link, a script) reached the page anyway on an aal1 session.
+ * Opt-in rather than the default because most callers of this guard
+ * (auth pages, support-sessions, the buyer/drive shells that don't even use
+ * it) must never gate on aal2: the enroll and challenge pages need to be
+ * reachable at aal1 or the flow can never complete, and enforcing this
+ * everywhere would be scope creep beyond the staff dashboard/seller shell
+ * this was asked to protect.
  */
-export async function requireUserOrRedirect(nextPath?: string) {
+export async function requireUserOrRedirect(
+  nextPath?: string,
+  options?: { requireAal2?: boolean },
+) {
+  let user: Awaited<ReturnType<typeof requireUser>>;
   try {
-    return await requireUser();
+    user = await requireUser();
   } catch (err) {
     if (err instanceof UnauthenticatedError) {
       const returnPath = await returnPathFor(nextPath);
@@ -73,6 +90,19 @@ export async function requireUserOrRedirect(nextPath?: string) {
     }
     throw err;
   }
+
+  if (options?.requireAal2) {
+    const supabase = await createSupabaseServerClient();
+    const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    if (aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
+      const returnPath = await returnPathFor(nextPath);
+      const qs = returnPath ? `?next=${encodeURIComponent(returnPath)}` : "";
+      const locale = await getLocale();
+      redirect(`/${locale}/mfa/challenge${qs}`);
+    }
+  }
+
+  return user;
 }
 
 export type ActiveOrgMember = {

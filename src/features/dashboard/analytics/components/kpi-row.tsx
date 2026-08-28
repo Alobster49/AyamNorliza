@@ -36,7 +36,13 @@ export function KpiRow({ vm }: { vm: SalesViewModel }) {
             <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold tabular-nums">{render(cell.value)}</p>
+            {/* Uniform size (not scaled up at sm/lg): the lg:grid-cols-5 row is
+                just as width-constrained as the 2-col mobile grid once
+                sidebar + gaps are subtracted, so a bigger breakpoint size
+                would re-clip long "MYR 9,906.20"-style values there too. */}
+            <p className="break-words text-lg font-semibold tabular-nums">
+              {render(cell.value)}
+            </p>
             <Delta cell={cell} />
           </CardContent>
         </Card>

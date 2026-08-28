@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import {
   Activity,
+  ChevronLeft,
   ChevronRight,
   Filter,
   Search,
@@ -42,6 +43,11 @@ type Props = {
     source: string;
     query: string;
     rowId: string;
+  };
+  pagination: {
+    page: number;
+    pageSize: number;
+    total: number;
   };
 };
 
@@ -135,7 +141,7 @@ function Copyable({ value, copiedLabel }: { value: string; copiedLabel: string }
   );
 }
 
-export function AuditLogClient({ rows, filters, active }: Props) {
+export function AuditLogClient({ rows, filters, active, pagination }: Props) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -150,6 +156,13 @@ export function AuditLogClient({ rows, filters, active }: Props) {
       const params = new URLSearchParams(searchParams.toString());
       if (!value) params.delete(key);
       else params.set(key, value);
+      // eventType/entityType change the underlying server query, and
+      // source/query re-slice the loaded page client-side - in every
+      // case the old page number no longer means the same thing, so
+      // land back on page 1 whenever a filter changes.
+      if (key !== "row" && key !== "page") {
+        params.delete("page");
+      }
       const qs = params.toString();
       startTransition(() => {
         router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -157,6 +170,21 @@ export function AuditLogClient({ rows, filters, active }: Props) {
     },
     [pathname, router, searchParams],
   );
+
+  const goToPage = useCallback(
+    (page: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (page <= 1) params.delete("page");
+      else params.set("page", String(page));
+      const qs = params.toString();
+      startTransition(() => {
+        router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      });
+    },
+    [pathname, router, searchParams],
+  );
+
+  const totalPages = Math.max(1, Math.ceil(pagination.total / pagination.pageSize));
 
   const filtered = useMemo(() => {
     const q = active.query.trim().toLowerCase();
@@ -299,12 +327,42 @@ export function AuditLogClient({ rows, filters, active }: Props) {
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs text-muted-foreground">
           <div>
             {t("showing", { shown: filtered.length, total: rows.length })}
+            {active.source || active.query ? (
+              <span className="ml-1">{t("filterScopeHint")}</span>
+            ) : null}
           </div>
           <div className="hidden sm:block">
             {t("appendOnlyNote")}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              disabled={pagination.page <= 1}
+              onClick={() => goToPage(pagination.page - 1)}
+            >
+              <ChevronLeft className="size-3" />
+              {t("pagePrev")}
+            </Button>
+            <span className="font-mono tabular-nums">
+              {t("pageIndicator", { page: pagination.page, totalPages })}
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              disabled={pagination.page >= totalPages}
+              onClick={() => goToPage(pagination.page + 1)}
+            >
+              {t("pageNext")}
+              <ChevronRight className="size-3" />
+            </Button>
           </div>
         </div>
       </div>

@@ -19,7 +19,7 @@ export default async function OrganizationLayout({
   params: Promise<{ organizationSlug: string }>;
 }) {
   const { organizationSlug } = await params;
-  const user = await requireUserOrRedirect(`/${organizationSlug}`);
+  const user = await requireUserOrRedirect(`/${organizationSlug}`, { requireAal2: true });
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
 
@@ -58,6 +58,7 @@ export default async function OrganizationLayout({
           organizationRegion={org.region}
           userEmail={userEmail}
           userName={userName}
+          role={member.role}
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
           <DashboardShellHeader

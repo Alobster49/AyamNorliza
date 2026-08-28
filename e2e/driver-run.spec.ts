@@ -2,6 +2,7 @@ import { expect, test, type Page, type Locator } from "@playwright/test";
 import {
   OWNER,
   createSellableProduct,
+  markOrderLoaded,
   seedZoneWithCoverage,
   signIn,
   uniqueFixtureName,
@@ -230,10 +231,20 @@ test("driver starts run, keys weights, invoice shows recomputed total", async ({
   await signIn(driverPage, driver.email, driver.password);
   await expect(driverPage).toHaveURL(/\/drive\/ayam-norliza-pilot(?:[/?#]|$)/, { timeout: 10_000 });
 
-  await expect(driverPage.getByRole("button", { name: "Start delivering" })).toBeVisible({
-    timeout: 15_000,
-  });
-  await driverPage.getByRole("button", { name: "Start delivering" }).click();
+  // The order was weighed but never loaded: the deck holds the driver at the
+  // yard, matching the runs board's departure gate.
+  const startButton = driverPage.getByRole("button", { name: "Start delivering" });
+  await expect(startButton).toBeVisible({ timeout: 15_000 });
+  await expect(startButton).toBeDisabled();
+  await expect(driverPage.getByText("The truck is still being loaded")).toBeVisible();
+
+  // The loading bay signs the stop off; a reload beats waiting out the
+  // deck's 15 s self-refresh.
+  await markOrderLoaded(orderId);
+  await driverPage.reload();
+  await expect(startButton).toBeVisible({ timeout: 15_000 });
+  await expect(startButton).toBeEnabled();
+  await startButton.click();
 
   await expect(driverPage.getByRole("button", { name: "I'm at the door" })).toBeVisible({
     timeout: 10_000,
@@ -284,10 +295,11 @@ test("driver starts run, keys weights, invoice shows recomputed total", async ({
 test("confirm is blocked until every item has a weight", async ({ page, browser }) => {
   test.setTimeout(240_000);
   await signIn(page, OWNER.email, OWNER.password);
-  const { productName, driver } = await seedReadyOrderForDriver(page, {
+  const { orderId, productName, driver } = await seedReadyOrderForDriver(page, {
     priceKg: "12",
     warehouseWeightKg: "2.3",
   });
+  await markOrderLoaded(orderId);
 
   const driverContext = await browser.newContext();
   const driverPage = await driverContext.newPage();

@@ -88,6 +88,19 @@ export function buildBoardView(data: DispatchBoardData, date: string): DispatchB
   return { pool, bays };
 }
 
+/**
+ * A truck can't depart while a 'ready' ticket on it was never signed off by
+ * the loading screen (loaded_at is null) -- dispatch_depart_truck and
+ * set_run_status both reject that with 'not_loaded' now (see
+ * 20260828000002_depart_loading_gate.sql), mirroring the hard gate
+ * driver_start_run already enforces for the driver deck. Tickets that
+ * aren't 'ready' are unaffected -- the office's own escape hatch drops them
+ * back to the pool on depart instead of blocking it.
+ */
+export function hasUnloadedReadyTickets(tickets: DispatchTicket[]): boolean {
+  return tickets.some((t) => t.status === "ready" && t.loaded_at === null);
+}
+
 /** Trucks whose zone coverage includes the ticket's matched zone. */
 export function compatibleTruckIds(
   ticket: DispatchTicket,

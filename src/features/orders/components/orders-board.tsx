@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -17,10 +17,10 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import type { OrderListItem, OrderStatus, OrderWithItems } from "@/features/orders/types";
-import { ORDER_STATUSES } from "@/features/orders/types";
+import { ORDER_STATUSES, ORDER_STATUS_DOT } from "@/features/orders/types";
 import { resolveDrop } from "@/features/orders/lib/board-rules";
 import { classifyDropTarget, isAtRisk, type DropTarget } from "@/features/orders/lib/board-view-model";
-import { getOrderDetail, confirmOrder } from "@/features/orders/server/order-actions";
+import { getOrderDetail } from "@/features/orders/server/order-actions";
 import { OrderCard, OrderCardContent } from "./order-card";
 import {
   ConfirmOrderDialog,
@@ -31,15 +31,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
-const STATUS_DOT: Record<OrderStatus, string> = {
-  pending: "bg-[var(--status-pending)]",
-  confirmed: "bg-[var(--status-confirmed)]",
-  ready: "bg-[var(--status-ready)]",
-  delivered: "bg-[var(--status-delivered)]",
-  closed: "bg-[var(--status-closed)]",
-  cancelled: "bg-[var(--status-cancelled)]",
-};
 
 type PendingWorkflow =
   | { kind: "confirm"; orderId: string; detail: OrderWithItems }
@@ -70,9 +61,69 @@ export function OrdersBoard({
   const { toast } = useToast();
   const [activeOrder, setActiveOrder] = useState<OrderListItem | null>(null);
   const [workflow, setWorkflow] = useState<PendingWorkflow | null>(null);
-  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [refusedId, setRefusedId] = useState<string | null>(null);
   const refuseFallbackTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollerRef = useRef<HTMLDivElement | null>(null);
+  const pagerRef = useRef<HTMLElement | null>(null);
+  const chipRefs = useRef(new Map<OrderStatus, HTMLButtonElement>());
+  const columnRefs = useRef(new Map<OrderStatus, HTMLElement>());
+  const [activeColumn, setActiveColumn] = useState<OrderStatus>(ORDER_STATUSES[0]);
+
+  const countByStatus = useMemo(() => {
+    const base = Object.fromEntries(ORDER_STATUSES.map((s) => [s, 0])) as Record<OrderStatus, number>;
+    for (const order of orders) base[order.status] += 1;
+    return base;
+  }, [orders]);
+
+  const registerColumn = useCallback((status: OrderStatus, node: HTMLElement | null) => {
+    if (node) columnRefs.current.set(status, node);
+    else columnRefs.current.delete(status);
+  }, []);
+
+  // Whichever column sits closest to the scroller's left edge owns the pager.
+  function syncActiveColumn() {
+    const scroller = scrollerRef.current;
+    if (!scroller) return;
+    // offsetLeft is measured against the nearest positioned ancestor, which is not
+    // this scroller — compare live rects instead.
+    const origin = scroller.getBoundingClientRect().left;
+    let nearest: OrderStatus = ORDER_STATUSES[0];
+    let best = Infinity;
+    for (const status of ORDER_STATUSES) {
+      const node = columnRefs.current.get(status);
+      if (!node) continue;
+      const distance = Math.abs(node.getBoundingClientRect().left - origin);
+      if (distance < best) {
+        best = distance;
+        nearest = status;
+      }
+    }
+    setActiveColumn((prev) => (prev === nearest ? prev : nearest));
+  }
+
+  // Keep the current chip on screen — swiping to Cancelled must not leave the
+  // pager showing Pending. Scrolls the pager only, never the page.
+  useEffect(() => {
+    const pager = pagerRef.current;
+    const chip = chipRefs.current.get(activeColumn);
+    if (!pager || !chip) return;
+    const chipRect = chip.getBoundingClientRect();
+    const pagerRect = pager.getBoundingClientRect();
+    if (chipRect.left < pagerRect.left) {
+      pager.scrollTo({ left: pager.scrollLeft + chipRect.left - pagerRect.left - 4, behavior: "smooth" });
+    } else if (chipRect.right > pagerRect.right) {
+      pager.scrollTo({ left: pager.scrollLeft + chipRect.right - pagerRect.right + 4, behavior: "smooth" });
+    }
+  }, [activeColumn]);
+
+  function jumpToColumn(status: OrderStatus) {
+    const scroller = scrollerRef.current;
+    const node = columnRefs.current.get(status);
+    if (!scroller || !node) return;
+    setActiveColumn(status);
+    const delta = node.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
+    scroller.scrollTo({ left: scroller.scrollLeft + delta, behavior: "smooth" });
+  }
 
   function clearRefuseFallback() {
     if (refuseFallbackTimeout.current) {
@@ -129,59 +180,6 @@ export function OrdersBoard({
     router.refresh();
   }
 
-  async function quickConfirm(orderId: string) {
-    if (confirmingId) return;
-    setConfirmingId(orderId);
-    try {
-      const detail = await getOrderDetail(organizationSlug, orderId);
-      if (!detail.ok) {
-        toast({
-          title: tError("error"),
-          description: detail.messageKey ? tRoot(detail.messageKey as never) : detail.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      const result = await confirmOrder({
-        organizationSlug,
-        orderId,
-        decisions: detail.data.items.map((item) => ({ itemId: item.id, available: true })),
-      });
-      if (!result.ok) {
-        toast({
-          title: tError("error"),
-          description: result.messageKey ? tRoot(result.messageKey as never) : result.message,
-          variant: "destructive",
-        });
-        return;
-      }
-      toast({ title: t("quickConfirm.success") });
-      moveOrder(orderId, "confirmed");
-    } finally {
-      setConfirmingId(null);
-    }
-  }
-
-  const cardActions = (order: OrderListItem) =>
-    order.status === "pending" ? (
-      <Button
-        size="sm"
-        variant="outline"
-        className="h-8 w-full"
-        disabled={confirmingId === order.id}
-        onClick={(e) => {
-          e.stopPropagation();
-          quickConfirm(order.id);
-        }}
-        onPointerDown={(e) => e.stopPropagation()}
-        onMouseDown={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onKeyDown={(e) => e.stopPropagation()}
-      >
-        {confirmingId === order.id ? t("quickConfirm.busy") : t("quickConfirm.action")}
-      </Button>
-    ) : undefined;
-
   function handleDragStart(event: DragStartEvent) {
     setActiveOrder(orders.find((o) => o.id === event.active.id) ?? null);
   }
@@ -194,7 +192,6 @@ export function OrdersBoard({
 
     const order = orders.find((o) => o.id === active.id);
     if (!order) return;
-    if (confirmingId === order.id) return; // quick-confirm in flight for this card — ignore the drop
     const to = over.id as OrderStatus;
     const resolution = resolveDrop(order.status, to, callerRole);
 
@@ -249,7 +246,42 @@ export function OrdersBoard({
         onDragEnd={handleDragEnd}
         onDragCancel={() => setActiveOrder(null)}
       >
-        <div className="flex h-full gap-4 overflow-x-auto pb-4 snap-x snap-mandatory sm:snap-none">
+        {/* Phone: six columns are six swipes away — the pager makes them one tap,
+            and marks where you are. Hidden once the columns fit side by side. */}
+        <nav
+          ref={pagerRef}
+          aria-label={t("columnNav")}
+          className="-mx-1 mb-1.5 flex gap-1.5 overflow-x-auto px-1 pb-1 sm:hidden"
+        >
+          {ORDER_STATUSES.map((status) => (
+            <button
+              key={status}
+              type="button"
+              ref={(node) => {
+                if (node) chipRefs.current.set(status, node);
+                else chipRefs.current.delete(status);
+              }}
+              onClick={() => jumpToColumn(status)}
+              aria-current={activeColumn === status ? "true" : undefined}
+              className={
+                "inline-flex min-h-8 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium transition-colors " +
+                (activeColumn === status
+                  ? "border-transparent bg-foreground text-background"
+                  : "bg-card text-muted-foreground")
+              }
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${ORDER_STATUS_DOT[status]}`} />
+              {tStatus(status)}
+              <span className="tabular-nums opacity-70">{countByStatus[status]}</span>
+            </button>
+          ))}
+        </nav>
+        <p className="mb-1.5 px-1 text-[11px] text-muted-foreground sm:hidden">{t("dragHint")}</p>
+        <div
+          ref={scrollerRef}
+          onScroll={syncActiveColumn}
+          className="flex h-full gap-3 overflow-x-auto pb-4 snap-x snap-mandatory sm:gap-4 sm:snap-none"
+        >
           {ORDER_STATUSES.map((status) => {
             const dropTarget = activeOrder
               ? classifyDropTarget(activeOrder.status, status, callerRole)
@@ -258,12 +290,12 @@ export function OrdersBoard({
               <BoardColumn
                 key={status}
                 status={status}
+                registerRef={registerColumn}
                 orders={orders.filter((o) => o.status === status)}
                 onOpenOrder={(id) => router.push(`/${organizationSlug}/orders/${id}`)}
                 onNewOrder={() => router.push(`/${organizationSlug}/orders/new`)}
                 cardAriaLabel={cardAriaLabel}
                 cardRisk={cardRisk}
-                cardActions={cardActions}
                 dropTarget={dropTarget}
                 hintText={dropTarget?.hintKey ? tRoot(dropTarget.hintKey as never) : null}
                 refusedId={refusedId}
@@ -321,24 +353,24 @@ export function OrdersBoard({
 
 function BoardColumn({
   status,
+  registerRef,
   orders,
   onOpenOrder,
   onNewOrder,
   cardAriaLabel,
   cardRisk,
-  cardActions,
   dropTarget,
   hintText,
   refusedId,
   onRefuseEnd,
 }: {
   status: OrderStatus;
+  registerRef: (status: OrderStatus, node: HTMLElement | null) => void;
   orders: OrderListItem[];
   onOpenOrder: (id: string) => void;
   onNewOrder: () => void;
   cardAriaLabel: (order: OrderListItem) => string;
   cardRisk: (order: OrderListItem) => "overdue" | "dueToday" | null;
-  cardActions: (order: OrderListItem) => React.ReactNode;
   dropTarget: DropTarget | null;
   hintText: string | null;
   refusedId: string | null;
@@ -351,10 +383,13 @@ function BoardColumn({
 
   return (
     <section
-      ref={setNodeRef}
+      ref={(node) => {
+        setNodeRef(node);
+        registerRef(status, node);
+      }}
       aria-label={statusLabel}
       className={
-        "flex h-full w-72 shrink-0 snap-center flex-col rounded-xl border bg-muted/40 " +
+        "flex h-full w-[82vw] max-w-[19rem] shrink-0 snap-start flex-col rounded-xl border bg-muted/40 sm:w-72 sm:max-w-none sm:snap-align-none " +
         "transition-[opacity,transform,box-shadow] duration-150 motion-reduce:transition-none " +
         (dropTarget?.mode === "invite"
           ? isOver
@@ -367,8 +402,8 @@ function BoardColumn({
               : "")
       }
     >
-      <header className="flex items-center gap-2 px-3 py-2.5">
-        <span className={`h-2 w-2 rounded-full ${STATUS_DOT[status]}`} />
+      <header className="flex items-center gap-2 px-3 py-2 sm:py-2.5">
+        <span className={`h-2 w-2 rounded-full ${ORDER_STATUS_DOT[status]}`} />
         <h3 className="text-sm font-semibold">{statusLabel}</h3>
         <Badge key={orders.length} variant="secondary" className="animate-count-pop text-[10px]">
           {orders.length}
@@ -380,11 +415,11 @@ function BoardColumn({
             <Button
               variant="ghost"
               size="icon"
-              className="ml-auto h-5 w-5"
+              className="ml-auto h-8 w-8 sm:h-5 sm:w-5"
               onClick={onNewOrder}
               aria-label={t("addToPending")}
             >
-              <Plus className="h-2.5 w-2.5" />
+              <Plus className="h-4 w-4 sm:h-2.5 sm:w-2.5" />
             </Button>
           )
         )}
@@ -411,7 +446,6 @@ function BoardColumn({
                 onOpen={() => onOpenOrder(order.id)}
                 ariaLabel={cardAriaLabel(order)}
                 risk={cardRisk(order)}
-                actions={cardActions(order)}
                 refused={refusedId === order.id}
                 onRefuseEnd={onRefuseEnd}
               />

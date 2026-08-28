@@ -24,7 +24,7 @@ vi.mock("next-intl/server", () => ({
 import { headers } from "next/headers";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PATHNAME_HEADER } from "../next-path";
-import { requireBuyerOrRedirect } from "../buyer-auth";
+import { getBuyerFromSession, requireBuyerOrRedirect } from "../buyer-auth";
 
 const SLUG = "ayam-norliza-pilot";
 
@@ -41,6 +41,11 @@ function chain(result: { data: unknown; error: unknown }) {
 function mockRequest({
   userId = null as string | null,
   buyerId = null as string | null,
+  // Org the buyer row actually belongs to, vs. the org `SLUG` resolves to -
+  // kept equal by default so existing same-org scenarios still pass; tests
+  // that need a cross-org mismatch override one or the other.
+  buyerOrgId = "org-1" as string | null,
+  slugOrgId = "org-1" as string | null,
   pathname = null as string | null,
 }) {
   vi.mocked(createSupabaseServerClient).mockResolvedValue({
@@ -50,12 +55,18 @@ function mockRequest({
         error: userId ? null : { message: "no session" },
       }),
     },
-    from: vi.fn(() =>
-      chain({
-        data: buyerId ? { id: buyerId, organization_id: "org-1" } : null,
+    from: vi.fn((table: string) => {
+      if (table === "organizations") {
+        return chain({
+          data: slugOrgId ? { id: slugOrgId } : null,
+          error: slugOrgId ? null : { message: "not found" },
+        });
+      }
+      return chain({
+        data: buyerId ? { id: buyerId, organization_id: buyerOrgId } : null,
         error: buyerId ? null : { message: "not found" },
-      }),
-    ),
+      });
+    }),
   } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>);
 
   vi.mocked(headers).mockResolvedValue({
@@ -138,5 +149,56 @@ describe("requireBuyerOrRedirect", () => {
     await expect(redirectTarget()).resolves.toBe(
       `/en/buyer_portal/${SLUG}/login`,
     );
+  });
+
+  it("redirects an Org A buyer visiting Org B's portal instead of treating them as signed in", async () => {
+    // Signed in and a real buyer, but for a different organization than the
+    // one `SLUG` resolves to - must not pass as authenticated here.
+    mockRequest({
+      userId: "user-1",
+      buyerId: "user-1",
+      buyerOrgId: "org-A",
+      slugOrgId: "org-B",
+      pathname: null,
+    });
+    await expect(redirectTarget()).resolves.toBe(`/en/buyer_portal/${SLUG}/login`);
+  });
+
+  it("redirects when the slug's organization cannot be resolved at all", async () => {
+    mockRequest({
+      userId: "user-1",
+      buyerId: "user-1",
+      buyerOrgId: "org-A",
+      slugOrgId: null,
+      pathname: null,
+    });
+    await expect(redirectTarget()).resolves.toBe(`/en/buyer_portal/${SLUG}/login`);
+  });
+});
+
+describe("getBuyerFromSession", () => {
+  it("returns the buyer when no organizationSlug is given (existing callers unaffected)", async () => {
+    mockRequest({ userId: "user-1", buyerId: "user-1", buyerOrgId: "org-A" });
+    await expect(getBuyerFromSession()).resolves.toMatchObject({ id: "user-1" });
+  });
+
+  it("returns the buyer when the organizationSlug matches their org", async () => {
+    mockRequest({ userId: "user-1", buyerId: "user-1", buyerOrgId: "org-1", slugOrgId: "org-1" });
+    await expect(getBuyerFromSession(SLUG)).resolves.toMatchObject({ id: "user-1" });
+  });
+
+  it("returns null for a buyer of a different organization than the slug", async () => {
+    mockRequest({ userId: "user-1", buyerId: "user-1", buyerOrgId: "org-A", slugOrgId: "org-B" });
+    await expect(getBuyerFromSession(SLUG)).resolves.toBeNull();
+  });
+
+  it("returns null when the slug's organization cannot be resolved", async () => {
+    mockRequest({ userId: "user-1", buyerId: "user-1", buyerOrgId: "org-A", slugOrgId: null });
+    await expect(getBuyerFromSession(SLUG)).resolves.toBeNull();
+  });
+
+  it("returns null when there is no session", async () => {
+    mockRequest({ userId: null });
+    await expect(getBuyerFromSession(SLUG)).resolves.toBeNull();
   });
 });

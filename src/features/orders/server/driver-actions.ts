@@ -188,12 +188,14 @@ function startRunMessageKey(rawMessage: string): string {
       return "errors.drive.run.notFound";
     case "invalid_transition":
       return "errors.drive.run.alreadyStarted";
+    case "not_loaded":
+      return "errors.drive.run.notLoaded";
     default:
       return "errors.drive.run.internal";
   }
 }
 
-/** The driver pulls out of the yard. Non-ready orders return to the pool. */
+/** The driver pulls out of the yard. Refused until every stop is loaded. */
 export async function startRun(organizationSlug: string, runId: string): Promise<ActionResult> {
   const ctx = await guard(organizationSlug);
   if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
@@ -296,6 +298,11 @@ export async function deliverStop(
 
 export type DriverInvoicePayload = {
   organizationName: string;
+  organizationLegalName: string | null;
+  organizationRegistrationNo: string | null;
+  organizationAddress: string | null;
+  organizationPhone: string | null;
+  organizationEmail: string | null;
   organizationTimeZone: string;
   order: OrderWithItems;
   deliveredAttempt: DeliveryAttempt | null;
@@ -314,7 +321,11 @@ export async function getDriverInvoice(
 
   const supabase = await createSupabaseServerClient();
   const [{ data: org }, { data: order, error }] = await Promise.all([
-    supabase.from("organizations").select("name, default_time_zone").eq("id", ctx.orgId).single(),
+    supabase
+      .from("organizations")
+      .select("name, legal_name, registration_no, address, phone, email, default_time_zone")
+      .eq("id", ctx.orgId)
+      .single(),
     supabase
       .from("orders")
       .select(
@@ -341,6 +352,11 @@ export async function getDriverInvoice(
 
   return ok({
     organizationName: org?.name ?? organizationSlug,
+    organizationLegalName: org?.legal_name ?? null,
+    organizationRegistrationNo: org?.registration_no ?? null,
+    organizationAddress: org?.address ?? null,
+    organizationPhone: org?.phone ?? null,
+    organizationEmail: org?.email ?? null,
     organizationTimeZone: org?.default_time_zone ?? "UTC",
     order: order as OrderWithItems,
     deliveredAttempt: attempts.at(-1) ?? null,

@@ -43,7 +43,15 @@ export async function loginAction(
   rawInput: unknown,
 ): Promise<
   ActionResult<{
-    requiresMfa: boolean;
+    /**
+     * True only when the account has a verified TOTP factor and this
+     * session hasn't stepped up to aal2 yet - i.e. the challenge screen is
+     * mandatory before the caller can proceed. A brand-new session with no
+     * enrolled factor is `nextLevel === currentLevel` (both "aal1"), so this
+     * is false for accounts that never set up MFA - enrollment stays
+     * optional, only step-up is enforced.
+     */
+    mfaChallengeRequired: boolean;
     redirectTo: string;
     /** Absent only if the sync itself failed - caller should keep the URL locale. */
     locale?: AppLocale;
@@ -63,7 +71,7 @@ export async function loginAction(
     return err("unauthenticated", "Invalid email or password", "errors.identity.auth.invalidCredentials");
   }
   const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-  const requiresMfa = (aal?.currentLevel ?? "aal1") !== "aal2";
+  const mfaChallengeRequired = Boolean(aal && aal.nextLevel === "aal2" && aal.currentLevel !== "aal2");
 
   // Resolve the destination so the client can navigate straight to a real
   // page. We never want login to bounce the user through "/", because "/"
@@ -86,7 +94,7 @@ export async function loginAction(
     console.error("loginAction: locale sync failed", syncError);
   }
 
-  return ok({ requiresMfa, redirectTo, locale });
+  return ok({ mfaChallengeRequired, redirectTo, locale });
 }
 
 export async function signOutAction(): Promise<ActionResult<{ ok: true }>> {
@@ -197,9 +205,21 @@ export async function unenrollMfaAction(rawInput: unknown): Promise<ActionResult
   return ok({ factorId: input.factorId });
 }
 
+/**
+ * Single source of truth for the account password policy (min 12 chars).
+ * Shared by signup and `setPasswordAction` so the two paths a password can
+ * be set through - initial signup and the recovery-link "set a new
+ * password" screen - can never drift apart. `SetPasswordForm` used to call
+ * `supabase.auth.updateUser` directly from the browser, guarded only by an
+ * HTML `minLength={8}` - anyone could bypass that with devtools or a direct
+ * API call, so the 12-char rule was effectively unenforced for password
+ * resets.
+ */
+const PasswordSchema = z.string().min(12).max(200);
+
 const SignupInput = z.object({
   email: z.string().email().max(254),
-  password: z.string().min(12).max(200),
+  password: PasswordSchema,
   displayName: z.string().min(1).max(150),
 });
 export async function signUpAction(rawInput: unknown): Promise<ActionResult<{ requiresEmailConfirm: boolean }>> {
@@ -243,4 +263,38 @@ export async function signUpAction(rawInput: unknown): Promise<ActionResult<{ re
     );
   }
   return ok({ requiresEmailConfirm: !data.session });
+}
+
+const SetPasswordInput = z.object({
+  password: PasswordSchema,
+});
+
+/**
+ * Sets a new password for the signed-in user - the recovery-link flow
+ * (`/set-password`, reached after `/auth/callback` exchanges the email
+ * token for a session) and nothing else. Runs the same 12-char policy as
+ * `signUpAction` server-side, so it can't be bypassed by skipping the
+ * form's client-side `minLength` check.
+ */
+export async function setPasswordAction(rawInput: unknown): Promise<ActionResult<{ ok: true }>> {
+  const parsed = SetPasswordInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err(
+      "validation",
+      "Invalid password",
+      "errors.identity.auth.invalidSetPassword",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+  const input = parsed.data;
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return err("unauthenticated", "Sign in first", "errors.identity.common.unauthenticated");
+  const { error } = await supabase.auth.updateUser({ password: input.password });
+  if (error) {
+    return err("internal", error.message, "errors.identity.auth.setPasswordFailed");
+  }
+  return ok({ ok: true });
 }

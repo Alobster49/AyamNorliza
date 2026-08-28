@@ -101,8 +101,15 @@ export function BuyerHeader({
           <LocaleSwitcher />
           <ThemeToggle />
 
-          {/* Cart button - always visible */}
-          <Button variant="ghost" size="icon" onClick={openCart} className="relative">
+          {/* Cart button - always visible. Bumped to a 44px tap target on
+              mobile (buyer portal's primary viewport); reverts to the
+              compact 32px desktop size at sm+. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={openCart}
+            className="relative size-11 sm:size-8"
+          >
             <ShoppingCart className="h-5 w-5" />
             {items.length > 0 && (
               <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 font-buyer-mono text-[10px] font-medium text-primary-foreground">
@@ -115,7 +122,7 @@ export function BuyerHeader({
           {isLoggedIn ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="size-11 sm:size-8">
                   <User className="h-5 w-5" />
                   <span className="sr-only">{t("userMenu")}</span>
                 </Button>
@@ -147,30 +154,34 @@ export function BuyerHeader({
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button asChild variant="default" size="sm">
+            <Button asChild variant="default" size="sm" className="h-11 px-5 sm:h-7 sm:px-3">
               <Link href={`/buyer_portal/${organizationSlug}/login`}>{t("login")}</Link>
             </Button>
           )}
 
-          {/* Mobile menu button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-            <span className="sr-only">{t("menuToggle")}</span>
-          </Button>
+          {/* Mobile menu button - only meaningful once there are nav items
+              (orders/profile, logged-in only); for a guest it would just
+              flip open an empty panel. */}
+          {navItems.length > 0 && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-11 md:hidden sm:size-8"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+              <span className="sr-only">{t("menuToggle")}</span>
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Mobile Navigation */}
-      {mobileMenuOpen && (
+      {mobileMenuOpen && navItems.length > 0 && (
         <div className="border-t md:hidden">
           <nav className="container mx-auto px-4 py-3">
             <div className="flex flex-col space-y-2">

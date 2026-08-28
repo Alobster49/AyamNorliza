@@ -324,6 +324,13 @@ export async function departTruck(
         "errors.logistics.dispatch.departInvalidTransition",
       );
     }
+    if (error.message.includes("not_loaded")) {
+      return err(
+        "conflict",
+        "The truck is not fully loaded yet. The loading bay has to sign every stop off first.",
+        "errors.drive.run.notLoaded",
+      );
+    }
     return mapRpcError(error.message);
   }
 

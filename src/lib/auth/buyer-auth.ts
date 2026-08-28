@@ -28,7 +28,28 @@ export type Buyer = {
   updated_at: string;
 };
 
-export async function requireBuyer() {
+/**
+ * A `buyers` row exists for whatever organization the account first bought
+ * from - `buyers.id = user.id` alone says nothing about *which* org's portal
+ * is being viewed. Every portal route carries the org slug in the URL, so
+ * callers that know it should pass it here and get treated as logged out on
+ * a mismatch, rather than letting an Org A buyer appear fully signed in
+ * (their name, their Org A orders) under Org B's branding.
+ */
+async function buyerBelongsToOrg(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+  organizationSlug: string,
+): Promise<boolean> {
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("id")
+    .eq("slug", organizationSlug)
+    .single();
+  return !!org && org.id === organizationId;
+}
+
+export async function requireBuyer(organizationSlug?: string) {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -47,6 +68,10 @@ export async function requireBuyer() {
 
   if (buyerError || !buyer) {
     throw new NotABuyerError("Not registered as a buyer");
+  }
+
+  if (organizationSlug && !(await buyerBelongsToOrg(supabase, buyer.organization_id, organizationSlug))) {
+    throw new NotABuyerError("Buyer belongs to a different organization");
   }
 
   return buyer as Buyer;
@@ -98,7 +123,7 @@ async function buyerReturnPath(organizationSlug: string): Promise<string | null>
  */
 export async function requireBuyerOrRedirect(organizationSlug: string) {
   try {
-    return await requireBuyer();
+    return await requireBuyer(organizationSlug);
   } catch (err) {
     if (err instanceof NotABuyerError) {
       const returnPath = await buyerReturnPath(organizationSlug);
@@ -118,9 +143,11 @@ export async function requireBuyerOrRedirect(organizationSlug: string) {
 }
 
 /**
- * Check if current user is a buyer (returns null if not).
+ * Check if current user is a buyer (returns null if not). Pass
+ * `organizationSlug` to also treat a buyer of a different organization as
+ * not logged in for this portal - see `buyerBelongsToOrg`.
  */
-export async function getBuyerFromSession(): Promise<Buyer | null> {
+export async function getBuyerFromSession(organizationSlug?: string): Promise<Buyer | null> {
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -133,5 +160,11 @@ export async function getBuyerFromSession(): Promise<Buyer | null> {
     .eq("id", user.id)
     .single();
 
-  return buyer as Buyer | null;
+  if (!buyer) return null;
+
+  if (organizationSlug && !(await buyerBelongsToOrg(supabase, buyer.organization_id, organizationSlug))) {
+    return null;
+  }
+
+  return buyer as Buyer;
 }

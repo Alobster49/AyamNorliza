@@ -35,45 +35,47 @@ export default async function ManifestPage({
         <PrintButton />
       </div>
 
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="border-b text-left">
-            <th className="p-2">{t("headers.index")}</th>
-            <th className="p-2">{t("headers.order")}</th>
-            <th className="p-2">{t("headers.customer")}</th>
-            <th className="p-2">{t("headers.zone")}</th>
-            <th className="p-2">{t("headers.address")}</th>
-            <th className="p-2">{t("headers.items")}</th>
-            <th className="p-2">{t("headers.status")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {stops.map((order, index) => (
-            <tr key={order.id} className="border-b align-top">
-              <td className="p-2 font-mono">{index + 1}</td>
-              <td className="p-2 font-mono">{order.id.slice(0, 8)}</td>
-              <td className="p-2">{order.customer?.name ?? "-"}</td>
-              <td className="p-2">{order.zone?.name ?? "-"}</td>
-              <td className="p-2">{order.delivery_address}</td>
-              <td className="p-2">
-                <ul>
-                  {order.items
-                    .filter((item) => !item.is_cancelled)
-                    .map((item) => (
-                      <li key={item.id}>
-                        {item.product?.name ?? t("itemFallback")} —{" "}
-                        {item.mode === "kg"
-                          ? formatWeight(item.quantity)
-                          : tUnits("pieces", { count: item.quantity })}
-                      </li>
-                    ))}
-                </ul>
-              </td>
-              <td className="p-2">{tStatus(order.status)}</td>
+      <div className="-mx-4 overflow-x-auto px-4 print:mx-0 print:overflow-visible print:px-0">
+        <table className="w-full min-w-[640px] border-collapse text-sm print:min-w-0">
+          <thead>
+            <tr className="border-b text-left">
+              <th className="p-2">{t("headers.index")}</th>
+              <th className="p-2">{t("headers.order")}</th>
+              <th className="p-2">{t("headers.customer")}</th>
+              <th className="p-2">{t("headers.zone")}</th>
+              <th className="p-2">{t("headers.address")}</th>
+              <th className="p-2">{t("headers.items")}</th>
+              <th className="p-2">{t("headers.status")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {stops.map((order, index) => (
+              <tr key={order.id} className="border-b align-top">
+                <td className="p-2 font-mono">{index + 1}</td>
+                <td className="p-2 font-mono">{order.id.slice(0, 8)}</td>
+                <td className="p-2">{order.customer?.name ?? "-"}</td>
+                <td className="p-2">{order.zone?.name ?? "-"}</td>
+                <td className="p-2">{order.delivery_address}</td>
+                <td className="p-2">
+                  <ul>
+                    {order.items
+                      .filter((item) => !item.is_cancelled)
+                      .map((item) => (
+                        <li key={item.id}>
+                          {item.product?.name ?? t("itemFallback")} —{" "}
+                          {item.mode === "kg"
+                            ? formatWeight(item.quantity)
+                            : tUnits("pieces", { count: item.quantity })}
+                        </li>
+                      ))}
+                  </ul>
+                </td>
+                <td className="p-2">{tStatus(order.status)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

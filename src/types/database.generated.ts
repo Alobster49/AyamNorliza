@@ -1398,14 +1398,18 @@ export type Database = {
       }
       organizations: {
         Row: {
+          address: string | null
           created_at: string
           created_by: string | null
           default_locale: string
           default_time_zone: string
+          email: string | null
           id: string
           legal_name: string | null
           name: string
+          phone: string | null
           region: string | null
+          registration_no: string | null
           slug: string
           status: string
           updated_at: string
@@ -1413,14 +1417,18 @@ export type Database = {
           version: number
         }
         Insert: {
+          address?: string | null
           created_at?: string
           created_by?: string | null
           default_locale?: string
           default_time_zone?: string
+          email?: string | null
           id?: string
           legal_name?: string | null
           name: string
+          phone?: string | null
           region?: string | null
+          registration_no?: string | null
           slug: string
           status?: string
           updated_at?: string
@@ -1428,14 +1436,18 @@ export type Database = {
           version?: number
         }
         Update: {
+          address?: string | null
           created_at?: string
           created_by?: string | null
           default_locale?: string
           default_time_zone?: string
+          email?: string | null
           id?: string
           legal_name?: string | null
           name?: string
+          phone?: string | null
           region?: string | null
+          registration_no?: string | null
           slug?: string
           status?: string
           updated_at?: string

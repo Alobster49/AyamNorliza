@@ -11,7 +11,6 @@ import { bucketForRange, resolveRange, type RangePreset } from "../date-range";
 import { buildSalesViewModel, type SalesPayload } from "../sales-model";
 import { buildInsightsViewModel, type InsightsPayload } from "../insights-model";
 import type { TodayPayload } from "../today-model";
-import type { AdminSummary } from "../admin-summary-model";
 import { KpiRow } from "./kpi-row";
 import { RangePicker } from "./range-picker";
 import { SectionError } from "./section-error";
@@ -19,7 +18,6 @@ import { RevenueChart } from "./revenue-chart";
 import { FunnelCard } from "./funnel-card";
 import { InsightsRow } from "./insights-row";
 import { TodayStrip } from "./today-strip";
-import { AdminPanel } from "./admin-panel";
 import { TopLists } from "./top-lists";
 
 type Props = {
@@ -30,7 +28,6 @@ type Props = {
   today: TodayPayload | null;
   initialInsights: InsightsPayload | null;
   marketSuggestions: MarketSuggestion[];
-  adminSummary: AdminSummary | null;
 };
 
 /** Sales payload bound to the exact range/bucket it was fetched for, so a stale render can never mix old data with a new range. */
@@ -49,7 +46,6 @@ export function AnalyticsDashboard({
   today,
   initialInsights,
   marketSuggestions,
-  adminSummary,
 }: Props) {
   const t = useTranslations("analytics");
   const [preset, setPreset] = useState<RangePreset | "custom">("30d");
@@ -144,11 +140,14 @@ export function AnalyticsDashboard({
       {insightsError || !insightsVm ? (
         <SectionError />
       ) : (
-        <InsightsRow vm={insightsVm} organizationSlug={organizationSlug} />
+        <InsightsRow
+          vm={insightsVm}
+          organizationSlug={organizationSlug}
+          earnedRm={salesVm?.revenue.value}
+        />
       )}
       {!salesError && salesVm && <TopLists vm={salesVm} />}
       {today ? <TodayStrip payload={today} /> : <SectionError />}
-      {adminSummary && <AdminPanel summary={adminSummary} organizationSlug={organizationSlug} />}
     </div>
   );
 }

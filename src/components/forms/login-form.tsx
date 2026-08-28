@@ -98,9 +98,6 @@ export function LoginForm({
       setError(tRoot(result.messageKey as never));
       return;
     }
-    // Always proceed to the destination; MFA enrollment is optional.
-    // Users can enable 2FA later from their security settings.
-    //
     // `next` is whatever page the guard bounced them off, but it arrives via
     // the query string, so anyone can craft a /login?next=... link - it is
     // re-validated here rather than trusted. When it fails validation, fall
@@ -112,6 +109,15 @@ export function LoginForm({
     // unconditionally under `localePrefix: 'always'`, so a prefixed value
     // passed straight through would double up into "/ms/ms/...".
     const destination = toLocaleAgnostic(next) ?? result.data.redirectTo;
+    // An account with a verified TOTP factor whose session hasn't stepped up
+    // to aal2 yet must clear the challenge screen before reaching its real
+    // destination - carry `destination` through as `?next=` the same way the
+    // login page itself received it, so the challenge screen lands the user
+    // exactly where they were headed. Enrollment stays optional: this only
+    // fires for accounts that already have a verified factor.
+    const target = result.data.mfaChallengeRequired
+      ? `/mfa/challenge?next=${encodeURIComponent(destination)}`
+      : destination;
     // `result.data.locale` is the account's just-synced locale, which may
     // differ from the locale this login page happened to be prefixed with
     // (e.g. signing in on a new device). Passing it explicitly keeps the
@@ -119,9 +125,9 @@ export function LoginForm({
     // /auth/callback already does; when the sync itself failed, fall back
     // to the router's default of the current URL locale.
     if (result.data.locale) {
-      router.push(destination, { locale: result.data.locale });
+      router.push(target, { locale: result.data.locale });
     } else {
-      router.push(destination);
+      router.push(target);
     }
   }
 

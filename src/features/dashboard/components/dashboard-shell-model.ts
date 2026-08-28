@@ -146,6 +146,12 @@ export function getDashboardPageContext({
   // considered when resolving the active section/title. Route access to
   // those pages is owner-gated anyway, so this only affects which label the
   // header shows, never actual permissions.
+  // Account pages live in the user menu, not the sidebar, so they resolve
+  // here instead of through the sidebar groups.
+  if (isRouteActive(pathname, `/${organizationSlug}/profile/security`)) {
+    return { section: "sections.account", title: "pages.accountSecurity" };
+  }
+
   const groups = getDashboardSidebarGroups({ organizationSlug, pathname, role: "owner" });
   const activeGroup = groups.find((group) => group.isActive);
   const activeItem = activeGroup?.items.find((item) => item.isActive);

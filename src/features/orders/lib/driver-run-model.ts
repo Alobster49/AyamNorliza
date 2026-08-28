@@ -100,6 +100,8 @@ export type DriverStop = {
   weightKg: number;
   amount: number;
   window: { start: string; end: string } | null;
+  /** Signed off by the loading screen. Only meaningful while the run is planned. */
+  loaded: boolean;
   outcome: StopOutcome;
   atStop: boolean;
   dwellMinutes: number | null;
@@ -142,6 +144,7 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
     window: order.slot
       ? { start: order.slot.start_time.slice(0, 5), end: order.slot.end_time.slice(0, 5) }
       : null,
+    loaded: order.loaded_at !== null,
     outcome: stopOutcome(order),
     atStop: isAtStop(order),
     dwellMinutes: dwellMinutes(order, now),

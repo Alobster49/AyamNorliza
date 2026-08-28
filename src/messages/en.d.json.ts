@@ -74,6 +74,15 @@ declare const messages: {
       "removeButton": "Remove authenticator app",
       "removing": "Removing..."
     },
+    "mfaChallenge": {
+      "pageTitle": "Verify it's you - AyamNorliza",
+      "title": "Verify it's you",
+      "subtitle": "Enter the 6-digit code from your authenticator app to finish signing in.",
+      "codeLabel": "Code",
+      "submit": "Verify",
+      "submitting": "Verifying...",
+      "hint": "Lost access to your authenticator app? Contact your organization owner."
+    },
     "invite": {
       "title": "Accept your invitation",
       "subtitle": "Set a password to finish joining {organizationName}.",
@@ -474,7 +483,9 @@ declare const messages: {
         "invalidSignup": "Invalid signup",
         "signupFailed": "Could not create your account. Please try again.",
         "alreadyRegistered": "This email is already registered.",
-        "mfaVerifyFailed": "The verification code did not match. Please try again."
+        "mfaVerifyFailed": "The verification code did not match. Please try again.",
+        "invalidSetPassword": "Password must be at least 12 characters.",
+        "setPasswordFailed": "Could not set your new password. Please try again."
       }
     },
     "drive": {
@@ -486,7 +497,8 @@ declare const messages: {
         "alreadyStarted": "This run has already left the yard.",
         "notFound": "Run not found.",
         "internal": "Something went wrong. Please try again.",
-        "notDeparted": "This run is not out on the road."
+        "notDeparted": "This run is not out on the road.",
+        "notLoaded": "The truck is not fully loaded yet. The loading bay has to sign every stop off first."
       },
       "stop": {
         "forbidden": "You do not have permission to do that.",
@@ -583,7 +595,8 @@ declare const messages: {
       "fulfillment": "Fulfillment",
       "accessControl": "Access control",
       "warehouse": "Warehouse",
-      "system": "System"
+      "system": "System",
+      "account": "Account"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -602,7 +615,8 @@ declare const messages: {
       "accessReviews": "Access reviews",
       "supportSessions": "Support sessions",
       "auditLog": "Audit log",
-      "dataConsole": "Data console"
+      "dataConsole": "Data console",
+      "accountSecurity": "My security"
     },
     "fallbackUserName": "Team member",
     "sidebar": {
@@ -630,8 +644,14 @@ declare const messages: {
       "aov": "Avg order value",
       "rmPerKg": "Realized RM/kg"
     },
-    "chart": { "title": "Sales trend" },
-    "funnel": { "title": "Order funnel", "cancellationRate": "Cancellation rate" },
+    "chart": {
+      "title": "Sales trend"
+    },
+    "funnel": {
+      "title": "Order funnel",
+      "cancellationRate": "Cancellation rate",
+      "total": "Total orders"
+    },
     "sectionError": "This section failed to load.",
     "empty": "No data for this period yet.",
     "today": {
@@ -645,15 +665,6 @@ declare const messages: {
         "ordersWithoutRun": "{count} orders for today have no delivery run",
         "marketStale": "Market prices have not synced for 3+ days"
       }
-    },
-    "admin": {
-      "title": "Admin",
-      "activeMembers": "Active members",
-      "pendingInvitations": "Pending invitations",
-      "openAccessReviews": "Open access reviews",
-      "activeSupportSessions": "Active support sessions",
-      "priorities": "Needs attention",
-      "allClear": "Nothing needs attention."
     },
     "insights": {
       "title": "How to improve",
@@ -669,8 +680,14 @@ declare const messages: {
         "title": "Weight leakage",
         "summary": "{diff} kg given away ({pct} of allocated weight)",
         "lostSummary": "≈ {rm} lost — {diff} kg given away ({pct} of allocated weight)",
-        "rowLoss": "{rm} · {kg} kg",
-        "byOrderTitle": "Top orders by loss",
+        "tabRm": "RM",
+        "tabKg": "Kg",
+        "earned": "Earned",
+        "lost": "Lost",
+        "chargedKg": "Charged",
+        "givenKg": "Given away",
+        "couldHaveEarned": "Could have earned",
+        "deliveredKg": "Delivered",
         "none": "No leakage recorded in this period."
       },
       "retention": {
@@ -767,6 +784,8 @@ declare const messages: {
     "accessReviews": {
       "startReview": "Start quarterly review",
       "starting": "Starting...",
+      "reviewerLabel": "Reviewer",
+      "noMembers": "No members available",
       "reviewHeading": "Review {id} - {status}",
       "due": "Due: {date}",
       "colMember": "Member",
@@ -838,6 +857,7 @@ declare const messages: {
       "defaultRoleChangeReason": "Role change via users page",
       "defaultDeactivateReason": "Deactivated from users page",
       "createUser": "Create user",
+      "viewDetails": "View details",
       "editDetails": "Edit",
       "resetPassword": "Reset password",
       "removeMember": "Remove",
@@ -859,6 +879,10 @@ declare const messages: {
       "clear": "Clear ({count})",
       "showing": "Showing {shown} of {total} events",
       "appendOnlyNote": "Append-only · tamper-evident · most recent first",
+      "pagePrev": "Prev",
+      "pageNext": "Next",
+      "pageIndicator": "Page {page} of {totalPages}",
+      "filterScopeHint": "(search applies to this page only)",
       "today": "Today",
       "yesterday": "Yesterday",
       "eventCount": "{count, plural, one {# event} other {# events}}",
@@ -1083,14 +1107,30 @@ declare const messages: {
       "roleColumnHeader": "Role",
       "cellAriaLabel": "{role} {hasCapability, select, true {has} other {does not have}} capability {capability}",
       "groups": {
-        "organization": { "label": "Organization" },
-        "membership": { "label": "Membership" },
-        "catalog": { "label": "Catalog" },
-        "sales": { "label": "Sales" },
-        "access_review": { "label": "Access review" },
-        "support": { "label": "Support" },
-        "break_glass": { "label": "Break-glass" },
-        "audit_auth": { "label": "Audit & auth" }
+        "organization": {
+          "label": "Organization"
+        },
+        "membership": {
+          "label": "Membership"
+        },
+        "catalog": {
+          "label": "Catalog"
+        },
+        "sales": {
+          "label": "Sales"
+        },
+        "access_review": {
+          "label": "Access review"
+        },
+        "support": {
+          "label": "Support"
+        },
+        "break_glass": {
+          "label": "Break-glass"
+        },
+        "audit_auth": {
+          "label": "Audit & auth"
+        }
       }
     },
     "invitationsQueue": {
@@ -1203,13 +1243,26 @@ declare const messages: {
       "pendingSettlementTitle": "Awaiting final weights",
       "pendingSettlementDescription": "This order was closed by the office without door weights. Ask the office for the settled invoice.",
       "invoiceNumber": "Invoice #{number}",
-      "headers": { "item": "Item", "weight": "Weight", "pricePerKg": "Price/kg", "lineTotal": "Total" },
+      "backToRun": "Back to run",
+      "title": "INVOICE",
+      "regNo": "Reg. No: {number}",
+      "dateLabel": "Date: {date}",
+      "billTo": "Bill to",
+      "headers": {
+        "no": "No.",
+        "item": "Item",
+        "weight": "Weight",
+        "pricePerKg": "Price/kg",
+        "lineTotal": "Total"
+      },
       "itemFallback": "Item",
       "pieces": "{count} pcs",
       "grandTotal": "Grand total",
+      "cashCollected": "Cash collected",
       "deliveredAt": "Delivered {time}",
       "receivedBy": "received by {name}",
       "footerNote": "Weighed at delivery. Thank you!",
+      "computerGenerated": "This is a computer-generated invoice. No signature is required.",
       "printButton": "Print invoice"
     }
   },
@@ -1435,9 +1488,7 @@ declare const messages: {
         "portal": "Portal",
         "manual": "Manual"
       },
-      "unweighed": "Not weighed yet",
-      "call": "Call {name}",
-      "whatsapp": "WhatsApp {name}"
+      "unweighed": "Not weighed yet"
     },
     "journey": {
       "ariaLabel": "Order progress: step {step} of {total}",
@@ -1701,7 +1752,11 @@ declare const messages: {
       "itemCount": "{count, plural, one {# item} other {# items}}",
       "startRun": {
         "hint": "Check the route below, then pull out.",
-        "button": "Start delivering"
+        "button": "Start delivering",
+        "blockedTitle": "The truck is still being loaded",
+        "blockedNotLoaded": "{count, plural, one {# stop is not on the truck yet} other {# stops are not on the truck yet}}: {list}.",
+        "blockedUnweighed": "Still to weigh: {list}.",
+        "blockedHint": "The loading bay signs these off — this screen updates by itself."
       },
       "actions": {
         "call": "Call",
@@ -1723,6 +1778,7 @@ declare const messages: {
         "cancelled": "Cancelled",
         "hereNow": "Here now",
         "toDo": "To do",
+        "notLoaded": "Not loaded",
         "invoice": "Invoice"
       },
       "deliverSheet": {
@@ -1803,6 +1859,8 @@ declare const messages: {
     "board": {
       "newOrder": "New order",
       "addToPending": "Add a new pending order",
+      "columnNav": "Jump to a column",
+      "dragHint": "Hold a card to move it to another column.",
       "empty": {
         "pending": "No new orders yet",
         "confirmed": "Nothing confirmed",
@@ -1836,11 +1894,6 @@ declare const messages: {
         "over": "Over {column}",
         "dropped": "Dropped on {column}",
         "cancelled": "Move cancelled"
-      },
-      "quickConfirm": {
-        "action": "Confirm",
-        "busy": "Confirming…",
-        "success": "Order confirmed"
       }
     },
     "station": {
@@ -2248,6 +2301,7 @@ declare const messages: {
     "previousDay": "Previous day",
     "nextDay": "Next day",
     "today": "Today",
+    "backToToday": "Back to today",
     "trucksRunningToday": "Trucks running today",
     "toasts": {
       "couldNotLoadRuns": "Could not load runs",

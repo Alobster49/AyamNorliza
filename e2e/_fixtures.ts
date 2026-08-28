@@ -377,6 +377,32 @@ export async function shiftOrderToToday(orderId: string): Promise<string> {
 }
 
 /**
+ * Sign one order off as loaded, the way the loading screen would. The
+ * driver's "Start delivering" is gated — in the UI and in driver_start_run
+ * itself — on every stop being loaded, and the loading screen only shows
+ * *today's* runs while suite orders may sit on a future slot date, so this
+ * reaches around the UI with the service-role key, the same pattern as
+ * shiftOrderToToday above.
+ */
+export async function markOrderLoaded(orderId: string): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    throw new Error("markOrderLoaded needs SUPABASE_SERVICE_ROLE_KEY (see playwright.config.ts)");
+  }
+  await fetch(`${url}/rest/v1/orders?id=eq.${orderId}`, {
+    method: "PATCH",
+    headers: {
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({ loaded_at: new Date().toISOString() }),
+  });
+}
+
+/**
  * Complete the step-up ("Confirm it's you") dialog that sensitive Server
  * Actions trigger via `reauth_required`. The dialog re-runs the pending
  * action on success, so callers can assert its effects afterwards.

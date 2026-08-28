@@ -66,23 +66,33 @@ describe("permissions matrix", () => {
     expect(canGrantRole("org_admin", "org_admin")).toBe(true);
   });
 
-  it("farm_manager can run access reviews but not change roles", () => {
-    expect(can("farm_manager", "access_review.run")).toBe(true);
+  it("farm_manager can invite/scope members but not run access reviews or change roles", () => {
+    // access_review.run is owner/org_admin-only in RLS
+    // (access_reviews_admin_write, supabase/migrations/20260624000002_id_access_rls.sql),
+    // so farm_manager must not hold the capability either.
+    expect(can("farm_manager", "access_review.run")).toBe(false);
     expect(can("farm_manager", "membership.role.change")).toBe(false);
+    expect(can("farm_manager", "membership.invite")).toBe(true);
   });
 
-  it("remaining org_admin and farm_manager capabilities are correct", () => {
+  it("remaining org_admin capabilities are correct; farm_manager/supervisor have no audit read", () => {
     expect(can("org_admin", "membership.invite")).toBe(true);
     expect(can("org_admin", "audit.read")).toBe(true);
-    expect(can("farm_manager", "access_review.run")).toBe(true);
-    expect(can("farm_manager", "audit.read")).toBe(true);
-    expect(can("supervisor", "audit.read")).toBe(true);
+    // audit_log_select_admin (same migration) restricts audit reads to
+    // owner/org_admin, so these roles must not report the capability.
+    expect(can("farm_manager", "audit.read")).toBe(false);
+    expect(can("supervisor", "audit.read")).toBe(false);
   });
 
-  it("auditor can read audit logs but cannot mutate", () => {
-    expect(can("auditor", "audit.read")).toBe(true);
+  it("auditor has no MOD-01 capabilities (audit reads are owner/org_admin-only in RLS)", () => {
+    expect(can("auditor", "audit.read")).toBe(false);
+    expect(can("auditor", "audit_log.read")).toBe(false);
     expect(can("auditor", "membership.role.change")).toBe(false);
     expect(canGrantRole("auditor", "caretaker")).toBe(false);
+  });
+
+  it("biosecurity_qa has no audit read capability", () => {
+    expect(can("biosecurity_qa", "audit.read")).toBe(false);
   });
 
   it("highestGrantableRole walks down the rank table", () => {

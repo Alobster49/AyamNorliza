@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, type CSSProperties } from "react";
 import { useTranslations } from "next-intl";
 import type { DispatchBoardData } from "../types";
-import { buildBoardView, type BoardTruck } from "../lib/dispatch-board-model";
+import { buildBoardView, hasUnloadedReadyTickets, type BoardTruck } from "../lib/dispatch-board-model";
 import { draftPlan, orderWeightKg, totalWeightKg, type PlanDraft } from "../lib/plan-model";
 import { applyPlan, assignOrder, departTruck } from "../server/dispatch-actions";
 import { Loader2 } from "lucide-react";
@@ -48,6 +48,10 @@ function TruckPlanCard({
   const kg = totalWeightKg(bt.tickets);
   const notReady = bt.tickets.filter((tk) => tk.status !== "ready").length;
   const readyCount = bt.tickets.filter((tk) => tk.status === "ready").length;
+  // A 'ready' ticket the loading screen never signed off blocks departure
+  // server-side (dispatch_depart_truck raises 'not_loaded') -- disable the
+  // button up front rather than let the click round-trip into that error.
+  const unloadedReady = hasUnloadedReadyTickets(bt.tickets);
   const pct =
     bt.truck.capacity_kg !== null && bt.truck.capacity_kg > 0
       ? (kg / bt.truck.capacity_kg) * 100
@@ -121,7 +125,7 @@ function TruckPlanCard({
           </div>
         ) : (
           <Button
-            disabled={departPending || readyCount === 0}
+            disabled={departPending || readyCount === 0 || unloadedReady}
             className="w-full"
             onClick={() => (notReady > 0 ? setConfirming(true) : onDepart())}
           >

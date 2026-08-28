@@ -13,7 +13,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import type { DispatchBoardData, DispatchTicket } from "../types";
-import { buildBoardView, compatibleTruckIds } from "../lib/dispatch-board-model";
+import { buildBoardView, compatibleTruckIds, hasUnloadedReadyTickets } from "../lib/dispatch-board-model";
 import { resolveDispatchDrop, type DispatchDropTarget } from "../lib/dispatch-rules";
 import { assignOrder, departTruck, unassignOrder } from "../server/dispatch-actions";
 import { TicketCard } from "./ticket-card";
@@ -203,7 +203,11 @@ export function DispatchBoard({
                   dim={compatible !== null && !compatible.has(bt.truck.id)}
                   departing={departingTruckId === bt.truck.id}
                   onDepart={() => requestDepart(bt.truck.id)}
-                  canDepart={!bt.departed && bt.tickets.some((tk) => tk.status === "ready")}
+                  canDepart={
+                    !bt.departed &&
+                    bt.tickets.some((tk) => tk.status === "ready") &&
+                    !hasUnloadedReadyTickets(bt.tickets)
+                  }
                 />
               ))}
               {trucks.length === 0 ? (

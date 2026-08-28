@@ -244,6 +244,23 @@ describe("departTruck", () => {
       messageKey: "errors.logistics.dispatch.departInvalidTransition",
     });
   });
+
+  it("maps not_loaded RPC error to the shared driver-deck loading-gate copy", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "not_loaded" } });
+
+    const result = await departTruck("ayam-norliza-pilot", {
+      truckId: "5b1f5c1e-0000-4000-8000-000000000002",
+      date: "2026-08-14",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "The truck is not fully loaded yet. The loading bay has to sign every stop off first.",
+      messageKey: "errors.drive.run.notLoaded",
+    });
+  });
 });
 
 describe("applyPlan", () => {

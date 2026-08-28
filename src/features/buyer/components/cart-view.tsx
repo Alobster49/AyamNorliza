@@ -49,22 +49,32 @@ export function CartView({
           const step = item.mode === "kg" ? 0.1 : 1;
           const min = item.mode === "kg" ? 0.1 : 1;
           return (
-            <li key={`${item.productId}-${index}`} className="flex items-start gap-3 border-b border-dashed pb-4 last:border-0 last:pb-0">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary">
-                <Bird className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{item.productName}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t("sizeLine", {
-                    min: item.sizeMinKg,
-                    max: item.sizeMaxKg,
-                    fallback: tProduct(BUYER_FALLBACK_KEYS[item.fallback]),
-                  })}
-                </p>
-                <ScaleChip className="mt-1" />
+            <li
+              key={`${item.productId}-${index}`}
+              className="flex flex-col gap-3 border-b border-dashed pb-4 last:border-0 last:pb-0 sm:flex-row sm:items-start"
+            >
+              <div className="flex min-w-0 flex-1 items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-secondary">
+                  <Bird className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+                </span>
+                {/* No `truncate` here: on mobile the stepper now sits on its
+                    own row below (see the wrapping `flex-col`), so the name
+                    gets the full row width instead of fighting four 44px
+                    stepper controls for space — that combo used to clip
+                    every product name down to a couple of characters. */}
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium">{item.productName}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("sizeLine", {
+                      min: item.sizeMinKg,
+                      max: item.sizeMaxKg,
+                      fallback: tProduct(BUYER_FALLBACK_KEYS[item.fallback]),
+                    })}
+                  </p>
+                  <ScaleChip className="mt-1" />
+                </div>
               </div>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 self-end sm:self-start">
                 <button type="button" aria-label={t("decrease")} className="flex h-11 w-11 items-center justify-center rounded-full border transition-transform active:scale-95"
                   onClick={() => updateLine(index, { quantity: Math.max(min, Math.round((item.quantity - step) * 1000) / 1000) })}>
                   <Minus className="h-4 w-4" />

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/i18n/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
 import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { InviteUserDialog } from "@/components/forms/invite-user-dialog";
 import { EditMemberDialog } from "@/components/forms/edit-member-dialog";
@@ -44,10 +44,37 @@ export function UsersPageClient(props: {
   const [reauthOpen, setReauthOpen] = useState(false);
   const [pendingAction, setPendingAction] = useState<null | (() => Promise<ActionResult<unknown>>)>(null);
   const [error, setError] = useState<string | null>(null);
+  // The role <select> is controlled from this map (falling back to the
+  // server-provided `m.role`) so an optimistic pick can be rolled back if
+  // the mutation fails -- an uncontrolled `defaultValue` kept showing the
+  // picked role even after a rejected/failed change.
+  const [roleDraft, setRoleDraft] = useState<Record<string, string>>({});
+  // Tracks whether the in-flight reauth retry actually committed, so
+  // canceling the reauth dialog (which calls the same onClose the success
+  // path uses) only reverts the optimistic role pick when nothing landed.
+  const pendingRevertRef = useRef<(() => void) | null>(null);
+  const pendingCommittedRef = useRef(false);
 
-  async function reauthThen(retry: () => Promise<ActionResult<unknown>>) {
-    setPendingAction(() => retry);
+  async function reauthThen(
+    retry: () => Promise<ActionResult<unknown>>,
+    onRevert?: () => void,
+  ) {
+    pendingRevertRef.current = onRevert ?? null;
+    pendingCommittedRef.current = false;
+    setPendingAction(() => async () => {
+      const result = await retry();
+      if (result.ok) pendingCommittedRef.current = true;
+      return result;
+    });
     setReauthOpen(true);
+  }
+
+  function closeReauth() {
+    setReauthOpen(false);
+    if (!pendingCommittedRef.current) {
+      pendingRevertRef.current?.();
+    }
+    pendingRevertRef.current = null;
   }
 
   // `messageKey` is a dynamic full path (e.g. "errors.identity.member.notFound");
@@ -56,8 +83,13 @@ export function UsersPageClient(props: {
     setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
   }
 
-  async function changeRole(memberId: string, newRole: string) {
+  async function changeRole(memberId: string, newRole: string, previousRole: string) {
     setError(null);
+    // Optimistic: reflect the pick immediately, revert in every failure
+    // branch below (including a canceled reauth) so the dropdown never
+    // shows a role that was never actually applied.
+    setRoleDraft((prev) => ({ ...prev, [memberId]: newRole }));
+    const revert = () => setRoleDraft((prev) => ({ ...prev, [memberId]: previousRole }));
     const result = await changeMemberRoleAction({
       memberId,
       newRole: newRole as (typeof ROLES)[number],
@@ -65,11 +97,14 @@ export function UsersPageClient(props: {
     });
     if (!result.ok) {
       if (result.code === "reauth_required") {
-        await reauthThen(() =>
-          changeMemberRoleAction({ memberId, newRole: newRole as (typeof ROLES)[number], reason: t("defaultRoleChangeReason") }),
+        await reauthThen(
+          () =>
+            changeMemberRoleAction({ memberId, newRole: newRole as (typeof ROLES)[number], reason: t("defaultRoleChangeReason") }),
+          revert,
         );
         return;
       }
+      revert();
       showError(result);
       return;
     }
@@ -137,90 +172,103 @@ export function UsersPageClient(props: {
       {error ? <p role="alert">{error}</p> : null}
 
       <h2>{t("membersHeading", { count: props.members.length })}</h2>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>{t("colUser")}</th>
-            <th>{t("colRole")}</th>
-            <th>{t("colStatus")}</th>
-            <th>{t("colScopes")}</th>
-            <th>{t("colActions")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {props.members.map((m) => (
-            <tr key={m.id}>
-              <td>
-                <div title={m.userId}>
-                  <strong>{m.displayName ?? t("unknownUser")}</strong>
-                  <br />
-                  <span className="text-muted-foreground">{m.email ?? "—"}</span>
-                </div>
-              </td>
-              <td>
-                <select defaultValue={m.role} onChange={(e) => changeRole(m.id, e.target.value)}>
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {tRoles(roleLabelKey(r))}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td>{tStatus(m.status)}</td>
-              <td>
-                {props.scopes.filter((s) => s.organizationMemberId === m.id).length}
-              </td>
-              <td>
-                <button type="button" onClick={() => setEditing(m)}>{t("editDetails")}</button>
-                <button type="button" onClick={() => setResetTarget(m)}>{t("resetPassword")}</button>
-                {m.status === "active" ? (
-                  <button type="button" onClick={() => deactivate(m.id)}>
-                    {t("deactivate")}
-                  </button>
-                ) : null}
-                <button type="button" onClick={() => setRemoveTarget(m)}>{t("removeMember")}</button>
-              </td>
+      <div className="overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>{t("colUser")}</th>
+              <th>{t("colRole")}</th>
+              <th>{t("colStatus")}</th>
+              <th>{t("colScopes")}</th>
+              <th>{t("colActions")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {props.members.map((m) => (
+              <tr key={m.id}>
+                <td>
+                  <Link
+                    href={`/${props.organizationSlug}/settings/users/${m.userId}`}
+                    title={t("viewDetails")}
+                    className="-m-2 block p-2"
+                  >
+                    <div title={m.userId}>
+                      <strong className="hover:underline">{m.displayName ?? t("unknownUser")}</strong>
+                      <br />
+                      <span className="text-muted-foreground">{m.email ?? "—"}</span>
+                    </div>
+                  </Link>
+                </td>
+                <td>
+                  <select
+                    value={roleDraft[m.id] ?? m.role}
+                    onChange={(e) => changeRole(m.id, e.target.value, roleDraft[m.id] ?? m.role)}
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {tRoles(roleLabelKey(r))}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td>{tStatus(m.status)}</td>
+                <td>
+                  {props.scopes.filter((s) => s.organizationMemberId === m.id).length}
+                </td>
+                <td>
+                  <button type="button" onClick={() => setEditing(m)}>{t("editDetails")}</button>
+                  <button type="button" onClick={() => setResetTarget(m)}>{t("resetPassword")}</button>
+                  {m.status === "active" ? (
+                    <button type="button" onClick={() => deactivate(m.id)}>
+                      {t("deactivate")}
+                    </button>
+                  ) : null}
+                  <button type="button" onClick={() => setRemoveTarget(m)}>{t("removeMember")}</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <h2>{t("invitationsHeading", { count: props.invitations.length })}</h2>
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>{t("colEmail")}</th>
-            <th>{t("colRole")}</th>
-            <th>{t("colStatus")}</th>
-            <th>{t("colActions")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {props.invitations.map((inv) => (
-            <tr key={inv.id}>
-              <td>{inv.email}</td>
-              <td>{tRoles(roleLabelKey(inv.role))}</td>
-              <td>
-                {inv.acceptedAt
-                  ? tInvitationStatus("accepted")
-                  : inv.revokedAt
-                    ? tInvitationStatus("revoked")
-                    : new Date(inv.expiresAt) < new Date()
-                      ? tInvitationStatus("expired")
-                      : tInvitationStatus("pending")}
-              </td>
-              <td>
-                {!inv.acceptedAt && !inv.revokedAt ? (
-                  <>
-                    <button type="button" onClick={() => resend(inv.id)}>{t("resend")}</button>
-                    <button type="button" onClick={() => revoke(inv.id)}>{t("revoke")}</button>
-                  </>
-                ) : null}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>{t("colEmail")}</th>
+              <th>{t("colRole")}</th>
+              <th>{t("colStatus")}</th>
+              <th>{t("colActions")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {props.invitations.map((inv) => (
+              <tr key={inv.id}>
+                <td>{inv.email}</td>
+                <td>{tRoles(roleLabelKey(inv.role))}</td>
+                <td>
+                  {inv.acceptedAt
+                    ? tInvitationStatus("accepted")
+                    : inv.revokedAt
+                      ? tInvitationStatus("revoked")
+                      : new Date(inv.expiresAt) < new Date()
+                        ? tInvitationStatus("expired")
+                        : tInvitationStatus("pending")}
+                </td>
+                <td>
+                  {!inv.acceptedAt && !inv.revokedAt ? (
+                    <>
+                      <button type="button" onClick={() => resend(inv.id)}>{t("resend")}</button>
+                      <button type="button" onClick={() => revoke(inv.id)}>{t("revoke")}</button>
+                    </>
+                  ) : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       <InviteUserDialog
         organizationId={props.organizationId}
@@ -262,7 +310,7 @@ export function UsersPageClient(props: {
       />
       <ReauthDialog
         open={reauthOpen}
-        onClose={() => setReauthOpen(false)}
+        onClose={closeReauth}
         onSuccess={() => {
           setReauthOpen(false);
         }}

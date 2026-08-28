@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getBuyerFromSession } from "@/lib/auth/buyer-auth";
 import { SupabaseSessionProvider } from "@/components/providers/supabase-session-provider";
 import { BuyerHeader } from "@/features/buyer/components/buyer-header";
 import { CartProvider } from "@/features/buyer/components/cart-context";
@@ -12,24 +12,12 @@ type BuyerLayoutProps = {
 
 export default async function BuyerLayout({ children, params }: BuyerLayoutProps) {
   const { organizationSlug } = await params;
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  let buyerName: string | undefined;
-  let isLoggedIn = false;
-
-  if (user) {
-    const { data: buyer } = await supabase
-      .from("buyers")
-      .select("display_name")
-      .eq("id", user.id)
-      .single();
-    if (buyer) {
-      buyerName = buyer.display_name;
-      isLoggedIn = true;
-    }
-  }
+  // Cross-checked against `organizationSlug`, not just `buyers.id = user.id`
+  // - otherwise an Org A buyer browsing Org B's portal reads as logged in
+  // here, header identity and all. See `getBuyerFromSession`.
+  const buyer = await getBuyerFromSession(organizationSlug);
+  const buyerName = buyer?.display_name;
+  const isLoggedIn = buyer !== null;
 
   return (
     <SupabaseSessionProvider>
@@ -41,7 +29,13 @@ export default async function BuyerLayout({ children, params }: BuyerLayoutProps
               buyerName={buyerName}
               isLoggedIn={isLoggedIn}
             />
-            <main className="container mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+            {/* Extra bottom padding on mobile: `CartOverlay`'s floating
+                "View Cart" bar is `fixed` at the viewport bottom whenever
+                the cart has items (see cart-overlay.tsx), and without this
+                clearance it sits directly over the last product row's
+                "+ Add" button. Reverts to the normal py-6 on sm+, where the
+                bar is a smaller fraction of the viewport. */}
+            <main className="container mx-auto max-w-7xl px-4 py-6 pb-28 sm:px-6 sm:pb-6 lg:px-8">
               {children}
             </main>
             <CartOverlay organizationSlug={organizationSlug} />

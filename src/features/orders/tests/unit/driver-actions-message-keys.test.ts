@@ -230,6 +230,14 @@ describe("startRun", () => {
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.alreadyStarted");
   });
 
+  it("maps not_loaded to errors.drive.run.notLoaded", async () => {
+    mockDriverGuard();
+    mockSupabaseRpc({ error: { message: "not_loaded" } });
+    const result = await startRun("org-slug", "run-1");
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.notLoaded");
+  });
+
   it("calls driver_start_run and succeeds", async () => {
     mockDriverGuard();
     const supabase = mockSupabaseRpc({ error: null });

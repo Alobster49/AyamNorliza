@@ -22,6 +22,7 @@ import {
   closeOrder,
   getOrderDetail,
   createManualOrder,
+  setRunStatus,
 } from "../../server/order-actions";
 import { mapRpcError } from "../../lib/rpc-errors";
 
@@ -132,6 +133,36 @@ describe("confirmOrder", () => {
       p_order: ORDER_ID,
       p_decisions: [{ item_id: ITEM_ID, available: true, price_per_kg: 11.5 }],
     });
+  });
+});
+
+describe("setRunStatus", () => {
+  const RUN_ID = "66666666-6666-6666-6666-666666666666";
+
+  it("departs the run via set_run_status", async () => {
+    const supabase = mockSupabaseFor({ role: "owner", rpcResult: { data: null, error: null } });
+
+    const result = await setRunStatus("ayam-norliza-pilot", RUN_ID, "departed");
+
+    expect(result).toEqual({ ok: true, data: undefined });
+    expect(supabase.rpc).toHaveBeenCalledWith("set_run_status", { p_run: RUN_ID, p_status: "departed" });
+  });
+
+  it("maps not_loaded to the shared driver-deck loading-gate copy", async () => {
+    const supabase = mockSupabaseFor({
+      role: "owner",
+      rpcResult: { data: null, error: { message: "not_loaded" } },
+    });
+
+    const result = await setRunStatus("ayam-norliza-pilot", RUN_ID, "departed");
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "The truck is not fully loaded yet. The loading bay has to sign every stop off first.",
+      messageKey: "errors.drive.run.notLoaded",
+    });
+    expect(supabase.rpc).toHaveBeenCalledWith("set_run_status", { p_run: RUN_ID, p_status: "departed" });
   });
 });
 

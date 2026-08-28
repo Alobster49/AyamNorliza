@@ -90,32 +90,34 @@ export function UserDetailClient(props: {
 
   return (
     <div>
-      <p>{t("userIdLabel")} <code>{props.member.userId}</code></p>
+      <p>{t("userIdLabel")} <code className="break-all">{props.member.userId}</code></p>
       <p>{t("statusLabel")} {tStatus(MEMBER_STATUS_KEYS[props.member.status])}</p>
-      <label>
-        {t("roleLabel")}
-        <select value={role} onChange={(e) => setRole(e.target.value)}>
-          {ROLES.map((r) => (
-            <option key={r} value={r}>
-              {tRoles(roleLabelKey(r))}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        {t("reasonLabel")}
-        <input value={reason} onChange={(e) => setReason(e.target.value)} minLength={10} maxLength={1000} required />
-      </label>
-      {error ? <p role="alert">{error}</p> : null}
-      <div className="page-actions">
-        <button type="button" disabled={pending} onClick={saveRole}>
-          {t("saveRole")}
-        </button>
-        {props.member.status === "active" ? (
-          <button type="button" disabled={pending} onClick={deactivate}>
-            {t("deactivate")}
+      <div className="settings-form">
+        <label>
+          {t("roleLabel")}
+          <select value={role} onChange={(e) => setRole(e.target.value)}>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {tRoles(roleLabelKey(r))}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("reasonLabel")}
+          <input value={reason} onChange={(e) => setReason(e.target.value)} minLength={10} maxLength={1000} required />
+        </label>
+        {error ? <p role="alert">{error}</p> : null}
+        <div className="page-actions">
+          <button type="button" disabled={pending} onClick={saveRole}>
+            {t("saveRole")}
           </button>
-        ) : null}
+          {props.member.status === "active" ? (
+            <button type="button" disabled={pending} onClick={deactivate}>
+              {t("deactivate")}
+            </button>
+          ) : null}
+        </div>
       </div>
       <h2>{t("scopesHeading", { count: props.scopes.length })}</h2>
       <ul>
