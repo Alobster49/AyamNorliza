@@ -23,6 +23,8 @@ export type LoadJob = {
   ticket: DispatchTicket;
   lines: LoadLine[];
   weightKg: number | null;
+  /** Warehouse weigh task done ('ready') — loading is blocked until then. */
+  weighed: boolean;
   loaded: boolean;
   slotStart: string | null;
   /** 1 = first stop of the route, so it loads last and rides at the tail. */
@@ -102,6 +104,7 @@ function buildLane(
     ticket,
     lines: toLines(ticket),
     weightKg: orderWeightKg(ticket),
+    weighed: ticket.status === "ready",
     loaded: ticket.loaded_at !== null,
     slotStart: slotStart(ticket),
     dropNumber: dropByTicketId.get(ticket.id) ?? 0,
@@ -130,7 +133,9 @@ function buildLane(
     plannedPct: pct(totalKg, capacityKg),
     freeKg: capacityKg === null ? null : Math.max(0, capacityKg - totalKg),
     overCapacity: capacityKg !== null && capacityKg > 0 && totalKg > capacityKg,
-    nextJobId: jobs.find((j) => !j.loaded)?.ticket.id ?? null,
+    // Next = first pending job the loader can actually carry; an unweighed
+    // job never gets the highlight (its load button is gated anyway).
+    nextJobId: jobs.find((j) => !j.loaded && j.weighed)?.ticket.id ?? null,
   };
 }
 

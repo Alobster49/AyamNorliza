@@ -107,7 +107,7 @@ function JobCard({
   const t = useTranslations("loadingBoard.job");
   const tPlan = useTranslations("logistics.dispatch.plan");
   const name = job.ticket.customer?.name ?? tPlan("orderFallback");
-  const weighed = job.weightKg !== null;
+  const hasWeight = job.weightKg !== null;
 
   if (job.loaded) {
     return (
@@ -123,7 +123,7 @@ function JobCard({
         </span>
         <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground line-through">{name}</span>
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {weighed ? `${kg(job.weightKg!)} kg` : "—"}
+          {hasWeight ? `${kg(job.weightKg!)} kg` : "—"}
         </span>
         <span className="shrink-0 rounded-md border px-1.5 py-0.5 text-[11px] font-medium text-muted-foreground">
           {t("undo")}
@@ -141,8 +141,8 @@ function JobCard({
     >
       <button
         type="button"
-        disabled={disabled}
-        aria-label={t("markLoadedAria", { name })}
+        disabled={disabled || !job.weighed}
+        aria-label={job.weighed ? t("markLoadedAria", { name }) : t("notWeighedYet")}
         onClick={() => onToggle(true)}
         className="grid min-h-16 w-full grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-1 rounded-xl p-3 text-left transition-transform duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.98] disabled:opacity-50 motion-reduce:transition-none motion-reduce:active:scale-100"
       >
@@ -163,7 +163,7 @@ function JobCard({
           ) : null}
         </span>
         <span className="row-span-2 text-right text-lg font-semibold tabular-nums leading-none">
-          {weighed ? kg(job.weightKg!) : "—"}
+          {hasWeight ? kg(job.weightKg!) : "—"}
           <span className="block text-[10px] font-medium tracking-wide text-muted-foreground">KG</span>
         </span>
         <span className="truncate text-xs text-muted-foreground">
@@ -173,7 +173,7 @@ function JobCard({
         </span>
       </button>
 
-      {!weighed ? (
+      {!job.weighed ? (
         <Link
           href={`/${organizationSlug}/tasks?order=${job.ticket.id}`}
           className="mx-3 mb-3 flex min-h-11 items-center justify-between gap-2 rounded-lg bg-amber-100 px-3 text-[11px] font-semibold uppercase tracking-wide text-amber-800 transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] hover:bg-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/60 active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 dark:bg-amber-950 dark:text-amber-300 dark:hover:bg-amber-900"

@@ -576,6 +576,7 @@
         "invalidStatus": "Hanya order yang disahkan atau sedia boleh dihantar keluar.",
         "invalidTruck": "Trak itu tidak aktif dalam organisasi ini.",
         "notAssigned": "Order itu belum berada pada mana-mana trak.",
+        "notWeighed": "Order itu belum ditimbang lagi — timbang dahulu sebelum dimuatkan.",
         "notFound": "Order tidak dijumpai.",
         "invalidAssignInput": "Input penetapan tidak sah",
         "invalidUnassignInput": "Input tidak sah",

@@ -579,6 +579,7 @@ declare const messages: {
         "invalidStatus": "Only confirmed or ready orders can be dispatched.",
         "invalidTruck": "That truck is not active in this organization.",
         "notAssigned": "That order is not on a truck yet.",
+        "notWeighed": "That order has not been weighed yet — weigh it before loading.",
         "notFound": "Order not found.",
         "invalidAssignInput": "Invalid assignment input",
         "invalidUnassignInput": "Invalid input",

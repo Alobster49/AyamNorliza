@@ -77,6 +77,13 @@ function mapRpcError<T = void>(message: string): ActionResult<T> {
   if (message.includes("not_assigned")) {
     return err("conflict", "That order is not on a truck yet.", "errors.logistics.dispatch.notAssigned");
   }
+  if (message.includes("not_weighed")) {
+    return err(
+      "conflict",
+      "That order has not been weighed yet — weigh it before loading.",
+      "errors.logistics.dispatch.notWeighed",
+    );
+  }
   if (message.includes("forbidden")) {
     return err("forbidden", "You do not have access to dispatch.", "errors.logistics.dispatch.forbidden");
   }

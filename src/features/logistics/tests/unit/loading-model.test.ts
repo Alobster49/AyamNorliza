@@ -103,9 +103,9 @@ function routeData() {
     slot("slot-3", "08:00:00", truckId),
   ];
   data.orders = [
-    order({ assignment_source: "auto", truck_id: truckId, slot_id: "slot-2", customer: { name: "Second" }, items: [{ quantity: 1, warehouse_weight_kg: 20, warehouse_pieces: 1, final_weight_kg: null, is_cancelled: false, product: { name: "Ayam" } }] }),
-    order({ assignment_source: "auto", truck_id: truckId, slot_id: "slot-1", customer: { name: "First" }, items: [{ quantity: 1, warehouse_weight_kg: 10, warehouse_pieces: 1, final_weight_kg: null, is_cancelled: false, product: { name: "Ayam" } }] }),
-    order({ assignment_source: "auto", truck_id: truckId, slot_id: "slot-3", customer: { name: "Third" }, items: [{ quantity: 1, warehouse_weight_kg: 30, warehouse_pieces: 1, final_weight_kg: null, is_cancelled: false, product: { name: "Ayam" } }] }),
+    order({ assignment_source: "auto", truck_id: truckId, status: "ready", slot_id: "slot-2", customer: { name: "Second" }, items: [{ quantity: 1, warehouse_weight_kg: 20, warehouse_pieces: 1, final_weight_kg: null, is_cancelled: false, product: { name: "Ayam" } }] }),
+    order({ assignment_source: "auto", truck_id: truckId, status: "ready", slot_id: "slot-1", customer: { name: "First" }, items: [{ quantity: 1, warehouse_weight_kg: 10, warehouse_pieces: 1, final_weight_kg: null, is_cancelled: false, product: { name: "Ayam" } }] }),
+    order({ assignment_source: "auto", truck_id: truckId, status: "ready", slot_id: "slot-3", customer: { name: "Third" }, items: [{ quantity: 1, warehouse_weight_kg: 30, warehouse_pieces: 1, final_weight_kg: null, is_cancelled: false, product: { name: "Ayam" } }] }),
   ];
   return { data, truckId };
 }
@@ -138,6 +138,31 @@ describe("drop sequence", () => {
   it("has no next job once everything is loaded", () => {
     const { data, truckId } = routeData();
     for (const o of data.orders) o.loaded_at = "2026-08-20T00:00:00Z";
+    expect(buildLoadQueue(data, DATE, truckId)!.nextJobId).toBeNull();
+  });
+});
+
+describe("weigh gate", () => {
+  it("marks a confirmed (unweighed) order's job as not weighed", () => {
+    const { data, truckId } = routeData();
+    data.orders[2]!.status = "confirmed"; // 08:00 drop, weigh task still open
+    const q = buildLoadQueue(data, DATE, truckId)!;
+    const byName = new Map(q.jobs.map((j) => [j.ticket.customer!.name, j]));
+    expect(byName.get("Third")!.weighed).toBe(false);
+    expect(byName.get("First")!.weighed).toBe(true);
+    expect(byName.get("Second")!.weighed).toBe(true);
+  });
+
+  it("skips unweighed jobs when picking the next job to carry", () => {
+    const { data, truckId } = routeData();
+    data.orders[2]!.status = "confirmed"; // deepest drop not weighed yet
+    const q = buildLoadQueue(data, DATE, truckId)!;
+    expect(q.nextJobId).toBe(data.orders[0]!.id); // Second — first weighed pending job
+  });
+
+  it("has no next job when every pending job is unweighed", () => {
+    const { data, truckId } = routeData();
+    for (const o of data.orders) o.status = "confirmed";
     expect(buildLoadQueue(data, DATE, truckId)!.nextJobId).toBeNull();
   });
 });

@@ -323,6 +323,23 @@ describe("setOrderLoaded", () => {
     });
   });
 
+  it("maps not_weighed rpc errors to a conflict", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "not_weighed" } });
+
+    const result = await setOrderLoaded("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      loaded: true,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "That order has not been weighed yet — weigh it before loading.",
+      messageKey: "errors.logistics.dispatch.notWeighed",
+    });
+  });
+
   it("maps run_departed rpc errors to a conflict", async () => {
     const supabase = mockSupabaseFor({ role: "logistics" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "run_departed" } });
