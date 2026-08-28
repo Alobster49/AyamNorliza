@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, Database, RefreshCw } from "lucide-react";
-import { clearAllData, seedDemoData } from "@/features/data-console/server/actions";
+import { AlertTriangle, Database, RefreshCw, Sprout, Truck } from "lucide-react";
+import {
+  clearAllData,
+  seedDemoData,
+  seedRealworldData,
+  seedSetupData,
+} from "@/features/data-console/server/actions";
 import { CONSOLE_ACCOUNTS } from "@/features/data-console/lib/accounts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,6 +76,57 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
         setMessage(
           t("seededSummary", {
             products: s.products ?? 0,
+            customers: s.customers ?? 0,
+            orders: s.orders ?? 0,
+            runs: s.runs ?? 0,
+          }),
+        );
+      } else {
+        setError(result.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runSeedSetup() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      setMessage(null);
+      setError(null);
+      const result = await seedSetupData(organizationSlug);
+      if (result.ok) {
+        const s = result.data.summary;
+        setMessage(
+          t("seededSetupSummary", {
+            products: s.products ?? 0,
+            customers: s.customers ?? 0,
+            zones: s.zones ?? 0,
+            trucks: s.trucks ?? 0,
+          }),
+        );
+      } else {
+        setError(result.message);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function runSeedRealworld() {
+    if (busy) return;
+    setBusy(true);
+    try {
+      setMessage(null);
+      setError(null);
+      const result = await seedRealworldData(organizationSlug);
+      if (result.ok) {
+        const s = result.data.summary;
+        setMessage(
+          t("seededRealworldSummary", {
+            trucks: s.trucks ?? 0,
+            zones: s.zones ?? 0,
             customers: s.customers ?? 0,
             orders: s.orders ?? 0,
             runs: s.runs ?? 0,
@@ -175,6 +231,84 @@ export function DataConsoleClient({ organizationSlug }: DataConsoleClientProps) 
                   <DialogClose asChild>
                     <Button disabled={busy} onClick={runSeed}>
                       {t("seedCard.confirm")}
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Sprout className="size-4" />
+              {t("setupCard.title")}
+            </CardTitle>
+            <CardDescription>{t("setupCard.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{t("setupCard.detail")}</p>
+          </CardContent>
+          <CardFooter>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" disabled={busy}>
+                  <Sprout className="size-4" />
+                  {t("setupCard.trigger")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("setupCard.dialogTitle")}</DialogTitle>
+                  <DialogDescription>{t("setupCard.dialogDescription")}</DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">{tCommon("cancel")}</Button>
+                  </DialogClose>
+                  <DialogClose asChild>
+                    <Button disabled={busy} onClick={runSeedSetup}>
+                      {t("setupCard.confirm")}
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardFooter>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="size-4" />
+              {t("realworldCard.title")}
+            </CardTitle>
+            <CardDescription>{t("realworldCard.description")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">{t("realworldCard.detail")}</p>
+          </CardContent>
+          <CardFooter>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button disabled={busy}>
+                  <Truck className="size-4" />
+                  {t("realworldCard.trigger")}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{t("realworldCard.dialogTitle")}</DialogTitle>
+                  <DialogDescription>{t("realworldCard.dialogDescription")}</DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="outline">{tCommon("cancel")}</Button>
+                  </DialogClose>
+                  <DialogClose asChild>
+                    <Button disabled={busy} onClick={runSeedRealworld}>
+                      {t("realworldCard.confirm")}
                     </Button>
                   </DialogClose>
                 </DialogFooter>

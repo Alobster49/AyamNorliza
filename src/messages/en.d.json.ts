@@ -1982,6 +1982,18 @@ declare const messages: {
           "no_covering_truck": "No truck covers this zone today.",
           "all_trucks_full": "Every covering truck is at its slot capacity."
         },
+        "removeFromTruck": "Remove from {truckName}",
+        "dropToUnassign": "Drop here to move back to Proposed",
+        "unassignFailedToast": "Remove failed",
+        "ghostProjected": "+{kg} kg → {pct}%",
+        "ghostNoCap": "+{kg} kg",
+        "ghostNoWeight": "No weight recorded yet",
+        "dropToAssign": "Drop to assign",
+        "overweight": {
+          "title": "Overload {truckName}?",
+          "body": "This order takes the load to {pct}% of the {capacity} kg capacity. Assign anyway?",
+          "confirm": "Assign anyway"
+        },
         "reason": {
           "withSlot": "{zone} · slot {slot} · least loaded",
           "withoutSlot": "{zone} · least loaded"
@@ -2267,6 +2279,8 @@ declare const messages: {
     "subtitle": "Reset or seed the demo data for this organization. Pilot-only, owner-only.",
     "clearedRows": "Cleared {count, plural, one {# row} other {# rows}}. Users were kept.",
     "seededSummary": "Seeded {products, plural, one {# product} other {# products}}, {customers, plural, one {# customer} other {# customers}}, {orders, plural, one {# order} other {# orders}}, {runs, plural, one {# run} other {# runs}}.",
+    "seededSetupSummary": "Seeded {products, plural, one {# product} other {# products}}, {customers, plural, one {# customer} other {# customers}}, {zones, plural, one {# zone} other {# zones}} and {trucks, plural, one {# truck} other {# trucks}}. No orders or runs.",
+    "seededRealworldSummary": "Seeded {trucks, plural, one {# truck} other {# trucks}} across {zones, plural, one {# zone} other {# zones}}, {customers, plural, one {# customer} other {# customers}}, {orders, plural, one {# order} other {# orders}} and {runs, plural, one {# run} other {# runs}}. Drivers 1-30 can now sign in.",
     "clearCard": {
       "title": "Clear all data",
       "description": "Permanently deletes products, customers, orders, and runs for this organization. User accounts and logins are kept.",
@@ -2281,6 +2295,24 @@ declare const messages: {
       "dialogTitle": "Seed demo data?",
       "dialogDescription": "This clears existing data first, then creates a fresh set of demo products, customers, orders, and runs.",
       "confirm": "Seed demo data"
+    },
+    "setupCard": {
+      "title": "Seed setup only",
+      "description": "Creates products, customers and the delivery setup (zones, postcodes, trucks, slots) — no orders and no runs.",
+      "detail": "Start here when you want to enter orders yourself on a clean, fully configured workspace.",
+      "trigger": "Seed setup only",
+      "dialogTitle": "Seed setup only?",
+      "dialogDescription": "This clears existing data first, then creates products, customers and the delivery setup. No orders or runs are created.",
+      "confirm": "Seed setup only"
+    },
+    "realworldCard": {
+      "title": "Seed real-world load",
+      "description": "A full Johor operation: 10 zones with real postcode ranges, 30 trucks, 30 driver accounts, and about 190 orders with a live run per truck today.",
+      "detail": "Driver 1-30 accounts (driver1@gmail.com …) are created and each is assigned to their truck's run — pick any of them in the login page's dev sign-in.",
+      "trigger": "Seed real-world load",
+      "dialogTitle": "Seed the real-world load?",
+      "dialogDescription": "This clears existing data first, then creates the full Johor setup: 10 zones, 30 trucks with drivers, and about 190 orders across today's runs. Seeding takes a moment.",
+      "confirm": "Seed real-world load"
     }
   },
   "tasks": {

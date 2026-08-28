@@ -1979,6 +1979,18 @@
           "no_covering_truck": "Tiada trak meliputi zon ini hari ini.",
           "all_trucks_full": "Setiap trak yang meliputi zon ini sudah pada kapasiti slotnya."
         },
+        "removeFromTruck": "Alih keluar dari {truckName}",
+        "dropToUnassign": "Lepaskan di sini untuk kembali ke Dicadang",
+        "unassignFailedToast": "Alih keluar gagal",
+        "ghostProjected": "+{kg} kg → {pct}%",
+        "ghostNoCap": "+{kg} kg",
+        "ghostNoWeight": "Belum ada berat direkodkan",
+        "dropToAssign": "Lepaskan untuk tugaskan",
+        "overweight": {
+          "title": "Lebih muatan {truckName}?",
+          "body": "Pesanan ini menjadikan muatan {pct}% daripada kapasiti {capacity} kg. Tugaskan juga?",
+          "confirm": "Tugaskan juga"
+        },
         "reason": {
           "withSlot": "{zone} · slot {slot} · muatan paling ringan",
           "withoutSlot": "{zone} · muatan paling ringan"
@@ -2264,6 +2276,8 @@
     "subtitle": "Tetapkan semula atau semai data demo untuk organisasi ini. Khas untuk rintis, pemilik sahaja.",
     "clearedRows": "{count, plural, other {# baris}} dipadam. Pengguna dikekalkan.",
     "seededSummary": "{products, plural, other {# produk}}, {customers, plural, other {# pelanggan}}, {orders, plural, other {# pesanan}}, {runs, plural, other {# trip}} disemai.",
+    "seededSetupSummary": "{products, plural, other {# produk}}, {customers, plural, other {# pelanggan}}, {zones, plural, other {# zon}} dan {trucks, plural, other {# lori}} disemai. Tiada pesanan atau trip.",
+    "seededRealworldSummary": "{trucks, plural, other {# lori}} merentasi {zones, plural, other {# zon}}, {customers, plural, other {# pelanggan}}, {orders, plural, other {# pesanan}} dan {runs, plural, other {# trip}} disemai. Pemandu 1-30 kini boleh log masuk.",
     "clearCard": {
       "title": "Padam semua data",
       "description": "Memadam produk, pelanggan, pesanan dan trip untuk organisasi ini secara kekal. Akaun pengguna dan log masuk dikekalkan.",
@@ -2278,6 +2292,24 @@
       "dialogTitle": "Semai data demo?",
       "dialogDescription": "Ini akan memadam data sedia ada dahulu, kemudian mencipta set baharu produk, pelanggan, pesanan dan trip demo.",
       "confirm": "Semai data demo"
+    },
+    "setupCard": {
+      "title": "Semai persediaan sahaja",
+      "description": "Mencipta produk, pelanggan dan persediaan penghantaran (zon, poskod, lori, slot) — tiada pesanan dan tiada trip.",
+      "detail": "Mula di sini jika anda mahu memasukkan pesanan sendiri pada ruang kerja bersih yang lengkap dikonfigurasi.",
+      "trigger": "Semai persediaan sahaja",
+      "dialogTitle": "Semai persediaan sahaja?",
+      "dialogDescription": "Ini akan memadam data sedia ada dahulu, kemudian mencipta produk, pelanggan dan persediaan penghantaran. Tiada pesanan atau trip dicipta.",
+      "confirm": "Semai persediaan sahaja"
+    },
+    "realworldCard": {
+      "title": "Semai beban dunia sebenar",
+      "description": "Operasi Johor penuh: 10 zon dengan julat poskod sebenar, 30 lori, 30 akaun pemandu, dan kira-kira 190 pesanan dengan satu trip langsung setiap lori hari ini.",
+      "detail": "Akaun Pemandu 1-30 (driver1@gmail.com …) dicipta dan setiap satu ditugaskan ke trip lorinya — pilih mana-mana melalui dev sign-in di halaman log masuk.",
+      "trigger": "Semai beban dunia sebenar",
+      "dialogTitle": "Semai beban dunia sebenar?",
+      "dialogDescription": "Ini akan memadam data sedia ada dahulu, kemudian mencipta persediaan Johor penuh: 10 zon, 30 lori dengan pemandu, dan kira-kira 190 pesanan merentasi trip hari ini. Semaian mengambil sedikit masa.",
+      "confirm": "Semai beban dunia sebenar"
     }
   },
   "tasks": {

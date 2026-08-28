@@ -21,7 +21,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { CONSOLE_ACCOUNTS } from "@/features/data-console/lib/accounts";
+import {
+  CONSOLE_ACCOUNTS,
+  REALWORLD_DRIVER_ACCOUNTS,
+} from "@/features/data-console/lib/accounts";
 import { loginAction } from "@/features/identity-access/server/auth-actions";
 import { toLocaleAgnostic } from "@/lib/auth/next-path";
 import { cn } from "@/lib/utils";
@@ -50,12 +53,14 @@ const devLogins =
   process.env.NODE_ENV === "production"
     ? []
     : [
-        ...CONSOLE_ACCOUNTS.map((account) => ({
-          label: account.displayName,
-          role: account.role as string,
-          email: account.email,
-          password: "password123",
-        })),
+        ...CONSOLE_ACCOUNTS.filter((account) => account.role !== "driver").map(
+          (account) => ({
+            label: account.displayName,
+            role: account.role as string,
+            email: account.email,
+            password: "password123",
+          }),
+        ),
         ...(process.env.NEXT_PUBLIC_DEV_LOGINS ?? "")
           .split(",")
           .map((entry) => entry.split(":"))
@@ -69,6 +74,22 @@ const devLogins =
             password,
           })),
       ];
+
+/**
+ * The 30-driver fleet from the real-world seed, folded into their own
+ * collapsed section so the picker stays usable. driver1/driver2 also cover
+ * the demo seed (same emails); drivers 3-30 only log in after the
+ * real-world seed has run.
+ */
+const devDriverLogins =
+  process.env.NODE_ENV === "production"
+    ? []
+    : REALWORLD_DRIVER_ACCOUNTS.map((driver) => ({
+        label: driver.displayName,
+        role: driver.truckCode,
+        email: driver.email,
+        password: "password123",
+      }));
 
 export function LoginForm({
   next,
@@ -85,6 +106,14 @@ export function LoginForm({
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [driversOpen, setDriversOpen] = useState(false);
+
+  function pickLogin(login: { email: string; password: string }) {
+    setEmail(login.email);
+    setPassword(login.password);
+    setError(null);
+    setPickerOpen(false);
+  }
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -182,7 +211,7 @@ export function LoginForm({
                   Dev: pick an account
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-sm">
+              <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-sm">
                 <DialogHeader>
                   <DialogTitle>Dev sign-in</DialogTitle>
                   <DialogDescription>
@@ -195,12 +224,7 @@ export function LoginForm({
                     <button
                       key={login.email}
                       type="button"
-                      onClick={() => {
-                        setEmail(login.email);
-                        setPassword(login.password);
-                        setError(null);
-                        setPickerOpen(false);
-                      }}
+                      onClick={() => pickLogin(login)}
                       className="flex items-center justify-between gap-3 rounded-md border border-transparent px-3 py-2 text-left text-sm hover:border-border hover:bg-muted"
                     >
                       <span className="flex flex-col">
@@ -214,6 +238,43 @@ export function LoginForm({
                       </span>
                     </button>
                   ))}
+                  {devDriverLogins.length > 0 ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setDriversOpen((open) => !open)}
+                        aria-expanded={driversOpen}
+                        className="mt-1 flex items-center justify-between gap-3 rounded-md border border-transparent px-3 py-2 text-left text-sm font-medium hover:border-border hover:bg-muted"
+                      >
+                        Drivers ({devDriverLogins.length})
+                        <span className="text-xs text-muted-foreground">
+                          {driversOpen ? "Hide" : "Show"}
+                        </span>
+                      </button>
+                      {driversOpen ? (
+                        <div className="flex max-h-64 flex-col gap-1 overflow-y-auto rounded-md border p-1">
+                          {devDriverLogins.map((login) => (
+                            <button
+                              key={login.email}
+                              type="button"
+                              onClick={() => pickLogin(login)}
+                              className="flex items-center justify-between gap-3 rounded-md border border-transparent px-3 py-2 text-left text-sm hover:border-border hover:bg-muted"
+                            >
+                              <span className="flex flex-col">
+                                <span className="font-medium">{login.label}</span>
+                                <span className="text-xs text-muted-foreground">
+                                  {login.email}
+                                </span>
+                              </span>
+                              <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                                {login.role}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
                 </div>
               </DialogContent>
             </Dialog>

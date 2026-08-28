@@ -1966,6 +1966,14 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      admin_seed_realworld_data: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
+      admin_seed_setup_data: {
+        Args: { p_organization_id: string }
+        Returns: Json
+      }
       can_record_stop: {
         Args: { p_org: string; p_run: string }
         Returns: boolean
