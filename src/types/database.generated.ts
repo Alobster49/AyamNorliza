@@ -2239,7 +2239,45 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leave_whos_away: {
+        Row: {
+          end_date: string | null
+          leave_type_id: string | null
+          organization_id: string | null
+          start_date: string | null
+          user_id: string | null
+        }
+        Insert: {
+          end_date?: string | null
+          leave_type_id?: string | null
+          organization_id?: string | null
+          start_date?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          end_date?: string | null
+          leave_type_id?: string | null
+          organization_id?: string | null
+          start_date?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       _dc_uuid: { Args: { p_label: string; p_org: string }; Returns: string }

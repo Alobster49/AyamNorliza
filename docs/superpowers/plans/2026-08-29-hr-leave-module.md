@@ -228,23 +228,26 @@ create policy "leave_credit_requests_approver_read" on public.leave_credit_reque
   for select to authenticated
   using (public.has_org_role(organization_id, array['owner','org_admin','hr']));
 
--- "Who's away": members may read APPROVED requests of colleagues (name join
--- happens server-side; only dates/type leak, not justification — enforced by
--- the server action selecting only those columns).
-create policy "leave_requests_member_read_approved" on public.leave_requests
-  for select to authenticated using (
-    status = 'approved'
-    and exists (select 1 from public.organization_members m
-      where m.organization_id = leave_requests.organization_id
-        and m.user_id = auth.uid() and m.status = 'active')
-  );
-
 -- 4. Grants (RLS alone -> 42501) ---------------------------------------------
 grant select, insert, update, delete on public.leave_types to authenticated;
 grant select, insert, update, delete on public.leave_ledger to authenticated;
 grant select, insert, update, delete on public.leave_requests to authenticated;
 grant select, insert, update, delete on public.leave_credit_requests to authenticated;
 grant select, insert, update, delete on public.public_holidays to authenticated;
+
+-- "Who's away": colleagues see only who/type/when of approved leave — never
+-- justification, attachments, or decision notes. The view (definer-owned,
+-- bypasses base RLS) scopes rows to orgs the caller is an active member of.
+create or replace view public.leave_whos_away as
+select r.organization_id, r.user_id, r.leave_type_id, r.start_date, r.end_date
+from public.leave_requests r
+where r.status = 'approved'
+  and exists (
+    select 1 from public.organization_members m
+    where m.organization_id = r.organization_id
+      and m.user_id = auth.uid() and m.status = 'active');
+
+grant select on public.leave_whos_away to authenticated;
 
 -- 5. Seed defaults for every existing org ------------------------------------
 insert into public.leave_types
@@ -855,7 +858,7 @@ git commit -m "feat(hr): pure leave model — accrual, workday count, CF-first b
 **Interfaces:**
 - Consumes: Task 4 types; RPCs from Task 2; `requireOrgRole`/`OrderPermissionError` from `@/features/orders/server/guards`; `createSupabaseServerClient` from `@/lib/supabase/server`; `LEAVE_APPROVER_ROLES`, `ALL_MEMBER_ROLES` from Task 3.
 - Produces (all return the repo's `ActionResult<T>` shape `{ok:true,data}|{ok:false,code,message}` — copy the `ok/err` helpers from driver-actions.ts):
-  - `getMyLeaveData(slug, year)` → `{ types: LeaveTypeInfo[]; ledger: LedgerEntry[]; requests: MyLeaveRequestRow[]; creditRequests: CreditRequestRow[]; holidays: {date,name}[]; whosAway: {displayName, startDate, endDate, typeName}[]; viewer: {userId, role, displayName} }`
+  - `getMyLeaveData(slug, year)` → `{ types: LeaveTypeInfo[]; ledger: LedgerEntry[]; requests: MyLeaveRequestRow[]; creditRequests: CreditRequestRow[]; holidays: {date,name}[]; whosAway: {displayName, startDate, endDate, typeName}[]; viewer: {userId, role, displayName} }` — `whosAway` reads from the `public.leave_whos_away` view (safe columns only: user_id/leave_type_id/start_date/end_date), joining display names and leave type names server-side; never selects from `leave_requests` directly for this list
   - `applyLeave(slug, input: {leaveTypeId, startDate, endDate, justification, attachmentPath?})` → inserts pending request; server recomputes `day_count` via `workdayCount` + holidays and validates via `validateApplication` (client numbers are advisory only)
   - `requestLeaveCredit(slug, input: {leaveTypeId, amount, referenceStart, referenceEnd, justification?, attachmentPath?})`
   - `cancelMyLeaveRequest(slug, requestId)` → RPC `cancel_leave_request`

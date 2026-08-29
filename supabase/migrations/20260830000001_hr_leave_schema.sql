@@ -182,23 +182,26 @@ create policy "leave_credit_requests_approver_read" on public.leave_credit_reque
   for select to authenticated
   using (public.has_org_role(organization_id, array['owner','org_admin','hr']));
 
--- "Who's away": members may read APPROVED requests of colleagues (name join
--- happens server-side; only dates/type leak, not justification — enforced by
--- the server action selecting only those columns).
-create policy "leave_requests_member_read_approved" on public.leave_requests
-  for select to authenticated using (
-    status = 'approved'
-    and exists (select 1 from public.organization_members m
-      where m.organization_id = leave_requests.organization_id
-        and m.user_id = auth.uid() and m.status = 'active')
-  );
-
 -- 4. Grants (RLS alone -> 42501) ---------------------------------------------
 grant select, insert, update, delete on public.leave_types to authenticated;
 grant select, insert, update, delete on public.leave_ledger to authenticated;
 grant select, insert, update, delete on public.leave_requests to authenticated;
 grant select, insert, update, delete on public.leave_credit_requests to authenticated;
 grant select, insert, update, delete on public.public_holidays to authenticated;
+
+-- "Who's away": colleagues see only who/type/when of approved leave — never
+-- justification, attachments, or decision notes. The view (definer-owned,
+-- bypasses base RLS) scopes rows to orgs the caller is an active member of.
+create or replace view public.leave_whos_away as
+select r.organization_id, r.user_id, r.leave_type_id, r.start_date, r.end_date
+from public.leave_requests r
+where r.status = 'approved'
+  and exists (
+    select 1 from public.organization_members m
+    where m.organization_id = r.organization_id
+      and m.user_id = auth.uid() and m.status = 'active');
+
+grant select on public.leave_whos_away to authenticated;
 
 -- 5. Seed defaults for every existing org ------------------------------------
 insert into public.leave_types
