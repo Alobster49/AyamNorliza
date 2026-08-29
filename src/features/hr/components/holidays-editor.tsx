@@ -30,7 +30,6 @@ type HolidaysEditorProps = {
 
 export function HolidaysEditor({ organizationSlug, year, holidays, onChanged }: HolidaysEditorProps) {
   const { toast } = useToast();
-  const tCommon = useTranslations("common");
   const t = useTranslations("hr.manage.holidays");
   const tRoot = useTranslations();
 
