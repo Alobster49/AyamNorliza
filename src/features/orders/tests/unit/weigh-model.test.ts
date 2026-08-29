@@ -796,8 +796,7 @@ describe("SYNC_TASKS", () => {
   it("tracks the same itemId under the cursor when the server returns tasks in a different order", () => {
     // Deterministic ordering (fix for the BLOCKER: getTodayTasks now orders
     // by created_at, id) means the server shouldn't actually reshuffle rows,
-    // but SYNC_TASKS itself must still be robust to a permuted list — e.g. a
-    // claim UPDATE racing ahead of the ordered SELECT on an older PG version.
+    // but SYNC_TASKS itself must still be robust to a permuted list — Cursor identity must follow itemId, not array position, whatever order the server returns.
     const t1 = makeClaimTask();
     const t2 = makeClaimTask();
     const t3 = makeClaimTask();

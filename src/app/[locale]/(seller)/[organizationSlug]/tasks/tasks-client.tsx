@@ -110,10 +110,8 @@ export function TasksClient({
     if (claim?.by === viewerId && isClaimActive(claim.at, Date.now())) return;
     // Known-blocked (chip visible): don't fire a doomed RPC per keystroke.
     if (isTaskBlocked(snapshot, taskId, Date.now())) return;
-    // Not an active own claim (unclaimed, someone else's stale claim, or our
-    // own claim expired) — clear any stale attempt marker so a re-claim can
-    // fire instead of being blocked by a marker from the earlier attempt.
-    claimAttemptsRef.current.delete(taskId);
+    // Own claim, but expired — drop the stale marker so the re-claim can fire.
+    if (claim?.by === viewerId) claimAttemptsRef.current.delete(taskId);
     if (claimAttemptsRef.current.has(taskId)) return;
     claimAttemptsRef.current.add(taskId);
     dispatch({ type: "CLAIM_LOCAL", taskId, by: viewerId, at: new Date().toISOString() });
