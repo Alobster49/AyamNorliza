@@ -5,11 +5,13 @@
  * Managers (owner/org_admin/seller) land on the dashboard, so the app opens
  * on the KPI overview rather than the catalog. Warehouse staff
  * (inventory/logistics) keep Products, since the dashboard's sales analytics
- * aren't relevant to their job. Drivers cannot enter the seller shell at all
- * (see the (seller) layout role check), so they keep going to the driver
- * deck. HR lands on the leave approval queue, since that is the only screen
- * their role exists to open. Anyone else falls back to a page every active
- * member can open.
+ * aren't relevant to their job. Drivers still land on the driver deck by
+ * default — that is the job they're here to do — even though the (seller)
+ * layout now admits any active member (so a driver *can* open the seller
+ * shell, e.g. for My Leave; see the driver deck's leave link and the layout's
+ * own comment). HR lands on the leave approval queue, since that is the only
+ * screen their role exists to open. Anyone else falls back to a page every
+ * active member can open.
  *
  * Nothing here may return a bare `/{slug}`: that path only exists to bounce
  * callers back through this module (see app/[organizationSlug]/page.tsx), so

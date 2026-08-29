@@ -27,7 +27,7 @@ import { DriverSignOutButton } from "@/features/orders/components/driver-sign-ou
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { MessageCircle, Navigation, Phone } from "lucide-react";
+import { CalendarDays, MessageCircle, Navigation, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Sheet = "none" | "deliver" | "fail";
@@ -362,7 +362,18 @@ export function DriverDeck({
               {deck.failed > 0 ? ` · ${t("header.toSortOut", { count: deck.failed })}` : ""}
             </p>
           </div>
-          <DriverSignOutButton className="h-11 min-w-11" />
+          <div className="flex shrink-0 items-center gap-1.5">
+            {/* Small, unobtrusive — the deck's job is the run, not HR. Drivers
+                now open the seller shell for leave (the (seller) layout admits
+                any active member), so this is their only way in from here. */}
+            <Button variant="ghost" size="sm" className="h-9 gap-1.5" asChild>
+              <Link href={`/${organizationSlug}/leave`}>
+                <CalendarDays className="size-4" aria-hidden />
+                <span className="sr-only sm:not-sr-only">{tRoot("hr.nav.myLeave")}</span>
+              </Link>
+            </Button>
+            <DriverSignOutButton className="h-11 min-w-11" />
+          </div>
         </div>
         <div className="mt-2">
           <Bar pct={deck.progressPct} />

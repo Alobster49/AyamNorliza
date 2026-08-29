@@ -14,7 +14,11 @@
 --   owner@gmail.com                   -- local convenience owner login
 --   hr@gmail.com                      -- local convenience hr login
 --   buyer@ayam-norliza-pilot.example  -- E2E buyer portal (e2e/_fixtures.ts BUYER)
--- All five share the deterministic local password below.
+-- All five share the deterministic local password below, EXCEPT hr@gmail.com:
+-- project CLAUDE.md's test-account rule says every test/console login uses
+-- password123, and hr@gmail.com is one of the data console's documented
+-- accounts (src/features/data-console/lib/accounts.ts) — the other four
+-- above are E2E-only fixtures that rule doesn't reach.
 
 begin;
 
@@ -25,27 +29,31 @@ with seed_users as (
       '10000000-0000-0000-0000-000000000001'::uuid,
       'owner@ayam-norliza-pilot.example',
       'Owner Ayam Norliza',
-      'owner'
+      'owner',
+      'test-only-password-12-chars'
     ),
     (
       '10000000-0000-0000-0000-000000000002'::uuid,
       'target@ayam-norliza-pilot.example',
       'Target User',
-      'caretaker'
+      'caretaker',
+      'test-only-password-12-chars'
     ),
     (
       '10000000-0000-0000-0000-000000000003'::uuid,
       'owner@gmail.com',
       'CEO Badrool',
-      'owner'
+      'owner',
+      'test-only-password-12-chars'
     ),
     (
       '10000000-0000-0000-0000-000000000004'::uuid,
       'hr@gmail.com',
       'HR Manager',
-      'hr'
+      'hr',
+      'password123'
     )
-  ) as user_seed(id, email, display_name, role)
+  ) as user_seed(id, email, display_name, role, password)
   -- Only seed when the pilot org exists, so a partially migrated database
   -- fails loudly on the migration rather than silently here.
   where exists (select 1 from public.organizations where slug = 'ayam-norliza-pilot')
@@ -81,7 +89,7 @@ inserted_users as (
     'authenticated',
     'authenticated',
     seed_users.email,
-    extensions.crypt('test-only-password-12-chars', extensions.gen_salt('bf')),
+    extensions.crypt(seed_users.password, extensions.gen_salt('bf')),
     now(),
     '',
     '',
