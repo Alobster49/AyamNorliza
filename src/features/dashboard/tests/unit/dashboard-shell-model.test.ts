@@ -1,9 +1,36 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_ROLE_GRANTS } from "@/lib/auth/rbac";
 import {
   getDashboardPageContext,
   getDashboardSidebarGroups,
   getUserInitials,
 } from "../../components/dashboard-shell-model";
+
+const groupsFor = (grants: ReadonlySet<string>, pathname = "/acme/products") =>
+  getDashboardSidebarGroups({ organizationSlug: "acme", pathname, grants });
+
+const flat = (gs: ReturnType<typeof groupsFor>) => gs.flatMap((g) => g.items.map((i) => i.titleKey));
+
+describe("permission-driven nav", () => {
+  it("seller sees sales pages, no dashboard/settings", () => {
+    const keys = flat(groupsFor(DEFAULT_ROLE_GRANTS.seller));
+    expect(keys).toContain("pages.products");
+    expect(keys).not.toContain("pages.dashboard");
+    expect(keys).not.toContain("pages.loading");
+  });
+  it("worker sees warehouse only", () => {
+    const keys = flat(groupsFor(DEFAULT_ROLE_GRANTS.inventory));
+    expect(keys).toEqual(expect.arrayContaining(["pages.warehouseTasks", "pages.loading", "pages.myLeave"]));
+    expect(keys).not.toContain("pages.orders");
+  });
+  it("admin sees data console, owner does not", () => {
+    expect(flat(groupsFor(DEFAULT_ROLE_GRANTS.org_admin))).toContain("pages.dataConsole");
+    expect(flat(groupsFor(DEFAULT_ROLE_GRANTS.owner))).not.toContain("pages.dataConsole");
+  });
+  it("view-only custom role sees just its page", () => {
+    expect(flat(groupsFor(new Set(["products:view"])))).toEqual(["pages.products"]);
+  });
+});
 
 describe("dashboard shell model", () => {
   it("still highlights the right item when pathname is locale-prefixed", () => {
@@ -20,6 +47,7 @@ describe("dashboard shell model", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/en/ayam-norliza-pilot/settings/organization",
+      grants: DEFAULT_ROLE_GRANTS.org_admin,
     });
 
     expect(groups[2]).toMatchObject({
@@ -35,6 +63,7 @@ describe("dashboard shell model", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/settings/organization",
+      grants: DEFAULT_ROLE_GRANTS.org_admin,
     });
 
     expect(groups[2]).toMatchObject({
@@ -54,6 +83,7 @@ describe("dashboard shell model", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/settings/users",
+      grants: DEFAULT_ROLE_GRANTS.org_admin,
     });
 
     expect(groups[2]).toMatchObject({
@@ -63,7 +93,7 @@ describe("dashboard shell model", () => {
     });
   });
 
-  it("returns page context for nested access control routes", () => {
+  it("returns page context for nested access control routes regardless of grants", () => {
     expect(
       getDashboardPageContext({
         organizationSlug: "ayam-norliza-pilot",
@@ -99,22 +129,34 @@ describe("dashboard shell model", () => {
     });
   });
 
+  it("resolves the account security page context without touching the sidebar groups", () => {
+    expect(
+      getDashboardPageContext({
+        organizationSlug: "ayam-norliza-pilot",
+        pathname: "/ayam-norliza-pilot/profile/security",
+      }),
+    ).toEqual({
+      section: "sections.account",
+      title: "pages.accountSecurity",
+    });
+  });
+
   it("formats fallback user initials from display name or email", () => {
     expect(getUserInitials("Ayam Norliza", "owner@example.com")).toBe("AN");
     expect(getUserInitials("", "owner@example.com")).toBe("O");
   });
 
-  it("returns only the warehouse group for staff roles", () => {
+  it("returns only the warehouse-relevant group for the inventory grant set", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/tasks",
-      role: "inventory",
+      grants: DEFAULT_ROLE_GRANTS.inventory,
     });
 
-    expect(groups).toHaveLength(1);
+    expect(groups).toHaveLength(2);
     expect(groups[0]).toMatchObject({
-      title: "Warehouse",
-      sectionKey: "sections.warehouse",
+      title: "Fulfillment",
+      sectionKey: "sections.fulfillment",
       isActive: true,
     });
     expect(groups[0]?.items).toEqual([
@@ -128,6 +170,9 @@ describe("dashboard shell model", () => {
         href: "/ayam-norliza-pilot/loading",
         isActive: false,
       },
+    ]);
+    expect(groups[1]).toMatchObject({ title: "HR", sectionKey: "sections.hr" });
+    expect(groups[1]?.items).toEqual([
       {
         titleKey: "pages.myLeave",
         href: "/ayam-norliza-pilot/leave",
@@ -137,12 +182,12 @@ describe("dashboard shell model", () => {
   });
 
   it.each(["seller", "supervisor"] as const)(
-    "returns the sales-side nav (no dashboard) for the %s role",
+    "returns the sales-side nav (no dashboard) for the %s grant set",
     (role) => {
       const groups = getDashboardSidebarGroups({
         organizationSlug: "ayam-norliza-pilot",
         pathname: "/ayam-norliza-pilot/delivery",
-        role,
+        grants: DEFAULT_ROLE_GRANTS[role],
       });
 
       expect(groups).toHaveLength(3);
@@ -166,39 +211,24 @@ describe("dashboard shell model", () => {
         href: "/ayam-norliza-pilot/delivery",
         isActive: true,
       });
+      // loading only carries an `edit` grant for seller/supervisor (RPC-only
+      // actions) — the page itself stays hidden from the nav.
       expect(groups[1]?.items.map((item) => item.titleKey)).toEqual([
         "pages.dispatch",
         "pages.deliveryRuns",
         "pages.deliverySetup",
       ]);
 
-      // seller/supervisor are managers but not leave approvers: HR group
-      // shows only My Leave, Leave Management is filtered out.
       const hrGroup = groups.find((group) => group.title === "HR");
       expect(hrGroup?.items.map((item) => item.titleKey)).toEqual(["pages.myLeave"]);
     },
   );
 
-  it("returns the full nav when role is undefined (back-compat)", () => {
-    const groups = getDashboardSidebarGroups({
-      organizationSlug: "ayam-norliza-pilot",
-      pathname: "/ayam-norliza-pilot/runs",
-    });
-
-    expect(groups).toHaveLength(4);
-    const runsItem = groups[1]?.items.find((item) => item.titleKey === "pages.deliveryRuns");
-    expect(runsItem).toMatchObject({
-      titleKey: "pages.deliveryRuns",
-      href: "/ayam-norliza-pilot/runs",
-      isActive: true,
-    });
-  });
-
-  it("gives the hr role both My Leave and Leave Management", () => {
+  it("gives the hr grant set both My Leave and Leave Management", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/leave/manage",
-      role: "hr",
+      grants: DEFAULT_ROLE_GRANTS.hr,
     });
 
     expect(groups).toHaveLength(1);
@@ -224,11 +254,11 @@ describe("dashboard shell model", () => {
     ]);
   });
 
-  it("gives the driver role My Leave only", () => {
+  it("gives the driver grant set My Leave only", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/leave",
-      role: "driver",
+      grants: DEFAULT_ROLE_GRANTS.driver,
     });
 
     expect(groups).toHaveLength(1);
@@ -246,7 +276,7 @@ describe("dashboard shell model", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/leave/manage",
-      role: "owner",
+      grants: DEFAULT_ROLE_GRANTS.owner,
     });
 
     const hrGroup = groups.find((group) => group.title === "HR");
@@ -255,9 +285,6 @@ describe("dashboard shell model", () => {
       {
         titleKey: "pages.myLeave",
         href: "/ayam-norliza-pilot/leave",
-        // "/leave/manage" is nested under "/leave", so isRouteActive treats
-        // My Leave as active too (prefix match) — same behavior as any
-        // other nested route in this model.
         isActive: true,
       },
       {
@@ -268,38 +295,11 @@ describe("dashboard shell model", () => {
     ]);
   });
 
-  it("keeps warehouse nav and adds My Leave for the inventory role", () => {
-    const groups = getDashboardSidebarGroups({
-      organizationSlug: "ayam-norliza-pilot",
-      pathname: "/ayam-norliza-pilot/leave",
-      role: "inventory",
-    });
-
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.title).toBe("Warehouse");
-    expect(groups[0]?.items).toEqual([
-      {
-        titleKey: "pages.warehouseTasks",
-        href: "/ayam-norliza-pilot/tasks",
-        isActive: false,
-      },
-      {
-        titleKey: "pages.loading",
-        href: "/ayam-norliza-pilot/loading",
-        isActive: false,
-      },
-      {
-        titleKey: "pages.myLeave",
-        href: "/ayam-norliza-pilot/leave",
-        isActive: true,
-      },
-    ]);
-  });
-
   it("splits sales and fulfillment into separate groups", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/dispatch",
+      grants: DEFAULT_ROLE_GRANTS.owner,
     });
 
     expect(groups[0]).toMatchObject({
@@ -333,7 +333,7 @@ describe("dashboard shell model", () => {
     const adminGroups = getDashboardSidebarGroups({
       organizationSlug: "org",
       pathname: "/org/data-console",
-      role: "org_admin",
+      grants: DEFAULT_ROLE_GRANTS.org_admin,
     });
     const system = adminGroups.find((g) => g.title === "System");
     expect(system?.sectionKey).toBe("sections.system");
@@ -345,11 +345,11 @@ describe("dashboard shell model", () => {
       },
     ]);
 
-    for (const role of ["owner", "seller", undefined]) {
+    for (const grants of [DEFAULT_ROLE_GRANTS.owner, DEFAULT_ROLE_GRANTS.seller, new Set<string>()]) {
       const groups = getDashboardSidebarGroups({
         organizationSlug: "org",
         pathname: "/org/products",
-        role,
+        grants,
       });
       expect(groups.find((g) => g.title === "System")).toBeUndefined();
     }

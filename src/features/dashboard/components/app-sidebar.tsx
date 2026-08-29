@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
@@ -62,7 +62,7 @@ type AppSidebarProps = {
   userEmail: string;
   userId: string;
   userAvatar: string | null;
-  role?: string;
+  grants: string[];
 };
 
 const groupIcons: Record<string, LucideIcon> = {
@@ -81,11 +81,12 @@ export function AppSidebar({
   userEmail,
   userId,
   userAvatar,
-  role,
+  grants,
 }: AppSidebarProps) {
   const t = useTranslations("dashboard");
   const pathname = usePathname();
-  const groups = getDashboardSidebarGroups({ organizationSlug, pathname, role });
+  const grantSet = useMemo(() => new Set(grants), [grants]);
+  const groups = getDashboardSidebarGroups({ organizationSlug, pathname, grants: grantSet });
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="print:hidden">
