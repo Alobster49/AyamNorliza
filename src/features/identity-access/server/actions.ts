@@ -349,9 +349,14 @@ export async function inviteUserAction(
   }
   const targetRole = await resolveOrgRole(supabase, input.organizationId, input.roleId);
   const actorCanChangeRoles = await actorCan(actor.role_id, "membership.role.change");
+  // Rank-only comparison isn't enough on its own: a rank tie (or, before
+  // 20260901000003's DB-side rank cap, a corrupted/inflated rank) would let
+  // a non-owner grant `owner`. The role's *key* must be checked directly --
+  // only an existing owner may ever mint another one.
   if (
     !targetRole ||
-    !canGrantRole(actor.organization_roles?.rank ?? 0, targetRole.rank, actorCanChangeRoles)
+    !canGrantRole(actor.organization_roles?.rank ?? 0, targetRole.rank, actorCanChangeRoles) ||
+    (targetRole.key === "owner" && actor.role !== "owner")
   ) {
     return err(
       "forbidden",
@@ -649,9 +654,15 @@ export async function changeMemberRoleAction(
 
   const { data: target } = await supabase
     .from("organization_members")
-    .select("id, organization_id, role, user_id")
+    .select("id, organization_id, role, user_id, organization_roles(rank)")
     .eq("id", input.memberId)
-    .maybeSingle();
+    .maybeSingle<{
+      id: string;
+      organization_id: string;
+      role: string;
+      user_id: string;
+      organization_roles: { rank: number } | null;
+    }>();
   if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
 
   const { data: actor } = await supabase
@@ -669,6 +680,31 @@ export async function changeMemberRoleAction(
   const actorCanChangeRoles = await actorCan(actor.role_id, "membership.role.change");
   if (!actorCanChangeRoles) {
     return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+  // The actor must outrank (or match) the TARGET's *current* role too, not
+  // just the role being granted -- otherwise an org_admin could reach down
+  // and demote a member who currently holds a rank the org_admin could
+  // never have been granted themselves (e.g. a corrupted/legacy row, or a
+  // custom role ranked between org_admin and owner). Fails closed: an
+  // unresolvable target rank is treated as "higher than anyone" (Infinity),
+  // never as 0.
+  //
+  // Exempted when the target's *current* role is "owner": that case is
+  // governed entirely by the second-owner-approval flow below (an
+  // org_admin demoting an owner is the designed, tested bypass -- see the
+  // "confirmed exploit path" comment further down), and this rank gate
+  // would otherwise block it before it ever reaches that flow.
+  if (
+    target.role !== "owner" &&
+    (actor.organization_roles?.rank ?? 0) < (target.organization_roles?.rank ?? Infinity)
+  ) {
+    return err(
+      "forbidden",
+      `Cannot manage member with role '${target.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: target.role },
+    );
   }
   const newRoleRow = await resolveOrgRole(supabase, target.organization_id, input.newRoleId);
   if (
@@ -857,9 +893,16 @@ export async function deactivateUserAction(
 
   const { data: target } = await supabase
     .from("organization_members")
-    .select("id, organization_id, user_id, role, status")
+    .select("id, organization_id, user_id, role, status, organization_roles(rank)")
     .eq("id", input.memberId)
-    .maybeSingle();
+    .maybeSingle<{
+      id: string;
+      organization_id: string;
+      user_id: string;
+      role: string;
+      status: string;
+      organization_roles: { rank: number } | null;
+    }>();
   if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
   if ((target.role as string) === "owner" && target.status === "active") {
     return err(
@@ -871,13 +914,30 @@ export async function deactivateUserAction(
 
   const { data: actor } = await supabase
     .from("organization_members")
-    .select("role, role_id")
+    .select("role, role_id, organization_roles(rank)")
     .eq("organization_id", target.organization_id)
     .eq("user_id", user.id)
     .eq("status", "active")
-    .maybeSingle();
+    .maybeSingle<{
+      role: string;
+      role_id: string;
+      organization_roles: { rank: number } | null;
+    }>();
   if (!actor || !(await actorCan(actor.role_id, "membership.deactivate"))) {
     return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+  // The active-owner case is already blocked flatly above regardless of
+  // rank, so this only ever gates a non-owner target: the actor must
+  // outrank (or match) the target's current role. Fails closed -- an
+  // unresolvable target rank reads as "higher than anyone" (Infinity).
+  if ((actor.organization_roles?.rank ?? 0) < (target.organization_roles?.rank ?? Infinity)) {
+    return err(
+      "forbidden",
+      `Cannot manage member with role '${target.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: target.role },
+    );
   }
 
   const { error: memberErr } = await supabase
@@ -972,9 +1032,11 @@ export async function updateMemberProfileAction(
   // Role-rank guard: an org_admin must never edit the identity (email!)
   // of a member who outranks them — an owner-email swap plus a password
   // reset would be a full owner-account takeover, bypassing the
-  // two-person owner rule enforced elsewhere.
+  // two-person owner rule enforced elsewhere. Fails closed on the target
+  // side: an unresolvable target rank reads as Infinity (deny), never 0
+  // (which would read as "lowest possible rank" and wrongly allow it).
   if (
-    !canGrantRole(actor.organization_roles?.rank ?? 0, target.organization_roles?.rank ?? 0, actorCanChangeRoles)
+    !canGrantRole(actor.organization_roles?.rank ?? 0, target.organization_roles?.rank ?? Infinity, actorCanChangeRoles)
   ) {
     return err(
       "forbidden",
@@ -1045,9 +1107,16 @@ export async function removeMemberAction(
 
   const { data: target } = await supabase
     .from("organization_members")
-    .select("id, organization_id, user_id, role, status")
+    .select("id, organization_id, user_id, role, status, organization_roles(rank)")
     .eq("id", input.memberId)
-    .maybeSingle();
+    .maybeSingle<{
+      id: string;
+      organization_id: string;
+      user_id: string;
+      role: string;
+      status: string;
+      organization_roles: { rank: number } | null;
+    }>();
   if (!target) return err("not_found", "Member not found", "errors.identity.member.notFound");
   if (target.user_id === user.id) {
     return err("forbidden", "You cannot remove yourself", "errors.identity.member.cannotRemoveSelf");
@@ -1062,13 +1131,30 @@ export async function removeMemberAction(
 
   const { data: actor } = await supabase
     .from("organization_members")
-    .select("role, role_id")
+    .select("role, role_id, organization_roles(rank)")
     .eq("organization_id", target.organization_id)
     .eq("user_id", user.id)
     .eq("status", "active")
-    .maybeSingle();
+    .maybeSingle<{
+      role: string;
+      role_id: string;
+      organization_roles: { rank: number } | null;
+    }>();
   if (!actor || !(await actorCan(actor.role_id, "membership.deactivate"))) {
     return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
+  }
+  // The active-owner case is already blocked flatly above regardless of
+  // rank, so this only ever gates a non-owner target: the actor must
+  // outrank (or match) the target's current role. Fails closed -- an
+  // unresolvable target rank reads as "higher than anyone" (Infinity).
+  if ((actor.organization_roles?.rank ?? 0) < (target.organization_roles?.rank ?? Infinity)) {
+    return err(
+      "forbidden",
+      `Cannot manage member with role '${target.role}'`,
+      "errors.identity.roles.cannotGrantRole",
+      undefined,
+      { role: target.role },
+    );
   }
 
   try {
@@ -1241,9 +1327,13 @@ export async function createUserAction(
   }
   const targetRole = await resolveOrgRole(supabase, input.organizationId, input.roleId);
   const actorCanChangeRoles = await actorCan(actor.role_id, "membership.role.change");
+  // See the identical guard in inviteUserAction: rank alone can't gate an
+  // owner grant, the role's key must be checked -- only an owner may mint
+  // another owner.
   if (
     !targetRole ||
-    !canGrantRole(actor.organization_roles?.rank ?? 0, targetRole.rank, actorCanChangeRoles)
+    !canGrantRole(actor.organization_roles?.rank ?? 0, targetRole.rank, actorCanChangeRoles) ||
+    (targetRole.key === "owner" && actor.role !== "owner")
   ) {
     return err(
       "forbidden",

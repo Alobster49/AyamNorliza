@@ -235,6 +235,47 @@ describe("inviteUserAction", () => {
     }
   });
 
+  it("returns roles.cannotGrantRole when the roleId doesn't belong to this org", async () => {
+    // resolveOrgRole's `.eq("organization_id", ...)` filter means a roleId
+    // from a different org (or a nonexistent one) comes back null, not a
+    // row with the wrong org_id -- the mock simulates that directly.
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("owner")],
+      organization_roles: [{ data: null, error: null }],
+    });
+    const result = await inviteUserAction({ ...validInput, roleId: "99999999-9999-9999-9999-999999999999" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+  });
+
+  it("denies granting the owner key even when the actor's rank is inflated", async () => {
+    // Defense-in-depth for the DB-side rank cap (20260901000003): even if
+    // an actor's own rank were somehow inflated past 100 (a corrupted row,
+    // a bug, a future write path this app doesn't control), the key check
+    // is independent of rank and still blocks minting a second owner.
+    setSupabase({
+      organization_members: [
+        {
+          data: {
+            id: "actor-1",
+            role: "org_admin",
+            role_id: "org_admin",
+            organization_id: "org-1",
+            organization_roles: { rank: 999 },
+          },
+          error: null,
+        },
+      ],
+      organization_roles: [ORG_ROLE("owner")],
+    });
+    const result = await inviteUserAction({ ...validInput, roleId: ROLE_ID.owner });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+      expect(result.messageParams).toEqual({ role: "owner" });
+    }
+  });
+
   it("returns invite.createFailed when adminCreateInvitation throws an Error", async () => {
     setSupabase({
       organization_members: [ACTIVE_MEMBER("org_admin")],
@@ -364,7 +405,10 @@ describe("changeMemberRoleAction", () => {
   it("returns member.alreadyHasRole when the role is unchanged", async () => {
     setSupabase({
       organization_members: [
-        { data: { id: "m-1", organization_id: "org-1", role: "driver", user_id: "target-1" }, error: null },
+        {
+          data: { id: "m-1", organization_id: "org-1", role: "driver", user_id: "target-1", organization_roles: { rank: RANK_BY_ROLE.driver } },
+          error: null,
+        },
         ACTIVE_MEMBER("org_admin"),
       ],
       organization_roles: [ORG_ROLE("driver")],
@@ -377,7 +421,10 @@ describe("changeMemberRoleAction", () => {
   it("returns member.ownerNeedsApprover for an owner transfer with no approver", async () => {
     setSupabase({
       organization_members: [
-        { data: { id: "m-1", organization_id: "org-1", role: "org_admin", user_id: "target-1" }, error: null },
+        {
+          data: { id: "m-1", organization_id: "org-1", role: "org_admin", user_id: "target-1", organization_roles: { rank: RANK_BY_ROLE.org_admin } },
+          error: null,
+        },
         ACTIVE_MEMBER("owner"),
       ],
       organization_roles: [ORG_ROLE("owner")],
@@ -458,6 +505,37 @@ describe("changeMemberRoleAction", () => {
     });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.ownerNeedsApprover");
+  });
+
+  it("denies managing a member holding a higher-ranked (non-owner) custom role", async () => {
+    // Target-rank comparison (Important #2): an org_admin (rank 80) must
+    // not be able to act on a member currently holding some other role
+    // ranked above them, even when that role isn't "owner" -- e.g. a
+    // custom role a real owner ranked at 90. The DB-side rank cap
+    // (20260901000003) prevents a *custom* role from ever reaching 90, but
+    // this app-side check is the fail-safe for any row that predates it or
+    // reaches this table another way.
+    setSupabase({
+      organization_members: [
+        {
+          data: {
+            id: "m-1",
+            organization_id: "org-1",
+            role: "regional_lead",
+            user_id: "target-1",
+            organization_roles: { rank: 90 },
+          },
+          error: null,
+        },
+        ACTIVE_MEMBER("org_admin"),
+      ],
+    });
+    const result = await changeMemberRoleAction(validInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+      expect(result.messageParams).toEqual({ role: "regional_lead" });
+    }
   });
 
   it("succeeds when approverUserId is a real, active, distinct owner", async () => {
@@ -568,10 +646,21 @@ describe("updateMemberProfileAction", () => {
 describe("removeMemberAction", () => {
   const UUID = "11111111-1111-1111-1111-111111111111";
   const validInput = { memberId: UUID, reason: "left the farm" };
-  const TARGET = (over: Partial<{ user_id: string; role: string; status: string }> = {}) => ({
-    data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "driver", status: "active", ...over },
-    error: null,
-  });
+  const TARGET = (over: Partial<{ user_id: string; role: string; status: string }> = {}) => {
+    const role = over.role ?? "driver";
+    return {
+      data: {
+        id: UUID,
+        organization_id: "org-1",
+        user_id: "u-target",
+        role,
+        status: "active",
+        organization_roles: { rank: RANK_BY_ROLE[role] ?? 0 },
+        ...over,
+      },
+      error: null,
+    };
+  };
 
   it("returns member.notFound for an unknown member", async () => {
     setSupabase({ organization_members: [{ data: null, error: null }] });
