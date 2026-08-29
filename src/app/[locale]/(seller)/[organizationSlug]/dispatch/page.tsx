@@ -1,8 +1,8 @@
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { todayInTimeZone } from "@/lib/time/org-date";
-import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
-import { DISPATCH_ROLES } from "@/features/logistics/lib/roles";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
 import { getDispatchBoard } from "@/features/logistics/server/dispatch-actions";
 import { DispatchClient } from "@/features/logistics/components/dispatch-client";
 
@@ -15,7 +15,7 @@ export default async function DispatchPage({
 
   let timeZone: string;
   try {
-    ({ timeZone } = await requireOrgRole(organizationSlug, DISPATCH_ROLES));
+    ({ timeZone } = await requirePermission(organizationSlug, "dispatch", "view"));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });

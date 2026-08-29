@@ -1,8 +1,8 @@
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { getRuns } from "@/features/orders/server/order-actions";
-import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
-import { MANAGER_ROLES } from "@/features/orders/lib/roles";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
 import { todayInTimeZone } from "@/lib/time/org-date";
 import { RunsClient } from "./runs-client";
 
@@ -15,7 +15,7 @@ export default async function RunsPage({
 
   let timeZone: string;
   try {
-    ({ timeZone } = await requireOrgRole(organizationSlug, MANAGER_ROLES));
+    ({ timeZone } = await requirePermission(organizationSlug, "delivery_runs", "view"));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });

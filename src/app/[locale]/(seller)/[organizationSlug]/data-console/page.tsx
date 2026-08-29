@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
 import { DataConsoleClient } from "./data-console-client";
 
 export default async function DataConsolePage({
@@ -9,7 +10,7 @@ export default async function DataConsolePage({
 }) {
   const { organizationSlug } = await params;
   try {
-    await requireOrgRole(organizationSlug, ["org_admin"]);
+    await requirePermission(organizationSlug, "data_console.manage", "use");
   } catch (e) {
     if (e instanceof OrderPermissionError) notFound();
     throw e;

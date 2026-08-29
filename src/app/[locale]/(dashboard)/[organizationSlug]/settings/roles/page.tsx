@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
+import { requirePermissionOrRedirect } from "@/lib/auth/require-permission";
 import {
   getOrganizationBySlug,
   listInvitations,
@@ -25,6 +26,7 @@ export default async function RolesPage({
 }) {
   await requireUserOrRedirect();
   const { organizationSlug } = await params;
+  await requirePermissionOrRedirect(organizationSlug, "roles", "view");
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
 
