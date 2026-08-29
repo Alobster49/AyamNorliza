@@ -6,6 +6,7 @@
  * completeTask. No React, no DOM — unit tested in tests/unit/weigh-model.test.ts.
  */
 
+import { isClaimActive } from "@/lib/claims";
 import type { OrderItemMode, TaskWithOrder } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -34,6 +35,8 @@ export type LineDraft = { weightKg: string; pieces: string };
 
 export type EntryTarget = "weight" | "pieces";
 
+export type TaskClaim = { by: string; at: string };
+
 export type WeighState = {
   queue: WeighLine[];
   cursor: number;
@@ -43,6 +46,15 @@ export type WeighState = {
   entryTarget: EntryTarget;
   /** Snapshots of optimistically removed tasks, keyed by taskId. */
   pendingRemovals: Record<string, { removedLines: WeighLine[]; insertAt: number }>;
+  /** Active-or-not is decided at read time via isTaskBlocked — raw claim rows live here. */
+  claims: Record<string, TaskClaim>;
+  viewerId: string | null;
+};
+
+export type CreateWeighStateOptions = {
+  viewerId?: string | null;
+  focusOrderId?: string;
+  nowMs?: number;
 };
 
 export type WeighAction =
@@ -50,13 +62,17 @@ export type WeighAction =
   | { type: "DOT" }
   | { type: "BACKSPACE" }
   | { type: "TOGGLE_TARGET" }
-  | { type: "NEXT" }
-  | { type: "SKIP" }
+  | { type: "NEXT"; nowMs: number }
+  | { type: "SKIP"; nowMs: number }
   | { type: "UNDO" }
   | { type: "GO_TO"; index: number }
   | { type: "OPTIMISTIC_COMPLETE"; taskId: string }
   | { type: "COMPLETE_SUCCESS"; taskId: string }
-  | { type: "RESTORE_TASK"; taskId: string };
+  | { type: "RESTORE_TASK"; taskId: string }
+  | { type: "SYNC_TASKS"; tasks: TaskWithOrder[]; nowMs: number }
+  | { type: "CLAIM_LOCAL"; taskId: string; by: string; at: string }
+  | { type: "CLAIM_CLEARED"; taskId: string }
+  | { type: "CLAIM_REJECTED"; taskId: string; nowMs: number };
 
 export type BandStatus = "empty" | "in_band" | "out_of_band" | "delta_only";
 
@@ -102,18 +118,47 @@ export function indexOfOrder(queue: WeighLine[], orderId: string): number {
   return queue.findIndex((line) => line.orderId === orderId);
 }
 
+function claimsFromTasks(tasks: TaskWithOrder[]): Record<string, TaskClaim> {
+  const claims: Record<string, TaskClaim> = {};
+  for (const task of tasks) {
+    if (task.weigh_claimed_by !== null && task.weigh_claimed_at !== null) {
+      claims[task.id] = { by: task.weigh_claimed_by, at: task.weigh_claimed_at };
+    }
+  }
+  return claims;
+}
+
+/** Actively claimed (within TTL) by someone other than the viewer. */
+export function isTaskBlocked(state: WeighState, taskId: string, nowMs: number): boolean {
+  const claim = state.claims[taskId];
+  if (!claim) return false;
+  if (claim.by === state.viewerId) return false;
+  return isClaimActive(claim.at, nowMs);
+}
+
+function firstAvailableIndex(state: WeighState, nowMs: number): number {
+  const index = state.queue.findIndex((line) => !isTaskBlocked(state, line.taskId, nowMs));
+  return index === -1 ? 0 : index;
+}
+
 /** `focusOrderId` opens the station on that order — used by "Weigh now" links. */
-export function createWeighState(tasks: TaskWithOrder[], focusOrderId?: string): WeighState {
+export function createWeighState(
+  tasks: TaskWithOrder[],
+  { viewerId = null, focusOrderId, nowMs = 0 }: CreateWeighStateOptions = {},
+): WeighState {
   const queue = buildLineQueue(tasks);
-  const focused = focusOrderId ? indexOfOrder(queue, focusOrderId) : -1;
-  return {
+  const base: WeighState = {
     queue,
-    cursor: focused === -1 ? 0 : focused,
+    cursor: 0,
     drafts: Object.fromEntries(queue.map((line) => [line.itemId, { ...EMPTY_DRAFT }])),
     confirmed: {},
     entryTarget: "weight",
     pendingRemovals: {},
+    claims: claimsFromTasks(tasks),
+    viewerId,
   };
+  const focused = focusOrderId ? indexOfOrder(queue, focusOrderId) : -1;
+  return { ...base, cursor: focused === -1 ? firstAvailableIndex(base, nowMs) : focused };
 }
 
 export type TaskGroup = {
@@ -308,14 +353,16 @@ export function firstReadyUnsubmittedTaskId(
 // Navigation
 // ---------------------------------------------------------------------------
 
-/** Next unconfirmed line after `from`, searching circularly. Null when all confirmed. */
-export function nextIncompleteIndex(state: WeighState, from: number): number | null {
+/** Next unconfirmed, non-blocked line after `from`, searching circularly. Null when none left. */
+export function nextIncompleteIndex(state: WeighState, from: number, nowMs: number): number | null {
   const { queue } = state;
   if (queue.length === 0) return null;
   for (let step = 1; step <= queue.length; step++) {
     const index = (from + step) % queue.length;
     const line = queue[index];
-    if (line && !state.confirmed[line.itemId]) return index;
+    if (line && !state.confirmed[line.itemId] && !isTaskBlocked(state, line.taskId, nowMs)) {
+      return index;
+    }
   }
   return null;
 }
@@ -349,8 +396,8 @@ function clampCursor(queue: WeighLine[], cursor: number): number {
   return Math.min(Math.max(cursor, 0), queue.length - 1);
 }
 
-function advance(state: WeighState): WeighState {
-  const next = nextIncompleteIndex(state, state.cursor);
+function advance(state: WeighState, nowMs: number): WeighState {
+  const next = nextIncompleteIndex(state, state.cursor, nowMs);
   return { ...state, cursor: next ?? state.cursor, entryTarget: "weight" };
 }
 
@@ -379,10 +426,10 @@ export function weighReducer(state: WeighState, action: WeighAction): WeighState
         line && isLineReady(line, state.drafts)
           ? { ...state.confirmed, [line.itemId]: true as const }
           : state.confirmed;
-      return advance({ ...state, confirmed });
+      return advance({ ...state, confirmed }, action.nowMs);
     }
     case "SKIP":
-      return advance(state);
+      return advance(state, action.nowMs);
     case "UNDO": {
       if (!canUndo(state)) return state;
       const cursor = state.cursor - 1;
@@ -437,6 +484,51 @@ export function weighReducer(state: WeighState, action: WeighAction): WeighState
         // failed submit would immediately resubmit the same payload forever.
         confirmed: unconfirm(state.confirmed, snapshot.removedLines.map((l) => l.itemId)),
       };
+    }
+    case "SYNC_TASKS": {
+      // Rebuild from server truth, but never resurrect a task we are
+      // mid-submitting (its snapshot lives in pendingRemovals for RESTORE_TASK).
+      const fresh = buildLineQueue(action.tasks).filter(
+        (line) => !state.pendingRemovals[line.taskId],
+      );
+      const drafts: Record<string, LineDraft> = Object.fromEntries(
+        fresh.map((line) => [line.itemId, state.drafts[line.itemId] ?? { ...EMPTY_DRAFT }]),
+      );
+      const confirmed: Record<string, true> = {};
+      for (const line of fresh) {
+        if (state.confirmed[line.itemId]) confirmed[line.itemId] = true;
+      }
+      const claims = claimsFromTasks(action.tasks);
+      const currentItemId = state.queue[state.cursor]?.itemId;
+      const surviving = fresh.findIndex((line) => line.itemId === currentItemId);
+      const next: WeighState = { ...state, queue: fresh, drafts, confirmed, claims };
+      return {
+        ...next,
+        cursor: surviving !== -1 ? surviving : firstAvailableIndex(next, action.nowMs),
+      };
+    }
+    case "CLAIM_LOCAL":
+      return {
+        ...state,
+        claims: { ...state.claims, [action.taskId]: { by: action.by, at: action.at } },
+      };
+    case "CLAIM_CLEARED": {
+      const claims = { ...state.claims };
+      delete claims[action.taskId];
+      return { ...state, claims };
+    }
+    case "CLAIM_REJECTED": {
+      // Someone else holds the task: throw away what was typed into it and
+      // move on. The refetch that follows delivers the true claimant.
+      const itemIds = state.queue
+        .filter((line) => line.taskId === action.taskId)
+        .map((line) => line.itemId);
+      const drafts = { ...state.drafts };
+      for (const id of itemIds) drafts[id] = { ...EMPTY_DRAFT };
+      const claims = { ...state.claims };
+      delete claims[action.taskId];
+      const next = { ...state, drafts, confirmed: unconfirm(state.confirmed, itemIds), claims };
+      return advance(next, action.nowMs);
     }
     default:
       return state;

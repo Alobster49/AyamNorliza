@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { CLAIM_TTL_MS } from "@/lib/claims";
 import type { TaskWithOrder } from "../../types";
 import {
   applyBackspace,
@@ -14,6 +15,7 @@ import {
   indexOfOrder,
   isLineReady,
   isPiecesValid,
+  isTaskBlocked,
   isTaskComplete,
   isWeightValid,
   nextIncompleteIndex,
@@ -22,6 +24,10 @@ import {
   weighReducer,
   type WeighState,
 } from "../../lib/weigh-model";
+
+const NOW = Date.parse("2026-08-29T08:00:00.000Z");
+const ACTIVE_AT = new Date(NOW - 60_000).toISOString();
+const EXPIRED_AT = new Date(NOW - CLAIM_TTL_MS - 1).toISOString();
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -70,6 +76,8 @@ function makeTask(items: ReturnType<typeof makeItem>[], overrides: Record<string
     status: "pending",
     done_by: null,
     done_at: null,
+    weigh_claimed_by: null,
+    weigh_claimed_at: null,
     created_at: "",
     updated_at: "",
     version: 1,
@@ -127,6 +135,11 @@ function makeTask(items: ReturnType<typeof makeItem>[], overrides: Record<string
   } as unknown as TaskWithOrder;
 }
 
+/** A single-line task, for claim/sync scenarios where per-task granularity matters. */
+function makeClaimTask(overrides: Record<string, unknown> = {}): TaskWithOrder {
+  return makeTask([makeItem({ mode: "kg", quantity: 10 })], overrides);
+}
+
 /** Two tasks: task A has 2 lines (kg + piece mode), task B has 1 line. */
 function fixtureTasks(): TaskWithOrder[] {
   const a1 = makeItem({ mode: "kg", quantity: 40 });
@@ -179,12 +192,12 @@ describe("focusing one order", () => {
 
   it("opens on the focused order instead of the top of the queue", () => {
     const tasks = fixtureTasks();
-    expect(createWeighState(tasks, tasks[1]!.order.id).cursor).toBe(2);
+    expect(createWeighState(tasks, { focusOrderId: tasks[1]!.order.id }).cursor).toBe(2);
   });
 
   it("falls back to the top when the order is not in the queue", () => {
     const tasks = fixtureTasks();
-    expect(createWeighState(tasks, "no-such-order").cursor).toBe(0);
+    expect(createWeighState(tasks, { focusOrderId: "no-such-order" }).cursor).toBe(0);
     expect(createWeighState(tasks).cursor).toBe(0);
   });
 });
@@ -418,14 +431,14 @@ describe("navigation", () => {
   it("nextIncompleteIndex searches circularly, skipping confirmed lines", () => {
     let s = stateWith();
     s = confirmLine(s, 1, "24");
-    expect(nextIncompleteIndex(s, 0)).toBe(2); // line 1 confirmed → skip to 2
-    expect(nextIncompleteIndex(s, 2)).toBe(0); // wraps
+    expect(nextIncompleteIndex(s, 0, NOW)).toBe(2); // line 1 confirmed → skip to 2
+    expect(nextIncompleteIndex(s, 2, NOW)).toBe(0); // wraps
   });
 
   it("a filled-but-unconfirmed line still counts as incomplete", () => {
     let s = stateWith();
     s = fillLine(s, 1, "24");
-    expect(nextIncompleteIndex(s, 0)).toBe(1);
+    expect(nextIncompleteIndex(s, 0, NOW)).toBe(1);
   });
 
   it("returns null when every line is confirmed", () => {
@@ -433,7 +446,7 @@ describe("navigation", () => {
     s = confirmLine(s, 0, "41.6");
     s = confirmLine(s, 1, "24");
     s = confirmLine(s, 2, "25.4");
-    expect(nextIncompleteIndex(s, 0)).toBeNull();
+    expect(nextIncompleteIndex(s, 0, NOW)).toBeNull();
   });
 
   it("canUndo only when cursor > 0", () => {
@@ -462,7 +475,7 @@ describe("weighReducer", () => {
     let s = stateWith();
     s = weighReducer(s, { type: "TOGGLE_TARGET" });
     s = fillLine(s, 0, "41.6");
-    s = weighReducer(s, { type: "NEXT" });
+    s = weighReducer(s, { type: "NEXT", nowMs: NOW });
     expect(s.cursor).toBe(1);
     expect(s.entryTarget).toBe("weight");
     expect(s.confirmed[s.queue[0]!.itemId]).toBe(true);
@@ -470,14 +483,14 @@ describe("weighReducer", () => {
 
   it("NEXT does not confirm an invalid line", () => {
     let s = stateWith();
-    s = weighReducer(s, { type: "NEXT" });
+    s = weighReducer(s, { type: "NEXT", nowMs: NOW });
     expect(s.confirmed[s.queue[0]!.itemId]).toBeUndefined();
   });
 
   it("SKIP moves on without confirming", () => {
     let s = stateWith();
     s = fillLine(s, 0, "41.6");
-    s = weighReducer(s, { type: "SKIP" });
+    s = weighReducer(s, { type: "SKIP", nowMs: NOW });
     expect(s.cursor).toBe(1);
     expect(s.confirmed[s.queue[0]!.itemId]).toBeUndefined();
   });
@@ -485,7 +498,7 @@ describe("weighReducer", () => {
   it("UNDO steps back one line, keeping the draft but unconfirming it", () => {
     let s = stateWith();
     s = fillLine(s, 0, "41.6");
-    s = weighReducer(s, { type: "NEXT" });
+    s = weighReducer(s, { type: "NEXT", nowMs: NOW });
     s = weighReducer(s, { type: "UNDO" });
     expect(s.cursor).toBe(0);
     expect(s.drafts[s.queue[0]!.itemId]!.weightKg).toBe("41.6");
@@ -558,11 +571,11 @@ describe("weighReducer", () => {
     const taskId = s.queue[0]!.taskId;
     for (const d of ["4", "1"]) s = weighReducer(s, { type: "DIGIT", digit: d });
     expect(isTaskComplete(s, taskId)).toBe(false);
-    s = weighReducer(s, { type: "NEXT" });
+    s = weighReducer(s, { type: "NEXT", nowMs: NOW });
     for (const d of ["2", "4"]) s = weighReducer(s, { type: "DIGIT", digit: d });
     // both lines now hold valid weights, but line 2 is unconfirmed
     expect(isTaskComplete(s, taskId)).toBe(false);
-    s = weighReducer(s, { type: "NEXT" });
+    s = weighReducer(s, { type: "NEXT", nowMs: NOW });
     expect(isTaskComplete(s, taskId)).toBe(true);
   });
 });
@@ -596,5 +609,133 @@ describe("queueWithPendingRemovals", () => {
     const display = queueWithPendingRemovals(s.queue, s.pendingRemovals);
     expect(display).toHaveLength(3);
     expect(display[2]!.taskId).toBe(lastTaskId);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Claims — blocking, deep-link overrides, and claim reducer actions
+// ---------------------------------------------------------------------------
+
+describe("claims", () => {
+  it("maps claim fields into state and marks other-active tasks blocked", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
+    const t2 = makeClaimTask();
+    const state = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    expect(state.claims[t1.id]).toEqual({ by: "worker-a", at: ACTIVE_AT });
+    expect(isTaskBlocked(state, t1.id, NOW)).toBe(true);
+    expect(isTaskBlocked(state, t2.id, NOW)).toBe(false);
+  });
+
+  it("treats an expired claim as unclaimed", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: EXPIRED_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskBlocked(state, t1.id, NOW)).toBe(false);
+  });
+
+  it("my own claim never blocks me", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "me", weigh_claimed_at: ACTIVE_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskBlocked(state, t1.id, NOW)).toBe(false);
+  });
+
+  it("initial cursor lands on the first non-blocked task", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
+    const t2 = makeClaimTask();
+    const state = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    expect(state.queue[state.cursor]?.taskId).toBe(t2.id);
+  });
+
+  it("focusOrderId deep link wins even into a blocked task", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
+    const t2 = makeClaimTask();
+    const state = createWeighState([t1, t2], {
+      viewerId: "me",
+      nowMs: NOW,
+      focusOrderId: t1.order.id,
+    });
+    expect(state.queue[state.cursor]?.taskId).toBe(t1.id);
+  });
+
+  it("NEXT skips lines of blocked tasks", () => {
+    // t1 unblocked (1 line), t2 blocked, t3 unblocked
+    const t1 = makeClaimTask();
+    const t2 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
+    const t3 = makeClaimTask();
+    let state = createWeighState([t1, t2, t3], { viewerId: "me", nowMs: NOW });
+    expect(state.queue[state.cursor]!.taskId).toBe(t1.id);
+    state = fillLine(state, state.cursor, "5");
+    // cursor on t1's line; NEXT with a valid draft must land on t3's line
+    state = weighReducer(state, { type: "NEXT", nowMs: NOW });
+    expect(state.queue[state.cursor]!.taskId).toBe(t3.id);
+  });
+
+  it("CLAIM_LOCAL sets, CLAIM_CLEARED removes", () => {
+    const t1 = makeClaimTask();
+    let state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    state = weighReducer(state, { type: "CLAIM_LOCAL", taskId: t1.id, by: "me", at: ACTIVE_AT });
+    expect(state.claims[t1.id]).toEqual({ by: "me", at: ACTIVE_AT });
+    state = weighReducer(state, { type: "CLAIM_CLEARED", taskId: t1.id });
+    expect(state.claims[t1.id]).toBeUndefined();
+  });
+
+  it("CLAIM_REJECTED discards the task's drafts and advances off it", () => {
+    // type a digit into t1's line, dispatch CLAIM_REJECTED
+    const t1 = makeClaimTask();
+    const t2 = makeClaimTask();
+    let state = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    state = confirmLine(state, 0, "5");
+    expect(state.confirmed[state.queue[0]!.itemId]).toBe(true);
+    state = weighReducer(state, { type: "CLAIM_REJECTED", taskId: t1.id, nowMs: NOW });
+    // expect drafts for t1's items reset to empty, confirmations gone,
+    // and cursor on the next non-blocked task
+    expect(state.drafts[state.queue[0]!.itemId]).toEqual({ weightKg: "", pieces: "" });
+    expect(state.confirmed[state.queue[0]!.itemId]).toBeUndefined();
+    expect(state.queue[state.cursor]!.taskId).toBe(t2.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// SYNC_TASKS — merging server truth into local state
+// ---------------------------------------------------------------------------
+
+describe("SYNC_TASKS", () => {
+  it("preserves drafts, confirmations and cursor for surviving lines", () => {
+    // build state from [t1, t2]; type "5" into t1's first line; confirm nothing
+    const t1 = makeClaimTask();
+    const t2 = makeClaimTask();
+    let state = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    state = fillLine(state, 0, "5");
+    // sync with fresh [t1, t2] where t2 now carries an active other-claim
+    const freshT2 = { ...t2, weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT };
+    state = weighReducer(state, { type: "SYNC_TASKS", tasks: [t1, freshT2], nowMs: NOW });
+    // expect draft "5" kept, cursor unchanged, claims["t2"] set
+    expect(state.drafts[state.queue[0]!.itemId]!.weightKg).toBe("5");
+    expect(state.cursor).toBe(0);
+    expect(state.claims[t2.id]).toEqual({ by: "worker-a", at: ACTIVE_AT });
+  });
+
+  it("drops vanished tasks and moves a stranded cursor to the first available task", () => {
+    // cursor on t1; sync with fresh [t2] (t1 completed elsewhere)
+    const t1 = makeClaimTask();
+    const t2 = makeClaimTask();
+    let state = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    expect(state.queue[state.cursor]!.taskId).toBe(t1.id);
+    state = weighReducer(state, { type: "SYNC_TASKS", tasks: [t2], nowMs: NOW });
+    // expect no t1 lines, cursor on t2's first line
+    expect(state.queue.some((line) => line.taskId === t1.id)).toBe(false);
+    expect(state.queue[state.cursor]!.taskId).toBe(t2.id);
+  });
+
+  it("does not resurrect tasks in pendingRemovals", () => {
+    // OPTIMISTIC_COMPLETE t1, then SYNC_TASKS with fresh data still containing t1
+    const t1 = makeClaimTask();
+    let state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    state = confirmLine(state, 0, "5");
+    state = weighReducer(state, { type: "OPTIMISTIC_COMPLETE", taskId: t1.id });
+    expect(state.pendingRemovals[t1.id]).toBeDefined();
+    state = weighReducer(state, { type: "SYNC_TASKS", tasks: [t1], nowMs: NOW });
+    // expect t1 absent from queue (its snapshot stays in pendingRemovals for RESTORE_TASK)
+    expect(state.queue.some((line) => line.taskId === t1.id)).toBe(false);
+    expect(state.pendingRemovals[t1.id]).toBeDefined();
   });
 });
