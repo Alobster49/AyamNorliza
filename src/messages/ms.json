@@ -1537,7 +1537,10 @@
       "saving": "Menyimpan",
       "itemProgress": "item {index} daripada {total}",
       "weighedProgress": "{done} / {total} ditimbang",
-      "orderProgressAriaLabel": "Kemajuan pesanan: {customerName}"
+      "orderProgressAriaLabel": "Kemajuan pesanan: {customerName}",
+      "claimedBy": "{name} sedang menimbang",
+      "claimedByFallback": "Pekerja lain sedang menimbang",
+      "release": "Lepaskan"
     },
     "swipeCard": {
       "orderedKg": "{quantity} kg ditempah · saiz {min}–{max} kg",
@@ -2325,6 +2328,7 @@
   },
   "tasks": {
     "saveFailedTitle": "Gagal simpan pesanan",
+    "claimLostTitle": "Pesanan diambil",
     "completeTitle": "Pesanan selesai",
     "completeBody": "Ditimbang dan disimpan untuk {customerName}."
   },

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Check, Loader2 } from "lucide-react";
+import { isClaimActive } from "@/lib/claims";
 import {
   groupQueueByTask,
   queueWithPendingRemovals,
@@ -15,7 +16,12 @@ type QueueRailProps = {
   confirmed: Record<string, true>;
   cursor: number;
   pendingRemovals: WeighState["pendingRemovals"];
+  claims: WeighState["claims"];
+  viewerId: string | null;
+  people: Record<string, string>;
+  nowMs: number;
   onSelect: (index: number) => void;
+  onRelease: (taskId: string) => void;
 };
 
 /**
@@ -24,7 +30,18 @@ type QueueRailProps = {
  * Orders mid-save stay visible as non-interactive rows with a spinner until
  * the server confirms, so completing one never makes it silently vanish.
  */
-export function QueueRail({ queue, confirmed, cursor, pendingRemovals, onSelect }: QueueRailProps) {
+export function QueueRail({
+  queue,
+  confirmed,
+  cursor,
+  pendingRemovals,
+  claims,
+  viewerId,
+  people,
+  nowMs,
+  onSelect,
+  onRelease,
+}: QueueRailProps) {
   const t = useTranslations("orders.queue");
   const displayQueue = queueWithPendingRemovals(queue, pendingRemovals);
   const groups = groupQueueByTask(displayQueue);
@@ -56,6 +73,10 @@ export function QueueRail({ queue, confirmed, cursor, pendingRemovals, onSelect 
         const saving = Boolean(pendingRemovals[group.taskId]);
         const firstIndex = queue.findIndex((l) => l.taskId === group.taskId);
 
+        const claim = claims[group.taskId];
+        const blockedBy =
+          claim && claim.by !== viewerId && isClaimActive(claim.at, nowMs) ? claim.by : null;
+
         const rowContent = (
           <>
             <span className="flex items-center justify-between gap-2 text-sm font-medium">
@@ -77,6 +98,23 @@ export function QueueRail({ queue, confirmed, cursor, pendingRemovals, onSelect 
                   ? t("itemProgress", { index: currentLine.indexInTask, total: currentLine.totalInTask })
                   : t("weighedProgress", { done: doneCount, total: group.lines.length })}
             </span>
+            {blockedBy !== null && !saving && (
+              <span className="flex items-center justify-between gap-2">
+                <span className="truncate text-xs font-medium text-amber-600 dark:text-amber-500">
+                  {people[blockedBy] ? t("claimedBy", { name: people[blockedBy] }) : t("claimedByFallback")}
+                </span>
+                <button
+                  type="button"
+                  className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:underline"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onRelease(group.taskId);
+                  }}
+                >
+                  {t("release")}
+                </button>
+              </span>
+            )}
           </>
         );
 

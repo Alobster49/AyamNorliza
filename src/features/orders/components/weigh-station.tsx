@@ -21,6 +21,9 @@ const EMPTY_DRAFT: LineDraft = { weightKg: "", pieces: "" };
 type WeighStationProps = {
   state: WeighState;
   dispatch: (action: WeighAction) => void;
+  people: Record<string, string>;
+  nowMs: number;
+  onRelease: (taskId: string) => void;
   className?: string;
 };
 
@@ -28,7 +31,7 @@ type WeighStationProps = {
  * Desktop/tablet kiosk: queue rail on the left, one line at a time on the
  * right with a scale-sized readout, size-band gauge and numpad.
  */
-export function WeighStation({ state, dispatch, className }: WeighStationProps) {
+export function WeighStation({ state, dispatch, people, nowMs, onRelease, className }: WeighStationProps) {
   const tDetail = useTranslations("orders.detail");
   const tQueue = useTranslations("orders.queue");
   const tStation = useTranslations("orders.station");
@@ -44,7 +47,12 @@ export function WeighStation({ state, dispatch, className }: WeighStationProps) 
             confirmed={state.confirmed}
             cursor={state.cursor}
             pendingRemovals={state.pendingRemovals}
+            claims={state.claims}
+            viewerId={state.viewerId}
+            people={people}
+            nowMs={nowMs}
             onSelect={(index) => dispatch({ type: "GO_TO", index })}
+            onRelease={onRelease}
           />
           {/* my-auto instead of justify-center: centered when it fits, but the top
               stays scroll-reachable when the viewport is short. */}
@@ -111,8 +119,8 @@ export function WeighStation({ state, dispatch, className }: WeighStationProps) 
                 onDot={() => dispatch({ type: "DOT" })}
                 onBackspace={() => dispatch({ type: "BACKSPACE" })}
                 onToggleTarget={() => dispatch({ type: "TOGGLE_TARGET" })}
-                onNext={() => dispatch({ type: "NEXT" })}
-                onSkip={() => dispatch({ type: "SKIP" })}
+                onNext={() => dispatch({ type: "NEXT", nowMs: Date.now() })}
+                onSkip={() => dispatch({ type: "SKIP", nowMs: Date.now() })}
               />
 
               <p className="text-xs text-muted-foreground">{tStation("autosaveHint")}</p>

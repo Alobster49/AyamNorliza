@@ -8,6 +8,7 @@ import {
   bandStatus,
   canUndo,
   isLineReady,
+  isTaskBlocked,
   type LineDraft,
   type WeighAction,
   type WeighState,
@@ -24,6 +25,8 @@ const COMMIT_PROJECTED_FRACTION = 0.35;
 type SwipeDeckProps = {
   state: WeighState;
   dispatch: (action: WeighAction) => void;
+  people: Record<string, string>;
+  nowMs: number;
   className?: string;
 };
 
@@ -33,9 +36,10 @@ type SwipeDeckProps = {
  * by momentum projection, and hands release velocity into a spring — per
  * Apple's fluid-interface model. Swipe left = skip, right = undo.
  */
-export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
+export function SwipeDeck({ state, dispatch, people, nowMs, className }: SwipeDeckProps) {
   const tNumpad = useTranslations("orders.numpad");
   const tSwipeCard = useTranslations("orders.swipeCard");
+  const tQueue = useTranslations("orders.queue");
   const line = state.queue[state.cursor];
   const draft = line ? (state.drafts[line.itemId] ?? EMPTY_DRAFT) : EMPTY_DRAFT;
 
@@ -233,7 +237,7 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
 
     const { state: current } = modelRef.current;
     if (shouldCommit && direction === -1) {
-      commit(-1, { type: "SKIP" });
+      commit(-1, { type: "SKIP", nowMs: Date.now() });
       return;
     }
     if (shouldCommit && direction === 1 && canUndo(current)) {
@@ -267,6 +271,16 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
   return (
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       <OrderProgressTicks lines={taskLines} confirmed={state.confirmed} currentItemId={line.itemId} />
+
+      {line && isTaskBlocked(state, line.taskId, nowMs) && (
+        <div className="mx-auto w-fit rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-500">
+          {(() => {
+            const by = state.claims[line.taskId]?.by;
+            const name = by ? people[by] : undefined;
+            return name ? tQueue("claimedBy", { name }) : tQueue("claimedByFallback");
+          })()}
+        </div>
+      )}
 
       <div ref={wrapperRef} className="relative flex-1">
         {/* Peek cards behind the stack */}
@@ -303,8 +317,8 @@ export function SwipeDeck({ state, dispatch, className }: SwipeDeckProps) {
             entryTarget={state.entryTarget}
             interactive
             onDispatchNumpad={onNumpad}
-            onSave={() => commit(-1, { type: "NEXT" })}
-            onSkip={() => commit(-1, { type: "SKIP" })}
+            onSave={() => commit(-1, { type: "NEXT", nowMs: Date.now() })}
+            onSkip={() => commit(-1, { type: "SKIP", nowMs: Date.now() })}
           />
         </div>
         {/* Drag-direction chips: opacity driven imperatively from applyTransform. */}

@@ -15,8 +15,9 @@ export default async function TasksPage({
   const { organizationSlug } = await params;
   const { order: focusOrderId } = await searchParams;
 
+  let ctx;
   try {
-    await requireOrgRole(organizationSlug, STAFF_ROLES);
+    ctx = await requireOrgRole(organizationSlug, STAFF_ROLES);
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}`, locale: await getLocale() });
@@ -29,7 +30,10 @@ export default async function TasksPage({
   return (
     <TasksClient
       organizationSlug={organizationSlug}
-      initialTasks={result.ok ? result.data : []}
+      orgId={ctx.orgId}
+      viewerId={ctx.userId}
+      initialTasks={result.ok ? result.data.tasks : []}
+      initialPeople={result.ok ? result.data.people : {}}
       focusOrderId={focusOrderId}
     />
   );

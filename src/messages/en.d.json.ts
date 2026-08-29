@@ -1540,7 +1540,10 @@ declare const messages: {
       "saving": "Saving",
       "itemProgress": "item {index} of {total}",
       "weighedProgress": "{done} / {total} weighed",
-      "orderProgressAriaLabel": "Order progress: {customerName}"
+      "orderProgressAriaLabel": "Order progress: {customerName}",
+      "claimedBy": "{name} weighing",
+      "claimedByFallback": "Another worker weighing",
+      "release": "Release"
     },
     "swipeCard": {
       "orderedKg": "{quantity} kg ordered · size {min}–{max} kg",
@@ -2328,6 +2331,7 @@ declare const messages: {
   },
   "tasks": {
     "saveFailedTitle": "Couldn't save order",
+    "claimLostTitle": "Order taken",
     "completeTitle": "Order complete",
     "completeBody": "Weighed and saved for {customerName}."
   },
