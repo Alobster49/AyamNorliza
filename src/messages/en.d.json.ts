@@ -2551,7 +2551,6 @@ declare const messages: {
     },
     "apply": {
       "title": "Apply Leave",
-      "yearLabel": "Year",
       "typeLabel": "Leave Type",
       "startDateLabel": "Start date",
       "endDateLabel": "End date",
@@ -2561,6 +2560,7 @@ declare const messages: {
       "dayCount": "{n} days",
       "remaining": "{n} remaining",
       "uponRequest": "Upon Request",
+      "crossYearNote": "Balance preview unavailable for {year}",
       "submit": "Apply",
       "success": "Leave request submitted.",
       "error": "Failed to submit leave request."
@@ -2629,7 +2629,8 @@ declare const messages: {
       "invalid_range": "End date must be on or after the start date.",
       "zero_workdays": "This date range has no working days to apply for.",
       "insufficient_balance": "There is not enough leave balance for this request.",
-      "attachment_required": "This leave type requires a supporting attachment."
+      "attachment_required": "This leave type requires a supporting attachment.",
+      "uploadFailed": "Attachment upload failed"
     }
   }
 };

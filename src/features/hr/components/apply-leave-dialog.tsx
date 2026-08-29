@@ -31,13 +31,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { applyLeave } from "../server/leave-actions";
 import { computeBalance, validateApplication, workdayCount } from "../lib/leave-model";
 import type { LedgerEntry, LeaveRequestSummary, LeaveTypeInfo } from "../types";
@@ -78,7 +71,6 @@ export function ApplyLeaveDialog({
   const t = useTranslations("hr.apply");
   const tRoot = useTranslations();
 
-  const [selectedYear, setSelectedYear] = useState(year);
   const [typeId, setTypeId] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -91,24 +83,31 @@ export function ApplyLeaveDialog({
   useEffect(() => {
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the form on open; a lazy initializer can't see the `open` transition
-      setSelectedYear(year);
       setTypeId("");
       setStartDate("");
       setEndDate("");
       setJustification("");
       setFile(null);
     }
-  }, [open, year]);
+  }, [open]);
 
-  const yearOptions = useMemo(() => [year, year + 1], [year]);
   const selectedType = types.find((type) => type.id === typeId) ?? null;
+
+  // The request's year is whatever the start date falls in (the server
+  // derives it the same way — see applyLeave in leave-actions.ts). Before a
+  // start date is picked, fall back to the page's loaded year. `ledger` and
+  // `requests` are only ever fetched for the page's loaded `year`, so a
+  // balance computed against a different year is meaningless — `crossYear`
+  // flags that so previews can hide the (wrong) number instead of showing it.
+  const startYear = startDate ? Number(startDate.slice(0, 4)) : year;
+  const crossYear = startYear !== year;
 
   const dayCount =
     startDate && endDate ? workdayCount(startDate, endDate, holidays) : 0;
 
   const validation = useMemo(() => {
     if (!selectedType || !startDate || !endDate) return null;
-    const balance = computeBalance(selectedType, ledger, requests, selectedYear, today);
+    const balance = computeBalance(selectedType, ledger, requests, startYear, today);
     return validateApplication({
       type: selectedType,
       startDate,
@@ -117,7 +116,7 @@ export function ApplyLeaveDialog({
       balance,
       attachmentProvided: !!file,
     });
-  }, [selectedType, startDate, endDate, dayCount, ledger, requests, selectedYear, today, file]);
+  }, [selectedType, startDate, endDate, dayCount, ledger, requests, startYear, today, file]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -133,7 +132,11 @@ export function ApplyLeaveDialog({
           .from("leave-attachments")
           .upload(path, file, { contentType: file.type, upsert: false });
         if (uploadError) {
-          toast({ title: t("error"), description: uploadError.message, variant: "destructive" });
+          toast({
+            title: tRoot("hr.errors.uploadFailed"),
+            description: uploadError.message,
+            variant: "destructive",
+          });
           return;
         }
         attachmentPath = path;
@@ -171,26 +174,10 @@ export function ApplyLeaveDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="apply-leave-year">{t("yearLabel")}</Label>
-            <Select value={String(selectedYear)} onValueChange={(v) => setSelectedYear(Number(v))}>
-              <SelectTrigger id="apply-leave-year">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {yearOptions.map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
             <Label>{t("typeLabel")}</Label>
             <div className="space-y-2">
               {types.map((type) => {
-                const balance = computeBalance(type, ledger, requests, selectedYear, today);
+                const balance = computeBalance(type, ledger, requests, startYear, today);
                 const inputId = `apply-leave-type-${type.id}`;
                 return (
                   <label
@@ -215,7 +202,11 @@ export function ApplyLeaveDialog({
                       <span className="text-sm font-medium">{type.name}</span>
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      {balance.uponRequest ? t("uponRequest") : t("remaining", { n: balance.available })}
+                      {balance.uponRequest
+                        ? t("uponRequest")
+                        : crossYear
+                          ? t("crossYearNote", { year: startYear })
+                          : t("remaining", { n: balance.available })}
                     </span>
                   </label>
                 );
@@ -274,9 +265,13 @@ export function ApplyLeaveDialog({
             <div className="text-sm">
               {dayCount > 0 && <p className="text-muted-foreground">{t("dayCount", { n: dayCount })}</p>}
               {validation && !validation.ok && (
-                <p className="text-xs text-destructive">
-                  {tRoot(`hr.errors.${validation.reason}` as never)}
-                </p>
+                validation.reason === "insufficient_balance" && crossYear ? (
+                  <p className="text-xs text-muted-foreground">{t("crossYearNote", { year: startYear })}</p>
+                ) : (
+                  <p className="text-xs text-destructive">
+                    {tRoot(`hr.errors.${validation.reason}` as never)}
+                  </p>
+                )
               )}
             </div>
             <div className="flex justify-end gap-2">

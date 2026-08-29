@@ -2548,7 +2548,6 @@
     },
     "apply": {
       "title": "Mohon Cuti",
-      "yearLabel": "Tahun",
       "typeLabel": "Jenis Cuti",
       "startDateLabel": "Tarikh mula",
       "endDateLabel": "Tarikh tamat",
@@ -2558,6 +2557,7 @@
       "dayCount": "{n} hari",
       "remaining": "{n} baki",
       "uponRequest": "Ikut Permohonan",
+      "crossYearNote": "Pratonton baki tidak tersedia untuk {year}",
       "submit": "Mohon",
       "success": "Permohonan cuti telah dihantar.",
       "error": "Gagal menghantar permohonan cuti."
@@ -2626,7 +2626,8 @@
       "invalid_range": "Tarikh tamat mesti sama atau selepas tarikh mula.",
       "zero_workdays": "Julat tarikh ini tiada hari bekerja untuk dimohon.",
       "insufficient_balance": "Baki cuti tidak mencukupi untuk permohonan ini.",
-      "attachment_required": "Jenis cuti ini memerlukan lampiran sokongan."
+      "attachment_required": "Jenis cuti ini memerlukan lampiran sokongan.",
+      "uploadFailed": "Muat naik lampiran gagal"
     }
   }
 }

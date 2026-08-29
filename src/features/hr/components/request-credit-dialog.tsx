@@ -99,7 +99,11 @@ export function RequestCreditDialog({
           .from("leave-attachments")
           .upload(path, file, { contentType: file.type, upsert: false });
         if (uploadError) {
-          toast({ title: t("error"), description: uploadError.message, variant: "destructive" });
+          toast({
+            title: tRoot("hr.errors.uploadFailed"),
+            description: uploadError.message,
+            variant: "destructive",
+          });
           return;
         }
         attachmentPath = path;
