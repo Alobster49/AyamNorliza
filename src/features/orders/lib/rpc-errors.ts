@@ -72,6 +72,8 @@ export function mapRpcError(message: string): { code: string; message: string } 
       return { code: "validation", message: "That person is not an active driver in this organization." };
     case "invalid_transition":
       return { code: "conflict", message: "That run status change is not allowed." };
+    case "claimed_by_other":
+      return { code: "conflict", message: "Another worker is weighing that order right now." };
     default:
       return { code: "internal", message: "Something went wrong. Please try again." };
   }

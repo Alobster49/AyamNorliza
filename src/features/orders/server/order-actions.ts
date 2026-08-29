@@ -12,6 +12,7 @@ import {
   PlaceOrderSchema,
   ConfirmOrderSchema,
   CompleteTaskSchema,
+  ClaimWeighTaskSchema,
   CloseOrderSchema,
   type ActionResult,
   type OrderStatus,
@@ -19,6 +20,7 @@ import {
   type OrderListItem,
   type OrderWithItems,
   type TaskWithOrder,
+  type TodayTasksData,
   type RunWithOrders,
   type RunDriver,
   type DeliveryRun,
@@ -371,7 +373,7 @@ export async function cancelOrder(
 
 export async function getTodayTasks(
   organizationSlug: string,
-): Promise<ActionResult<TaskWithOrder[]>> {
+): Promise<ActionResult<TodayTasksData>> {
   const guard = await guardRoles(organizationSlug, STAFF_ROLES);
   if (!guard.ok) return guard;
   const { orgId } = guard;
@@ -410,7 +412,45 @@ export async function getTodayTasks(
     return err("internal", "Failed to load today's tasks");
   }
 
-  return ok((data ?? []) as TaskWithOrder[]);
+  const tasks = (data ?? []) as TaskWithOrder[];
+
+  // Names for whoever is claiming a task, so other stations can say which
+  // worker is weighing which order (same pattern as getDispatchBoard).
+  const personIds = Array.from(
+    new Set(tasks.map((t) => t.weigh_claimed_by).filter((id): id is string => id !== null)),
+  );
+  const people: Record<string, string> = {};
+  if (personIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", personIds);
+    for (const profile of profiles ?? []) {
+      if (profile.display_name) people[profile.user_id] = profile.display_name;
+    }
+  }
+
+  return ok({ tasks, people });
+}
+
+/** See `createMessageKey` — same rationale, the weigh-task RPCs' own codes. */
+function taskMessageKey(rawMessage: string): string {
+  switch (rawMessage) {
+    case "forbidden":
+      return "errors.orders.tasks.forbidden";
+    case "task_done":
+      return "errors.orders.tasks.taskDone";
+    case "invalid_status":
+      return "errors.orders.tasks.invalidStatus";
+    case "weights_incomplete":
+      return "errors.orders.tasks.weightsIncomplete";
+    case "invalid_weight":
+      return "errors.orders.tasks.invalidWeight";
+    case "claimed_by_other":
+      return "errors.orders.tasks.claimedByOther";
+    default:
+      return "errors.orders.tasks.internal";
+  }
 }
 
 export async function completeTask(rawInput: unknown): Promise<ActionResult> {
@@ -439,7 +479,32 @@ export async function completeTask(rawInput: unknown): Promise<ActionResult> {
 
   if (error) {
     const mapped = mapRpcError(error.message);
-    return err(mapped.code as OrderErrorCode, mapped.message);
+    return err(mapped.code as OrderErrorCode, mapped.message, undefined, taskMessageKey(error.message));
+  }
+
+  revalidatePath(`/${input.organizationSlug}/tasks`);
+  return ok(undefined);
+}
+
+export async function claimWeighTask(rawInput: unknown): Promise<ActionResult> {
+  const parsed = ClaimWeighTaskSchema.safeParse(rawInput);
+  if (!parsed.success) {
+    return err("validation", "Invalid claim input", parsed.error.flatten().fieldErrors);
+  }
+  const input = parsed.data;
+
+  const guard = await guardRoles(input.organizationSlug, STAFF_ROLES);
+  if (!guard.ok) return guard;
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("claim_weigh_task", {
+    p_task: input.taskId,
+    p_claim: input.claim,
+  });
+
+  if (error) {
+    const mapped = mapRpcError(error.message);
+    return err(mapped.code as OrderErrorCode, mapped.message, undefined, taskMessageKey(error.message));
   }
 
   revalidatePath(`/${input.organizationSlug}/tasks`);

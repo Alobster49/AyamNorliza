@@ -567,6 +567,15 @@ declare const messages: {
         "optionsLoadFailed": "Failed to load delivery options",
         "invalidPostcode": "Enter a 5-digit postcode",
         "coverageCheckFailed": "Failed to check delivery coverage"
+      },
+      "tasks": {
+        "forbidden": "You do not have permission to do that.",
+        "taskDone": "This task is already done.",
+        "invalidStatus": "This order is not in the right status for that action.",
+        "weightsIncomplete": "Every line needs a warehouse weight before you can finish this task.",
+        "invalidWeight": "Weight must be greater than zero.",
+        "claimedByOther": "Another worker is weighing that order right now.",
+        "internal": "Something went wrong. Please try again."
       }
     },
     "logistics": {

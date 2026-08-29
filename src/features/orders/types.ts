@@ -214,6 +214,8 @@ export type OrderTask = {
   status: "pending" | "done";
   done_by: string | null;
   done_at: string | null;
+  weigh_claimed_by: string | null;
+  weigh_claimed_at: string | null;
   created_at: string;
   updated_at: string;
   version: number;
@@ -331,6 +333,8 @@ export type OrderListItem = Order & {
 
 export type TaskWithOrder = OrderTask & { order: OrderWithItems };
 
+export type TodayTasksData = { tasks: TaskWithOrder[]; people: Record<string, string> };
+
 export type RunDriver = { userId: string; name: string };
 
 export type RunWithOrders = DeliveryRun & {
@@ -414,6 +418,13 @@ export const CompleteTaskSchema = z.object({
     .min(1),
 });
 export type CompleteTaskInput = z.infer<typeof CompleteTaskSchema>;
+
+export const ClaimWeighTaskSchema = z.object({
+  organizationSlug: z.string().min(1),
+  taskId: z.string().uuid(),
+  claim: z.boolean(),
+});
+export type ClaimWeighTaskInput = z.infer<typeof ClaimWeighTaskSchema>;
 
 export const CloseOrderSchema = z.object({
   organizationSlug: z.string().min(1),

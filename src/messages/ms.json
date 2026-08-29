@@ -564,6 +564,15 @@
         "optionsLoadFailed": "Gagal memuatkan pilihan penghantaran",
         "invalidPostcode": "Masukkan poskod 5 digit",
         "coverageCheckFailed": "Gagal menyemak liputan penghantaran"
+      },
+      "tasks": {
+        "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+        "taskDone": "Tugasan ini sudah selesai.",
+        "invalidStatus": "Pesanan ini tidak berada dalam status yang betul untuk tindakan itu.",
+        "weightsIncomplete": "Setiap baris perlukan berat gudang sebelum tugasan ini boleh diselesaikan.",
+        "invalidWeight": "Berat mesti lebih daripada sifar.",
+        "claimedByOther": "Pekerja lain sedang menimbang pesanan itu sekarang.",
+        "internal": "Sesuatu tidak kena. Sila cuba lagi."
       }
     },
     "logistics": {

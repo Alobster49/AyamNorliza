@@ -23,6 +23,8 @@ import {
   getOrderDetail,
   createManualOrder,
   setRunStatus,
+  completeTask,
+  claimWeighTask,
 } from "../../server/order-actions";
 import { mapRpcError } from "../../lib/rpc-errors";
 
@@ -101,7 +103,7 @@ describe("getTodayTasks", () => {
 
     const result = await getTodayTasks("ayam-norliza-pilot");
 
-    expect(result).toEqual({ ok: true, data: [] });
+    expect(result).toEqual({ ok: true, data: { tasks: [], people: {} } });
   });
 
   it("forbids the support role", async () => {
@@ -115,6 +117,114 @@ describe("getTodayTasks", () => {
       message: expect.any(String),
       messageKey: "errors.orders.permission.forbidden",
     });
+  });
+
+  it("resolves display names for whoever is claiming a weigh task", async () => {
+    const CLAIMER_ID = "88888888-8888-8888-8888-888888888888";
+    mockSupabaseFor({
+      role: "logistics",
+      tableResults: {
+        order_tasks: {
+          data: [
+            {
+              id: "task-1",
+              organization_id: "org-1",
+              order_id: ORDER_ID,
+              type: "allocate_weigh",
+              assigned_to: null,
+              status: "pending",
+              done_by: null,
+              done_at: null,
+              weigh_claimed_by: CLAIMER_ID,
+              weigh_claimed_at: "2026-08-29T01:00:00.000Z",
+              created_at: "2026-08-29T00:00:00.000Z",
+              updated_at: "2026-08-29T00:00:00.000Z",
+              version: 1,
+            },
+          ],
+          error: null,
+        },
+        profiles: {
+          data: [{ user_id: CLAIMER_ID, display_name: "Aiman" }],
+          error: null,
+        },
+      },
+    });
+
+    const result = await getTodayTasks("ayam-norliza-pilot");
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.tasks).toHaveLength(1);
+      expect(result.data.people).toEqual({ [CLAIMER_ID]: "Aiman" });
+    }
+  });
+});
+
+describe("claimWeighTask", () => {
+  const TASK_ID = "11111111-1111-4111-8111-111111111111";
+
+  it("calls claim_weigh_task and returns ok", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics", rpcResult: { data: null, error: null } });
+
+    const result = await claimWeighTask({
+      organizationSlug: "ayam-norliza-pilot",
+      taskId: TASK_ID,
+      claim: true,
+    });
+
+    expect(result).toEqual({ ok: true, data: undefined });
+    expect(supabase.rpc).toHaveBeenCalledWith("claim_weigh_task", { p_task: TASK_ID, p_claim: true });
+  });
+
+  it("maps claimed_by_other to a conflict with the tasks messageKey", async () => {
+    mockSupabaseFor({
+      role: "logistics",
+      rpcResult: { data: null, error: { message: "claimed_by_other" } },
+    });
+
+    const result = await claimWeighTask({
+      organizationSlug: "ayam-norliza-pilot",
+      taskId: TASK_ID,
+      claim: true,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("conflict");
+      expect(result.messageKey).toBe("errors.orders.tasks.claimedByOther");
+    }
+  });
+
+  it("rejects invalid input", async () => {
+    const result = await claimWeighTask({
+      organizationSlug: "ayam-norliza-pilot",
+      taskId: "nope",
+      claim: true,
+    });
+
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe("completeTask claim conflict", () => {
+  it("maps claimed_by_other with the tasks messageKey", async () => {
+    mockSupabaseFor({
+      role: "logistics",
+      rpcResult: { data: null, error: { message: "claimed_by_other" } },
+    });
+
+    const result = await completeTask({
+      organizationSlug: "ayam-norliza-pilot",
+      taskId: "11111111-1111-4111-8111-111111111111",
+      weights: [{ itemId: ITEM_ID, weightKg: 1.5 }],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("conflict");
+      expect(result.messageKey).toBe("errors.orders.tasks.claimedByOther");
+    }
   });
 });
 
@@ -348,6 +458,7 @@ describe("mapRpcError", () => {
     ["invalid_weight", "validation"],
     ["invalid_price", "validation"],
     ["invalid_transition", "conflict"],
+    ["claimed_by_other", "conflict"],
     ["some_unrecognized_code", "internal"],
   ];
 
