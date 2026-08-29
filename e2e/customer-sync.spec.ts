@@ -18,7 +18,7 @@ test("buyer signup auto-links to the admin-created customer with the same phone"
   const phone = uniquePhone();
   const dashedPhone = `${phone.slice(0, 3)}-${phone.slice(3)}`; // admin types it dashed
   const buyerEmail = `e2e-sync-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
-  const buyerPassword = "test-only-password-12-chars";
+  const buyerPassword = "password123";
 
   // Step 1: admin creates the customer (dashed phone, no email).
   await signIn(page, OWNER.email, OWNER.password);

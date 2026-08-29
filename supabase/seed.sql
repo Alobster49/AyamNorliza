@@ -14,11 +14,8 @@
 --   owner@gmail.com                   -- local convenience owner login
 --   hr@gmail.com                      -- local convenience hr login
 --   buyer@ayam-norliza-pilot.example  -- E2E buyer portal (e2e/_fixtures.ts BUYER)
--- All five share the deterministic local password below, EXCEPT hr@gmail.com:
--- project CLAUDE.md's test-account rule says every test/console login uses
--- password123, and hr@gmail.com is one of the data console's documented
--- accounts (src/features/data-console/lib/accounts.ts) — the other four
--- above are E2E-only fixtures that rule doesn't reach.
+-- All five share password123, the repo-wide test-account convention
+-- (project CLAUDE.md; e2e/_fixtures.ts defaults).
 
 begin;
 
@@ -29,31 +26,27 @@ with seed_users as (
       '10000000-0000-0000-0000-000000000001'::uuid,
       'owner@ayam-norliza-pilot.example',
       'Owner Ayam Norliza',
-      'owner',
-      'test-only-password-12-chars'
+      'owner'
     ),
     (
       '10000000-0000-0000-0000-000000000002'::uuid,
       'target@ayam-norliza-pilot.example',
       'Target User',
-      'caretaker',
-      'test-only-password-12-chars'
+      'caretaker'
     ),
     (
       '10000000-0000-0000-0000-000000000003'::uuid,
       'owner@gmail.com',
       'CEO Badrool',
-      'owner',
-      'test-only-password-12-chars'
+      'owner'
     ),
     (
       '10000000-0000-0000-0000-000000000004'::uuid,
       'hr@gmail.com',
       'HR Manager',
-      'hr',
-      'password123'
+      'hr'
     )
-  ) as user_seed(id, email, display_name, role, password)
+  ) as user_seed(id, email, display_name, role)
   -- Only seed when the pilot org exists, so a partially migrated database
   -- fails loudly on the migration rather than silently here.
   where exists (select 1 from public.organizations where slug = 'ayam-norliza-pilot')
@@ -89,7 +82,7 @@ inserted_users as (
     'authenticated',
     'authenticated',
     seed_users.email,
-    extensions.crypt(seed_users.password, extensions.gen_salt('bf')),
+    extensions.crypt('password123', extensions.gen_salt('bf')),
     now(),
     '',
     '',
@@ -206,7 +199,7 @@ select
   'authenticated',
   'authenticated',
   'buyer@ayam-norliza-pilot.example',
-  crypt('test-only-password-12-chars', gen_salt('bf')),
+  crypt('password123', gen_salt('bf')),
   now(), '', '', '', '', '', '', '', '',
   jsonb_build_object('provider', 'email', 'providers', array['email']),
   jsonb_build_object('display_name', 'E2E Pilot Buyer'),

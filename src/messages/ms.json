@@ -2334,7 +2334,9 @@
     "saveFailedTitle": "Gagal simpan pesanan",
     "claimLostTitle": "Pesanan diambil",
     "completeTitle": "Pesanan selesai",
-    "completeBody": "Ditimbang dan disimpan untuk {customerName}."
+    "completeBody": "Ditimbang dan disimpan untuk {customerName}.",
+    "startWeighing": "Mula menimbang",
+    "pickAnother": "Pilih pesanan lain"
   },
   "warehouse": {
     "empty": {

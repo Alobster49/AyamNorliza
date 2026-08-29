@@ -2337,7 +2337,9 @@ declare const messages: {
     "saveFailedTitle": "Couldn't save order",
     "claimLostTitle": "Order taken",
     "completeTitle": "Order complete",
-    "completeBody": "Weighed and saved for {customerName}."
+    "completeBody": "Weighed and saved for {customerName}.",
+    "startWeighing": "Start weighing",
+    "pickAnother": "Pick another order"
   },
   "warehouse": {
     "empty": {

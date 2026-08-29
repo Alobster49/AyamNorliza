@@ -35,7 +35,7 @@ test("buyer signs up with phone, checks out with a new address, then reuses it f
   const buyerPage = await buyerContext.newPage();
   const buyerEmail = `e2e-addr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
   const buyerName = uniqueFixtureName("E2E Addr Buyer");
-  const buyerPassword = "test-only-password-12-chars";
+  const buyerPassword = "password123";
 
   await buyerPage.goto("/ms/buyer_portal/ayam-norliza-pilot/login");
   // RECONCILIATION: the login/signup toggle is a radiogroup ("Log
