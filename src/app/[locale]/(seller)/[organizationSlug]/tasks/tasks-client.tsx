@@ -171,6 +171,7 @@ export function TasksClient({
   useEffect(() => {
     const supabase = createSupabaseBrowserClient();
     let timer: ReturnType<typeof setTimeout> | null = null;
+    let disposed = false;
     const channel = supabase
       .channel(`weigh-queue-${orgId}`)
       .on(
@@ -180,9 +181,20 @@ export function TasksClient({
           if (timer) clearTimeout(timer);
           timer = setTimeout(() => void refetchRef.current(), 400);
         },
-      )
-      .subscribe();
+      );
+    // The browser client starts realtime with the anon key; RLS rejects the
+    // subscription until the user token is set, so wait for the session first.
+    void supabase.auth.getSession().then(({ data }) => {
+      if (disposed) return;
+      if (data.session) supabase.realtime.setAuth(data.session.access_token);
+      channel.subscribe((status, err) => {
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          console.error(`realtime ${status}`, err);
+        }
+      });
+    });
     return () => {
+      disposed = true;
       if (timer) clearTimeout(timer);
       void supabase.removeChannel(channel);
     };
