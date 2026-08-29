@@ -14,8 +14,10 @@ export default async function LoadingPage({
   const { organizationSlug } = await params;
 
   let timeZone: string;
+  let orgId: string;
+  let userId: string;
   try {
-    ({ timeZone } = await requireOrgRole(organizationSlug, DISPATCH_ROLES));
+    ({ timeZone, orgId, userId } = await requireOrgRole(organizationSlug, DISPATCH_ROLES));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });
@@ -32,6 +34,12 @@ export default async function LoadingPage({
   }
 
   return (
-    <LoadingClient organizationSlug={organizationSlug} initialDate={date} initialData={result.data} />
+    <LoadingClient
+      organizationSlug={organizationSlug}
+      orgId={orgId}
+      viewerId={userId}
+      initialDate={date}
+      initialData={result.data}
+    />
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DispatchBoardData, DispatchTicket } from "../../types";
-import { buildLoadBoard, buildLoadQueue, truckSummaries } from "../../lib/loading-model";
+import { buildLoadBoard, buildLoadQueue, isClaimActive, truckSummaries } from "../../lib/loading-model";
 
 const DATE = "2026-08-20";
 const WEEKDAY = new Date(2026, 7, 20).getDay();
@@ -23,7 +23,7 @@ function order(over: Partial<DispatchTicket> = {}): DispatchTicket {
     delivery_address: "addr", delivery_date: DATE, slot_id: "slot-1",
     truck_id: "truck-x", run_id: null, run_sequence: null, postcode: "82000",
     assignment_source: "none", notes: null, total_amount: 0, closed_at: null,
-    loaded_at: null, loaded_by: null,
+    loaded_at: null, loaded_by: null, loading_claimed_by: null, loading_claimed_at: null,
     created_at: "", updated_at: "", version: 1,
     customer: { name: "Kedai A" }, ...over,
   };
@@ -42,6 +42,7 @@ function baseData(over: Partial<DispatchBoardData> = {}): DispatchBoardData {
     blocks: [],
     runs: [],
     orders: [],
+    people: {},
     ...over,
   };
 }
@@ -229,5 +230,81 @@ describe("truckSummaries", () => {
     expect(sums[0]!.bayName).toBe("Bay A");
     expect(sums[0]!.doneCount).toBe(1);
     expect(sums[0]!.totalCount).toBe(1);
+  });
+});
+
+describe("loading claims", () => {
+  const NOW = Date.parse("2026-08-20T08:00:00Z");
+  const claimOpts = { viewerId: "worker-a", nowMs: NOW };
+
+  function claimedOrder(truckId: string, over: Partial<DispatchTicket> = {}) {
+    return order({
+      assignment_source: "auto", truck_id: truckId, status: "ready",
+      loading_claimed_by: "worker-b",
+      loading_claimed_at: "2026-08-20T07:55:00Z", // 5 min ago — active
+      ...over,
+    });
+  }
+
+  it("maps an active claim with the claimer's name", () => {
+    const data = baseData();
+    const truckId = data.trucks[0]!.id;
+    data.orders = [claimedOrder(truckId)];
+    data.people = { "worker-b": "Badrol" };
+    const q = buildLoadQueue(data, DATE, truckId, claimOpts)!;
+    expect(q.jobs[0]!.claim).toEqual({ userId: "worker-b", name: "Badrol", mine: false });
+  });
+
+  it("marks the viewer's own claim as mine", () => {
+    const data = baseData();
+    const truckId = data.trucks[0]!.id;
+    data.orders = [claimedOrder(truckId, { loading_claimed_by: "worker-a" })];
+    const q = buildLoadQueue(data, DATE, truckId, claimOpts)!;
+    expect(q.jobs[0]!.claim).toEqual({ userId: "worker-a", name: null, mine: true });
+  });
+
+  it("treats an expired claim as no claim", () => {
+    const data = baseData();
+    const truckId = data.trucks[0]!.id;
+    data.orders = [claimedOrder(truckId, { loading_claimed_at: "2026-08-20T07:45:00Z" })]; // 15 min ago
+    const q = buildLoadQueue(data, DATE, truckId, claimOpts)!;
+    expect(q.jobs[0]!.claim).toBeNull();
+  });
+
+  it("drops the claim once the order is loaded and resolves loadedByName", () => {
+    const data = baseData();
+    const truckId = data.trucks[0]!.id;
+    data.orders = [claimedOrder(truckId, {
+      loaded_at: "2026-08-20T07:58:00Z", loaded_by: "worker-b",
+    })];
+    data.people = { "worker-b": "Badrol" };
+    const q = buildLoadQueue(data, DATE, truckId, claimOpts)!;
+    expect(q.jobs[0]!.claim).toBeNull();
+    expect(q.jobs[0]!.loadedByName).toBe("Badrol");
+  });
+
+  it("skips another worker's claim when picking the next job, but not mine", () => {
+    const data = baseData();
+    const truckId = data.trucks[0]!.id;
+    const theirs = claimedOrder(truckId, { customer: { name: "Kedai B" } });
+    const free = order({ assignment_source: "auto", truck_id: truckId, status: "ready" });
+    data.orders = [theirs, free];
+    const q = buildLoadQueue(data, DATE, truckId, claimOpts)!;
+    expect(q.nextJobId).toBe(free.id);
+
+    const mine = claimedOrder(truckId, { loading_claimed_by: "worker-a" });
+    data.orders = [mine, free];
+    const q2 = buildLoadQueue(data, DATE, truckId, claimOpts)!;
+    // Both carriable; the highlight follows loading order, my claim included.
+    expect([mine.id, free.id]).toContain(q2.nextJobId);
+    const mineJob = q2.jobs.find((j) => j.ticket.id === mine.id)!;
+    expect(mineJob.claim?.mine).toBe(true);
+  });
+
+  it("isClaimActive is a strict TTL window", () => {
+    expect(isClaimActive(null, NOW)).toBe(false);
+    expect(isClaimActive("2026-08-20T07:50:01Z", NOW)).toBe(true);
+    expect(isClaimActive("2026-08-20T07:50:00Z", NOW)).toBe(false); // exactly 10 min
+    expect(isClaimActive("garbage", NOW)).toBe(false);
   });
 });

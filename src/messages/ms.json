@@ -583,7 +583,9 @@
         "invalidDepartInput": "Input bertolak tidak sah",
         "departNotFound": "Tiada trip penghantaran wujud untuk trak ini pada tarikh ini.",
         "departInvalidTransition": "Trip ini tidak boleh bertolak daripada status semasa.",
-        "internal": "Sesuatu tidak kena. Sila cuba lagi."
+        "internal": "Sesuatu tidak kena. Sila cuba lagi.",
+        "alreadyLoaded": "Pesanan itu sudah berada di atas lori — pekerja lain telah memuatkannya.",
+        "claimedByOther": "Pekerja lain sedang memuat pesanan itu sekarang."
       }
     }
   },
@@ -2447,7 +2449,17 @@
       "dropOf": "penghantaran {drop} daripada {total}",
       "notWeighedYet": "Belum ditimbang",
       "weighNow": "Timbang sekarang →",
-      "weighNowAria": "— buka stesen timbang untuk {name}"
+      "weighNowAria": "— buka stesen timbang untuk {name}",
+      "start": "Mula",
+      "startLoadingAria": "Mula memuat {name}",
+      "cancelClaim": "batal",
+      "cancelClaimAria": "Berhenti memuat {name}",
+      "releaseClaim": "lepaskan",
+      "releaseClaimAria": "Lepaskan tuntutan pada {name}",
+      "claimedByYou": "Anda sedang memuat",
+      "claimedBy": "{name} sedang memuat",
+      "byName": "oleh {name}",
+      "workerFallback": "Seorang pekerja"
     },
     "lane": {
       "ariaLabel": "{truck}, {done} daripada {total} dimuatkan",

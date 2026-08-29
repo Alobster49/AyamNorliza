@@ -19,6 +19,23 @@ import { orderWeightKg, totalWeightKg } from "./plan-model";
 
 export type LoadLine = { name: string; quantity: number; pieces: number | null; weightKg: number | null };
 
+/** Advisory claims expire after this long; an expired claim is no claim. */
+export const CLAIM_TTL_MS = 10 * 60 * 1000;
+
+export function isClaimActive(claimedAt: string | null, nowMs: number): boolean {
+  if (claimedAt === null) return false;
+  const at = Date.parse(claimedAt);
+  return Number.isFinite(at) && nowMs - at < CLAIM_TTL_MS;
+}
+
+export type LoadClaim = {
+  userId: string;
+  /** Display name, when the board knows it. */
+  name: string | null;
+  /** The viewer holds this claim. */
+  mine: boolean;
+};
+
 export type LoadJob = {
   ticket: DispatchTicket;
   lines: LoadLine[];
@@ -26,6 +43,10 @@ export type LoadJob = {
   /** Warehouse weigh task done ('ready') — loading is blocked until then. */
   weighed: boolean;
   loaded: boolean;
+  /** Who signed it onto the truck, when the board knows the name. */
+  loadedByName: string | null;
+  /** Active advisory claim only — expired claims come through as null. */
+  claim: LoadClaim | null;
   slotStart: string | null;
   /** 1 = first stop of the route, so it loads last and rides at the tail. */
   dropNumber: number;
@@ -83,12 +104,22 @@ function pct(part: number, whole: number | null): number | null {
   return Math.min(100, (part / whole) * 100);
 }
 
+export type LoadBoardOptions = {
+  /** Current user, for marking claims as mine. */
+  viewerId?: string | null;
+  /** Clock for claim expiry; defaults to Date.now(). */
+  nowMs?: number;
+};
+
 function buildLane(
   truck: DispatchTruck,
   bayName: string,
   departed: boolean,
   tickets: DispatchTicket[],
   slotStartById: Map<string, string>,
+  people: Record<string, string>,
+  viewerId: string | null,
+  nowMs: number,
 ): LoadLane {
   const slotStart = (t: DispatchTicket) => slotStartById.get(t.slot_id)?.slice(0, 5) ?? null;
 
@@ -100,16 +131,30 @@ function buildLane(
   );
   const dropByTicketId = new Map(route.map((t, i) => [t.id, i + 1]));
 
-  const jobs: LoadJob[] = route.map((ticket) => ({
-    ticket,
-    lines: toLines(ticket),
-    weightKg: orderWeightKg(ticket),
-    weighed: ticket.status === "ready",
-    loaded: ticket.loaded_at !== null,
-    slotStart: slotStart(ticket),
-    dropNumber: dropByTicketId.get(ticket.id) ?? 0,
-    totalDrops: route.length,
-  }));
+  const jobs: LoadJob[] = route.map((ticket) => {
+    const claimActive =
+      ticket.loaded_at === null &&
+      ticket.loading_claimed_by !== null &&
+      isClaimActive(ticket.loading_claimed_at, nowMs);
+    return {
+      ticket,
+      lines: toLines(ticket),
+      weightKg: orderWeightKg(ticket),
+      weighed: ticket.status === "ready",
+      loaded: ticket.loaded_at !== null,
+      loadedByName: ticket.loaded_by !== null ? (people[ticket.loaded_by] ?? null) : null,
+      claim: claimActive
+        ? {
+            userId: ticket.loading_claimed_by!,
+            name: people[ticket.loading_claimed_by!] ?? null,
+            mine: ticket.loading_claimed_by === viewerId,
+          }
+        : null,
+      slotStart: slotStart(ticket),
+      dropNumber: dropByTicketId.get(ticket.id) ?? 0,
+      totalDrops: route.length,
+    };
+  });
 
   // Loading order: pending first, then reverse-route so the last drop goes deepest.
   jobs.sort((a, b) => Number(a.loaded) - Number(b.loaded) || b.dropNumber - a.dropNumber);
@@ -134,17 +179,31 @@ function buildLane(
     freeKg: capacityKg === null ? null : Math.max(0, capacityKg - totalKg),
     overCapacity: capacityKg !== null && capacityKg > 0 && totalKg > capacityKg,
     // Next = first pending job the loader can actually carry; an unweighed
-    // job never gets the highlight (its load button is gated anyway).
-    nextJobId: jobs.find((j) => !j.loaded && j.weighed)?.ticket.id ?? null,
+    // job never gets the highlight (its load button is gated anyway), and
+    // neither does one another worker is already carrying.
+    nextJobId:
+      jobs.find((j) => !j.loaded && j.weighed && (j.claim === null || j.claim.mine))?.ticket.id ??
+      null,
   };
 }
 
 /** Every truck on today's board as a lane, bay order preserved. */
-export function buildLoadBoard(data: DispatchBoardData, date: string): LoadLane[] {
+export function buildLoadBoard(
+  data: DispatchBoardData,
+  date: string,
+  options: LoadBoardOptions = {},
+): LoadLane[] {
   const board = buildBoardView(data, date);
   const slotStartById = new Map(data.slots.map((s) => [s.id, s.start_time]));
+  const viewerId = options.viewerId ?? null;
+  const nowMs = options.nowMs ?? Date.now();
   return board.bays.flatMap((bay) =>
-    bay.trucks.map((bt) => buildLane(bt.truck, bay.bay.name, bt.departed, bt.tickets, slotStartById)),
+    bay.trucks.map((bt) =>
+      buildLane(
+        bt.truck, bay.bay.name, bt.departed, bt.tickets, slotStartById,
+        data.people ?? {}, viewerId, nowMs,
+      ),
+    ),
   );
 }
 
@@ -152,8 +211,9 @@ export function buildLoadQueue(
   data: DispatchBoardData,
   date: string,
   truckId: string,
+  options: LoadBoardOptions = {},
 ): LoadQueue | null {
-  return buildLoadBoard(data, date).find((lane) => lane.truck.id === truckId) ?? null;
+  return buildLoadBoard(data, date, options).find((lane) => lane.truck.id === truckId) ?? null;
 }
 
 export function truckSummaries(data: DispatchBoardData, date: string): LoadTruckSummary[] {

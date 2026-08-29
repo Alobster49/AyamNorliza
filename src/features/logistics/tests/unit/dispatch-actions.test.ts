@@ -19,6 +19,7 @@ import {
   autoAssignOrder,
   applyPlan,
   setOrderLoaded,
+  setLoadingClaim,
 } from "../../server/dispatch-actions";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
@@ -355,5 +356,97 @@ describe("setOrderLoaded", () => {
       message: "That run has already departed.",
       messageKey: "errors.logistics.dispatch.runDeparted",
     });
+  });
+});
+
+describe("setOrderLoaded concurrency guards", () => {
+  it("maps already_loaded rpc errors to a conflict", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "already_loaded" } });
+
+    const result = await setOrderLoaded("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      loaded: true,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "That order is already on the truck — someone else loaded it.",
+      messageKey: "errors.logistics.dispatch.alreadyLoaded",
+    });
+  });
+
+  it("maps claimed_by_other rpc errors to a conflict", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "claimed_by_other" } });
+
+    const result = await setOrderLoaded("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      loaded: true,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "Another worker is loading that order right now.",
+      messageKey: "errors.logistics.dispatch.claimedByOther",
+    });
+  });
+});
+
+describe("setLoadingClaim", () => {
+  it("calls dispatch_claim_loading with the claim flag", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: null });
+
+    const result = await setLoadingClaim("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      claim: true,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(supabase.rpc).toHaveBeenCalledWith("dispatch_claim_loading", {
+      p_order: "5b1f5c1e-0000-4000-8000-000000000001",
+      p_claim: true,
+    });
+  });
+
+  it("rejects invalid input", async () => {
+    mockSupabaseFor({ role: "logistics" });
+
+    const result = await setLoadingClaim("ayam-norliza-pilot", { orderId: "nope", claim: true });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("validation");
+  });
+
+  it("maps claimed_by_other rpc errors to a conflict", async () => {
+    const supabase = mockSupabaseFor({ role: "logistics" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "claimed_by_other" } });
+
+    const result = await setLoadingClaim("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      claim: true,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message: "Another worker is loading that order right now.",
+      messageKey: "errors.logistics.dispatch.claimedByOther",
+    });
+  });
+
+  it("refuses viewers without a dispatch role", async () => {
+    mockSupabaseFor({ role: "inventory" });
+
+    const result = await setLoadingClaim("ayam-norliza-pilot", {
+      orderId: "5b1f5c1e-0000-4000-8000-000000000001",
+      claim: true,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.code).toBe("forbidden");
   });
 });

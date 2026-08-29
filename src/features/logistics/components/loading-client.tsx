@@ -1,12 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState, type ComponentProps } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { Check, Search } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { DispatchBoardData } from "../types";
 import { buildLoadBoard, type LoadJob, type LoadLane } from "../lib/loading-model";
-import { getDispatchBoard, setOrderLoaded } from "../server/dispatch-actions";
+import { getDispatchBoard, setLoadingClaim, setOrderLoaded } from "../server/dispatch-actions";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Link } from "@/i18n/navigation";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { Badge } from "@/components/ui/badge";
@@ -176,12 +177,31 @@ function StatusBadge({
   const tJob = useTranslations("loadingBoard.job");
   if (job.loaded) {
     return (
+      <span className="inline-flex flex-col items-start gap-0.5">
+        <Badge
+          variant="outline"
+          className="gap-1 border-[color:var(--color-success)]/40 text-[color:var(--color-success)]"
+        >
+          <Check aria-hidden />
+          {t("statusOnBoard")}
+        </Badge>
+        {job.loadedByName ? (
+          <span className="text-[11px] text-muted-foreground">
+            {tJob("byName", { name: job.loadedByName })}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
+  if (job.claim) {
+    return (
       <Badge
         variant="outline"
-        className="gap-1 border-[color:var(--color-success)]/40 text-[color:var(--color-success)]"
+        className="border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-300"
       >
-        <Check aria-hidden />
-        {t("statusOnBoard")}
+        {job.claim.mine
+          ? tJob("claimedByYou")
+          : tJob("claimedBy", { name: job.claim.name ?? tJob("workerFallback") })}
       </Badge>
     );
   }
@@ -209,6 +229,7 @@ function ManifestRow({
   disabled,
   organizationSlug,
   onToggle,
+  onClaim,
 }: {
   job: LoadJob;
   isNext: boolean;
@@ -216,6 +237,7 @@ function ManifestRow({
   disabled: boolean;
   organizationSlug: string;
   onToggle: (loaded: boolean) => void;
+  onClaim: (claim: boolean) => void;
 }) {
   const t = useTranslations("loadingBoard.manifest");
   const tJob = useTranslations("loadingBoard.job");
@@ -264,6 +286,13 @@ function ManifestRow({
             <span className="sr-only">{tJob("weighNowAria", { name })}</span>
           </Link>
         ) : null}
+        {job.claim ? (
+          <span className="mt-0.5 block text-[11px] font-semibold text-amber-700 dark:text-amber-300 sm:hidden">
+            {job.claim.mine
+              ? tJob("claimedByYou")
+              : tJob("claimedBy", { name: job.claim.name ?? tJob("workerFallback") })}
+          </span>
+        ) : null}
       </td>
       <td className="hidden p-2 align-middle text-sm whitespace-nowrap text-muted-foreground lg:table-cell">
         {zoneName ?? "—"}
@@ -293,14 +322,44 @@ function ManifestRow({
           >
             {tJob("undo")}
           </Button>
+        ) : job.claim?.mine ? (
+          <span className="inline-flex items-center justify-end gap-1">
+            <Button
+              size="sm"
+              variant="ghost"
+              disabled={disabled}
+              aria-label={tJob("cancelClaimAria", { name })}
+              onClick={() => onClaim(false)}
+            >
+              {tJob("cancelClaim")}
+            </Button>
+            <Button
+              size="sm"
+              disabled={disabled}
+              aria-label={tJob("markLoadedAria", { name })}
+              onClick={() => onToggle(true)}
+            >
+              {t("load")}
+            </Button>
+          </span>
+        ) : job.claim ? (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={disabled}
+            aria-label={tJob("releaseClaimAria", { name })}
+            onClick={() => onClaim(false)}
+          >
+            {tJob("releaseClaim")}
+          </Button>
         ) : (
           <Button
             size="sm"
             disabled={disabled || !job.weighed}
-            aria-label={job.weighed ? tJob("markLoadedAria", { name }) : tJob("notWeighedYet")}
-            onClick={() => onToggle(true)}
+            aria-label={job.weighed ? tJob("startLoadingAria", { name }) : tJob("notWeighedYet")}
+            onClick={() => onClaim(true)}
           >
-            {t("load")}
+            {tJob("start")}
           </Button>
         )}
       </td>
@@ -313,11 +372,13 @@ function Manifest({
   pendingIds,
   organizationSlug,
   onToggle,
+  onClaim,
 }: {
   lane: LoadLane;
   pendingIds: ReadonlySet<string>;
   organizationSlug: string;
   onToggle: (orderId: string, loaded: boolean) => void;
+  onClaim: (orderId: string, claim: boolean) => void;
 }) {
   const t = useTranslations("loadingBoard.manifest");
   const tLane = useTranslations("loadingBoard.lane");
@@ -445,6 +506,7 @@ function Manifest({
                       disabled={pendingIds.has(job.ticket.id)}
                       organizationSlug={organizationSlug}
                       onToggle={(loaded) => onToggle(job.ticket.id, loaded)}
+                      onClaim={(claim) => onClaim(job.ticket.id, claim)}
                     />
                   ))
                 )}
@@ -464,10 +526,14 @@ function TableRowPlain(props: ComponentProps<"tr">) {
 
 export function LoadingClient({
   organizationSlug,
+  orgId,
+  viewerId,
   initialDate,
   initialData,
 }: {
   organizationSlug: string;
+  orgId: string;
+  viewerId: string;
   initialDate: string;
   initialData: DispatchBoardData;
 }) {
@@ -495,11 +561,34 @@ export function LoadingClient({
       ...prev,
       orders: prev.orders.map((order) =>
         order.id === orderId
-          ? { ...order, loaded_at: loaded ? new Date().toISOString() : null }
+          ? {
+              ...order,
+              loaded_at: loaded ? new Date().toISOString() : null,
+              loading_claimed_by: null,
+              loading_claimed_at: null,
+            }
           : order,
       ),
     }));
   }, []);
+
+  const setClaimLocal = useCallback(
+    (orderId: string, claim: boolean) => {
+      setData((prev) => ({
+        ...prev,
+        orders: prev.orders.map((order) =>
+          order.id === orderId
+            ? {
+                ...order,
+                loading_claimed_by: claim ? viewerId : null,
+                loading_claimed_at: claim ? new Date().toISOString() : null,
+              }
+            : order,
+        ),
+      }));
+    },
+    [viewerId],
+  );
 
   const refetch = useCallback(async () => {
     const result = await getDispatchBoard(organizationSlug, date);
@@ -537,6 +626,68 @@ export function LoadingClient({
     [organizationSlug, refetch, setLoadedLocal, toast, tToast],
   );
 
+  /** Optimistic claim: same pending/refetch dance as applyLoaded. */
+  const applyClaim = useCallback(
+    async (orderId: string, claim: boolean): Promise<void> => {
+      if (pendingRef.current.has(orderId)) return;
+      pendingRef.current.add(orderId);
+      setPendingIds(new Set(pendingRef.current));
+      inFlightRef.current += 1;
+      setClaimLocal(orderId, claim);
+      try {
+        const result = await setLoadingClaim(organizationSlug, { orderId, claim });
+        if (!result.ok) {
+          setClaimLocal(orderId, !claim);
+          toast({ title: tToast("couldNotUpdateTitle"), description: result.message, variant: "destructive" });
+        }
+      } catch {
+        setClaimLocal(orderId, !claim);
+        toast({ title: tToast("couldNotUpdateTitle"), variant: "destructive" });
+      } finally {
+        pendingRef.current.delete(orderId);
+        setPendingIds(new Set(pendingRef.current));
+        inFlightRef.current -= 1;
+        if (inFlightRef.current === 0) void refetch();
+      }
+    },
+    [organizationSlug, refetch, setClaimLocal, toast, tToast],
+  );
+
+  // Other loaders' writes land here live; a short debounce coalesces the
+  // burst a single action can emit, and refetch() already ignores results
+  // that would clobber a toggle mid-flight.
+  const refetchRef = useRef(refetch);
+  useEffect(() => {
+    refetchRef.current = refetch;
+  }, [refetch]);
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const channel = supabase
+      .channel(`loading-board-${orgId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `organization_id=eq.${orgId}` },
+        () => {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => void refetchRef.current(), 400);
+        },
+      )
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      void supabase.removeChannel(channel);
+    };
+  }, [orgId]);
+
+  // Claims expire client-side too: tick once a minute so a stale amber chip
+  // falls back to "Start" even with no board traffic.
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const toggle = useCallback(
     (orderId: string, loaded: boolean, name?: string) => {
       void (async () => {
@@ -558,7 +709,10 @@ export function LoadingClient({
     [applyLoaded, toast, tToast, tPlan, tSetupToasts],
   );
 
-  const lanes = useMemo(() => buildLoadBoard(data, date), [data, date]);
+  const lanes = useMemo(
+    () => buildLoadBoard(data, date, { viewerId, nowMs }),
+    [data, date, viewerId, nowMs],
+  );
 
   const counts = useMemo(() => {
     const byStatus = { loading: 0, done: 0, idle: 0 };
@@ -693,6 +847,7 @@ export function LoadingClient({
               pendingIds={pendingIds}
               organizationSlug={organizationSlug}
               onToggle={(orderId, loaded) => toggle(orderId, loaded, nameFor(orderId))}
+              onClaim={(orderId, claim) => void applyClaim(orderId, claim)}
             />
           ) : null}
         </div>

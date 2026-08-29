@@ -95,6 +95,8 @@ export type DispatchBoardData = {
   blocks: ScheduleBlock[];
   runs: DeliveryRun[];
   orders: DispatchTicket[];
+  /** Display names for every loaded_by / loading_claimed_by on the board. */
+  people: Record<string, string>;
 };
 
 // ---------------------------------------------------------------------------

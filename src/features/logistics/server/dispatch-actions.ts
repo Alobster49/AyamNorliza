@@ -84,6 +84,20 @@ function mapRpcError<T = void>(message: string): ActionResult<T> {
       "errors.logistics.dispatch.notWeighed",
     );
   }
+  if (message.includes("already_loaded")) {
+    return err(
+      "conflict",
+      "That order is already on the truck — someone else loaded it.",
+      "errors.logistics.dispatch.alreadyLoaded",
+    );
+  }
+  if (message.includes("claimed_by_other")) {
+    return err(
+      "conflict",
+      "Another worker is loading that order right now.",
+      "errors.logistics.dispatch.claimedByOther",
+    );
+  }
   if (message.includes("forbidden")) {
     return err("forbidden", "You do not have access to dispatch.", "errors.logistics.dispatch.forbidden");
   }
@@ -138,6 +152,26 @@ export async function getDispatchBoard(
     return err("internal", "Failed to load the dispatch board");
   }
 
+  // Names for whoever loaded or is currently claiming an order, so the
+  // loading screen can say which worker has which crates.
+  const personIds = Array.from(
+    new Set(
+      ((orders.data ?? []) as DispatchTicket[])
+        .flatMap((o) => [o.loaded_by, o.loading_claimed_by])
+        .filter((id): id is string => id !== null && id !== undefined),
+    ),
+  );
+  const people: Record<string, string> = {};
+  if (personIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("user_id, display_name")
+      .in("user_id", personIds);
+    for (const profile of profiles ?? []) {
+      if (profile.display_name) people[profile.user_id] = profile.display_name;
+    }
+  }
+
   return ok({
     facility: (facility.data ?? null) as Facility | null,
     bays: (bays.data ?? []) as Bay[],
@@ -149,6 +183,7 @@ export async function getDispatchBoard(
     blocks: (blocks.data ?? []) as DispatchBoardData["blocks"],
     runs: (runs.data ?? []) as DispatchBoardData["runs"],
     orders: (orders.data ?? []) as DispatchTicket[],
+    people,
   });
 }
 
@@ -418,6 +453,33 @@ export async function setOrderLoaded(
   if (error) return mapRpcError(error.message);
 
   revalidatePath(`/${organizationSlug}/dispatch`);
+  revalidatePath(`/${organizationSlug}/loading`);
+  return ok(undefined);
+}
+
+const SetClaimSchema = z.object({
+  orderId: z.string().uuid(),
+  claim: z.boolean(),
+});
+
+/** Take or release the advisory "I'm carrying this to the truck" claim. */
+export async function setLoadingClaim(
+  organizationSlug: string,
+  rawInput: unknown,
+): Promise<ActionResult<void>> {
+  const guard = await guardDispatch(organizationSlug);
+  if (!guard.ok) return guard;
+
+  const parsed = SetClaimSchema.safeParse(rawInput);
+  if (!parsed.success) return err("validation", "Invalid input");
+
+  const supabase = await createSupabaseServerClient();
+  const { error } = await supabase.rpc("dispatch_claim_loading", {
+    p_order: parsed.data.orderId,
+    p_claim: parsed.data.claim,
+  });
+  if (error) return mapRpcError(error.message);
+
   revalidatePath(`/${organizationSlug}/loading`);
   return ok(undefined);
 }

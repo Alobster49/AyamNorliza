@@ -586,7 +586,9 @@ declare const messages: {
         "invalidDepartInput": "Invalid depart input",
         "departNotFound": "No delivery run exists for this truck on this date.",
         "departInvalidTransition": "This run cannot depart from its current status.",
-        "internal": "Something went wrong. Please try again."
+        "internal": "Something went wrong. Please try again.",
+        "alreadyLoaded": "That order is already on the truck — someone else loaded it.",
+        "claimedByOther": "Another worker is loading that order right now."
       }
     }
   },
@@ -2450,7 +2452,17 @@ declare const messages: {
       "dropOf": "drop {drop} of {total}",
       "notWeighedYet": "Not weighed yet",
       "weighNow": "Weigh now →",
-      "weighNowAria": "— open the weigh station for {name}"
+      "weighNowAria": "— open the weigh station for {name}",
+      "start": "Start",
+      "startLoadingAria": "Start loading {name}",
+      "cancelClaim": "cancel",
+      "cancelClaimAria": "Stop loading {name}",
+      "releaseClaim": "release",
+      "releaseClaimAria": "Release the claim on {name}",
+      "claimedByYou": "You're loading",
+      "claimedBy": "{name} is loading",
+      "byName": "by {name}",
+      "workerFallback": "A worker"
     },
     "lane": {
       "ariaLabel": "{truck}, {done} of {total} loaded",

@@ -40,6 +40,8 @@ function makeOrder(overrides: Record<string, unknown> = {}): OrderWithItems {
     total_amount: 100,
     closed_at: null,
     loaded_at: "2026-08-21T01:00:00Z",
+    loading_claimed_by: null,
+    loading_claimed_at: null,
     loaded_by: "user-1",
     created_at: "",
     updated_at: "",

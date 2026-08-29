@@ -175,6 +175,9 @@ export type Order = {
   closed_at: string | null;
   loaded_at: string | null;
   loaded_by: string | null;
+  /** Advisory loading lock: who is carrying this order to the truck right now. */
+  loading_claimed_by: string | null;
+  loading_claimed_at: string | null;
   created_at: string;
   updated_at: string;
   version: number;

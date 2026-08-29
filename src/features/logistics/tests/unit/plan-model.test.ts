@@ -23,7 +23,7 @@ function order(over: Partial<DispatchTicket> = {}): DispatchTicket {
     delivery_address: "addr", delivery_date: DATE, slot_id: "slot-1",
     truck_id: "truck-x", run_id: null, run_sequence: null, postcode: "82000",
     assignment_source: "none", notes: null, total_amount: 0, closed_at: null,
-    loaded_at: null, loaded_by: null,
+    loaded_at: null, loaded_by: null, loading_claimed_by: null, loading_claimed_at: null,
     created_at: "", updated_at: "", version: 1,
     customer: { name: "Kedai A" }, ...over,
   };
@@ -42,6 +42,7 @@ function baseData(over: Partial<DispatchBoardData> = {}): DispatchBoardData {
     blocks: [],
     runs: [],
     orders: [],
+    people: {},
     ...over,
   };
 }
