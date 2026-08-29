@@ -108,10 +108,10 @@ afterEach(() => {
 });
 
 describe("requirePermission", () => {
-  it("throws when there is no authenticated user", async () => {
+  it("throws 'Not authenticated' when there is no authenticated user", async () => {
     mockSupabaseFor({ userId: null });
     await expect(requirePermission("acme", "products", "view")).rejects.toThrow(
-      OrderPermissionError,
+      "Not authenticated",
     );
   });
 
@@ -152,10 +152,10 @@ describe("requirePermission", () => {
     );
   });
 
-  it("throws when the org is not found", async () => {
+  it("throws 'Organization not found' when the org lookup misses", async () => {
     mockSupabaseFor({ orgId: null });
     await expect(requirePermission("nope", "products", "view")).rejects.toThrow(
-      OrderPermissionError,
+      "Organization not found",
     );
   });
 

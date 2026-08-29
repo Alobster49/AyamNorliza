@@ -38,9 +38,20 @@ type MembershipRow = {
  * `organization_members` that pulls the role key and every
  * `role_permissions` row for that role in one round trip.
  */
+type LoadReason = "unauthenticated" | "org_not_found" | null;
+
 async function loadContextAndGrants(organizationSlug: string): Promise<{
   context: PermissionContext | null;
   grants: ReadonlySet<PermissionKey>;
+  /**
+   * Why `context` is null, distinguishing "not signed in" and "org not
+   * found" from "signed in, not a member" — `requirePermission` maps the
+   * first two to the specific `OrderPermissionError` messages that
+   * `requireOrgRole` has always thrown (see guards.ts), which ~40
+   * server-action sites map to i18n keys via `permissionMessageKey`.
+   * `resolvePermissionsForOrg` ignores this and never throws.
+   */
+  reason: LoadReason;
 }> {
   const supabase = await createSupabaseServerClient();
 
@@ -48,7 +59,7 @@ async function loadContextAndGrants(organizationSlug: string): Promise<{
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return { context: null, grants: new Set() };
+    return { context: null, grants: new Set(), reason: "unauthenticated" };
   }
 
   const { data: org } = await supabase
@@ -57,7 +68,7 @@ async function loadContextAndGrants(organizationSlug: string): Promise<{
     .eq("slug", organizationSlug)
     .single();
   if (!org) {
-    return { context: null, grants: new Set() };
+    return { context: null, grants: new Set(), reason: "org_not_found" };
   }
 
   const { data: member } = await supabase
@@ -69,7 +80,7 @@ async function loadContextAndGrants(organizationSlug: string): Promise<{
     .maybeSingle<MembershipRow>();
 
   if (!member || !member.organization_roles) {
-    return { context: null, grants: new Set() };
+    return { context: null, grants: new Set(), reason: null };
   }
 
   const grants = new Set<PermissionKey>(
@@ -87,6 +98,7 @@ async function loadContextAndGrants(organizationSlug: string): Promise<{
       timeZone: org.default_time_zone,
     },
     grants,
+    reason: null,
   };
 }
 
@@ -107,7 +119,25 @@ async function loadContextAndGrants(organizationSlug: string): Promise<{
 export async function resolvePermissionsForOrg(
   organizationSlug: string,
 ): Promise<{ context: PermissionContext | null; grants: ReadonlySet<PermissionKey> }> {
-  return loadContextAndGrants(organizationSlug);
+  const { context, grants } = await loadContextAndGrants(organizationSlug);
+  return { context, grants };
+}
+
+/**
+ * Throws the specific `OrderPermissionError` message for the two denial
+ * reasons `requireOrgRole` has always distinguished (see guards.ts:42-52) —
+ * ~40 server-action sites map "Not authenticated" / "Organization not
+ * found" to i18n keys via `permissionMessageKey`. Non-member and
+ * missing-grant keep the generic default message, same as before.
+ */
+function throwForDenial(reason: LoadReason): never {
+  if (reason === "unauthenticated") {
+    throw new OrderPermissionError("Not authenticated");
+  }
+  if (reason === "org_not_found") {
+    throw new OrderPermissionError("Organization not found");
+  }
+  throw new OrderPermissionError();
 }
 
 export async function requirePermission(
@@ -115,9 +145,9 @@ export async function requirePermission(
   resource: string,
   action: PermissionAction,
 ): Promise<PermissionContext> {
-  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
+  const { context, grants, reason } = await loadContextAndGrants(organizationSlug);
   if (!context || !grants.has(grantKey(resource, action))) {
-    throw new OrderPermissionError();
+    throwForDenial(reason);
   }
   return context;
 }
@@ -126,9 +156,9 @@ export async function requireAnyPermission(
   organizationSlug: string,
   pairs: ReadonlyArray<readonly [string, PermissionAction]>,
 ): Promise<PermissionContext> {
-  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
+  const { context, grants, reason } = await loadContextAndGrants(organizationSlug);
   if (!context || !pairs.some(([resource, action]) => grants.has(grantKey(resource, action)))) {
-    throw new OrderPermissionError();
+    throwForDenial(reason);
   }
   return context;
 }
