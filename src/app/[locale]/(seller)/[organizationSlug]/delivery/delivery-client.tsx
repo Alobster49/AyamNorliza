@@ -42,14 +42,14 @@ type DeliveryClientProps = {
   organizationSlug: string;
   initialSetup: DeliverySetup;
   logisticsSetup: LogisticsSetup;
-  role: string;
+  canEdit: boolean;
 };
 
 export function DeliveryClient({
   organizationSlug,
   initialSetup,
   logisticsSetup,
-  role,
+  canEdit,
 }: DeliveryClientProps) {
   const { toast } = useToast();
   const t = useTranslations("logistics.setup.toasts");
@@ -71,8 +71,6 @@ export function DeliveryClient({
     name: string;
   } | null>(null);
   const [removeOpen, setRemoveOpen] = useState(false);
-
-  const canEdit = role === "owner" || role === "org_admin";
 
   function fail(message: string) {
     toast({ title: tLogistics("error"), description: message, variant: "destructive" });

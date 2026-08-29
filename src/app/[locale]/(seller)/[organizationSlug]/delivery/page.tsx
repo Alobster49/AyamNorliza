@@ -1,7 +1,8 @@
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { OrderPermissionError } from "@/features/orders/server/guards";
-import { requirePermission } from "@/lib/auth/require-permission";
+import { requirePermission, resolvePermissionsForOrg } from "@/lib/auth/require-permission";
+import { grantKey } from "@/lib/auth/rbac";
 import { getDeliverySetup } from "@/features/orders/server/schedule-actions";
 import { getLogisticsSetup } from "@/features/logistics/server/facility-actions";
 import { DeliveryClient } from "./delivery-client";
@@ -13,7 +14,7 @@ export default async function DeliveryPage({
 }) {
   const { organizationSlug } = await params;
 
-  const ctx = await (async () => {
+  await (async () => {
     try {
       return await requirePermission(organizationSlug, "delivery_setup", "view");
     } catch (error) {
@@ -23,6 +24,9 @@ export default async function DeliveryPage({
       throw error;
     }
   })();
+
+  const { grants } = await resolvePermissionsForOrg(organizationSlug);
+  const canEdit = grants.has(grantKey("delivery_setup", "edit"));
 
   const [result, logistics] = await Promise.all([
     getDeliverySetup(organizationSlug),
@@ -36,7 +40,7 @@ export default async function DeliveryPage({
       organizationSlug={organizationSlug}
       initialSetup={result.data}
       logisticsSetup={logistics.data}
-      role={ctx.roleKey}
+      canEdit={canEdit}
     />
   );
 }

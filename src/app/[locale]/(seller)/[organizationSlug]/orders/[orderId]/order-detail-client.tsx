@@ -54,11 +54,11 @@ import { useToast } from "@/hooks/use-toast";
 
 type OrderDetailClientProps = {
   organizationSlug: string;
-  callerRole: string;
+  canReopen: boolean;
   initialOrder: OrderWithItems | null;
 };
 
-export function OrderDetailClient({ organizationSlug, callerRole, initialOrder }: OrderDetailClientProps) {
+export function OrderDetailClient({ organizationSlug, canReopen, initialOrder }: OrderDetailClientProps) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("orders.detail");
@@ -167,7 +167,7 @@ export function OrderDetailClient({ organizationSlug, callerRole, initialOrder }
       {order.status === "closed" && (
         <ClosedPanel
           order={order}
-          callerRole={callerRole}
+          canReopen={canReopen}
           organizationSlug={organizationSlug}
           onReload={reloadOrder}
         />
@@ -722,12 +722,12 @@ function DeliveredPanel({
 
 function ClosedPanel({
   order,
-  callerRole,
+  canReopen,
   organizationSlug,
   onReload,
 }: {
   order: OrderWithItems;
-  callerRole: string;
+  canReopen: boolean;
   organizationSlug: string;
   onReload: () => void;
 }) {
@@ -741,7 +741,6 @@ function ClosedPanel({
   const [reopenOpen, setReopenOpen] = useState(false);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const canReopen = callerRole === "owner" || callerRole === "org_admin";
   const nonCancelled = order.items.filter((item) => !item.is_cancelled);
   const format = useFormatter();
 
