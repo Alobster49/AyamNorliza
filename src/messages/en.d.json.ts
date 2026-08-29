@@ -608,7 +608,8 @@ declare const messages: {
       "accessControl": "Access control",
       "warehouse": "Warehouse",
       "system": "System",
-      "account": "Account"
+      "account": "Account",
+      "hr": "HR"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -621,6 +622,8 @@ declare const messages: {
       "loading": "Loading",
       "deliveryRuns": "Delivery runs",
       "warehouseTasks": "Warehouse tasks",
+      "myLeave": "My Leave",
+      "leaveManagement": "Leave Management",
       "organization": "Organization",
       "users": "Users",
       "roles": "Roles",
@@ -732,6 +735,7 @@ declare const messages: {
   "roles": {
     "owner": "Owner",
     "org_admin": "Org Admin",
+    "hr": "HR",
     "seller": "Seller",
     "driver": "Driver",
     "inventory": "Inventory",
@@ -2514,6 +2518,118 @@ declare const messages: {
     },
     "summary": {
       "loadedAcross": "{done} of {total} loaded across {count, plural, one {# truck} other {# trucks}}"
+    }
+  },
+  "hr": {
+    "errorTitle": "Something went wrong",
+    "nav": {
+      "myLeave": "My Leave"
+    },
+    "myLeave": {
+      "yearLabel": "Year",
+      "asOfLabel": "As of",
+      "asOfToday": "Today",
+      "asOfEndOfYear": "End of year",
+      "noData": "No annual leave type configured.",
+      "carryForward": "Carry Forward",
+      "carryForwardExpires": "Expires {date}",
+      "accrued": "Annual Leave Accrued",
+      "taken": "Leave Taken",
+      "takenAnnual": "{n} Annual taken",
+      "takenCarryForward": "{n} Carry Forward taken",
+      "currentBalance": "Current Leave Balance",
+      "days": "days",
+      "pendingNote": "{n} pending",
+      "annualFallback": "Annual Leave",
+      "applyButton": "Apply Leave",
+      "requestCreditButton": "Request Credit"
+    },
+    "policy": {
+      "uponRequest": "Upon Request",
+      "booked": "{n} booked",
+      "available": "available"
+    },
+    "apply": {
+      "title": "Apply Leave",
+      "yearLabel": "Year",
+      "typeLabel": "Leave Type",
+      "startDateLabel": "Start date",
+      "endDateLabel": "End date",
+      "justificationLabel": "Justification",
+      "attachmentLabel": "Attachment",
+      "attachmentRequiredHint": "Required for this leave type.",
+      "dayCount": "{n} days",
+      "remaining": "{n} remaining",
+      "uponRequest": "Upon Request",
+      "submit": "Apply",
+      "success": "Leave request submitted.",
+      "error": "Failed to submit leave request."
+    },
+    "credit": {
+      "title": "Request Leave Credit",
+      "typeLabel": "Leave Type",
+      "typePlaceholder": "Choose a leave type",
+      "creditTypeLabel": "Credit Type",
+      "replacement": "Replacement",
+      "amountLabel": "Amount (days)",
+      "referenceStartLabel": "Reference start",
+      "referenceEndLabel": "Reference end",
+      "justificationLabel": "Justification",
+      "attachmentLabel": "Attachment",
+      "submit": "Request Credit",
+      "success": "Credit request submitted.",
+      "error": "Failed to submit credit request."
+    },
+    "history": {
+      "title": "Leave History",
+      "typeFilterLabel": "Type",
+      "statusFilterLabel": "Status",
+      "allTypes": "All types",
+      "allStatuses": "All statuses",
+      "columns": {
+        "type": "Leave Type",
+        "date": "Date",
+        "count": "Count",
+        "status": "Status",
+        "comment": "Last Comment",
+        "actions": "Actions"
+      },
+      "statuses": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "cancelled": "Cancelled"
+      },
+      "cancel": "Cancel",
+      "cancelConfirmTitle": "Cancel this leave request?",
+      "cancelConfirmDescription": "This will withdraw your pending request. You can apply again later.",
+      "cancelConfirmAction": "Cancel Request",
+      "cancelSuccess": "Leave request cancelled.",
+      "cancelError": "Failed to cancel the request.",
+      "carryForwardSuffix": "{n} Carry Forward",
+      "noComment": "—",
+      "empty": "No leave requests yet."
+    },
+    "whosAway": {
+      "title": "Who's Away",
+      "today": "Today",
+      "thisWeek": "This Week",
+      "empty": "No one is away.",
+      "holidaysTitle": "Upcoming Holidays",
+      "holidaysEmpty": "No upcoming holidays."
+    },
+    "errors": {
+      "unauthenticated": "You need to sign in to view this page.",
+      "orgNotFound": "Organization not found.",
+      "forbidden": "You do not have permission to do that.",
+      "validation": "Check the form and try again.",
+      "not_found": "That request was not found.",
+      "invalid_status": "This request has already been decided.",
+      "internal": "Something went wrong. Please try again.",
+      "invalid_range": "End date must be on or after the start date.",
+      "zero_workdays": "This date range has no working days to apply for.",
+      "insufficient_balance": "There is not enough leave balance for this request.",
+      "attachment_required": "This leave type requires a supporting attachment."
     }
   }
 };

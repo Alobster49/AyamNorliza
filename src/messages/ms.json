@@ -2516,5 +2516,117 @@
     "summary": {
       "loadedAcross": "{done} daripada {total} dimuatkan merentasi {count, plural, other {# trak}}"
     }
+  },
+  "hr": {
+    "errorTitle": "Ralat berlaku",
+    "nav": {
+      "myLeave": "Cuti Saya"
+    },
+    "myLeave": {
+      "yearLabel": "Tahun",
+      "asOfLabel": "Sehingga",
+      "asOfToday": "Hari ini",
+      "asOfEndOfYear": "Akhir tahun",
+      "noData": "Tiada jenis cuti tahunan ditetapkan.",
+      "carryForward": "Bawa Ke Hadapan",
+      "carryForwardExpires": "Tamat tempoh {date}",
+      "accrued": "Cuti Tahunan Terkumpul",
+      "taken": "Cuti Diambil",
+      "takenAnnual": "{n} Tahunan diambil",
+      "takenCarryForward": "{n} Bawa Ke Hadapan diambil",
+      "currentBalance": "Baki Cuti Semasa",
+      "days": "hari",
+      "pendingNote": "{n} sedang menunggu",
+      "annualFallback": "Cuti Tahunan",
+      "applyButton": "Mohon Cuti",
+      "requestCreditButton": "Mohon Kredit"
+    },
+    "policy": {
+      "uponRequest": "Ikut Permohonan",
+      "booked": "{n} ditempah",
+      "available": "baki"
+    },
+    "apply": {
+      "title": "Mohon Cuti",
+      "yearLabel": "Tahun",
+      "typeLabel": "Jenis Cuti",
+      "startDateLabel": "Tarikh mula",
+      "endDateLabel": "Tarikh tamat",
+      "justificationLabel": "Justifikasi",
+      "attachmentLabel": "Lampiran",
+      "attachmentRequiredHint": "Diperlukan untuk jenis cuti ini.",
+      "dayCount": "{n} hari",
+      "remaining": "{n} baki",
+      "uponRequest": "Ikut Permohonan",
+      "submit": "Mohon",
+      "success": "Permohonan cuti telah dihantar.",
+      "error": "Gagal menghantar permohonan cuti."
+    },
+    "credit": {
+      "title": "Mohon Kredit Cuti",
+      "typeLabel": "Jenis Cuti",
+      "typePlaceholder": "Pilih jenis cuti",
+      "creditTypeLabel": "Jenis Kredit",
+      "replacement": "Gantian",
+      "amountLabel": "Jumlah (hari)",
+      "referenceStartLabel": "Tarikh rujukan mula",
+      "referenceEndLabel": "Tarikh rujukan tamat",
+      "justificationLabel": "Justifikasi",
+      "attachmentLabel": "Lampiran",
+      "submit": "Hantar Permohonan",
+      "success": "Permohonan kredit telah dihantar.",
+      "error": "Gagal menghantar permohonan kredit."
+    },
+    "history": {
+      "title": "Sejarah Cuti",
+      "typeFilterLabel": "Jenis",
+      "statusFilterLabel": "Status",
+      "allTypes": "Semua jenis",
+      "allStatuses": "Semua status",
+      "columns": {
+        "type": "Jenis Cuti",
+        "date": "Tarikh",
+        "count": "Bilangan",
+        "status": "Status",
+        "comment": "Komen Terakhir",
+        "actions": "Tindakan"
+      },
+      "statuses": {
+        "pending": "Menunggu",
+        "approved": "Diluluskan",
+        "rejected": "Ditolak",
+        "cancelled": "Dibatalkan"
+      },
+      "cancel": "Batal",
+      "cancelConfirmTitle": "Batalkan permohonan cuti ini?",
+      "cancelConfirmDescription": "Ini akan menarik balik permohonan tertunda anda. Anda boleh memohon semula kemudian.",
+      "cancelConfirmAction": "Batalkan Permohonan",
+      "cancelSuccess": "Permohonan cuti telah dibatalkan.",
+      "cancelError": "Gagal membatalkan permohonan.",
+      "carryForwardSuffix": "{n} Bawa Ke Hadapan",
+      "noComment": "—",
+      "empty": "Tiada permohonan cuti lagi."
+    },
+    "whosAway": {
+      "title": "Rekod Ketidakhadiran",
+      "today": "Hari Ini",
+      "thisWeek": "Minggu Ini",
+      "empty": "Tiada sesiapa yang tiada.",
+      "holidaysTitle": "Cuti Umum Akan Datang",
+      "holidaysEmpty": "Tiada cuti umum akan datang."
+    },
+    "errors": {
+      "unauthenticated": "Anda perlu log masuk untuk melihat halaman ini.",
+      "orgNotFound": "Organisasi tidak dijumpai.",
+      "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
+      "validation": "Semak borang dan cuba lagi.",
+      "not_found": "Permohonan itu tidak dijumpai.",
+      "invalid_status": "Permohonan ini telah pun diputuskan.",
+      "internal": "Berlaku ralat. Sila cuba lagi.",
+      "invalid_range": "Tarikh tamat mesti sama atau selepas tarikh mula.",
+      "zero_workdays": "Julat tarikh ini tiada hari bekerja untuk dimohon.",
+      "insufficient_balance": "Baki cuti tidak mencukupi untuk permohonan ini.",
+      "attachment_required": "Jenis cuti ini memerlukan lampiran sokongan."
+    }
   }
 }
