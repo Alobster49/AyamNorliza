@@ -1,8 +1,10 @@
 /**
  * Unit tests for facility/bay/postcode-range Server Actions. The Supabase
- * server client is mocked so no database is required; `requireOrgRole` (in
- * @/features/orders/server/guards) is exercised indirectly through the
- * actions since it has no dedicated test file of its own.
+ * server client is mocked so no database is required; the dynamic-RBAC
+ * `requirePermission` guard (in @/lib/auth/require-permission) is mocked
+ * directly. `updateFacility` (real facility/SSM fields) gates on
+ * `delivery_setup:edit` (owner/org_admin only); bay/postcode-range writes
+ * gate on `delivery_runs`, which sellers hold full CRUD on.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +13,14 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
 
+vi.mock("@/lib/auth/require-permission", () => ({
+  requirePermission: vi.fn(),
+}));
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/require-permission";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import { updateFacility, createBay, addPostcodeRange, setTruckBay } from "../../server/facility-actions";
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
@@ -38,10 +47,22 @@ function chain(result: QueryResult) {
 }
 
 /**
- * Builds a mock Supabase client. `from("organizations")` and
- * `from("organization_members")` are wired to satisfy `requireOrgRole`;
- * any other table name is served from `tableResults`, falling back to
- * `{ data: null, error: null }`.
+ * Grants each role holds on `delivery_setup`/`delivery_runs`, mirroring
+ * DEFAULT_ROLE_GRANTS in the dynamic-RBAC schema migration: owner/org_admin
+ * get full CRUD on both; seller gets `delivery_setup:view` plus full
+ * `delivery_runs` CRUD.
+ */
+const GRANTS: Record<string, Partial<Record<string, PermissionAction[]>>> = {
+  owner: { delivery_setup: ["view", "add", "edit", "delete"], delivery_runs: ["view", "add", "edit", "delete"] },
+  org_admin: { delivery_setup: ["view", "add", "edit", "delete"], delivery_runs: ["view", "add", "edit", "delete"] },
+  seller: { delivery_setup: ["view"], delivery_runs: ["view", "add", "edit", "delete"] },
+  supervisor: { delivery_setup: ["view"], delivery_runs: ["view", "add", "edit", "delete"] },
+};
+
+/**
+ * Builds a mock Supabase client and wires the mocked `requirePermission`
+ * guard to grant/deny based on `role`; any table name is served from
+ * `tableResults`, falling back to `{ data: null, error: null }`.
  */
 function mockSupabaseFor({
   userId = "user-1",
@@ -54,6 +75,14 @@ function mockSupabaseFor({
   role?: string | null;
   tableResults?: Record<string, QueryResult>;
 }) {
+  vi.mocked(requirePermission).mockImplementation(async (_slug, resource, action) => {
+    const grants = (role && GRANTS[role]?.[resource]) || [];
+    if (!userId || !orgId || !grants.includes(action)) {
+      throw new OrderPermissionError();
+    }
+    return { orgId, userId, roleId: "role-1", roleKey: role!, timeZone: "Asia/Kuala_Lumpur" };
+  });
+
   const supabase = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
@@ -62,12 +91,6 @@ function mockSupabaseFor({
       }),
     },
     from: vi.fn((table: string) => {
-      if (table === "organizations") {
-        return chain({ data: orgId ? { id: orgId } : null, error: null });
-      }
-      if (table === "organization_members") {
-        return chain({ data: role ? { role } : null, error: null });
-      }
       if (tableResults[table]) {
         return chain(tableResults[table]);
       }

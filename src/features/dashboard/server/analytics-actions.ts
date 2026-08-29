@@ -1,8 +1,8 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { MANAGER_ROLES } from "@/features/orders/lib/roles";
-import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
 import type { SalesPayload } from "../analytics/sales-model";
 import type { TodayPayload } from "../analytics/today-model";
 import type { InsightsPayload } from "../analytics/insights-model";
@@ -16,7 +16,7 @@ async function callDashboardRpc<T>(
 ): Promise<ActionResult<T>> {
   let orgId: string;
   try {
-    ({ orgId } = await requireOrgRole(organizationSlug, MANAGER_ROLES));
+    ({ orgId } = await requirePermission(organizationSlug, "dashboard", "view"));
   } catch (error) {
     if (error instanceof OrderPermissionError) return { ok: false, message: error.message };
     throw error;

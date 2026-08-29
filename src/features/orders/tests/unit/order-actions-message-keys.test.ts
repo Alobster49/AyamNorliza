@@ -16,20 +16,17 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
 
-vi.mock("../../server/guards", async () => {
-  const actual = await vi.importActual<typeof import("../../server/guards")>("../../server/guards");
-  return {
-    OrderPermissionError: actual.OrderPermissionError,
-    requireOrgRole: vi.fn(),
-  };
-});
+vi.mock("@/lib/auth/require-permission", () => ({
+  requirePermission: vi.fn(),
+}));
 
 vi.mock("@/features/logistics/server/dispatch-actions", () => ({
   autoAssignOrder: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireOrgRole, OrderPermissionError } from "../../server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
+import { OrderPermissionError } from "../../server/guards";
 import {
   getOrderDetail,
   createManualOrder,
@@ -42,10 +39,11 @@ import {
 } from "../../server/order-actions";
 
 function mockGuard() {
-  vi.mocked(requireOrgRole).mockResolvedValue({
+  vi.mocked(requirePermission).mockResolvedValue({
     orgId: "org-1",
     userId: "user-1",
-    role: "owner",
+    roleId: "role-1",
+    roleKey: "owner",
     timeZone: "Asia/Kuala_Lumpur",
   });
 }
@@ -117,23 +115,23 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("guardRoles permission (via getOrderDetail)", () => {
+describe("guardPermission permission (via getOrderDetail)", () => {
   it("returns errors.orders.permission.unauthenticated", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Not authenticated"));
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError("Not authenticated"));
     const result = await getOrderDetail("ayam-norliza-pilot", "order-1");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.orders.permission.unauthenticated");
   });
 
   it("returns errors.orders.permission.orgNotFound", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Organization not found"));
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError("Organization not found"));
     const result = await getOrderDetail("no-such-org", "order-1");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.orders.permission.orgNotFound");
   });
 
   it("returns errors.orders.permission.forbidden for the generic case", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError());
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError());
     const result = await getOrderDetail("ayam-norliza-pilot", "order-1");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.orders.permission.forbidden");

@@ -3,8 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireOrgRole, OrderPermissionError } from "./guards";
-import { MANAGER_ROLES } from "../lib/roles";
+import { OrderPermissionError } from "./guards";
+import { requirePermission } from "@/lib/auth/require-permission";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import {
   ZoneInputSchema,
   TruckInputSchema,
@@ -34,12 +35,14 @@ function ok<T>(data: T): ActionResult<T> {
 
 async function guardManager(
   organizationSlug: string,
+  resource: string,
+  action: PermissionAction,
 ): Promise<
   | { ok: true; orgId: string; userId: string }
   | { ok: false; code: "forbidden"; message: string }
 > {
   try {
-    const ctx = await requireOrgRole(organizationSlug, MANAGER_ROLES);
+    const ctx = await requirePermission(organizationSlug, resource, action);
     return { ok: true, orgId: ctx.orgId, userId: ctx.userId };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
@@ -56,7 +59,7 @@ async function guardManager(
 export async function getDeliverySetup(
   organizationSlug: string,
 ): Promise<ActionResult<DeliverySetup>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_setup", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -103,7 +106,7 @@ export async function createZone(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<DeliveryZone>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "add");
   if (!guard.ok) return guard;
   const { orgId, userId } = guard;
 
@@ -139,7 +142,7 @@ export async function updateZone(
   zoneId: string,
   rawInput: unknown,
 ): Promise<ActionResult<DeliveryZone>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -174,7 +177,7 @@ export async function deleteZone(
   organizationSlug: string,
   zoneId: string,
 ): Promise<ActionResult> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "delete");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -204,7 +207,7 @@ export async function createTruck(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<Truck>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "add");
   if (!guard.ok) return guard;
   const { orgId, userId } = guard;
 
@@ -245,7 +248,7 @@ export async function updateTruck(
   truckId: string,
   rawInput: unknown,
 ): Promise<ActionResult<Truck>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -285,7 +288,7 @@ export async function deleteTruck(
   organizationSlug: string,
   truckId: string,
 ): Promise<ActionResult> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "delete");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -312,7 +315,7 @@ export async function setTruckZones(
   truckId: string,
   zoneIds: string[],
 ): Promise<ActionResult> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -356,7 +359,7 @@ export async function createSlot(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<DeliverySlot>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "add");
   if (!guard.ok) return guard;
   const { orgId, userId } = guard;
 
@@ -395,7 +398,7 @@ export async function updateSlot(
   slotId: string,
   rawInput: unknown,
 ): Promise<ActionResult<DeliverySlot>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -433,7 +436,7 @@ export async function deleteSlot(
   organizationSlug: string,
   slotId: string,
 ): Promise<ActionResult> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "delete");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -463,7 +466,7 @@ export async function createBlock(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<ScheduleBlock>> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "add");
   if (!guard.ok) return guard;
   const { orgId, userId } = guard;
 
@@ -501,7 +504,7 @@ export async function deleteBlock(
   organizationSlug: string,
   blockId: string,
 ): Promise<ActionResult> {
-  const guard = await guardManager(organizationSlug);
+  const guard = await guardManager(organizationSlug, "delivery_runs", "delete");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 

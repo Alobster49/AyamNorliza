@@ -16,6 +16,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/orders/types";
 import { todayInTimeZone } from "@/lib/time/org-date";
 import { requireLeaveApprover, OrderPermissionError } from "./guards";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import { computeBalance } from "../lib/leave-model";
 import type { LeaveTypeInfo, LedgerEntry, LeaveRequestSummary, BalanceSummary } from "../types";
 
@@ -37,12 +38,12 @@ function permissionMessageKey(message: string): string {
 }
 
 type GuardResult =
-  | { ok: true; orgId: string; userId: string; role: string; timeZone: string }
+  | { ok: true; orgId: string; userId: string; roleKey: string; timeZone: string }
   | { ok: false; code: "forbidden"; message: string; messageKey: string };
 
-async function guardApprover(organizationSlug: string): Promise<GuardResult> {
+async function guardApprover(organizationSlug: string, action: PermissionAction): Promise<GuardResult> {
   try {
-    const ctx = await requireLeaveApprover(organizationSlug);
+    const ctx = await requireLeaveApprover(organizationSlug, action);
     return { ok: true, ...ctx };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
@@ -218,7 +219,7 @@ export async function getManageData(
   organizationSlug: string,
   year: number,
 ): Promise<ActionResult<ManageData>> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "view");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
   const { orgId, timeZone } = guard;
 
@@ -381,7 +382,7 @@ export async function getAttachmentUrl(
   organizationSlug: string,
   path: string,
 ): Promise<ActionResult<{ url: string }>> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "view");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
   const { orgId } = guard;
 
@@ -412,7 +413,7 @@ export async function decideLeave(
   action: "approve" | "reject",
   note?: string,
 ): Promise<ActionResult> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "edit");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
 
   const supabase = await createSupabaseServerClient();
@@ -434,7 +435,7 @@ export async function decideCredit(
   action: "approve" | "reject",
   note?: string,
 ): Promise<ActionResult> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "edit");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
 
   const supabase = await createSupabaseServerClient();
@@ -458,7 +459,7 @@ export async function saveHoliday(
   organizationSlug: string,
   input: { date: string; name: string },
 ): Promise<ActionResult<{ id: string }>> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "edit");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
   const { orgId } = guard;
 
@@ -481,7 +482,7 @@ export async function saveHoliday(
 }
 
 export async function deleteHoliday(organizationSlug: string, id: string): Promise<ActionResult> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "edit");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
   const { orgId } = guard;
 
@@ -511,7 +512,7 @@ export async function updateLeaveType(
   id: string,
   input: UpdateLeaveTypeInput,
 ): Promise<ActionResult> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "edit");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
   const { orgId } = guard;
 
@@ -548,7 +549,7 @@ export async function closeYear(
   organizationSlug: string,
   year: number,
 ): Promise<ActionResult<{ inserted: number }>> {
-  const guard = await guardApprover(organizationSlug);
+  const guard = await guardApprover(organizationSlug, "edit");
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
   const { orgId } = guard;
 

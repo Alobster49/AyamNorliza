@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
-import { MANAGER_ROLES } from "@/features/orders/lib/roles";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import type { ActionResult } from "@/features/orders/types";
-import { FACILITY_ADMIN_ROLES } from "../lib/roles";
 import {
   BayInputSchema,
   FacilityInputSchema,
@@ -30,15 +30,16 @@ function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };
 }
 
-async function guardRoles(
+async function guardPermission(
   organizationSlug: string,
-  roles: readonly string[],
+  resource: string,
+  action: PermissionAction,
 ): Promise<
   | { ok: true; orgId: string; userId: string }
   | { ok: false; code: "forbidden"; message: string }
 > {
   try {
-    const ctx = await requireOrgRole(organizationSlug, roles);
+    const ctx = await requirePermission(organizationSlug, resource, action);
     return { ok: true, orgId: ctx.orgId, userId: ctx.userId };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
@@ -61,7 +62,7 @@ export type LogisticsSetup = {
 export async function getLogisticsSetup(
   organizationSlug: string,
 ): Promise<ActionResult<LogisticsSetup>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_setup", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -99,7 +100,7 @@ export async function updateFacility(
   facilityId: string,
   rawInput: unknown,
 ): Promise<ActionResult<Facility>> {
-  const guard = await guardRoles(organizationSlug, FACILITY_ADMIN_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_setup", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -139,7 +140,7 @@ export async function createBay(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<Bay>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_runs", "add");
   if (!guard.ok) return guard;
   const { orgId, userId } = guard;
 
@@ -186,7 +187,7 @@ export async function updateBay(
   bayId: string,
   rawInput: unknown,
 ): Promise<ActionResult<Bay>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_runs", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -221,7 +222,7 @@ export async function deleteBay(
   organizationSlug: string,
   bayId: string,
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_runs", "delete");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -245,7 +246,7 @@ export async function setTruckBay(
   truckId: string,
   bayId: string | null,
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_runs", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -289,7 +290,7 @@ export async function addPostcodeRange(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<ZonePostcodeRange>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_runs", "add");
   if (!guard.ok) return guard;
   const { orgId, userId } = guard;
 
@@ -334,7 +335,7 @@ export async function deletePostcodeRange(
   organizationSlug: string,
   rangeId: string,
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "delivery_runs", "delete");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 

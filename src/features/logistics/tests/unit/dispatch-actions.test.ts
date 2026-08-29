@@ -1,8 +1,8 @@
 /**
  * Unit tests for dispatch Server Actions. The Supabase server client is
- * mocked so no database is required; `requireOrgRole` (in
- * @/features/orders/server/guards) is exercised indirectly through the
- * actions since it has no dedicated test file of its own.
+ * mocked so no database is required; the dynamic-RBAC `requirePermission`/
+ * `requireAnyPermission` guards (in @/lib/auth/require-permission) are
+ * mocked directly.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,15 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
 
+vi.mock("@/lib/auth/require-permission", () => ({
+  requirePermission: vi.fn(),
+  requireAnyPermission: vi.fn(),
+}));
+
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission, requireAnyPermission } from "@/lib/auth/require-permission";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import {
   assignOrder,
   unassignOrder,
@@ -46,9 +54,31 @@ function chain(result: QueryResult) {
 }
 
 /**
- * Builds a mock Supabase client. `from("organizations")` and
- * `from("organization_members")` are wired to satisfy `requireOrgRole`;
- * any other table name is served from `tableResults`, falling back to
+ * Grants each role holds on `dispatch`/`loading`, mirroring
+ * DEFAULT_ROLE_GRANTS in the dynamic-RBAC schema migration: owner/org_admin
+ * get full CRUD on both; seller/supervisor get `dispatch` CRUD plus a
+ * `loading:edit`-only grant; inventory ("Worker") gets `loading` view+edit
+ * only; driver and hr get neither.
+ */
+const GRANTS: Record<string, Partial<Record<string, PermissionAction[]>>> = {
+  owner: { dispatch: ["view", "add", "edit", "delete"], loading: ["view", "add", "edit", "delete"] },
+  org_admin: { dispatch: ["view", "add", "edit", "delete"], loading: ["view", "add", "edit", "delete"] },
+  seller: { dispatch: ["view", "add", "edit", "delete"], loading: ["edit"] },
+  supervisor: { dispatch: ["view", "add", "edit", "delete"], loading: ["edit"] },
+  inventory: { loading: ["view", "edit"] },
+  driver: {},
+  hr: {},
+};
+
+function hasGrant(role: string | null, resource: string, action: PermissionAction): boolean {
+  if (!role) return false;
+  return (GRANTS[role]?.[resource] ?? []).includes(action);
+}
+
+/**
+ * Builds a mock Supabase client and wires the mocked `requirePermission`/
+ * `requireAnyPermission` guards to grant/deny based on `role`; any table
+ * name is served from `tableResults`, falling back to
  * `{ data: null, error: null }`.
  */
 function mockSupabaseFor({
@@ -62,6 +92,15 @@ function mockSupabaseFor({
   role?: string | null;
   tableResults?: Record<string, QueryResult>;
 }) {
+  vi.mocked(requirePermission).mockImplementation(async (_slug, resource, action) => {
+    if (!userId || !orgId || !hasGrant(role, resource, action)) throw new OrderPermissionError();
+    return { orgId, userId, roleId: "role-1", roleKey: role!, timeZone: "Asia/Kuala_Lumpur" };
+  });
+  vi.mocked(requireAnyPermission).mockImplementation(async (_slug, pairs) => {
+    if (!userId || !orgId || !pairs.some(([r, a]) => hasGrant(role, r, a))) throw new OrderPermissionError();
+    return { orgId, userId, roleId: "role-1", roleKey: role!, timeZone: "Asia/Kuala_Lumpur" };
+  });
+
   const supabase = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
@@ -70,12 +109,6 @@ function mockSupabaseFor({
       }),
     },
     from: vi.fn((table: string) => {
-      if (table === "organizations") {
-        return chain({ data: orgId ? { id: orgId } : null, error: null });
-      }
-      if (table === "organization_members") {
-        return chain({ data: role ? { role } : null, error: null });
-      }
       if (tableResults[table]) {
         return chain(tableResults[table]);
       }
@@ -439,8 +472,9 @@ describe("setLoadingClaim", () => {
   });
 
   it("refuses viewers without a loading role", async () => {
-    // Workers ("inventory") may claim on the loading screen (LOADING_ROLES),
-    // so the forbidden case is a role outside both dispatch and loading sets.
+    // Workers ("inventory") may claim on the loading screen (a `loading`
+    // grant), so the forbidden case is a role with neither `dispatch` nor
+    // `loading` permissions.
     mockSupabaseFor({ role: "hr" });
 
     const result = await setLoadingClaim("ayam-norliza-pilot", {
