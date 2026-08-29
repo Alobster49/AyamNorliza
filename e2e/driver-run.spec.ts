@@ -71,7 +71,7 @@ async function createDriverAccount(
     "Content-Type": "application/json",
   };
   const email = `driver.${Math.random().toString(36).slice(2, 10)}@ayam-norliza-pilot.example`;
-  const password = "test-only-password-12-chars";
+  const password = "password123";
 
   const userResponse = await fetch(`${url}/auth/v1/admin/users`, {
     method: "POST",

@@ -8,7 +8,7 @@ import { test, expect, type Page } from "@playwright/test";
 
 export const OWNER = {
   email: process.env.E2E_OWNER_EMAIL ?? "owner@ayam-norliza-pilot.example",
-  password: process.env.E2E_OWNER_PASSWORD ?? "test-only-password-12-chars",
+  password: process.env.E2E_OWNER_PASSWORD ?? "password123",
 };
 
 export async function signIn(page: Page, email: string, password: string) {
@@ -73,7 +73,7 @@ export function uniqueFixtureName(base: string): string {
 /** Seeded non-owner member (see 20260624000004_id_access_seed.sql). */
 export const TARGET = {
   email: "target@ayam-norliza-pilot.example",
-  password: "test-only-password-12-chars",
+  password: "password123",
   userId: "10000000-0000-0000-0000-000000000002",
 };
 
@@ -422,7 +422,7 @@ export async function completeReauth(page: Page, password: string) {
 
 export const BUYER = {
   email: process.env.E2E_BUYER_EMAIL ?? "buyer@ayam-norliza-pilot.example",
-  password: process.env.E2E_BUYER_PASSWORD ?? "test-only-password-12-chars",
+  password: process.env.E2E_BUYER_PASSWORD ?? "password123",
 };
 
 export async function signInBuyer(page: Page, email: string, password: string) {
