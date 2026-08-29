@@ -8,6 +8,7 @@ import {
   listInvitations,
   listMemberScopes,
   listProfilesByUserIds,
+  listOrganizationRoles,
 } from "@/features/identity-access/server/queries";
 import { adminGetMemberEmails } from "@/features/identity-access/server/admin-queries";
 import { mergeMemberDirectory } from "@/features/identity-access/directory";
@@ -22,13 +23,18 @@ export default async function UsersSettingsPage({
   await requireUserOrRedirect();
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
-  // Confirms membership (RLS would deny on list queries if not a member).
-  await requireOrgMember(org.id);
+  // Confirms membership (RLS would deny on list queries if not a member)
+  // and gives us the actor's own rank, so the role pickers below only ever
+  // offer a role the actor could actually be granted to grant to someone
+  // else (see `canGrantRole` in `@/lib/auth/permissions`).
+  const actor = await requireOrgMember(org.id);
+  const actorRank = actor.organization_roles?.rank ?? 0;
 
-  const [members, invitations, scopes, t] = await Promise.all([
+  const [members, invitations, scopes, roles, t] = await Promise.all([
     listMembers(org.id),
     listInvitations(org.id),
     listMemberScopes(org.id),
+    listOrganizationRoles(org.id, { maxRank: actorRank }),
     getTranslations("settings.users"),
   ]);
   const userIds = Array.from(new Set(members.map((m) => m.userId)));
@@ -47,6 +53,7 @@ export default async function UsersSettingsPage({
         members={memberRows}
         invitations={invitations}
         scopes={scopes}
+        roles={roles}
       />
     </section>
   );

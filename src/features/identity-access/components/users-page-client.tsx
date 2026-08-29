@@ -17,9 +17,8 @@ import {
   removeMemberAction,
   type ActionResult,
 } from "@/features/identity-access/server/actions";
-import { ROLES } from "@/lib/auth/permissions";
-import { roleLabelKey } from "@/features/access-control/components/role-label";
-import type { Invitation, MemberScope } from "../types";
+import { roleDisplayLabel, roleLabelKey } from "@/features/access-control/components/role-label";
+import type { Invitation, MemberScope, OrganizationRole } from "../types";
 import type { MemberDirectoryRow } from "../directory";
 import { ReauthDialog } from "@/components/forms/reauth-dialog";
 
@@ -29,11 +28,21 @@ export function UsersPageClient(props: {
   members: MemberDirectoryRow[];
   invitations: Invitation[];
   scopes: MemberScope[];
+  /** Org roles the current actor may grant (already filtered to
+   * `rank <= actor's rank` by the server page). */
+  roles: OrganizationRole[];
 }) {
   const router = useRouter();
   const t = useTranslations("identity.usersPage");
   const tRoot = useTranslations();
   const tRoles = useTranslations("roles");
+  // Falls back to the raw i18n label lookup for a role key not present in
+  // `props.roles` (e.g. the actor can no longer grant it, or it was
+  // deleted) so an invitation row never renders a blank cell.
+  function labelForRoleKey(key: string): string {
+    const match = props.roles.find((r) => r.key === key);
+    return match ? roleDisplayLabel(tRoles, match) : tRoles(roleLabelKey(key) as never);
+  }
   const tStatus = useTranslations("identity.memberStatus");
   const tInvitationStatus = useTranslations("identity.invitationStatus");
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -83,23 +92,22 @@ export function UsersPageClient(props: {
     setError(resolveMessageKey(tRoot, result.messageKey!, result.messageParams));
   }
 
-  async function changeRole(memberId: string, newRole: string, previousRole: string) {
+  async function changeRole(memberId: string, newRoleId: string, previousRoleId: string) {
     setError(null);
     // Optimistic: reflect the pick immediately, revert in every failure
     // branch below (including a canceled reauth) so the dropdown never
     // shows a role that was never actually applied.
-    setRoleDraft((prev) => ({ ...prev, [memberId]: newRole }));
-    const revert = () => setRoleDraft((prev) => ({ ...prev, [memberId]: previousRole }));
+    setRoleDraft((prev) => ({ ...prev, [memberId]: newRoleId }));
+    const revert = () => setRoleDraft((prev) => ({ ...prev, [memberId]: previousRoleId }));
     const result = await changeMemberRoleAction({
       memberId,
-      newRole: newRole as (typeof ROLES)[number],
+      newRoleId,
       reason: t("defaultRoleChangeReason"),
     });
     if (!result.ok) {
       if (result.code === "reauth_required") {
         await reauthThen(
-          () =>
-            changeMemberRoleAction({ memberId, newRole: newRole as (typeof ROLES)[number], reason: t("defaultRoleChangeReason") }),
+          () => changeMemberRoleAction({ memberId, newRoleId, reason: t("defaultRoleChangeReason") }),
           revert,
         );
         return;
@@ -201,12 +209,12 @@ export function UsersPageClient(props: {
                 </td>
                 <td>
                   <select
-                    value={roleDraft[m.id] ?? m.role}
-                    onChange={(e) => changeRole(m.id, e.target.value, roleDraft[m.id] ?? m.role)}
+                    value={roleDraft[m.id] ?? m.roleId}
+                    onChange={(e) => changeRole(m.id, e.target.value, roleDraft[m.id] ?? m.roleId)}
                   >
-                    {ROLES.map((r) => (
-                      <option key={r} value={r}>
-                        {tRoles(roleLabelKey(r))}
+                    {props.roles.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {roleDisplayLabel(tRoles, r)}
                       </option>
                     ))}
                   </select>
@@ -246,7 +254,7 @@ export function UsersPageClient(props: {
             {props.invitations.map((inv) => (
               <tr key={inv.id}>
                 <td>{inv.email}</td>
-                <td>{tRoles(roleLabelKey(inv.role))}</td>
+                <td>{labelForRoleKey(inv.role)}</td>
                 <td>
                   {inv.acceptedAt
                     ? tInvitationStatus("accepted")
@@ -272,11 +280,13 @@ export function UsersPageClient(props: {
 
       <InviteUserDialog
         organizationId={props.organizationId}
+        roles={props.roles}
         open={inviteOpen}
         onClose={() => setInviteOpen(false)}
       />
       <CreateUserDialog
         organizationId={props.organizationId}
+        roles={props.roles}
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         onReauthNeeded={(retry) => reauthThen(retry)}

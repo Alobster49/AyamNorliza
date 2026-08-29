@@ -26,20 +26,20 @@ describe("CreateOrganizationInput", () => {
 });
 
 describe("InviteUserInput", () => {
-  it("requires email/role", () => {
+  it("requires email/roleId", () => {
     const r = InviteUserInput.safeParse({
       organizationId: "11111111-1111-1111-1111-111111111111",
       email: "x@example.com",
-      role: "driver",
+      roleId: "33333333-3333-3333-3333-333333333333",
       scopes: [],
     });
     expect(r.success).toBe(true);
   });
-  it("rejects unknown role", () => {
+  it("rejects a non-uuid roleId", () => {
     const r = InviteUserInput.safeParse({
       organizationId: "11111111-1111-1111-1111-111111111111",
       email: "x@example.com",
-      role: "admin",
+      roleId: "admin",
       scopes: [],
     });
     expect(r.success).toBe(false);
@@ -48,7 +48,7 @@ describe("InviteUserInput", () => {
     const r = InviteUserInput.safeParse({
       organizationId: "11111111-1111-1111-1111-111111111111",
       email: "x@example.com",
-      role: "driver",
+      roleId: "33333333-3333-3333-3333-333333333333",
       scopes: [
         { siteId: "11111111-1111-1111-1111-111111111111", zoneId: "22222222-2222-2222-2222-222222222222" },
       ],
@@ -62,7 +62,7 @@ describe("ChangeRoleInput", () => {
     expect(
       ChangeRoleInput.safeParse({
         memberId: "11111111-1111-1111-1111-111111111111",
-        newRole: "driver",
+        newRoleId: "33333333-3333-3333-3333-333333333333",
         reason: "too short",
       }).success,
     ).toBe(false);
@@ -156,23 +156,25 @@ describe("RemoveMemberInput", () => {
 });
 
 describe("CreateUserInput", () => {
+  const ROLE_ID = "33333333-3333-3333-3333-333333333333";
+
   it("accepts a full payload", () => {
     expect(
       CreateUserInput.safeParse({
         organizationId: UUID,
         email: "staff@ayam.my",
         displayName: "New Staff",
-        role: "driver",
+        roleId: ROLE_ID,
       }).success,
     ).toBe(true);
   });
-  it("rejects an unknown role", () => {
+  it("rejects a non-uuid roleId", () => {
     expect(
       CreateUserInput.safeParse({
         organizationId: UUID,
         email: "staff@ayam.my",
         displayName: "New Staff",
-        role: "superhero",
+        roleId: "superhero",
       }).success,
     ).toBe(false);
   });
@@ -182,7 +184,7 @@ describe("CreateUserInput", () => {
         organizationId: UUID,
         email: "staff@ayam.my",
         displayName: "New Staff",
-        role: "driver",
+        roleId: ROLE_ID,
         clientOperationId: "22222222-2222-2222-2222-222222222222",
       }).success,
     ).toBe(true);
@@ -193,7 +195,7 @@ describe("CreateUserInput", () => {
         organizationId: UUID,
         email: "staff@ayam.my",
         displayName: "New Staff",
-        role: "driver",
+        roleId: ROLE_ID,
         clientOperationId: "not-a-uuid",
       }).success,
     ).toBe(false);

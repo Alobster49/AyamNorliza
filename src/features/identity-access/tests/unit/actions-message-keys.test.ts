@@ -37,6 +37,19 @@ vi.mock("@/lib/auth/reauth.server", async () => {
   };
 });
 
+// `actorCan` is a real single-row Supabase lookup (see
+// `@/lib/auth/require-permission`); stubbing it out and deferring to the
+// legacy, DB-free `can()` matrix keeps these capability-branch assertions
+// exactly as they were pre-dynamic-RBAC, without having to queue a
+// `role_permissions` row for every one of them. Test fixtures below use the
+// role *key* (e.g. "driver", "org_admin") as the `role_id` surrogate so this
+// mock can look it up directly -- `role_id` is an opaque foreign key from
+// the action's point of view, never validated by Zod.
+vi.mock("@/lib/auth/require-permission", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth/require-permission")>("@/lib/auth/require-permission");
+  return { ...actual, actorCan: vi.fn() };
+});
+
 vi.mock("@/lib/audit/events", () => ({ recordAudit: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({
   admin: {
@@ -72,6 +85,8 @@ import { admin } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { requireUser, requireOrgMember, PermissionError } from "@/lib/auth/require-user";
 import { requireReauth, ReauthRequiredError } from "@/lib/auth/reauth.server";
+import { actorCan } from "@/lib/auth/require-permission";
+import { can, type Role, type Capability } from "@/lib/auth/permissions";
 import {
   adminCreateInvitation,
   adminUpdateMemberIdentity,
@@ -106,12 +121,48 @@ function setSupabase(tableQueues: Record<string, QueryResult[]> = {}, userId: st
   return supabase;
 }
 
-const ACTIVE_MEMBER = (role: string) => ({ data: { role }, error: null });
+// Mirrors the seeded system-role ranks in
+// supabase/migrations/20260901000001_dynamic_rbac_schema.sql's
+// `seed_system_roles`. `ROLE_ID` fakes a stable `organization_roles.id`
+// per key -- schema validation requires a real UUID shape wherever a role
+// is granted (InviteUserInput.roleId etc.), even though these tests never
+// touch a real `organization_roles` row.
+const RANK_BY_ROLE: Record<string, number> = {
+  owner: 100,
+  org_admin: 80,
+  hr: 75,
+  seller: 60,
+  supervisor: 60,
+  inventory: 40,
+  driver: 30,
+};
+const ROLE_ID: Record<string, string> = {
+  owner: "00000000-0000-0000-0000-000000000101",
+  org_admin: "00000000-0000-0000-0000-000000000102",
+  hr: "00000000-0000-0000-0000-000000000103",
+  seller: "00000000-0000-0000-0000-000000000104",
+  supervisor: "00000000-0000-0000-0000-000000000105",
+  inventory: "00000000-0000-0000-0000-000000000106",
+  driver: "00000000-0000-0000-0000-000000000107",
+};
+/** A queued `organization_roles` row for `resolveOrgRole()`'s lookup. */
+const ORG_ROLE = (roleKey: string) => ({
+  data: { id: ROLE_ID[roleKey], key: roleKey, name: roleKey, rank: RANK_BY_ROLE[roleKey] },
+  error: null,
+});
+
+const ACTIVE_MEMBER = (role: string) => ({
+  data: { role, role_id: role, organization_roles: { rank: RANK_BY_ROLE[role] ?? 0 } },
+  error: null,
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(requireReauth).mockResolvedValue({ userId: "user-1", jti: "jti-1" });
   vi.mocked(requireUser).mockResolvedValue({ id: "user-1", email: "a@b.com" } as never);
+  vi.mocked(actorCan).mockImplementation(async (roleId, capability) =>
+    can(roleId as Role, capability as Capability),
+  );
 });
 
 describe("updateOrganizationSettingsAction", () => {
@@ -129,7 +180,7 @@ describe("updateOrganizationSettingsAction", () => {
   });
 
   it("returns organization.updateForbidden when the role lacks the capability", async () => {
-    vi.mocked(requireOrgMember).mockResolvedValue({ role: "driver", user_id: "user-1" } as never);
+    vi.mocked(requireOrgMember).mockResolvedValue({ role: "driver", role_id: "driver", user_id: "user-1" } as never);
     const result = await updateOrganizationSettingsAction({ organizationId: "11111111-1111-1111-1111-111111111111" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.organization.updateForbidden");
@@ -137,10 +188,15 @@ describe("updateOrganizationSettingsAction", () => {
 });
 
 describe("inviteUserAction", () => {
-  const validInput = { organizationId: "11111111-1111-1111-1111-111111111111", email: "x@y.com", role: "driver", scopes: [] };
+  const validInput = {
+    organizationId: "11111111-1111-1111-1111-111111111111",
+    email: "x@y.com",
+    roleId: ROLE_ID.driver,
+    scopes: [],
+  };
 
   it("returns invite.invalidInput for a bad payload", async () => {
-    const result = await inviteUserAction({ organizationId: "bad", email: "x", role: "driver", scopes: [] });
+    const result = await inviteUserAction({ organizationId: "bad", email: "x", roleId: "driver", scopes: [] });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.invite.invalidInput");
   });
@@ -167,8 +223,11 @@ describe("inviteUserAction", () => {
   });
 
   it("returns roles.cannotGrantRole with the role param when the target role outranks the caller", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
-    const result = await inviteUserAction({ ...validInput, role: "owner" });
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("org_admin")],
+      organization_roles: [ORG_ROLE("owner")],
+    });
+    const result = await inviteUserAction({ ...validInput, roleId: ROLE_ID.owner });
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
@@ -177,7 +236,10 @@ describe("inviteUserAction", () => {
   });
 
   it("returns invite.createFailed when adminCreateInvitation throws an Error", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("org_admin")],
+      organization_roles: [ORG_ROLE("driver")],
+    });
     vi.mocked(adminCreateInvitation).mockRejectedValue(new Error("duplicate invitation"));
     const result = await inviteUserAction(validInput);
     expect(result.ok).toBe(false);
@@ -185,7 +247,10 @@ describe("inviteUserAction", () => {
   });
 
   it("returns invite.createFailedUnknown when adminCreateInvitation throws a non-Error", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("org_admin")],
+      organization_roles: [ORG_ROLE("driver")],
+    });
     vi.mocked(adminCreateInvitation).mockRejectedValue("some non-Error throw");
     const result = await inviteUserAction(validInput);
     expect(result.ok).toBe(false);
@@ -222,7 +287,7 @@ describe("resendInvitationAction", () => {
   it("returns common.forbidden when the caller can't invite", async () => {
     setSupabase({
       invitations: [{ data: { id: "inv-1", organization_id: "org-1", accepted_at: null, revoked_at: null }, error: null }],
-      organization_members: [{ data: { role: "driver" }, error: null }],
+      organization_members: [{ data: { role: "driver", role_id: "driver" }, error: null }],
     });
     const result = await resendInvitationAction({ invitationId: "11111111-1111-1111-1111-111111111111" });
     expect(result.ok).toBe(false);
@@ -276,7 +341,11 @@ describe("acceptInvitationAction", () => {
 });
 
 describe("changeMemberRoleAction", () => {
-  const validInput = { memberId: "11111111-1111-1111-1111-111111111111", newRole: "driver", reason: "reason text long enough" };
+  const validInput = {
+    memberId: "11111111-1111-1111-1111-111111111111",
+    newRoleId: ROLE_ID.driver,
+    reason: "reason text long enough",
+  };
 
   it("returns common.reauthRequired when step-up is needed", async () => {
     vi.mocked(requireReauth).mockRejectedValue(new ReauthRequiredError());
@@ -298,6 +367,7 @@ describe("changeMemberRoleAction", () => {
         { data: { id: "m-1", organization_id: "org-1", role: "driver", user_id: "target-1" }, error: null },
         ACTIVE_MEMBER("org_admin"),
       ],
+      organization_roles: [ORG_ROLE("driver")],
     });
     const result = await changeMemberRoleAction(validInput);
     expect(result.ok).toBe(false);
@@ -310,13 +380,14 @@ describe("changeMemberRoleAction", () => {
         { data: { id: "m-1", organization_id: "org-1", role: "org_admin", user_id: "target-1" }, error: null },
         ACTIVE_MEMBER("owner"),
       ],
+      organization_roles: [ORG_ROLE("owner")],
     });
-    const result = await changeMemberRoleAction({ ...validInput, newRole: "owner" });
+    const result = await changeMemberRoleAction({ ...validInput, newRoleId: ROLE_ID.owner });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.member.ownerNeedsApprover");
   });
 
-  // The following demote-an-owner scenarios (target role "owner", newRole
+  // The following demote-an-owner scenarios (target role "owner", newRoleId
   // "driver" from validInput) are the confirmed exploit path: an
   // org_admin's canGrantRole check passes for "driver" (rank <= org_admin),
   // so these reach the approver gate the same way the reported bug did.
@@ -327,6 +398,7 @@ describe("changeMemberRoleAction", () => {
         { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
         ACTIVE_MEMBER("org_admin"),
       ],
+      organization_roles: [ORG_ROLE("driver")],
     });
     const result = await changeMemberRoleAction(validInput);
     expect(result.ok).toBe(false);
@@ -340,6 +412,7 @@ describe("changeMemberRoleAction", () => {
         ACTIVE_MEMBER("org_admin"),
         { data: null, error: null }, // approver lookup: no matching active member
       ],
+      organization_roles: [ORG_ROLE("driver")],
     });
     const result = await changeMemberRoleAction({
       ...validInput,
@@ -358,6 +431,7 @@ describe("changeMemberRoleAction", () => {
           { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
           ACTIVE_MEMBER("org_admin"),
         ],
+        organization_roles: [ORG_ROLE("driver")],
       },
       callerId,
     );
@@ -376,6 +450,7 @@ describe("changeMemberRoleAction", () => {
         ACTIVE_MEMBER("org_admin"),
         { data: { role: "org_admin" }, error: null }, // approver lookup: active but not an owner
       ],
+      organization_roles: [ORG_ROLE("driver")],
     });
     const result = await changeMemberRoleAction({
       ...validInput,
@@ -393,6 +468,7 @@ describe("changeMemberRoleAction", () => {
         { data: { role: "owner" }, error: null }, // approver lookup: active owner
         { data: { id: "m-1", role: "driver" }, error: null }, // the update itself
       ],
+      organization_roles: [ORG_ROLE("driver")],
     });
     const result = await changeMemberRoleAction({
       ...validInput,
@@ -427,7 +503,10 @@ describe("deactivateUserAction", () => {
 describe("updateMemberProfileAction", () => {
   const UUID = "11111111-1111-1111-1111-111111111111";
   const validInput = { memberId: UUID, displayName: "New Name", reason: "correcting name" };
-  const TARGET = { data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "driver" }, error: null };
+  const TARGET = {
+    data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "driver", organization_roles: { rank: RANK_BY_ROLE.driver } },
+    error: null,
+  };
 
   it("returns common.invalidInput when nothing to update", async () => {
     const result = await updateMemberProfileAction({ memberId: UUID, reason: "no fields to change" });
@@ -452,7 +531,10 @@ describe("updateMemberProfileAction", () => {
   it("returns roles.cannotGrantRole when an org_admin edits an owner", async () => {
     setSupabase({
       organization_members: [
-        { data: { id: UUID, organization_id: "org-1", user_id: "u-owner", role: "owner" }, error: null },
+        {
+          data: { id: UUID, organization_id: "org-1", user_id: "u-owner", role: "owner", organization_roles: { rank: RANK_BY_ROLE.owner } },
+          error: null,
+        },
         ACTIVE_MEMBER("org_admin"),
       ],
     });
@@ -578,7 +660,7 @@ describe("createUserAction", () => {
     organizationId: "11111111-1111-1111-1111-111111111111",
     email: "staff@ayam.my",
     displayName: "New Staff",
-    role: "driver",
+    roleId: ROLE_ID.driver,
   };
 
   it("returns common.invalidInput for a bad payload", async () => {
@@ -602,14 +684,20 @@ describe("createUserAction", () => {
   });
 
   it("returns roles.cannotGrantRole when the target role outranks the caller", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
-    const result = await createUserAction({ ...validInput, role: "owner" });
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("org_admin")],
+      organization_roles: [ORG_ROLE("owner")],
+    });
+    const result = await createUserAction({ ...validInput, roleId: ROLE_ID.owner });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
   });
 
   it("returns user.emailInUse on a duplicate email", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("org_admin")],
+      organization_roles: [ORG_ROLE("driver")],
+    });
     vi.mocked(adminCreateOrgUser).mockRejectedValue(
       Object.assign(new Error("email exists"), { code: "email_exists", status: 422 }),
     );
@@ -619,7 +707,10 @@ describe("createUserAction", () => {
   });
 
   it("creates the user and sends a set-password email for an org_admin", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("org_admin")],
+      organization_roles: [ORG_ROLE("driver")],
+    });
     vi.mocked(adminCreateOrgUser).mockResolvedValue({ userId: "new-user" });
     const result = await createUserAction(validInput);
     expect(result.ok).toBe(true);
@@ -628,7 +719,10 @@ describe("createUserAction", () => {
   });
 
   it("still succeeds when the set-password email fails (best-effort)", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("org_admin")] });
+    setSupabase({
+      organization_members: [ACTIVE_MEMBER("org_admin")],
+      organization_roles: [ORG_ROLE("driver")],
+    });
     vi.mocked(adminCreateOrgUser).mockResolvedValue({ userId: "new-user" });
     vi.mocked(admin.generateRecoveryLink).mockRejectedValueOnce(new Error("gotrue down"));
     const result = await createUserAction(validInput);
@@ -638,7 +732,7 @@ describe("createUserAction", () => {
 
 describe("startAccessReviewAction", () => {
   it("returns common.forbidden when the caller lacks access_review.run", async () => {
-    setSupabase({ organization_members: [{ data: { role: "driver" }, error: null }] });
+    setSupabase({ organization_members: [{ data: { role: "driver", role_id: "driver" }, error: null }] });
     const result = await startAccessReviewAction({
       organizationId: "11111111-1111-1111-1111-111111111111",
       periodStart: new Date().toISOString(),
@@ -684,7 +778,7 @@ describe("openBreakGlassAction", () => {
   });
 
   it("returns breakGlass.cannotOpen when the role lacks break_glass.open", async () => {
-    setSupabase({ organization_members: [{ data: { role: "driver" }, error: null }] });
+    setSupabase({ organization_members: [{ data: { role: "driver", role_id: "driver" }, error: null }] });
     const result = await openBreakGlassAction({
       organizationId: "11111111-1111-1111-1111-111111111111",
       reason: "0123456789",

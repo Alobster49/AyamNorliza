@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   can,
   canGrantRole,
-  highestGrantableRole,
+  getRoleRank,
   ROLES,
   CAPABILITIES,
   EDITABLE_ROLES,
@@ -61,9 +61,14 @@ describe("permissions matrix", () => {
 
   it("org_admin can change roles but not grant owner", () => {
     expect(can("org_admin", "membership.role.change")).toBe(true);
-    expect(canGrantRole("org_admin", "owner")).toBe(false);
-    expect(canGrantRole("org_admin", "driver")).toBe(true);
-    expect(canGrantRole("org_admin", "org_admin")).toBe(true);
+    const adminRank = getRoleRank("org_admin");
+    expect(canGrantRole(adminRank, getRoleRank("owner"), true)).toBe(false);
+    expect(canGrantRole(adminRank, getRoleRank("driver"), true)).toBe(true);
+    expect(canGrantRole(adminRank, getRoleRank("org_admin"), true)).toBe(true);
+    // The third argument is the caller's `membership.role.change` capability
+    // (resolved via `actorCan` in production) -- without it, no grant is
+    // ever allowed regardless of rank.
+    expect(canGrantRole(adminRank, getRoleRank("driver"), false)).toBe(false);
   });
 
   it("org_admin has every capability (full access)", () => {
@@ -79,14 +84,6 @@ describe("permissions matrix", () => {
     // audit_log_select_admin restricts audit reads to owner/org_admin, so
     // sales roles must not report the capability.
     expect(can("supervisor", "audit.read")).toBe(false);
-  });
-
-  it("highestGrantableRole walks down the rank table", () => {
-    expect(highestGrantableRole("owner")).toBe("owner");
-    expect(highestGrantableRole("org_admin")).toBe("org_admin");
-    // drivers lack membership.role.change so canGrantRole() returns
-    // false for every role; the helper still surfaces the minimum role.
-    expect(highestGrantableRole("driver")).toBe("driver");
   });
 
   it("exactly the seven realigned roles exist", () => {

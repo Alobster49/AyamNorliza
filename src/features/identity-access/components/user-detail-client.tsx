@@ -5,10 +5,9 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { changeMemberRoleAction, changeMemberScopeAction, deactivateUserAction } from "@/features/identity-access/server/actions";
-import { ROLES } from "@/lib/auth/permissions";
-import { roleLabelKey } from "@/features/access-control/components/role-label";
+import { roleDisplayLabel } from "@/features/access-control/components/role-label";
 import { ReauthDialog } from "@/components/forms/reauth-dialog";
-import type { MemberScope, OrganizationMember } from "../types";
+import type { MemberScope, OrganizationMember, OrganizationRole } from "../types";
 
 const MEMBER_STATUS_KEYS = {
   invited: "invited",
@@ -21,13 +20,16 @@ export function UserDetailClient(props: {
   organizationId: string;
   member: OrganizationMember;
   scopes: MemberScope[];
+  /** Org roles the current actor may grant (already filtered to
+   * `rank <= actor's rank` by the server page). */
+  roles: OrganizationRole[];
 }) {
   const router = useRouter();
   const t = useTranslations("identity.userDetail");
   const tRoot = useTranslations();
   const tRoles = useTranslations("roles");
   const tStatus = useTranslations("identity.memberStatus");
-  const [role, setRole] = useState(props.member.role);
+  const [roleId, setRoleId] = useState(props.member.roleId);
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -51,14 +53,14 @@ export function UserDetailClient(props: {
     setPending(true);
     const result = await changeMemberRoleAction({
       memberId: props.member.id,
-      newRole: role as (typeof ROLES)[number],
+      newRoleId: roleId,
       reason: reason || t("defaultReason"),
     });
     setPending(false);
     if (!result.ok) {
       if (result.code === "reauth_required") {
         await reauthThen(() =>
-          changeMemberRoleAction({ memberId: props.member.id, newRole: role as (typeof ROLES)[number], reason: reason || t("defaultReason") }),
+          changeMemberRoleAction({ memberId: props.member.id, newRoleId: roleId, reason: reason || t("defaultReason") }),
         );
         return;
       }
@@ -95,10 +97,10 @@ export function UserDetailClient(props: {
       <div className="settings-form">
         <label>
           {t("roleLabel")}
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {tRoles(roleLabelKey(r))}
+          <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+            {props.roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {roleDisplayLabel(tRoles, r)}
               </option>
             ))}
           </select>
