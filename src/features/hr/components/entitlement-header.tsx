@@ -115,7 +115,7 @@ type EquationTermData = {
 /** Desktop: value-first columns on one shared baseline, operators on that line. */
 function EquationRow({ terms }: { terms: EquationTermData[] }) {
   return (
-    <div className="hidden items-start gap-x-4 gap-y-2 overflow-x-auto sm:flex">
+    <div className="hidden items-start justify-center gap-x-4 gap-y-2 overflow-x-auto sm:flex">
       {terms.map((term) => (
         <div key={term.label} className="flex items-start gap-4">
           {term.op && (
@@ -123,7 +123,7 @@ function EquationRow({ terms }: { terms: EquationTermData[] }) {
               {term.op === "-" ? "−" : term.op}
             </span>
           )}
-          <div className="flex flex-col gap-1">
+          <div className="flex flex-col items-center gap-1 text-center">
             <span
               className={cn(
                 "text-2xl font-semibold leading-8 tabular-nums",
