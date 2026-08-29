@@ -78,6 +78,9 @@ export function TasksClient({
         dispatch({ type: "SYNC_TASKS", tasks: result.data.tasks, nowMs: Date.now() });
         setPeople(result.data.people);
       }
+    } catch {
+      // Network hiccup: swallow — the next realtime event or 60s claim-tick
+      // retries, and the queue self-heals without surfacing an error.
     } finally {
       inFlightRef.current -= 1;
     }
@@ -106,18 +109,27 @@ export function TasksClient({
     if (claimAttemptsRef.current.has(taskId)) return;
     claimAttemptsRef.current.add(taskId);
     dispatch({ type: "CLAIM_LOCAL", taskId, by: viewerId, at: new Date().toISOString() });
-    void claimWeighTask({ organizationSlug, taskId, claim: true }).then((result) => {
-      if (result.ok) return;
-      // Always allow a later retry — the block may expire or be released.
-      claimAttemptsRef.current.delete(taskId);
-      if (result.code === "conflict") {
-        dispatch({ type: "CLAIM_REJECTED", taskId, nowMs: Date.now() });
-        toast({ title: t("claimLostTitle"), description: result.message, variant: "destructive" });
-      } else {
+    void claimWeighTask({ organizationSlug, taskId, claim: true })
+      .then((result) => {
+        if (result.ok) return;
+        // Always allow a later retry — the block may expire or be released.
+        claimAttemptsRef.current.delete(taskId);
+        if (result.code === "conflict") {
+          dispatch({ type: "CLAIM_REJECTED", taskId, nowMs: Date.now() });
+          toast({ title: t("claimLostTitle"), description: result.message, variant: "destructive" });
+        } else {
+          dispatch({ type: "CLAIM_CLEARED", taskId });
+        }
+        void refetch();
+      })
+      .catch(() => {
+        // The request never reached the server (offline/dropped): roll back
+        // the optimistic claim and clear the attempt marker so the next
+        // digit tries again, instead of leaving the task claimed forever.
+        claimAttemptsRef.current.delete(taskId);
         dispatch({ type: "CLAIM_CLEARED", taskId });
-      }
-      void refetch();
-    });
+        toast({ title: t("saveFailedTitle"), variant: "destructive" });
+      });
   }, [organizationSlug, refetch, t, toast, viewerId]);
 
   // Every numpad/keyboard/swipe path funnels through this dispatch so the
@@ -134,9 +146,21 @@ export function TasksClient({
     (taskId: string) => {
       dispatch({ type: "CLAIM_CLEARED", taskId });
       claimAttemptsRef.current.delete(taskId);
-      void claimWeighTask({ organizationSlug, taskId, claim: false }).then(() => void refetch());
+      void claimWeighTask({ organizationSlug, taskId, claim: false })
+        .then((result) => {
+          if (!result.ok) {
+            toast({ title: t("saveFailedTitle"), description: result.message, variant: "destructive" });
+          }
+          void refetch();
+        })
+        .catch(() => {
+          // Request never reached the server: the optimistic clear already
+          // happened locally, and claims resync via the next refetch tick
+          // or realtime event, so there's nothing to roll back here.
+          toast({ title: t("saveFailedTitle"), variant: "destructive" });
+        });
     },
-    [organizationSlug, refetch],
+    [organizationSlug, refetch, t, toast],
   );
 
   // ---- realtime: other stations' claims and completions land here ----

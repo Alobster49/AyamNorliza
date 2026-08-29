@@ -98,24 +98,29 @@ export function QueueRail({
                   ? t("itemProgress", { index: currentLine.indexInTask, total: currentLine.totalInTask })
                   : t("weighedProgress", { done: doneCount, total: group.lines.length })}
             </span>
-            {blockedBy !== null && !saving && (
-              <span className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs font-medium text-amber-600 dark:text-amber-500">
-                  {people[blockedBy] ? t("claimedBy", { name: people[blockedBy] }) : t("claimedByFallback")}
-                </span>
-                <button
-                  type="button"
-                  className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:underline"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onRelease(group.taskId);
-                  }}
-                >
-                  {t("release")}
-                </button>
-              </span>
-            )}
           </>
+        );
+
+        // Rendered as a sibling of the row button, never nested inside it —
+        // a <button> inside a <button> parses as two siblings on the server
+        // (invalid HTML), which mismatches the client's nested render and
+        // trips a hydration error the instant a claim is active on load.
+        const releaseRow = blockedBy !== null && !saving && (
+          <div className="flex items-center justify-between gap-2 border-l-2 border-transparent px-4 pb-2">
+            <span className="truncate text-xs font-medium text-amber-600 dark:text-amber-500">
+              {people[blockedBy] ? t("claimedBy", { name: people[blockedBy] }) : t("claimedByFallback")}
+            </span>
+            <button
+              type="button"
+              className="shrink-0 text-xs text-muted-foreground underline-offset-2 hover:underline"
+              onClick={(event) => {
+                event.stopPropagation();
+                onRelease(group.taskId);
+              }}
+            >
+              {t("release")}
+            </button>
+          </div>
         );
 
         if (saving) {
@@ -129,19 +134,21 @@ export function QueueRail({
           );
         }
         return (
-          <button
-            key={group.taskId}
-            type="button"
-            onClick={() => onSelect(isCurrent ? cursor : firstIndex)}
-            className={cn(
-              "flex flex-col gap-0.5 border-l-2 border-transparent px-4 py-2.5 text-left transition-colors duration-150 motion-reduce:transition-none",
-              "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
-              isCurrent && "border-l-primary bg-accent",
-              allDone && !isCurrent && "opacity-45",
-            )}
-          >
-            {rowContent}
-          </button>
+          <div key={group.taskId} className="flex flex-col">
+            <button
+              type="button"
+              onClick={() => onSelect(isCurrent ? cursor : firstIndex)}
+              className={cn(
+                "flex flex-col gap-0.5 border-l-2 border-transparent px-4 py-2.5 text-left transition-colors duration-150 motion-reduce:transition-none",
+                "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
+                isCurrent && "border-l-primary bg-accent",
+                allDone && !isCurrent && "opacity-45",
+              )}
+            >
+              {rowContent}
+            </button>
+            {releaseRow}
+          </div>
         );
       })}
     </aside>
