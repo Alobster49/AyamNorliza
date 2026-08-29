@@ -2541,12 +2541,19 @@
       "pendingNote": "{n} sedang menunggu",
       "annualFallback": "Cuti Tahunan",
       "applyButton": "Mohon Cuti",
-      "requestCreditButton": "Mohon Kredit"
+      "requestCreditButton": "Mohon Kredit",
+      "ofDays": "daripada {n} hari",
+      "statusSentence": "{n} hari cuti tahunan tersedia",
+      "howCalculated": "Cara pengiraan",
+      "credits": "Kredit",
+      "pendingHeld": "Menunggu"
     },
     "policy": {
       "uponRequest": "Ikut Permohonan",
       "booked": "{n} ditempah",
-      "available": "baki"
+      "available": "baki",
+      "otherLeaveTitle": "Cuti Lain",
+      "availableCount": "{n} baki"
     },
     "apply": {
       "title": "Mohon Cuti",
@@ -2607,7 +2614,9 @@
       "cancelError": "Gagal membatalkan permohonan.",
       "carryForwardSuffix": "{n} Bawa Ke Hadapan",
       "noComment": "—",
-      "empty": "Tiada permohonan cuti lagi."
+      "empty": "Tiada permohonan cuti lagi.",
+      "emptyApplyCta": "Mohon cuti pertama anda",
+      "dayCount": "{n} hari"
     },
     "whosAway": {
       "title": "Rekod Ketidakhadiran",

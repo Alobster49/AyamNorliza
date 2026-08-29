@@ -34,7 +34,7 @@ import { cancelMyLeaveRequest, type MyLeaveRequestRow } from "../server/leave-ac
 import { formatDateRange } from "../lib/date-format";
 import type { LeaveTypeInfo } from "../types";
 
-const DOT_PALETTE = [
+export const DOT_PALETTE = [
   "bg-sky-500",
   "bg-emerald-500",
   "bg-amber-500",
@@ -61,14 +61,22 @@ function statusVariant(status: MyLeaveRequestRow["status"]): "default" | "second
   }
 }
 
+const STRIPE_BY_STATUS: Record<MyLeaveRequestRow["status"], string> = {
+  pending: "border-l-amber-500",
+  approved: "border-l-emerald-500",
+  rejected: "border-l-red-500",
+  cancelled: "border-l-muted-foreground/40",
+};
+
 type LeaveHistoryProps = {
   organizationSlug: string;
   requests: MyLeaveRequestRow[];
   types: LeaveTypeInfo[];
   onCancelled: () => void;
+  onApply?: () => void;
 };
 
-export function LeaveHistory({ organizationSlug, requests, types, onCancelled }: LeaveHistoryProps) {
+export function LeaveHistory({ organizationSlug, requests, types, onCancelled, onApply }: LeaveHistoryProps) {
   const { toast } = useToast();
   const t = useTranslations("hr.history");
   const tRoot = useTranslations();
@@ -134,8 +142,17 @@ export function LeaveHistory({ organizationSlug, requests, types, onCancelled }:
       </CardHeader>
       <CardContent>
         {filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("empty")}</p>
+          <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-6 text-center">
+            <p className="text-sm text-muted-foreground">{t("empty")}</p>
+            {onApply && requests.length === 0 && (
+              <Button size="sm" onClick={onApply}>
+                {t("emptyApplyCta")}
+              </Button>
+            )}
+          </div>
         ) : (
+          <>
+          <div className="hidden sm:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -183,6 +200,48 @@ export function LeaveHistory({ organizationSlug, requests, types, onCancelled }:
               })}
             </TableBody>
           </Table>
+          </div>
+
+          <div className="flex flex-col gap-2 sm:hidden">
+            {filtered.map((req) => {
+              const type = typeById.get(req.leaveTypeId);
+              return (
+                <div
+                  key={req.id}
+                  className={cn("rounded-lg border border-l-4 p-3", STRIPE_BY_STATUS[req.status])}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", dotColor(type))} />
+                      <span className="truncate text-sm font-medium">{type?.name ?? "—"}</span>
+                    </div>
+                    <Badge variant={statusVariant(req.status)}>{t(`statuses.${req.status}`)}</Badge>
+                  </div>
+                  <div className="mt-1.5 text-sm text-muted-foreground">
+                    {formatDateRange(req.startDate, req.endDate)} ·{" "}
+                    {t("dayCount", { n: req.dayCount })}
+                    {req.breakdown && req.breakdown.carryForwardUsed > 0 && (
+                      <> · {t("carryForwardSuffix", { n: req.breakdown.carryForwardUsed })}</>
+                    )}
+                  </div>
+                  {req.decisionNote && (
+                    <p className="mt-1.5 text-sm text-muted-foreground">{req.decisionNote}</p>
+                  )}
+                  {req.status === "pending" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => setCancelTarget(req)}
+                    >
+                      {t("cancel")}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          </>
         )}
       </CardContent>
 

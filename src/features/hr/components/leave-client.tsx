@@ -130,6 +130,7 @@ export function LeaveClient({
             requests={data.requests}
             types={data.types}
             onCancelled={() => void refetch(year)}
+            onApply={() => setApplyOpen(true)}
           />
         </div>
         <WhosAway whosAway={data.whosAway} holidays={data.holidays} today={today} />

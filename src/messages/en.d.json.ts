@@ -2544,12 +2544,19 @@ declare const messages: {
       "pendingNote": "{n} pending",
       "annualFallback": "Annual Leave",
       "applyButton": "Apply Leave",
-      "requestCreditButton": "Request Credit"
+      "requestCreditButton": "Request Credit",
+      "ofDays": "of {n} days",
+      "statusSentence": "{n, plural, one {# annual day available} other {# annual days available}}",
+      "howCalculated": "How it's calculated",
+      "credits": "Credits",
+      "pendingHeld": "Pending"
     },
     "policy": {
       "uponRequest": "Upon Request",
       "booked": "{n} booked",
-      "available": "available"
+      "available": "available",
+      "otherLeaveTitle": "Other Leave",
+      "availableCount": "{n} left"
     },
     "apply": {
       "title": "Apply Leave",
@@ -2610,7 +2617,9 @@ declare const messages: {
       "cancelError": "Failed to cancel the request.",
       "carryForwardSuffix": "{n} Carry Forward",
       "noComment": "—",
-      "empty": "No leave requests yet."
+      "empty": "No leave requests yet.",
+      "emptyApplyCta": "Apply your first leave",
+      "dayCount": "{n, plural, one {# day} other {# days}}"
     },
     "whosAway": {
       "title": "Who's Away",
