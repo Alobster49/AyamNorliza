@@ -421,7 +421,8 @@ declare const messages: {
         "notMember": "Not a member of this organization",
         "reauthRequired": "Step-up re-authentication required",
         "internal": "Something went wrong. Please try again.",
-        "invalidInput": "Invalid input"
+        "invalidInput": "Invalid input",
+        "orgNotFound": "Organization not found"
       },
       "organization": {
         "invalidUpdate": "Invalid organization update",
@@ -467,7 +468,17 @@ declare const messages: {
         "ownerOnlyEdit": "Only the owner can edit capabilities",
         "ownerOnlyReset": "Only the owner can reset capabilities",
         "cannotGrantRole": "Cannot grant role '{role}'",
-        "saveOverrideFailed": "Failed to save override"
+        "saveOverrideFailed": "Failed to save override",
+        "forbidden": "You do not have permission to manage roles",
+        "invalidName": "Name must contain at least one letter or number",
+        "cloneSourceNotFound": "Role to clone from was not found",
+        "duplicateKey": "A role with key '{key}' already exists",
+        "createFailed": "Could not create the role. Please try again.",
+        "notFound": "Role not found",
+        "ownerLocked": "The owner role cannot be changed",
+        "systemLocked": "System roles cannot be renamed or deleted",
+        "hasMembers": "This role still has active members and cannot be deleted",
+        "noDefaults": "Custom roles have no default permissions to reset to"
       },
       "auth": {
         "invalidLogin": "Invalid login",
@@ -1108,14 +1119,157 @@ declare const messages: {
     },
     "rolesMasthead": {
       "kicker": "Access control — {organizationName}",
-      "issueTag": "Issue 01 · Phase 1 read-only",
+      "issueTag": "Issue 02 · Editable",
       "titleRoles": "Roles",
       "titlePermissions": "Permissions",
-      "description": "A read-only spread of every role inside this organization and every capability each role is granted. Editing this matrix is owned by MOD-19 — until then, this page is the canonical picture.",
+      "description": "Every role inside this organization and every permission each one is granted. Admins and the owner can create custom roles and adjust permissions here — every change is recorded in the audit log.",
       "statRoles": "Roles",
       "statCapabilities": "Capabilities",
       "statCategories": "Categories",
       "lastRevised": "Last revised {date}"
+    },
+    "rolesEditor": {
+      "newRoleButton": "New role",
+      "systemRolesHeading": "System roles",
+      "customRolesHeading": "Custom roles",
+      "systemBadge": "System",
+      "memberCountLabel": "{count, plural, one {# member} other {# members}}",
+      "nameLabel": "Role name",
+      "descriptionLabel": "Description",
+      "save": "Save",
+      "cancel": "Cancel",
+      "deleteButton": "Delete role",
+      "deleteDisabledOwner": "The owner role cannot be deleted",
+      "deleteDisabledSystem": "System roles cannot be deleted",
+      "deleteDisabledHasMembers": "Reassign this role's members before deleting it",
+      "confirmDeleteTitle": "Delete {role}?",
+      "confirmDeleteDescription": "This role will be removed permanently. This cannot be undone.",
+      "deleteSuccess": "Role deleted",
+      "deleteErrorTitle": "Couldn't delete role",
+      "renameDisabledOwner": "The owner role cannot be renamed",
+      "renameDisabledSystem": "System role names cannot be changed",
+      "renameSuccess": "Role updated",
+      "renameErrorTitle": "Couldn't save role",
+      "resetButton": "Reset to defaults",
+      "resetConfirmTitle": "Reset {role} to defaults?",
+      "resetConfirmDescription": "All custom permission changes for this role will be discarded and replaced with the built-in defaults.",
+      "resetSuccess": "Role reset to defaults",
+      "resetErrorTitle": "Couldn't reset role",
+      "ownerLockNote": "The owner role always has every permission. It cannot be edited.",
+      "readOnlyNote": "You do not have permission to edit roles.",
+      "toggleErrorTitle": "Couldn't update permission",
+      "toggleAriaLabel": "Toggle {action} on {resource}",
+      "pagesHeading": "Pages",
+      "pagesDescription": "What this role can see and do on each page.",
+      "colResource": "Page",
+      "colView": "View",
+      "colAdd": "Add",
+      "colEdit": "Edit",
+      "colDelete": "Delete",
+      "adminHeading": "Administration",
+      "adminDescription": "Organization-wide capabilities that aren't tied to a single page.",
+      "resources": {
+        "dashboard": "Dashboard",
+        "products": "Products",
+        "orders": "Orders",
+        "customers": "Customers",
+        "marketPrices": "Market prices",
+        "dispatch": "Dispatch",
+        "deliveryRuns": "Delivery runs",
+        "deliverySetup": "Delivery setup",
+        "warehouseTasks": "Warehouse tasks",
+        "loading": "Loading",
+        "driverDeck": "Driver deck",
+        "leave": "My Leave",
+        "leaveManagement": "Leave Management",
+        "users": "Users",
+        "roles": "Roles",
+        "dataConsole": "Data console",
+        "settings": "Settings"
+      },
+      "groups": {
+        "organization": "Organization",
+        "membership": "Membership",
+        "sales": "Sales",
+        "access_review": "Access review",
+        "break_glass": "Break-glass",
+        "audit_auth": "Audit & auth"
+      },
+      "capabilities": {
+        "organizationManage": {
+          "label": "Manage organization",
+          "description": "Create, archive, and bind to billing."
+        },
+        "organizationSettingsUpdate": {
+          "label": "Update organization settings",
+          "description": "Identity, locale, time zone, region."
+        },
+        "membershipInvite": {
+          "label": "Invite users",
+          "description": "Send invitations and create pending memberships."
+        },
+        "membershipRoleChange": {
+          "label": "Change member role",
+          "description": "Promote, demote, or transfer members between roles."
+        },
+        "membershipScopeChange": {
+          "label": "Change member scope",
+          "description": "Limit a member to specific sites, zones, or houses."
+        },
+        "membershipDeactivate": {
+          "label": "Deactivate members",
+          "description": "Suspend or transfer ownership on deactivation."
+        },
+        "accessReviewRun": {
+          "label": "Run access reviews",
+          "description": "Start quarterly or one-off attestation campaigns."
+        },
+        "accessReviewDecide": {
+          "label": "Decide review items",
+          "description": "Keep, modify, or revoke each member in a review."
+        },
+        "breakGlassOpen": {
+          "label": "Open break-glass",
+          "description": "Trigger an audited emergency override."
+        },
+        "breakGlassFinalize": {
+          "label": "Finalize break-glass review",
+          "description": "Close out a break-glass event with a post-use review."
+        },
+        "auditRead": {
+          "label": "Read audit log",
+          "description": "Inspect the immutable history of mutations."
+        },
+        "auditLogRead": {
+          "label": "Read audit log (raw)",
+          "description": "Inspect the underlying audit_log table."
+        },
+        "authSecurityRead": {
+          "label": "Read security events",
+          "description": "Inspect login, MFA, and session lifecycle events."
+        },
+        "ordersReopen": {
+          "label": "Reopen closed orders",
+          "description": "Move a closed or cancelled order back for correction."
+        },
+        "dataConsoleManage": {
+          "label": "Manage data console",
+          "description": "Run privileged data-console queries and exports."
+        }
+      },
+      "createDialog": {
+        "title": "New role",
+        "description": "Give the role a name and optionally start from an existing role's permissions.",
+        "nameLabel": "Name",
+        "namePlaceholder": "e.g. Regional Sales",
+        "cloneLabel": "Clone permissions from (optional)",
+        "cloneNone": "Start from scratch (no permissions)",
+        "cancel": "Cancel",
+        "create": "Create role",
+        "creating": "Creating…",
+        "success": "Role created",
+        "errorTitle": "Couldn't create role"
+      }
     },
     "updateOrganizationForm": {
       "cardTitle": "General",
