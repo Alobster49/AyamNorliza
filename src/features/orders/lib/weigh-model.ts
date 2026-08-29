@@ -136,6 +136,17 @@ export function isTaskBlocked(state: WeighState, taskId: string, nowMs: number):
   return isClaimActive(claim.at, nowMs);
 }
 
+/** Claim exists, is mine, and is inside the TTL. */
+export function isTaskMineActive(state: WeighState, taskId: string, nowMs: number): boolean {
+  const claim = state.claims[taskId];
+  return !!claim && claim.by === state.viewerId && isClaimActive(claim.at, nowMs);
+}
+
+/** Free to claim: not actively held by anyone (mine-expired counts as free). */
+export function isTaskStartable(state: WeighState, taskId: string, nowMs: number): boolean {
+  return !isTaskBlocked(state, taskId, nowMs) && !isTaskMineActive(state, taskId, nowMs);
+}
+
 function firstAvailableIndex(state: WeighState, nowMs: number): number {
   const index = state.queue.findIndex((line) => !isTaskBlocked(state, line.taskId, nowMs));
   return index === -1 ? 0 : index;

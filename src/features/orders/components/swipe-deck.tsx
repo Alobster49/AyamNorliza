@@ -7,8 +7,8 @@ import { isSettled, projectMomentum, rubberband, springStep } from "../lib/gestu
 import {
   bandStatus,
   canUndo,
-  isLineReady,
-  isTaskBlocked,
+  isTaskMineActive,
+  isTaskStartable,
   type LineDraft,
   type WeighAction,
   type WeighState,
@@ -25,6 +25,7 @@ const COMMIT_PROJECTED_FRACTION = 0.35;
 type SwipeDeckProps = {
   state: WeighState;
   dispatch: (action: WeighAction) => void;
+  onStart: (taskId: string) => void;
   people: Record<string, string>;
   nowMs: number;
   className?: string;
@@ -36,12 +37,19 @@ type SwipeDeckProps = {
  * by momentum projection, and hands release velocity into a spring — per
  * Apple's fluid-interface model. Swipe left = skip, right = undo.
  */
-export function SwipeDeck({ state, dispatch, people, nowMs, className }: SwipeDeckProps) {
+export function SwipeDeck({ state, dispatch, onStart, people, nowMs, className }: SwipeDeckProps) {
   const tNumpad = useTranslations("orders.numpad");
   const tSwipeCard = useTranslations("orders.swipeCard");
   const tQueue = useTranslations("orders.queue");
   const line = state.queue[state.cursor];
   const draft = line ? (state.drafts[line.itemId] ?? EMPTY_DRAFT) : EMPTY_DRAFT;
+  const taskState = line
+    ? isTaskMineActive(state, line.taskId, nowMs)
+      ? ("mineActive" as const)
+      : isTaskStartable(state, line.taskId, nowMs)
+        ? ("startable" as const)
+        : ("blocked" as const)
+    : ("mineActive" as const);
 
   const cardRef = useRef<HTMLDivElement | null>(null);
   const skipChipRef = useRef<HTMLDivElement | null>(null);
@@ -272,7 +280,7 @@ export function SwipeDeck({ state, dispatch, people, nowMs, className }: SwipeDe
     <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
       <OrderProgressTicks lines={taskLines} confirmed={state.confirmed} currentItemId={line.itemId} />
 
-      {line && isTaskBlocked(state, line.taskId, nowMs) && (
+      {taskState === "blocked" && (
         <div className="mx-auto w-fit rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-500">
           {(() => {
             const by = state.claims[line.taskId]?.by;
@@ -316,9 +324,11 @@ export function SwipeDeck({ state, dispatch, people, nowMs, className }: SwipeDe
             draft={draft}
             entryTarget={state.entryTarget}
             interactive
+            taskState={taskState}
             onDispatchNumpad={onNumpad}
             onSave={() => commit(-1, { type: "NEXT", nowMs: Date.now() })}
             onSkip={() => commit(-1, { type: "SKIP", nowMs: Date.now() })}
+            onStart={() => onStart(line.taskId)}
           />
         </div>
         {/* Drag-direction chips: opacity driven imperatively from applyTransform. */}

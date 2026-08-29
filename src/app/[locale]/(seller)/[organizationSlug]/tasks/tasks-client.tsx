@@ -8,15 +8,14 @@ import {
   buildCompletePayload,
   createWeighState,
   firstReadyUnsubmittedTaskId,
-  isTaskBlocked,
+  isTaskMineActive,
+  isTaskStartable,
   weighReducer,
-  type WeighAction,
 } from "@/features/orders/lib/weigh-model";
 import { WeighStation } from "@/features/orders/components/weigh-station";
 import { SwipeDeck } from "@/features/orders/components/swipe-deck";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { isClaimActive } from "@/lib/claims";
 
 type TasksClientProps = {
   organizationSlug: string;
@@ -88,78 +87,51 @@ export function TasksClient({
     }
   }, [organizationSlug]);
 
-  // ---- auto-claim on first digit ----
-  // One in-flight/settled claim attempt per task per approach; cleared when
-  // the task leaves the queue so a released task can be re-claimed.
-  const claimAttemptsRef = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    const liveTaskIds = new Set(state.queue.map((line) => line.taskId));
-    for (const id of Array.from(claimAttemptsRef.current)) {
-      if (!liveTaskIds.has(id) && !state.claims[id]) claimAttemptsRef.current.delete(id);
-    }
-  }, [state.queue, state.claims]);
-
-  const maybeClaim = useCallback(() => {
-    const snapshot = stateRef.current;
-    const line = snapshot.queue[snapshot.cursor];
-    if (!line) return;
-    const taskId = line.taskId;
-    const claim = snapshot.claims[taskId];
-    // Already mine and still active: nothing to do. An expired own claim
-    // falls through so the RPC re-claims it and refreshes the timestamp.
-    if (claim?.by === viewerId && isClaimActive(claim.at, Date.now())) return;
-    // Known-blocked (chip visible): don't fire a doomed RPC per keystroke.
-    if (isTaskBlocked(snapshot, taskId, Date.now())) return;
-    // Own claim, but expired — drop the stale marker so the re-claim can fire.
-    if (claim?.by === viewerId) claimAttemptsRef.current.delete(taskId);
-    if (claimAttemptsRef.current.has(taskId)) return;
-    claimAttemptsRef.current.add(taskId);
-    dispatch({ type: "CLAIM_LOCAL", taskId, by: viewerId, at: new Date().toISOString() });
-    void claimWeighTask({ organizationSlug, taskId, claim: true })
-      .then((result) => {
-        if (result.ok) return;
-        // Always allow a later retry — the block may expire or be released.
-        claimAttemptsRef.current.delete(taskId);
-        // "conflict" also covers task_done: a claim RPC that resolves after
-        // we already completed this task ourselves must not show a bogus
-        // "Order taken" toast or move the cursor. Only claimedByOther means
-        // someone else actually holds it.
-        if (result.messageKey === "errors.orders.tasks.claimedByOther") {
-          // The task may already be gone from the queue (e.g. completed
-          // while this RPC was in flight) — nothing to reject in that case.
-          if (stateRef.current.queue.some((line) => line.taskId === taskId)) {
-            dispatch({ type: "CLAIM_REJECTED", taskId, nowMs: Date.now() });
-            toast({ title: t("claimLostTitle"), description: result.message, variant: "destructive" });
+  // ---- explicit Start ----
+  // One in-flight Start per task at a time; cleared when the attempt settles
+  // so a later Start (e.g. after re-appearing unclaimed) can fire again.
+  const startPendingRef = useRef<Set<string>>(new Set());
+  const startTask = useCallback(
+    (taskId: string) => {
+      if (startPendingRef.current.has(taskId)) return;
+      startPendingRef.current.add(taskId);
+      dispatch({ type: "CLAIM_LOCAL", taskId, by: viewerId, at: new Date().toISOString() });
+      void claimWeighTask({ organizationSlug, taskId, claim: true })
+        .then((result) => {
+          if (!result.ok) {
+            // "conflict" also covers task_done: a claim RPC that resolves
+            // after we already completed this task ourselves must not show
+            // a bogus "Order taken" toast or move the cursor. Only
+            // claimedByOther means someone else actually holds it.
+            if (
+              result.messageKey === "errors.orders.tasks.claimedByOther" &&
+              stateRef.current.queue.some((line) => line.taskId === taskId)
+            ) {
+              dispatch({ type: "CLAIM_REJECTED", taskId, nowMs: Date.now() });
+              toast({ title: t("claimLostTitle"), description: result.message, variant: "destructive" });
+            } else {
+              dispatch({ type: "CLAIM_CLEARED", taskId });
+            }
           }
-        } else {
+          void refetch();
+        })
+        .catch(() => {
+          // The request never reached the server (offline/dropped): roll
+          // back the optimistic claim so Start reappears instead of leaving
+          // the task claimed forever.
           dispatch({ type: "CLAIM_CLEARED", taskId });
-        }
-        void refetch();
-      })
-      .catch(() => {
-        // The request never reached the server (offline/dropped): roll back
-        // the optimistic claim and clear the attempt marker so the next
-        // digit tries again, instead of leaving the task claimed forever.
-        claimAttemptsRef.current.delete(taskId);
-        dispatch({ type: "CLAIM_CLEARED", taskId });
-        toast({ title: t("saveFailedTitle"), variant: "destructive" });
-      });
-  }, [organizationSlug, refetch, t, toast, viewerId]);
-
-  // Every numpad/keyboard/swipe path funnels through this dispatch so the
-  // first digit (or dot) into a task fires the claim exactly once.
-  const dispatchWithClaim = useCallback(
-    (action: WeighAction) => {
-      if (action.type === "DIGIT" || action.type === "DOT") maybeClaim();
-      dispatch(action);
+          toast({ title: t("saveFailedTitle"), variant: "destructive" });
+        })
+        .finally(() => {
+          startPendingRef.current.delete(taskId);
+        });
     },
-    [maybeClaim],
+    [organizationSlug, refetch, t, toast, viewerId],
   );
 
   const release = useCallback(
     (taskId: string) => {
       dispatch({ type: "CLAIM_CLEARED", taskId });
-      claimAttemptsRef.current.delete(taskId);
       void claimWeighTask({ organizationSlug, taskId, claim: false })
         .then((result) => {
           if (!result.ok) {
@@ -230,7 +202,6 @@ export function TasksClient({
         void refetch();
         return;
       }
-      claimAttemptsRef.current.delete(taskId);
       dispatch({ type: "COMPLETE_SUCCESS", taskId });
       toast({
         title: t("completeTitle"),
@@ -246,16 +217,29 @@ export function TasksClient({
       if (event.metaKey || event.ctrlKey || event.altKey) return;
       const target = event.target as HTMLElement | null;
       if (target && (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) return;
+      const line = stateRef.current.queue[stateRef.current.cursor];
+      const mineActive = !!line && isTaskMineActive(stateRef.current, line.taskId, Date.now());
       if (/^[0-9]$/.test(event.key)) {
-        dispatchWithClaim({ type: "DIGIT", digit: event.key });
+        if (!mineActive) return;
+        dispatch({ type: "DIGIT", digit: event.key });
       } else if (event.key === "." || event.key === ",") {
-        dispatchWithClaim({ type: "DOT" });
+        if (!mineActive) return;
+        dispatch({ type: "DOT" });
       } else if (event.key === "Backspace") {
-        dispatchWithClaim({ type: "BACKSPACE" });
+        if (!mineActive) return;
+        dispatch({ type: "BACKSPACE" });
       } else if (event.key === "Enter") {
-        dispatchWithClaim({ type: "NEXT", nowMs: Date.now() });
+        if (!line) return;
+        if (isTaskStartable(stateRef.current, line.taskId, Date.now())) {
+          startTask(line.taskId);
+        } else if (mineActive) {
+          dispatch({ type: "NEXT", nowMs: Date.now() });
+        } else {
+          return;
+        }
       } else if (event.key.toLowerCase() === "p") {
-        dispatchWithClaim({ type: "TOGGLE_TARGET" });
+        if (!mineActive) return;
+        dispatch({ type: "TOGGLE_TARGET" });
       } else {
         return;
       }
@@ -263,13 +247,14 @@ export function TasksClient({
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [dispatchWithClaim]);
+  }, [startTask]);
 
   return (
     <div className="flex h-[calc(100svh-4rem-1.5rem)] flex-col gap-4 md:h-[calc(100svh-4rem-2rem)]">
       <WeighStation
         state={state}
-        dispatch={dispatchWithClaim}
+        dispatch={dispatch}
+        onStart={startTask}
         people={people}
         nowMs={nowMs}
         onRelease={release}
@@ -277,7 +262,8 @@ export function TasksClient({
       />
       <SwipeDeck
         state={state}
-        dispatch={dispatchWithClaim}
+        dispatch={dispatch}
+        onStart={startTask}
         people={people}
         nowMs={nowMs}
         className="flex md:hidden"

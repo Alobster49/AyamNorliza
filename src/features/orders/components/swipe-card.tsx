@@ -3,6 +3,7 @@
 import { forwardRef } from "react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { isLineReady, type EntryTarget, type LineDraft, type WeighLine } from "../lib/weigh-model";
 import { SizeBandGauge } from "./size-band-gauge";
@@ -14,9 +15,13 @@ type SwipeCardProps = {
   draft: LineDraft;
   entryTarget: EntryTarget;
   interactive: boolean;
+  /** mine-active: numpad as today. startable: Start button instead of the
+   *  numpad. blocked: numpad hidden, hint line instead. */
+  taskState: "mineActive" | "startable" | "blocked";
   onDispatchNumpad: (action: "digit" | "dot" | "backspace" | "toggle", digit?: string) => void;
   onSave: () => void;
   onSkip: () => void;
+  onStart: () => void;
 };
 
 /**
@@ -24,11 +29,12 @@ type SwipeCardProps = {
  * transforms (via the forwarded ref); this component is purely presentational.
  */
 export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(function SwipeCard(
-  { line, draft, entryTarget, interactive, onDispatchNumpad, onSave, onSkip },
+  { line, draft, entryTarget, interactive, taskState, onDispatchNumpad, onSave, onSkip, onStart },
   ref,
 ) {
   const t = useTranslations("orders.swipeCard");
   const tQueue = useTranslations("orders.queue");
+  const tTasks = useTranslations("tasks");
   return (
     <div
       ref={ref}
@@ -65,18 +71,30 @@ export const SwipeCard = forwardRef<HTMLDivElement, SwipeCardProps>(function Swi
 
         <SizeBandGauge line={line} draft={draft} compact />
 
-        <WeighNumpad
-          variant="thumb"
-          entryTarget={entryTarget}
-          nextDisabled={!isLineReady(line, { [line.itemId]: draft })}
-          nextLabel={t("saveNext")}
-          onDigit={(digit) => onDispatchNumpad("digit", digit)}
-          onDot={() => onDispatchNumpad("dot")}
-          onBackspace={() => onDispatchNumpad("backspace")}
-          onToggleTarget={() => onDispatchNumpad("toggle")}
-          onNext={onSave}
-          onSkip={onSkip}
-        />
+        {taskState === "mineActive" && (
+          <WeighNumpad
+            variant="thumb"
+            entryTarget={entryTarget}
+            nextDisabled={!isLineReady(line, { [line.itemId]: draft })}
+            nextLabel={t("saveNext")}
+            onDigit={(digit) => onDispatchNumpad("digit", digit)}
+            onDot={() => onDispatchNumpad("dot")}
+            onBackspace={() => onDispatchNumpad("backspace")}
+            onToggleTarget={() => onDispatchNumpad("toggle")}
+            onNext={onSave}
+            onSkip={onSkip}
+          />
+        )}
+
+        {taskState === "startable" && (
+          <Button type="button" size="lg" className="h-16 w-full text-lg" onClick={onStart}>
+            {tTasks("startWeighing")}
+          </Button>
+        )}
+
+        {taskState === "blocked" && (
+          <p className="text-center text-sm text-muted-foreground">{tTasks("pickAnother")}</p>
+        )}
       </div>
 
       <p className="text-center text-[11px] text-muted-foreground">

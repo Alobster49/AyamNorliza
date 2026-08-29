@@ -17,6 +17,8 @@ import {
   isPiecesValid,
   isTaskBlocked,
   isTaskComplete,
+  isTaskMineActive,
+  isTaskStartable,
   isWeightValid,
   nextIncompleteIndex,
   queueWithPendingRemovals,
@@ -758,6 +760,62 @@ describe("claims", () => {
     expect(synced.queue.some((line) => line.taskId === t3.id)).toBe(false);
     expect(synced.cursor).toBe(0);
     expect(isTaskBlocked(synced, synced.queue[0]!.taskId, NOW)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// isTaskMineActive / isTaskStartable — Start-gate selectors
+// ---------------------------------------------------------------------------
+
+describe("isTaskMineActive", () => {
+  it("is true when the claim is mine and within TTL", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "me", weigh_claimed_at: ACTIVE_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskMineActive(state, t1.id, NOW)).toBe(true);
+  });
+
+  it("is false when my own claim has expired", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "me", weigh_claimed_at: EXPIRED_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskMineActive(state, t1.id, NOW)).toBe(false);
+  });
+
+  it("is false when someone else holds an active claim", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskMineActive(state, t1.id, NOW)).toBe(false);
+  });
+
+  it("is false when there is no claim at all", () => {
+    const t1 = makeClaimTask();
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskMineActive(state, t1.id, NOW)).toBe(false);
+  });
+});
+
+describe("isTaskStartable", () => {
+  it("is true for an unclaimed task", () => {
+    const t1 = makeClaimTask();
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskStartable(state, t1.id, NOW)).toBe(true);
+  });
+
+  it("is true when my own claim has expired", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "me", weigh_claimed_at: EXPIRED_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskStartable(state, t1.id, NOW)).toBe(true);
+  });
+
+  it("is false when someone else actively holds the claim", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskStartable(state, t1.id, NOW)).toBe(false);
+  });
+
+  it("is false when I already actively hold the claim", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "me", weigh_claimed_at: ACTIVE_AT });
+    const state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    expect(isTaskStartable(state, t1.id, NOW)).toBe(false);
   });
 });
 

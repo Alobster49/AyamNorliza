@@ -2,10 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   isLineReady,
   isTaskBlocked,
+  isTaskMineActive,
+  isTaskStartable,
   type LineDraft,
   type WeighAction,
   type WeighState,
@@ -22,6 +25,7 @@ const EMPTY_DRAFT: LineDraft = { weightKg: "", pieces: "" };
 type WeighStationProps = {
   state: WeighState;
   dispatch: (action: WeighAction) => void;
+  onStart: (taskId: string) => void;
   people: Record<string, string>;
   nowMs: number;
   onRelease: (taskId: string) => void;
@@ -32,12 +36,25 @@ type WeighStationProps = {
  * Desktop/tablet kiosk: queue rail on the left, one line at a time on the
  * right with a scale-sized readout, size-band gauge and numpad.
  */
-export function WeighStation({ state, dispatch, people, nowMs, onRelease, className }: WeighStationProps) {
+export function WeighStation({
+  state,
+  dispatch,
+  onStart,
+  people,
+  nowMs,
+  onRelease,
+  className,
+}: WeighStationProps) {
   const tDetail = useTranslations("orders.detail");
   const tQueue = useTranslations("orders.queue");
   const tStation = useTranslations("orders.station");
   const tSwipeCard = useTranslations("orders.swipeCard");
+  const tNumpad = useTranslations("orders.numpad");
+  const tTasks = useTranslations("tasks");
   const line = state.queue[state.cursor];
+  const mineActive = line ? isTaskMineActive(state, line.taskId, nowMs) : false;
+  const startable = line ? isTaskStartable(state, line.taskId, nowMs) : false;
+  const blocked = line ? isTaskBlocked(state, line.taskId, nowMs) : false;
 
   return (
     <div className={cn("min-h-0 flex-1 overflow-hidden rounded-lg border", className)}>
@@ -71,7 +88,7 @@ export function WeighStation({ state, dispatch, people, nowMs, onRelease, classN
                     confirmed={state.confirmed}
                     currentItemId={line.itemId}
                   />
-                  {isTaskBlocked(state, line.taskId, nowMs) && (
+                  {blocked && (
                     <div className="mx-auto w-fit rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-500">
                       {(() => {
                         const by = state.claims[line.taskId]?.by;
@@ -121,19 +138,56 @@ export function WeighStation({ state, dispatch, people, nowMs, onRelease, classN
                 <SizeBandGauge line={line} draft={state.drafts[line.itemId] ?? EMPTY_DRAFT} />
               </div>
 
-              <WeighNumpad
-                variant="kiosk"
-                entryTarget={state.entryTarget}
-                nextDisabled={!isLineReady(line, state.drafts)}
-                onDigit={(digit) => dispatch({ type: "DIGIT", digit })}
-                onDot={() => dispatch({ type: "DOT" })}
-                onBackspace={() => dispatch({ type: "BACKSPACE" })}
-                onToggleTarget={() => dispatch({ type: "TOGGLE_TARGET" })}
-                onNext={() => dispatch({ type: "NEXT", nowMs: Date.now() })}
-                onSkip={() => dispatch({ type: "SKIP", nowMs: Date.now() })}
-              />
+              {mineActive && (
+                <WeighNumpad
+                  variant="kiosk"
+                  entryTarget={state.entryTarget}
+                  nextDisabled={!isLineReady(line, state.drafts)}
+                  onDigit={(digit) => dispatch({ type: "DIGIT", digit })}
+                  onDot={() => dispatch({ type: "DOT" })}
+                  onBackspace={() => dispatch({ type: "BACKSPACE" })}
+                  onToggleTarget={() => dispatch({ type: "TOGGLE_TARGET" })}
+                  onNext={() => dispatch({ type: "NEXT", nowMs: Date.now() })}
+                  onSkip={() => dispatch({ type: "SKIP", nowMs: Date.now() })}
+                />
+              )}
 
-              <p className="text-xs text-muted-foreground">{tStation("autosaveHint")}</p>
+              {startable && (
+                <Button
+                  type="button"
+                  size="lg"
+                  className="h-16 w-full max-w-xl text-lg"
+                  onClick={() => onStart(line.taskId)}
+                >
+                  {tTasks("startWeighing")}
+                </Button>
+              )}
+
+              {blocked && (
+                <div className="flex flex-col items-center gap-4">
+                  <p className="text-sm text-muted-foreground">{tTasks("pickAnother")}</p>
+                  <div className="flex w-full max-w-xl gap-3">
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="flex-1"
+                      onClick={() => dispatch({ type: "SKIP", nowMs: Date.now() })}
+                    >
+                      {tNumpad("skip")}
+                    </Button>
+                    <Button
+                      type="button"
+                      className="flex-1"
+                      disabled={!isLineReady(line, state.drafts)}
+                      onClick={() => dispatch({ type: "NEXT", nowMs: Date.now() })}
+                    >
+                      {tNumpad("nextDefault")}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {mineActive && <p className="text-xs text-muted-foreground">{tStation("autosaveHint")}</p>}
             </div>
           </div>
         </div>
