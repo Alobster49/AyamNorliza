@@ -19,7 +19,6 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/orders/types";
-import { todayInTimeZone } from "@/lib/time/org-date";
 import { requireMember, OrderPermissionError } from "./guards";
 import { workdayCount, validateApplication, computeBalance } from "../lib/leave-model";
 import type { LeaveTypeInfo, LedgerEntry, LeaveRequestSummary } from "../types";
@@ -379,7 +378,7 @@ export async function applyLeave(
 ): Promise<ActionResult<{ id: string }>> {
   const guard = await guardMember(organizationSlug);
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
-  const { orgId, userId, timeZone } = guard;
+  const { orgId, userId } = guard;
 
   if (!input.leaveTypeId) return err("validation", "Choose a leave type.", "hr.errors.validation");
   if (!input.justification || input.justification.trim().length === 0) {
@@ -415,7 +414,13 @@ export async function applyLeave(
 
   const dayCount = workdayCount(input.startDate, input.endDate, holidays);
   const year = Number(input.startDate.slice(0, 4));
-  const asOf = todayInTimeZone(timeZone);
+  // As-of convention (see leave-model.ts header and leave_available in
+  // 20260830000002_hr_leave_rpcs.sql, which the approval RPC calls with
+  // `r.start_date`): balance previews and validation are computed as of the
+  // LEAVE START DATE, never "today" — a request for December should be
+  // checked against December's full accrual, not however much has accrued
+  // by the day the member happens to click Apply.
+  const asOf = input.startDate;
 
   const [{ data: ledgerRows, error: ledgerErr }, { data: requestRows, error: reqErr }] = await Promise.all([
     supabase

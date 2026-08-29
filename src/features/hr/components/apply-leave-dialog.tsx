@@ -102,12 +102,18 @@ export function ApplyLeaveDialog({
   const startYear = startDate ? Number(startDate.slice(0, 4)) : year;
   const crossYear = startYear !== year;
 
+  // As-of convention (leave-model.ts header, leave-actions.ts's applyLeave):
+  // balance previews are computed as of the leave's START DATE, not today —
+  // before a start date is picked there is no request to anchor to yet, so
+  // fall back to today for the pre-pick preview.
+  const asOfForBalance = startDate || today;
+
   const dayCount =
     startDate && endDate ? workdayCount(startDate, endDate, holidays) : 0;
 
   const validation = useMemo(() => {
     if (!selectedType || !startDate || !endDate) return null;
-    const balance = computeBalance(selectedType, ledger, requests, startYear, today);
+    const balance = computeBalance(selectedType, ledger, requests, startYear, asOfForBalance);
     return validateApplication({
       type: selectedType,
       startDate,
@@ -116,7 +122,7 @@ export function ApplyLeaveDialog({
       balance,
       attachmentProvided: !!file,
     });
-  }, [selectedType, startDate, endDate, dayCount, ledger, requests, startYear, today, file]);
+  }, [selectedType, startDate, endDate, dayCount, ledger, requests, startYear, asOfForBalance, file]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -177,7 +183,7 @@ export function ApplyLeaveDialog({
             <Label>{t("typeLabel")}</Label>
             <div className="space-y-2">
               {types.map((type) => {
-                const balance = computeBalance(type, ledger, requests, startYear, today);
+                const balance = computeBalance(type, ledger, requests, startYear, asOfForBalance);
                 const inputId = `apply-leave-type-${type.id}`;
                 return (
                   <label

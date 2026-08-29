@@ -6,6 +6,10 @@ begin;
 
 -- Available balance as the approver decides: base accrued + unexpired CF
 -- + unexpired credits - approved usage - pending holds (excluding p_exclude).
+-- As-of convention: p_as_of is the LEAVE START DATE (see approve_leave_request
+-- below, which passes r.start_date, and leave-model.ts's header comment) --
+-- not "today". A December request is checked against December's full
+-- accrual, not however much has accrued by the day someone applies or approves.
 create or replace function public.leave_available(
   p_org uuid, p_user uuid, p_type uuid, p_year int, p_as_of date,
   p_exclude uuid default null

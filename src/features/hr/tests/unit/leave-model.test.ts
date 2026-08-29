@@ -224,6 +224,65 @@ describe("computeBalance", () => {
 });
 
 // ---------------------------------------------------------------------------
+// As-of convention: applying uses the LEAVE START DATE, not "today"
+// ---------------------------------------------------------------------------
+
+describe("as-of convention (asOf = startDate, not today)", () => {
+  it("applying in August for December dates validates against FULL December accrual", () => {
+    const type = makeType(); // Annual: 12, pro_rata
+    const startDate = "2026-12-01";
+    const endDate = "2026-12-02";
+    const dayCount = workdayCount(startDate, endDate, []);
+
+    // The convention under test: asOf is the request's start date (December),
+    // never "today" (August) — accrued must be the full 12, not August's 8.
+    const balance = computeBalance(type, [], [], 2026, startDate);
+    expect(balance.accrued).toBe(12);
+
+    const result = validateApplication({
+      type,
+      startDate,
+      endDate,
+      dayCount,
+      balance,
+      attachmentProvided: false,
+    });
+    expect(result).toEqual({ ok: true });
+
+    // Sanity check the bug this pins: computing against "today" (August,
+    // asOf = 2026-08-29) instead would only accrue 8 — still enough for this
+    // 2-day request, so pin a request size that only the correct (December)
+    // accrual can cover, proving the wrong asOf would actually reject it.
+    const longEndDate = "2026-12-10";
+    const longDayCount = workdayCount(startDate, longEndDate, []);
+    expect(longDayCount).toBe(8); // more than August's accrued 8 - 0 = 8 is exactly the boundary
+
+    const augustAccrual = computeBalance(type, [], [], 2026, "2026-08-29");
+    expect(augustAccrual.accrued).toBe(8);
+    const tooManyDaysForAugust = validateApplication({
+      type,
+      startDate,
+      endDate: longEndDate,
+      dayCount: longDayCount + 1, // one past what August's accrual could ever cover
+      balance: augustAccrual,
+      attachmentProvided: false,
+    });
+    expect(tooManyDaysForAugust).toEqual({ ok: false, reason: "insufficient_balance" });
+
+    const decemberAccrual = computeBalance(type, [], [], 2026, startDate);
+    const sameRequestAgainstDecemberAccrual = validateApplication({
+      type,
+      startDate,
+      endDate: longEndDate,
+      dayCount: longDayCount + 1,
+      balance: decemberAccrual,
+      attachmentProvided: false,
+    });
+    expect(sameRequestAgainstDecemberAccrual).toEqual({ ok: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // validateApplication
 // ---------------------------------------------------------------------------
 

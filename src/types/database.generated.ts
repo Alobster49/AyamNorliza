@@ -2457,6 +2457,10 @@ export type Database = {
           cf_remaining: number
         }[]
       }
+      leave_workday_count: {
+        Args: { p_end: string; p_org: string; p_start: string }
+        Returns: number
+      }
       link_or_create_customer_for_buyer: {
         Args: { p_buyer_id: string }
         Returns: undefined

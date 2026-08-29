@@ -354,6 +354,11 @@ export async function getManageData(
       requestsByUser.set(r.user_id, list);
     }
 
+    // Deliberately "today", not per-request start date: this table answers
+    // "what does this member's balance look like right now", the same
+    // question an HR user is asking when they open the tab — unlike
+    // applyLeave's per-request as-of (see leave-actions.ts), there is no
+    // single request date to anchor this view to.
     const asOf = todayInTimeZone(timeZone);
     staff = members.map((m) => {
       const memberLedger = ledgerByUser.get(m.user_id) ?? [];

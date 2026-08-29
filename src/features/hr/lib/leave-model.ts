@@ -10,6 +10,14 @@
  * - full accrual: entitlement, unaffected by asOf.
  * - upon-request (entitlementDays null): unlimited (Infinity available).
  * - available = max(CF - takenCF, 0) + accrued + credits - takenBase - pendingHeld.
+ *
+ * As-of convention: for applying/validating a request, `asOf` is the LEAVE
+ * START DATE, not "today" — a December request must be checked against
+ * December's full accrual, not however much has accrued by the day the
+ * member happens to apply. `approve_leave_request` in the SQL twin enforces
+ * this the same way (calls `leave_available` with `r.start_date`). The one
+ * deliberate exception is the HR staff-balances table (manage-actions.ts),
+ * which asks "what is this member's balance right now" and uses today.
  */
 
 import { eachDayOfInterval, format, getMonth, isWeekend, parseISO } from "date-fns";
