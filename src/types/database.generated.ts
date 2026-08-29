@@ -892,6 +892,251 @@ export type Database = {
           },
         ]
       }
+      leave_credit_requests: {
+        Row: {
+          amount: number
+          attachment_path: string | null
+          created_at: string
+          credit_type: string
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          id: string
+          justification: string | null
+          leave_type_id: string
+          organization_id: string
+          reference_end: string
+          reference_start: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          attachment_path?: string | null
+          created_at?: string
+          credit_type?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          justification?: string | null
+          leave_type_id: string
+          organization_id: string
+          reference_end: string
+          reference_start: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          attachment_path?: string | null
+          created_at?: string
+          credit_type?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          id?: string
+          justification?: string | null
+          leave_type_id?: string
+          organization_id?: string
+          reference_end?: string
+          reference_start?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_credit_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_credit_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_ledger: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          days: number
+          expires_on: string | null
+          id: string
+          kind: string
+          leave_type_id: string
+          note: string | null
+          organization_id: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          days: number
+          expires_on?: string | null
+          id?: string
+          kind: string
+          leave_type_id: string
+          note?: string | null
+          organization_id: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          days?: number
+          expires_on?: string | null
+          id?: string
+          kind?: string
+          leave_type_id?: string
+          note?: string | null
+          organization_id?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_ledger_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_ledger_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_requests: {
+        Row: {
+          attachment_path: string | null
+          breakdown: Json | null
+          created_at: string
+          day_count: number
+          decided_at: string | null
+          decided_by: string | null
+          decision_note: string | null
+          end_date: string
+          id: string
+          justification: string
+          leave_type_id: string
+          organization_id: string
+          start_date: string
+          status: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          attachment_path?: string | null
+          breakdown?: Json | null
+          created_at?: string
+          day_count: number
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          end_date: string
+          id?: string
+          justification: string
+          leave_type_id: string
+          organization_id: string
+          start_date: string
+          status?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          attachment_path?: string | null
+          breakdown?: Json | null
+          created_at?: string
+          day_count?: number
+          decided_at?: string | null
+          decided_by?: string | null
+          decision_note?: string | null
+          end_date?: string
+          id?: string
+          justification?: string
+          leave_type_id?: string
+          organization_id?: string
+          start_date?: string
+          status?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      leave_types: {
+        Row: {
+          accrual: string
+          carry_forward_cap: number | null
+          code: string
+          created_at: string
+          entitlement_days: number | null
+          id: string
+          name: string
+          organization_id: string
+          requires_attachment: boolean
+          sort: number
+        }
+        Insert: {
+          accrual?: string
+          carry_forward_cap?: number | null
+          code: string
+          created_at?: string
+          entitlement_days?: number | null
+          id?: string
+          name: string
+          organization_id: string
+          requires_attachment?: boolean
+          sort?: number
+        }
+        Update: {
+          accrual?: string
+          carry_forward_cap?: number | null
+          code?: string
+          created_at?: string
+          entitlement_days?: number | null
+          id?: string
+          name?: string
+          organization_id?: string
+          requires_attachment?: boolean
+          sort?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_types_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       market_premises: {
         Row: {
           district: string | null
@@ -1127,6 +1372,8 @@ export type Database = {
           type: string
           updated_at: string
           version: number
+          weigh_claimed_at: string | null
+          weigh_claimed_by: string | null
         }
         Insert: {
           assigned_to?: string | null
@@ -1140,6 +1387,8 @@ export type Database = {
           type?: string
           updated_at?: string
           version?: number
+          weigh_claimed_at?: string | null
+          weigh_claimed_by?: string | null
         }
         Update: {
           assigned_to?: string | null
@@ -1153,6 +1402,8 @@ export type Database = {
           type?: string
           updated_at?: string
           version?: number
+          weigh_claimed_at?: string | null
+          weigh_claimed_by?: string | null
         }
         Relationships: [
           {
@@ -1231,6 +1482,8 @@ export type Database = {
           id: string
           loaded_at: string | null
           loaded_by: string | null
+          loading_claimed_at: string | null
+          loading_claimed_by: string | null
           notes: string | null
           organization_id: string
           postcode: string | null
@@ -1256,6 +1509,8 @@ export type Database = {
           id?: string
           loaded_at?: string | null
           loaded_by?: string | null
+          loading_claimed_at?: string | null
+          loading_claimed_by?: string | null
           notes?: string | null
           organization_id: string
           postcode?: string | null
@@ -1281,6 +1536,8 @@ export type Database = {
           id?: string
           loaded_at?: string | null
           loaded_by?: string | null
+          loading_claimed_at?: string | null
+          loading_claimed_by?: string | null
           notes?: string | null
           organization_id?: string
           postcode?: string | null
@@ -1611,6 +1868,38 @@ export type Database = {
           version?: number
         }
         Relationships: []
+      }
+      public_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          name: string
+          organization_id: string
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          name: string
+          organization_id: string
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          name?: string
+          organization_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "public_holidays_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       role_capability_overrides: {
         Row: {
@@ -1982,6 +2271,10 @@ export type Database = {
         Args: { p_order: string; p_reason: string }
         Returns: undefined
       }
+      claim_weigh_task: {
+        Args: { p_claim: boolean; p_task: string }
+        Returns: undefined
+      }
       close_order: { Args: { p_lines: Json; p_order: string }; Returns: number }
       complete_order_task: {
         Args: { p_task: string; p_weights: Json }
@@ -2002,6 +2295,10 @@ export type Database = {
           p_source: Database["public"]["Enums"]["assignment_source"]
           p_truck: string
         }
+        Returns: undefined
+      }
+      dispatch_claim_loading: {
+        Args: { p_claim: boolean; p_order: string }
         Returns: undefined
       }
       dispatch_depart_truck: {
