@@ -2615,6 +2615,81 @@
       "holidaysTitle": "Cuti Umum Akan Datang",
       "holidaysEmpty": "Tiada cuti umum akan datang."
     },
+    "manage": {
+      "title": "Pengurusan Cuti",
+      "yearLabel": "Tahun",
+      "tabs": {
+        "requests": "Permohonan",
+        "staffBalances": "Baki Kakitangan",
+        "holidays": "Cuti Umum",
+        "leaveTypes": "Jenis Cuti",
+        "yearClose": "Tutup Tahun"
+      },
+      "pending": {
+        "leaveSectionTitle": "Permohonan cuti",
+        "creditSectionTitle": "Permohonan kredit",
+        "emptyLeave": "Tiada permohonan cuti tertunda.",
+        "emptyCredit": "Tiada permohonan kredit tertunda.",
+        "dayCount": "{n} hari",
+        "amount": "{n} hari",
+        "justificationLabel": "Justifikasi",
+        "attachmentLink": "Lihat lampiran",
+        "attachmentError": "Gagal membuka lampiran.",
+        "referenceRange": "Rujukan {start} - {end}",
+        "approve": "Luluskan",
+        "reject": "Tolak",
+        "noteLabel": "Nota (pilihan)",
+        "approveTitle": "Luluskan permohonan ini?",
+        "approveDescription": "Ini akan menolak bilangan hari daripada baki ahli.",
+        "rejectTitle": "Tolak permohonan ini?",
+        "rejectDescription": "Baki ahli kekal; permohonan ditanda ditolak.",
+        "approveSuccess": "Permohonan diluluskan.",
+        "rejectSuccess": "Permohonan ditolak.",
+        "decisionError": "Gagal merekodkan keputusan."
+      },
+      "staffBalances": {
+        "title": "Baki Kakitangan",
+        "empty": "Tiada ahli aktif.",
+        "memberColumn": "Ahli",
+        "uponRequest": "Ikut Permohonan",
+        "carryForwardRemaining": "{n} baki BKH"
+      },
+      "holidays": {
+        "title": "Cuti Umum",
+        "dateLabel": "Tarikh",
+        "nameLabel": "Nama",
+        "addButton": "Tambah cuti umum",
+        "empty": "Tiada cuti umum untuk tahun ini.",
+        "deleteConfirmTitle": "Padam cuti umum ini?",
+        "deleteConfirmDescription": "Ini akan menghapuskannya daripada pengiraan hari bekerja untuk tahun ini.",
+        "deleteConfirmAction": "Padam",
+        "addSuccess": "Cuti umum ditambah.",
+        "addError": "Gagal menambah cuti umum.",
+        "deleteSuccess": "Cuti umum dipadam.",
+        "deleteError": "Gagal memadam cuti umum."
+      },
+      "leaveTypes": {
+        "title": "Jenis Cuti",
+        "entitlementLabel": "Hari kelayakan",
+        "entitlementHint": "Biarkan kosong untuk Ikut Permohonan (tanpa had, baki tidak dijejaki).",
+        "carryForwardCapLabel": "Had bawa ke hadapan",
+        "requiresAttachmentLabel": "Memerlukan lampiran",
+        "save": "Simpan",
+        "saveSuccess": "Jenis cuti dikemas kini.",
+        "saveError": "Gagal mengemas kini jenis cuti."
+      },
+      "yearClose": {
+        "title": "Tutup Tahun Cuti",
+        "description": "Menutup tahun akan membawa baki Cuti Tahunan yang belum digunakan (mengikut had setiap jenis cuti) ke tahun berikutnya.",
+        "yearLabel": "Tahun",
+        "closeButton": "Tutup {year} → bawa ke hadapan ke {nextYear}",
+        "confirmTitle": "Tutup {year}?",
+        "confirmDescription": "Ini akan mencipta entri bawa-ke-hadapan untuk {nextYear} dan tidak boleh dibatalkan.",
+        "confirmAction": "Tutup tahun",
+        "success": "{n} entri bawa-ke-hadapan dicipta.",
+        "error": "Gagal menutup tahun."
+      }
+    },
     "errors": {
       "unauthenticated": "Anda perlu log masuk untuk melihat halaman ini.",
       "orgNotFound": "Organisasi tidak dijumpai.",

@@ -2615,6 +2615,81 @@
       "holidaysTitle": "Upcoming Holidays",
       "holidaysEmpty": "No upcoming holidays."
     },
+    "manage": {
+      "title": "Leave Management",
+      "yearLabel": "Year",
+      "tabs": {
+        "requests": "Requests",
+        "staffBalances": "Staff balances",
+        "holidays": "Holidays",
+        "leaveTypes": "Leave types",
+        "yearClose": "Year close"
+      },
+      "pending": {
+        "leaveSectionTitle": "Leave requests",
+        "creditSectionTitle": "Credit requests",
+        "emptyLeave": "No pending leave requests.",
+        "emptyCredit": "No pending credit requests.",
+        "dayCount": "{n} days",
+        "amount": "{n} days",
+        "justificationLabel": "Justification",
+        "attachmentLink": "View attachment",
+        "attachmentError": "Failed to open the attachment.",
+        "referenceRange": "Reference {start} - {end}",
+        "approve": "Approve",
+        "reject": "Reject",
+        "noteLabel": "Note (optional)",
+        "approveTitle": "Approve this request?",
+        "approveDescription": "This deducts the days from the member's balance.",
+        "rejectTitle": "Reject this request?",
+        "rejectDescription": "The member keeps their balance; the request is marked rejected.",
+        "approveSuccess": "Request approved.",
+        "rejectSuccess": "Request rejected.",
+        "decisionError": "Failed to record the decision."
+      },
+      "staffBalances": {
+        "title": "Staff balances",
+        "empty": "No active members.",
+        "memberColumn": "Member",
+        "uponRequest": "Upon Request",
+        "carryForwardRemaining": "{n} CF remaining"
+      },
+      "holidays": {
+        "title": "Public holidays",
+        "dateLabel": "Date",
+        "nameLabel": "Name",
+        "addButton": "Add holiday",
+        "empty": "No public holidays for this year.",
+        "deleteConfirmTitle": "Delete this holiday?",
+        "deleteConfirmDescription": "This removes it from workday calculations for this year.",
+        "deleteConfirmAction": "Delete",
+        "addSuccess": "Holiday added.",
+        "addError": "Failed to add the holiday.",
+        "deleteSuccess": "Holiday deleted.",
+        "deleteError": "Failed to delete the holiday."
+      },
+      "leaveTypes": {
+        "title": "Leave types",
+        "entitlementLabel": "Entitlement days",
+        "entitlementHint": "Leave blank for Upon Request (unlimited, no balance tracked).",
+        "carryForwardCapLabel": "Carry-forward cap",
+        "requiresAttachmentLabel": "Requires attachment",
+        "save": "Save",
+        "saveSuccess": "Leave type updated.",
+        "saveError": "Failed to update the leave type."
+      },
+      "yearClose": {
+        "title": "Close leave year",
+        "description": "Closing a year carries forward unused Annual Leave balance (capped per leave type) into the next year.",
+        "yearLabel": "Year",
+        "closeButton": "Close {year} → carry forward into {nextYear}",
+        "confirmTitle": "Close {year}?",
+        "confirmDescription": "This creates carry-forward ledger entries for {nextYear} and cannot be undone.",
+        "confirmAction": "Close year",
+        "success": "{n} carry-forward entries created.",
+        "error": "Failed to close the year."
+      }
+    },
     "errors": {
       "unauthenticated": "You need to sign in to view this page.",
       "orgNotFound": "Organization not found.",
