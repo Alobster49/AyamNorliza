@@ -22,6 +22,7 @@
 export const ROLES = [
   "owner",
   "org_admin",
+  "hr",
   "seller",
   "driver",
   "farm_manager",
@@ -83,6 +84,10 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
     "orders.manage",
     "customers.manage",
   ]),
+  // HR holds none of the MOD-01 capabilities above -- its authority lives in
+  // the separate leave domain (LEAVE_APPROVER_ROLES in
+  // src/features/hr/lib/roles.ts), which this matrix does not model.
+  hr: new Set<Capability>(["step_up.reauth"]),
   seller: new Set<Capability>([
     "catalog.manage",
     "orders.manage",
@@ -137,6 +142,7 @@ export function requireAny(role: Role, capabilities: Capability[]): boolean {
 const roleRank: Record<Role, number> = {
   owner: 100,
   org_admin: 80,
+  hr: 75,
   seller: 60,
   farm_manager: 60,
   driver: 30,

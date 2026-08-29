@@ -6,6 +6,8 @@
  * see docs/superpowers/specs/2026-08-22-data-console-design.md).
  *
  * Role notes:
+ * - `hr` is what the leave module gates on (LEAVE_APPROVER_ROLES) --
+ *   src/features/hr/lib/roles.ts.
  * - `inventory` is what Warehouse tasks needs (STAFF_ROLES).
  * - Loading and Dispatch gate on DISPATCH_ROLES (owner/org_admin/seller/
  *   logistics), so those are reached with the owner or seller login.
@@ -17,6 +19,7 @@
 export const CONSOLE_ACCOUNTS = [
   { email: "owner@gmail.com", displayName: "CEO Badrol", role: "owner" },
   { email: "admin@gmail.com", displayName: "Hafiz Samad", role: "org_admin" },
+  { email: "hr@gmail.com", displayName: "HR Manager", role: "hr" },
   { email: "seller@gmail.com", displayName: "Seller", role: "seller" },
   { email: "warehouse@gmail.com", displayName: "Warehouse", role: "inventory" },
   { email: "driver1@gmail.com", displayName: "Driver One", role: "driver" },

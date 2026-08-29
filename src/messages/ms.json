@@ -729,6 +729,7 @@
   "roles": {
     "owner": "Pemilik",
     "org_admin": "Admin Organisasi",
+    "hr": "HR",
     "seller": "Penjual",
     "driver": "Pemandu",
     "inventory": "Inventori",

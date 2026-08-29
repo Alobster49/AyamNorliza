@@ -7,7 +7,9 @@
  * (inventory/logistics) keep Products, since the dashboard's sales analytics
  * aren't relevant to their job. Drivers cannot enter the seller shell at all
  * (see the (seller) layout role check), so they keep going to the driver
- * deck, and anyone else falls back to a page every active member can open.
+ * deck. HR lands on the leave approval queue, since that is the only screen
+ * their role exists to open. Anyone else falls back to a page every active
+ * member can open.
  *
  * Nothing here may return a bare `/{slug}`: that path only exists to bounce
  * callers back through this module (see app/[organizationSlug]/page.tsx), so
@@ -31,6 +33,9 @@ function pathForRole(role: string, slug: string): string {
   }
   if (role === "driver") {
     return `/drive/${slug}`;
+  }
+  if (role === "hr") {
+    return `/${slug}/leave/manage`;
   }
   return `/${slug}/settings/organization`;
 }

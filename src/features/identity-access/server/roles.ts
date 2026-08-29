@@ -194,6 +194,11 @@ const ROLE_LABELS: Record<Role, { label: string; description: string; rank: numb
     description: "Configures the organization and manages membership.",
     rank: 80,
   },
+  hr: {
+    label: "HR",
+    description: "Manages leave requests, credits, and leave policy settings.",
+    rank: 75,
+  },
   seller: {
     label: "Seller",
     description: "Manages products, orders, and customer relationships.",

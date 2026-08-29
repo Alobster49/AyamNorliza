@@ -12,8 +12,9 @@
 --   owner@ayam-norliza-pilot.example  -- E2E owner (e2e/_fixtures.ts OWNER)
 --   target@ayam-norliza-pilot.example -- E2E deactivation target
 --   owner@gmail.com                   -- local convenience owner login
+--   hr@gmail.com                      -- local convenience hr login
 --   buyer@ayam-norliza-pilot.example  -- E2E buyer portal (e2e/_fixtures.ts BUYER)
--- All four share the deterministic local password below.
+-- All five share the deterministic local password below.
 
 begin;
 
@@ -37,6 +38,12 @@ with seed_users as (
       'owner@gmail.com',
       'CEO Badrool',
       'owner'
+    ),
+    (
+      '10000000-0000-0000-0000-000000000004'::uuid,
+      'hr@gmail.com',
+      'HR Manager',
+      'hr'
     )
   ) as user_seed(id, email, display_name, role)
   -- Only seed when the pilot org exists, so a partially migrated database

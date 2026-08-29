@@ -6,6 +6,7 @@
 const ROLE_LABEL_KEYS: Record<string, string> = {
   owner: "owner",
   org_admin: "org_admin",
+  hr: "hr",
   seller: "seller",
   driver: "driver",
   farm_manager: "farm_manager",

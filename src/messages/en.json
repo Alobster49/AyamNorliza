@@ -729,6 +729,7 @@
   "roles": {
     "owner": "Owner",
     "org_admin": "Org Admin",
+    "hr": "HR",
     "seller": "Seller",
     "driver": "Driver",
     "inventory": "Inventory",
