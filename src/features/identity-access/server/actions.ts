@@ -1035,8 +1035,15 @@ export async function updateMemberProfileAction(
   // two-person owner rule enforced elsewhere. Fails closed on the target
   // side: an unresolvable target rank reads as Infinity (deny), never 0
   // (which would read as "lowest possible rank" and wrongly allow it).
+  //
+  // Owner identity must be key-protected, not rank-only: a rank comparison
+  // alone is only as trustworthy as the rank data (the DB-side [1,10] cap
+  // on custom roles closes most of that, but this is the same
+  // belt-and-suspenders the invite/create/grant paths already apply --
+  // only an existing owner may ever touch an owner's identity).
   if (
-    !canGrantRole(actor.organization_roles?.rank ?? 0, target.organization_roles?.rank ?? Infinity, actorCanChangeRoles)
+    !canGrantRole(actor.organization_roles?.rank ?? 0, target.organization_roles?.rank ?? Infinity, actorCanChangeRoles) ||
+    (target.role === "owner" && actor.role !== "owner")
   ) {
     return err(
       "forbidden",

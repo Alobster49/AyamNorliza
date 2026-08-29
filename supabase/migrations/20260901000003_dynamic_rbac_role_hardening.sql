@@ -49,6 +49,42 @@
 -- `canGrantRole`), this migration is the fail-safe against any other write
 -- path (a future admin RPC, a manual SQL edit, a bug) reaching the same
 -- table without re-deriving the same rule.
+--
+-- Re-review found the above incomplete, plus a related RLS gap:
+--
+-- 3. (Critical, residual) The [1,10] cap in #2(b) is gated on
+--    `not new.is_system` -- an INSERT that sets `is_system = true` directly
+--    skips it entirely (and skips the immutable-rank check too, which is
+--    gated on `old.is_system`/UPDATE and never fires on INSERT). Full
+--    exploit chain: an org_admin (who holds `roles.edit` via
+--    `org_roles_write_editor`'s RLS) POSTs a new `organization_roles` row
+--    `{rank: 999, is_system: true}`, grants it every capability via
+--    `role_permissions` (which they can also write, same policy family),
+--    PATCHes their own membership to that role_id, and now resolves at
+--    rank 999 -- enough to pass `canGrantRole` against `owner` (rank 100)
+--    and, e.g., email-takeover an owner via `updateMemberProfileAction`.
+--    Fixed by rejecting `is_system = true` on INSERT unless the trusted
+--    `rbac.seeding` flag is set (the same flag `protect_owner_grants()`
+--    already relies on, set by `seed_system_roles()` at the top of its
+--    body -- confirmed still there, unchanged by this migration).
+--
+-- 4. (Important) `org_members_insert_admin` / `org_members_update_admin` /
+--    `invitations_insert_admin` (originally `20260624000002_id_access_rls.sql`,
+--    re-pointed at `has_permission` by `20260901000002`) still rank-gate
+--    their `with check` via the legacy `role_rank(text)` function -- a
+--    hardcoded, org-agnostic keyword match (`case role when 'owner' then
+--    100 ... else 0 end`). Every custom role's key is unknown to it and
+--    falls into `else 0`, so its rank comparison is meaningless for
+--    dynamic RBAC. Two new `security definer` helpers,
+--    `org_role_rank(org, role_key)` (looks up the row in that org's
+--    `organization_roles`) and `caller_role_rank(org)` (the caller's own
+--    active-membership rank in that org, via `role_id`), replace
+--    `role_rank(...)` in all three policies' `with check`. The
+--    `has_permission(...)` capability gate on each policy is unchanged.
+--    `role_rank(text)` itself is left in place (not dropped) -- nothing
+--    else references it after this migration, but dropping a function
+--    used by the RLS engine's plan cache is unnecessary risk for a
+--    security migration; it becomes dead code.
 
 begin;
 
@@ -73,6 +109,16 @@ begin
       raise exception 'system roles cannot be deleted';
     end if;
     return old;
+  end if;
+
+  if tg_op = 'INSERT' and new.is_system and current_setting('rbac.seeding', true) is distinct from 'on' then
+    -- Must run before the [1,10] cap below: every app-reachable INSERT
+    -- (org_roles_write_editor's RLS lets any roles.edit holder insert)
+    -- always hits the cap, never the wide-open system-role path. Only
+    -- `seed_system_roles()` (which sets this flag itself, is
+    -- security definer, and is never granted to `authenticated`) may
+    -- create a system role.
+    raise exception 'is_system may only be set by the seeder';
   end if;
 
   if tg_op = 'UPDATE' and new.is_system <> old.is_system then
@@ -112,5 +158,82 @@ end $$;
 drop trigger if exists organization_roles_protect on public.organization_roles;
 create trigger organization_roles_protect before insert or update or delete on public.organization_roles
   for each row execute function public.protect_system_roles();
+
+-- ---------------------------------------------------------------------------
+-- 3. Org-scoped rank helpers, replacing the legacy global `role_rank(text)`
+--    in the three RLS policies that still used it.
+-- ---------------------------------------------------------------------------
+create or replace function public.org_role_rank(target_org uuid, role_key text)
+returns integer
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(
+    (select r.rank from public.organization_roles r
+       where r.organization_id = target_org and r.key = role_key),
+    0
+  );
+$$;
+
+revoke all on function public.org_role_rank(uuid, text) from public;
+grant execute on function public.org_role_rank(uuid, text) to authenticated;
+
+create or replace function public.caller_role_rank(target_org uuid)
+returns integer
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select coalesce(
+    (select r.rank
+       from public.organization_members m
+       join public.organization_roles r on r.id = m.role_id
+       where m.organization_id = target_org
+         and m.user_id = (select auth.uid())
+         and m.status = 'active'
+       limit 1),
+    0
+  );
+$$;
+
+revoke all on function public.caller_role_rank(uuid) from public;
+grant execute on function public.caller_role_rank(uuid) to authenticated;
+
+-- org_members_insert_admin / org_members_update_admin / invitations_insert_admin:
+-- verbatim from 20260901000002_dynamic_rbac_enforcement.sql except
+-- `role_rank(role) <= role_rank((select m.role from ...))` ->
+-- `org_role_rank(<org>, role) <= caller_role_rank(<org>)`. The
+-- has_permission(...) capability gate on each is untouched. Owner
+-- protection is preserved as a corollary, not a separate branch: owner's
+-- rank is 100, the highest any org can seed, so a non-owner caller's
+-- caller_role_rank() is always < 100 and the <= comparison rejects setting
+-- anyone to the owner role -- verified live below.
+drop policy if exists org_members_insert_admin on public.organization_members;
+create policy org_members_insert_admin
+  on public.organization_members for insert to authenticated
+  with check (
+    public.has_permission(organization_id, 'membership.role.change', 'use')
+    and public.org_role_rank(organization_id, role) <= public.caller_role_rank(organization_id)
+  );
+
+drop policy if exists org_members_update_admin on public.organization_members;
+create policy org_members_update_admin
+  on public.organization_members for update to authenticated
+  using (public.has_permission(organization_id, 'membership.role.change', 'use'))
+  with check (
+    public.has_permission(organization_id, 'membership.role.change', 'use')
+    and public.org_role_rank(organization_id, role) <= public.caller_role_rank(organization_id)
+  );
+
+drop policy if exists invitations_insert_admin on public.invitations;
+create policy invitations_insert_admin
+  on public.invitations for insert to authenticated
+  with check (
+    public.has_permission(organization_id, 'membership.invite', 'use')
+    and public.org_role_rank(invitations.organization_id, role) <= public.caller_role_rank(invitations.organization_id)
+  );
 
 commit;

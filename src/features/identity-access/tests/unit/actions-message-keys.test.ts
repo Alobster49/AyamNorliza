@@ -625,6 +625,32 @@ describe("updateMemberProfileAction", () => {
     expect(adminUpdateMemberIdentity).not.toHaveBeenCalled();
   });
 
+  it("denies an org_admin editing an owner's profile even with an inflated actor rank", async () => {
+    // Owner identity must be key-protected, not rank-only: hand-set the
+    // actor's rank above the owner's (999 > 100) to prove the rank
+    // comparison alone would have allowed this, then confirm the
+    // independent key check still denies it.
+    setSupabase({
+      organization_members: [
+        {
+          data: { id: UUID, organization_id: "org-1", user_id: "u-owner", role: "owner", organization_roles: { rank: RANK_BY_ROLE.owner } },
+          error: null,
+        },
+        {
+          data: { role: "org_admin", role_id: "org_admin", organization_roles: { rank: 999 } },
+          error: null,
+        },
+      ],
+    });
+    const result = await updateMemberProfileAction({ memberId: UUID, email: "takeover@x.my", reason: "escalation attempt" });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.messageKey).toBe("errors.identity.roles.cannotGrantRole");
+      expect(result.messageParams).toEqual({ role: "owner" });
+    }
+    expect(adminUpdateMemberIdentity).not.toHaveBeenCalled();
+  });
+
   it("returns member.emailInUse when the email is already registered", async () => {
     setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("org_admin")] });
     vi.mocked(adminUpdateMemberIdentity).mockRejectedValue(
