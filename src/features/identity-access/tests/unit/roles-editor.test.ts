@@ -417,6 +417,34 @@ describe("setPermissionAction", () => {
     });
   });
 
+  it("rejects granting data_console.manage to any non-owner role", async () => {
+    mockPermission();
+    mockSupabase({
+      organization_roles: [
+        {
+          data: { id: CUSTOM_ROLE_ID, key: "custom-1", name: "Custom", description: null, rank: 5, is_system: false },
+          error: null,
+        },
+      ],
+    });
+
+    const result = await setPermissionAction({
+      organizationSlug: "acme",
+      roleId: CUSTOM_ROLE_ID,
+      resource: "data_console.manage",
+      action: "use",
+      granted: true,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "forbidden",
+      message: expect.any(String),
+      messageKey: "errors.identity.roles.capabilityLocked",
+      messageParams: { capability: "data_console.manage" },
+    });
+  });
+
   it("allows a grant edit on a system (non-owner) role", async () => {
     mockPermission();
     mockSupabase({
@@ -524,6 +552,49 @@ describe("createRoleAction", () => {
       ],
       role_permissions: [
         { data: [{ resource: "orders", action: "view", granted: true }], error: null }, // clone grants read
+        { data: null, error: null }, // apply-clone upsert
+      ],
+    });
+
+    const result = await createRoleAction({
+      organizationSlug: "acme",
+      name: "Cloned role",
+      cloneFromRoleId: CUSTOM_ROLE_ID,
+    });
+
+    expect(result).toEqual({ ok: true, data: { roleId: "new-role-id" } });
+    const rolePermissionsCallIndices = supabase.from.mock.calls
+      .map((call, i) => (call[0] === "role_permissions" ? i : -1))
+      .filter((i) => i >= 0);
+    const applyCloneIndex = rolePermissionsCallIndices[1]!;
+    const roleGrantsBuilder = supabase.from.mock.results[applyCloneIndex]!.value as {
+      upsert: ReturnType<typeof vi.fn>;
+    };
+    expect(roleGrantsBuilder.upsert).toHaveBeenCalledWith(
+      [{ role_id: "new-role-id", resource: "orders", action: "view", granted: true }],
+      { onConflict: "role_id,resource,action" },
+    );
+  });
+
+  it("does not copy data_console.manage when cloning a role that holds it", async () => {
+    mockPermission();
+    const supabase = mockSupabase({
+      organization_roles: [
+        { data: { rank: 80 }, error: null }, // actor rank
+        {
+          data: { id: CUSTOM_ROLE_ID, key: "custom-1", name: "Custom", description: null, rank: 5, is_system: false },
+          error: null,
+        }, // clone source fetch
+        { data: { id: "new-role-id" }, error: null }, // insert
+      ],
+      role_permissions: [
+        {
+          data: [
+            { resource: "orders", action: "view", granted: true },
+            { resource: "data_console.manage", action: "use", granted: true },
+          ],
+          error: null,
+        }, // clone grants read
         { data: null, error: null }, // apply-clone upsert
       ],
     });

@@ -294,7 +294,9 @@ export async function createRoleAction(rawInput: unknown): Promise<ActionResult<
       .select("resource, action, granted")
       .eq("role_id", input.cloneFromRoleId)
       .eq("granted", true);
-    cloneGrants = (grantRows as Array<{ resource: string; action: string; granted: boolean }> | null) ?? [];
+    cloneGrants = (
+      (grantRows as Array<{ resource: string; action: string; granted: boolean }> | null) ?? []
+    ).filter((g) => g.resource !== "data_console.manage");
   }
 
   const { data: created, error } = await supabase
@@ -499,6 +501,22 @@ export async function setPermissionAction(rawInput: unknown): Promise<ActionResu
   if (!role) return err("not_found", "Role not found", "errors.identity.roles.notFound");
   if (role.key === "owner") {
     return err("forbidden", "The owner role's permissions are locked", "errors.identity.roles.ownerLocked");
+  }
+
+  // data_console.manage is org_admin-only by seed convention, not by a
+  // structural rule -- any custom or non-owner role could otherwise be
+  // granted it here (roles:edit gates this whole action, and once roles:edit
+  // is itself delegated to a custom role that role could hand itself the
+  // data console). Fence it: no role editor may grant this specific
+  // capability through this action, regardless of caller rank.
+  if (input.resource === "data_console.manage" && input.granted) {
+    return err(
+      "forbidden",
+      "Capability 'data_console.manage' is locked",
+      "errors.identity.roles.capabilityLocked",
+      undefined,
+      { capability: "data_console.manage" },
+    );
   }
 
   const rows = permissionRows(input.roleId, input.resource, input.action, input.granted);
