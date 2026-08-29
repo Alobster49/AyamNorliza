@@ -39,7 +39,7 @@ describe("DEFAULT_ROLE_GRANTS parity with legacy access", () => {
   for (const resource of Object.keys(LEGACY_PAGE_ACCESS)) {
     for (const { key: role } of SYSTEM_ROLES) {
       it(`${role} view on ${resource} matches legacy`, () => {
-        const legacy = LEGACY_PAGE_ACCESS[resource].includes(role as Role);
+        const legacy = (LEGACY_PAGE_ACCESS[resource] ?? []).includes(role as Role);
         const seeded = DEFAULT_ROLE_GRANTS[role].has(grantKey(resource, "view"));
         expect(seeded).toBe(legacy);
       });
