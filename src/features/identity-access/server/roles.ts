@@ -1,292 +1,72 @@
 /**
- * Server Actions for the Roles & Permissions settings page (MOD-19).
+ * Server Actions for the Roles & Permissions settings page, backed by the
+ * dynamic-RBAC schema (`organization_roles` / `role_permissions` — see
+ * supabase/migrations/20260901000001_dynamic_rbac_schema.sql). Replaces the
+ * MOD-19 stub, which modeled roles as a fixed enum with per-org capability
+ * overrides; that stub (and its only consumer, `roles-page-client.tsx`) is
+ * retired here since Task 11 (the roles editor UI) rebuilds the page against
+ * this module from scratch.
  *
- * Each action follows the same contract as the rest of the identity-access
- * module:
- *   1. Zod parse the input
- *   2. Identity check (requireUser)
- *   3. Permission/scope check (owner of the target org)
- *   4. Step-up: requireReauth for any state-mutating action
- *   5. RLS mutation (the table is RLS-locked to owners)
- *   6. Audit row in the same transaction via recordAudit
- *   7. Safe field errors returned to the UI
- *   8. revalidatePath so the page re-renders the resolved matrix
+ * Every mutation:
+ *   1. Zod-parses the input
+ *   2. Gates on `requirePermission(slug, 'roles', 'edit')`
+ *   3. Re-validates the DB-trigger rules in TS so callers get a clean
+ *      `messageKey` instead of a raw Postgres exception (the triggers in
+ *      20260901000001/3 back these up, they are not the primary defense):
+ *        - the `owner` role's grants/name/existence can never be edited
+ *        - system roles (`is_system`) can't be renamed or deleted, but
+ *          their grants can be edited
+ *        - a role can't be deleted while it still has active members
+ *        - every `roleId` is validated to belong to the caller's org
+ *   4. Writes via Supabase (RLS is the final backstop: `roles_write_editor`
+ *      requires `has_permission(org, 'roles', 'edit')`)
+ *   5. `revalidatePath`s the roles settings page
  *
- * Read-only consumers (the page itself, non-owners) call `getRolesView`
- * which does NOT require reauth and which returns a view-shaped object
- * that the UI can consume directly.
+ * `getRolesView` is read-only, gated on `('roles','view')`, and returns a
+ * plain `RolesView` object (not an `ActionResult`) — same convention as
+ * `resolvePermissionsForOrg`: it throws the `requirePermission` guard's
+ * `OrderPermissionError` on denial rather than encoding failure in the
+ * return type, since it's meant to be awaited directly by a page/loader.
  */
 
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireUser, PermissionError } from "@/lib/auth/require-user";
-import { requireReauth, ReauthRequiredError } from "@/lib/auth/reauth.server";
+import { requirePermission } from "@/lib/auth/require-permission";
+import { OrderPermissionError } from "@/features/orders/server/guards";
 import {
-  ROLES,
-  CAPABILITIES,
-  can,
-  isCapabilityOverridable,
-  isRoleEditable,
-  type Capability,
-  type Role,
-} from "@/lib/auth/permissions";
-import { recordAudit } from "@/lib/audit/events";
+  PAGE_ACTIONS,
+  DEFAULT_ROLE_GRANTS,
+  grantKey,
+  type PermissionAction,
+  type PermissionKey,
+  type SystemRoleKey,
+} from "@/lib/auth/rbac";
 
 // ---------------------------------------------------------------------------
-// Public types: shape the UI receives
+// Public types
 // ---------------------------------------------------------------------------
 
-export type CapabilityArea = "organization" | "membership" | "audit" | "access_review" | "break_glass" | "catalog" | "sales";
-
-/**
- * `Capability` ids are dotted (e.g. "organization.settings.update"), which
- * cannot be used verbatim as a `next-intl` key segment — the client resolves
- * copy via `identity.rolesPage.capabilities.<key>.{label,description}`, so
- * this maps each capability to a flat, dot-free key. Exported so
- * `roles-page-client.tsx` (the only consumer) stays in sync with this list
- * by construction rather than by a second hand-maintained copy.
- */
-export const CAPABILITY_MESSAGE_KEY: Record<Capability, string> = {
-  "organization.manage": "organizationManage",
-  "organization.settings.update": "organizationSettingsUpdate",
-  "membership.invite": "membershipInvite",
-  "membership.role.change": "membershipRoleChange",
-  "membership.scope.change": "membershipScopeChange",
-  "membership.deactivate": "membershipDeactivate",
-  "access_review.run": "accessReviewRun",
-  "access_review.decide": "accessReviewDecide",
-  "break_glass.open": "breakGlassOpen",
-  "break_glass.finalize": "breakGlassFinalize",
-  "audit.read": "auditRead",
-  "audit_log.read": "auditLogRead",
-  "auth_security.read": "authSecurityRead",
-  "step_up.reauth": "stepUpReauth",
-  "catalog.manage": "catalogManage",
-  "orders.manage": "ordersManage",
-  "customers.manage": "customersManage",
-};
-
-export const CAPABILITY_AREAS: ReadonlyArray<{
-  id: CapabilityArea;
-  label: string;
-  description: string;
-}> = [
-  {
-    id: "organization",
-    label: "Organization",
-    description: "Settings that govern the organization as a whole.",
-  },
-  {
-    id: "membership",
-    label: "Membership",
-    description: "Inviting users, changing roles, scopes, and access lifecycle.",
-  },
-  {
-    id: "catalog",
-    label: "Catalog",
-    description: "Manage products, categories, and pricing.",
-  },
-  {
-    id: "sales",
-    label: "Sales",
-    description: "Manage orders and customers.",
-  },
-  {
-    id: "access_review",
-    label: "Access reviews",
-    description: "Periodic attestations that confirm membership and roles.",
-  },
-  {
-    id: "break_glass",
-    label: "Break-glass",
-    description: "Emergency override events recorded to the audit log.",
-  },
-  {
-    id: "audit",
-    label: "Audit & security",
-    description: "Read access to immutable history and security events.",
-  },
-];
-
-const CAPABILITY_AREA: Record<Capability, CapabilityArea> = {
-  "organization.manage": "organization",
-  "organization.settings.update": "organization",
-  "membership.invite": "membership",
-  "membership.role.change": "membership",
-  "membership.scope.change": "membership",
-  "membership.deactivate": "membership",
-  "catalog.manage": "catalog",
-  "orders.manage": "sales",
-  "customers.manage": "sales",
-  "access_review.run": "access_review",
-  "access_review.decide": "access_review",
-  "break_glass.open": "break_glass",
-  "break_glass.finalize": "break_glass",
-  "audit.read": "audit",
-  "audit_log.read": "audit",
-  "auth_security.read": "audit",
-  "step_up.reauth": "audit",
-};
-
-export type RoleCapabilityCell = {
-  capability: Capability;
-  label: string;
-  description: string;
-  area: CapabilityArea;
-  granted: boolean;
-  defaultGranted: boolean;
-  isOverridden: boolean;
-  isOverridable: boolean;
-  isEditableRole: boolean;
-};
-
-export type RoleView = {
-  role: Role;
-  label: string;
-  description: string;
+export type RoleRow = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
   rank: number;
-  isEditable: boolean;
-  isOwnerLocked: boolean;
-  cells: RoleCapabilityCell[];
+  isSystem: boolean;
+  memberCount: number;
 };
 
-export type RolesViewModel = {
-  organizationId: string;
-  organizationName: string;
-  isOwner: boolean;
+export type RolesView = {
+  roles: RoleRow[];
+  /** Keyed by roleId; lists every `granted = true` permission as a `PermissionKey`. */
+  grants: Record<string, PermissionKey[]>;
   canEdit: boolean;
-  roles: RoleView[];
-  areas: typeof CAPABILITY_AREAS;
-  totals: {
-    roles: number;
-    capabilities: number;
-    overrides: number;
-  };
-  lastEditedAt: string | null;
+  actorRank: number;
 };
-
-// ---------------------------------------------------------------------------
-// Labels & descriptions (presentation copy lives here so the UI stays clean)
-// ---------------------------------------------------------------------------
-
-const ROLE_LABELS: Record<Role, { label: string; description: string; rank: number }> = {
-  owner: {
-    label: "Owner",
-    description: "Full control. Receives every capability by structure and cannot be edited.",
-    rank: 100,
-  },
-  org_admin: {
-    label: "Admin",
-    description: "Full access to everything, including the data console.",
-    rank: 80,
-  },
-  hr: {
-    label: "HR",
-    description: "Manages leave requests, credits, and leave policy settings.",
-    rank: 75,
-  },
-  seller: {
-    label: "Seller",
-    description: "Manages products, orders, customers, market prices, dispatch, and delivery.",
-    rank: 60,
-  },
-  supervisor: {
-    label: "Supervisor",
-    description: "Same sales and delivery permissions as a seller.",
-    rank: 60,
-  },
-  driver: {
-    label: "Driver",
-    description: "Delivers one run at a time. Sees only the stops on the run they are assigned.",
-    rank: 30,
-  },
-  inventory: {
-    label: "Worker",
-    description: "Warehouse tasks and loading.",
-    rank: 40,
-  },
-};
-
-const CAPABILITY_LABELS: Record<Capability, { label: string; description: string }> = {
-  "organization.manage": {
-    label: "Manage organization",
-    description: "Create, archive, and bind to billing.",
-  },
-  "organization.settings.update": {
-    label: "Update organization settings",
-    description: "Identity, locale, time zone, region.",
-  },
-  "membership.invite": {
-    label: "Invite users",
-    description: "Send invitations and create pending memberships.",
-  },
-  "membership.role.change": {
-    label: "Change member role",
-    description: "Promote, demote, or transfer members between roles.",
-  },
-  "membership.scope.change": {
-    label: "Change member scope",
-    description: "Limit a member to specific sites, zones, or houses.",
-  },
-  "membership.deactivate": {
-    label: "Deactivate members",
-    description: "Suspend or transfer ownership on deactivation.",
-  },
-  "access_review.run": {
-    label: "Run access reviews",
-    description: "Start quarterly or one-off attestation campaigns.",
-  },
-  "access_review.decide": {
-    label: "Decide review items",
-    description: "Keep, modify, or revoke each member in a review.",
-  },
-  "break_glass.open": {
-    label: "Open break-glass",
-    description: "Trigger an audited emergency override.",
-  },
-  "break_glass.finalize": {
-    label: "Finalize break-glass review",
-    description: "Close out a break-glass event with a post-use review.",
-  },
-  "audit.read": {
-    label: "Read audit log",
-    description: "Inspect the immutable history of mutations.",
-  },
-  "audit_log.read": {
-    label: "Read audit log (raw)",
-    description: "Inspect the underlying audit_log table.",
-  },
-  "auth_security.read": {
-    label: "Read security events",
-    description: "Inspect login, MFA, and session lifecycle events.",
-  },
-  "step_up.reauth": {
-    label: "Step-up re-authentication (locked)",
-    description:
-      "Required to confirm sensitive mutations. Always preserved for roles that need it; cannot be removed.",
-  },
-  "catalog.manage": {
-    label: "Manage catalog",
-    description: "Create and edit categories, products, and variants.",
-  },
-  "orders.manage": {
-    label: "Manage orders",
-    description: "Create, view, and update order statuses.",
-  },
-  "customers.manage": {
-    label: "Manage customers",
-    description: "Add and edit customer records.",
-  },
-};
-
-// ---------------------------------------------------------------------------
-// Errors
-// ---------------------------------------------------------------------------
 
 export type ActionResult<T = void> =
   | { ok: true; data: T }
@@ -294,14 +74,7 @@ export type ActionResult<T = void> =
       ok: false;
       code: ActionErrorCode;
       message: string;
-      /**
-       * Full path under `errors.identity.*` for a client to resolve with a
-       * root-namespace `useTranslations()` + `t(messageKey as never)`.
-       * Additive: `roles-page-client.tsx` is the only consumer, but kept
-       * optional for the same reason as `actions.ts`'s `ActionResult`.
-       */
       messageKey?: string;
-      /** ICU params for `messageKey` (e.g. `{ role: input.role }`). */
       messageParams?: Record<string, string | number>;
       fieldErrors?: Record<string, string[]>;
     };
@@ -310,8 +83,8 @@ export type ActionErrorCode =
   | "validation"
   | "unauthenticated"
   | "forbidden"
-  | "reauth_required"
   | "not_found"
+  | "conflict"
   | "internal";
 
 function err<T = never>(
@@ -335,338 +108,468 @@ function ok<T>(data: T): ActionResult<T> {
   return { ok: true, data };
 }
 
-async function ctxFor(userId: string) {
-  return { actorUserId: userId, correlationId: randomUUID() };
+function permissionMessageKey(message: string): string {
+  if (message === "Not authenticated") return "errors.identity.common.unauthenticated";
+  if (message === "Organization not found") return "errors.identity.common.orgNotFound";
+  return "errors.identity.roles.forbidden";
 }
 
-async function reauthOrError(): Promise<
-  | { ok: true; userId: string; correlationId: string }
-  | { ok: false; result: ActionResult<never> }
-> {
+type RoleContext = { orgId: string; userId: string; roleId: string; roleKey: string };
+
+async function guardEdit(
+  organizationSlug: string,
+): Promise<{ ok: true; ctx: RoleContext } | { ok: false; result: ActionResult<never> }> {
   try {
-    const proof = await requireReauth();
-    return {
-      ok: true,
-      userId: proof.userId,
-      correlationId: randomUUID(),
-    };
+    const ctx = await requirePermission(organizationSlug, "roles", "edit");
+    return { ok: true, ctx };
   } catch (e) {
-    if (e instanceof ReauthRequiredError) {
-      return { ok: false, result: err("reauth_required", e.message, "errors.identity.common.reauthRequired") };
+    if (e instanceof OrderPermissionError) {
+      return { ok: false, result: err("forbidden", e.message, permissionMessageKey(e.message)) };
     }
     throw e;
   }
 }
 
-// ---------------------------------------------------------------------------
-// Member role lookup (who is calling?)
-// ---------------------------------------------------------------------------
+type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
-type CallerRole = { userId: string; role: Role };
+type OrgRoleRow = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  rank: number;
+  is_system: boolean;
+};
 
-/** Maps `callerRole()`'s two fixed forbidden strings to `errors.identity.*`. */
-function callerForbiddenKey(message: string): string {
-  return message === "Sign in first" ? "errors.identity.common.unauthenticated" : "errors.identity.common.notMember";
-}
-
-async function callerRole(organizationId: string): Promise<CallerRole | { forbidden: string }> {
-  let user;
-  try {
-    user = await requireUser();
-  } catch (e) {
-    if (e instanceof PermissionError) return { forbidden: "Sign in first" };
-    throw e;
-  }
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", organizationId)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) return { forbidden: "Not a member of this organization" };
-  return { userId: user.id, role: data.role as Role };
-}
-
-// ---------------------------------------------------------------------------
-// getRolesView: read-side, no reauth, render-ready for any active member.
-// Non-owners see the canonical matrix; owners additionally see overrides
-// and may edit.
-// ---------------------------------------------------------------------------
-
-const NON_OWNER_READ_RESULT: ActionResult<RolesViewModel> = err(
-  "forbidden",
-  "Not a member of this organization",
-);
-
-export async function getRolesView(
+/**
+ * Validates that `roleId` names a real role of `organizationId`, returning
+ * `null` for both "doesn't exist" and "belongs to a different org" — every
+ * caller treats cross-org roleIds the same as not-found.
+ */
+async function fetchRole(
+  supabase: SupabaseClient,
   organizationId: string,
-): Promise<ActionResult<RolesViewModel>> {
-  const caller = await callerRole(organizationId);
-  if ("forbidden" in caller) return NON_OWNER_READ_RESULT;
-
-  const supabase = await createSupabaseServerClient();
-  const isOwner = caller.role === "owner";
-  const canEdit = isOwner;
-
-  // Fetch overrides + last-edit timestamp. RLS: only owners can SELECT.
-  // For non-owners, these queries return zero rows and no error -- the
-  // helper is fail-closed to the canonical matrix via mergeOverrides.
-  let overrides: Array<{
-    role: string;
-    capability: string;
-    granted: boolean;
-    updated_at: string;
-  }> = [];
-  let lastEditedAt: string | null = null;
-  if (isOwner) {
-    const { data: rows, error } = await supabase
-      .from("role_capability_overrides")
-      .select("role, capability, granted, updated_at")
-      .eq("organization_id", organizationId);
-    if (!error && rows) {
-      overrides = rows as typeof overrides;
-      if (overrides.length > 0) {
-        lastEditedAt = overrides
-          .map((o) => o.updated_at)
-          .sort()
-          .at(-1) ?? null;
-      }
-    }
-  }
-
-  const overrideMap: Record<Role, Record<Capability, boolean>> = {} as Record<
-    Role,
-    Record<Capability, boolean>
-  >;
-  for (const r of ROLES) {
-    overrideMap[r] = {} as Record<Capability, boolean>;
-    for (const c of CAPABILITIES) overrideMap[r][c] = false;
-  }
-  for (const o of overrides) {
-    if (!(o.role in overrideMap)) continue;
-    if (!(o.capability in overrideMap[o.role as Role])) continue;
-    overrideMap[o.role as Role][o.capability as Capability] = o.granted;
-  }
-
-  const roles: RoleView[] = ROLES.map((role) => {
-    const cells: RoleCapabilityCell[] = CAPABILITIES.map((capability) => {
-      const defaultGranted = can(role, capability);
-      const hasOverride = Object.prototype.hasOwnProperty.call(overrideMap[role], capability);
-      const granted =
-        isOwner && hasOverride && isCapabilityOverridable(capability) && isRoleEditable(role)
-          ? overrideMap[role][capability]
-          : defaultGranted;
-      return {
-        capability,
-        label: CAPABILITY_LABELS[capability].label,
-        description: CAPABILITY_LABELS[capability].description,
-        area: CAPABILITY_AREA[capability],
-        granted,
-        defaultGranted,
-        isOverridden: hasOverride && isOwner,
-        isOverridable: isCapabilityOverridable(capability),
-        isEditableRole: isRoleEditable(role),
-      };
-    });
-    const meta = ROLE_LABELS[role];
-    return {
-      role,
-      label: meta.label,
-      description: meta.description,
-      rank: meta.rank,
-      isEditable: isRoleEditable(role),
-      isOwnerLocked: role === "owner",
-      cells,
-    };
-  });
-
-  return ok({
-    organizationId,
-    organizationName: "", // filled in by the page; we keep the action small
-    isOwner,
-    canEdit,
-    roles,
-    areas: CAPABILITY_AREAS,
-    totals: {
-      roles: roles.length,
-      capabilities: CAPABILITIES.length,
-      overrides: overrides.length,
-    },
-    lastEditedAt,
-  });
+  roleId: string,
+): Promise<OrgRoleRow | null> {
+  const { data } = await supabase
+    .from("organization_roles")
+    .select("id, key, name, description, rank, is_system")
+    .eq("id", roleId)
+    .eq("organization_id", organizationId)
+    .maybeSingle();
+  return (data as OrgRoleRow | null) ?? null;
 }
 
 // ---------------------------------------------------------------------------
-// Mutations
+// getRolesView
 // ---------------------------------------------------------------------------
 
-const UpdateCapabilityInput = z.object({
-  organizationId: z.string().uuid(),
-  role: z.enum(ROLES),
-  capability: z.enum(CAPABILITIES),
-  granted: z.boolean(),
-  reason: z.string().min(10).max(1000),
+export async function getRolesView(organizationSlug: string): Promise<RolesView> {
+  const ctx = await requirePermission(organizationSlug, "roles", "view");
+
+  let canEdit = true;
+  try {
+    await requirePermission(organizationSlug, "roles", "edit");
+  } catch (e) {
+    if (e instanceof OrderPermissionError) {
+      canEdit = false;
+    } else {
+      throw e;
+    }
+  }
+
+  const supabase = await createSupabaseServerClient();
+
+  const { data: roleRows } = await supabase
+    .from("organization_roles")
+    .select("id, key, name, description, rank, is_system")
+    .eq("organization_id", ctx.orgId)
+    .order("rank", { ascending: false });
+  const roles = (roleRows as OrgRoleRow[] | null) ?? [];
+
+  const { data: memberRows } = await supabase
+    .from("organization_members")
+    .select("role_id")
+    .eq("organization_id", ctx.orgId)
+    .eq("status", "active");
+  const counts = new Map<string, number>();
+  for (const row of (memberRows as Array<{ role_id: string }> | null) ?? []) {
+    counts.set(row.role_id, (counts.get(row.role_id) ?? 0) + 1);
+  }
+
+  const roleIds = roles.map((r) => r.id);
+  const { data: grantRows } = await supabase
+    .from("role_permissions")
+    .select("role_id, resource, action, granted")
+    .in("role_id", roleIds);
+  const grants: Record<string, PermissionKey[]> = {};
+  for (const role of roles) grants[role.id] = [];
+  for (const g of (grantRows as
+    | Array<{ role_id: string; resource: string; action: string; granted: boolean }>
+    | null) ?? []) {
+    if (!g.granted) continue;
+    (grants[g.role_id] ??= []).push(grantKey(g.resource, g.action as PermissionAction));
+  }
+
+  const actorRole = roles.find((r) => r.id === ctx.roleId);
+
+  return {
+    roles: roles.map((r) => ({
+      id: r.id,
+      key: r.key,
+      name: r.name,
+      description: r.description ?? null,
+      rank: r.rank,
+      isSystem: r.is_system,
+      memberCount: counts.get(r.id) ?? 0,
+    })),
+    grants,
+    canEdit,
+    actorRank: actorRole?.rank ?? 0,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// createRoleAction
+// ---------------------------------------------------------------------------
+
+const CreateRoleInput = z.object({
+  organizationSlug: z.string().min(1),
+  name: z.string().trim().min(1),
+  cloneFromRoleId: z.string().uuid().optional(),
 });
 
-export async function updateRoleCapabilityAction(
-  rawInput: unknown,
-): Promise<ActionResult<{ overrideId: string }>> {
-  const reauth = await reauthOrError();
-  if (!reauth.ok) return reauth.result;
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
 
-  const parsed = UpdateCapabilityInput.safeParse(rawInput);
+export async function createRoleAction(rawInput: unknown): Promise<ActionResult<{ roleId: string }>> {
+  const parsed = CreateRoleInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+    return err(
+      "validation",
+      "Invalid input",
+      "errors.identity.common.invalidInput",
+      parsed.error.flatten().fieldErrors,
+    );
   }
   const input = parsed.data;
 
-  if (!isRoleEditable(input.role)) {
-    return err(
-      "forbidden",
-      `Role '${input.role}' is not editable`,
-      "errors.identity.roles.notEditable",
-      undefined,
-      { role: input.role },
-    );
-  }
-  if (!isCapabilityOverridable(input.capability)) {
-    return err(
-      "forbidden",
-      `Capability '${input.capability}' is locked`,
-      "errors.identity.roles.capabilityLocked",
-      undefined,
-      { capability: input.capability },
-    );
-  }
+  const guard = await guardEdit(input.organizationSlug);
+  if (!guard.ok) return guard.result;
+  const { ctx } = guard;
 
-  const caller = await callerRole(input.organizationId);
-  if ("forbidden" in caller) return err("forbidden", caller.forbidden, callerForbiddenKey(caller.forbidden));
-  if (caller.role !== "owner") {
-    return err("forbidden", "Only the owner can edit capabilities", "errors.identity.roles.ownerOnlyEdit");
+  const key = slugify(input.name);
+  if (!key) {
+    return err(
+      "validation",
+      "Name must contain at least one letter or number",
+      "errors.identity.roles.invalidName",
+      { name: ["errors.identity.roles.invalidName"] },
+    );
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: upserted, error } = await supabase
-    .from("role_capability_overrides")
-    .upsert(
-      {
-        organization_id: input.organizationId,
-        role: input.role,
-        capability: input.capability,
-        granted: input.granted,
-        reason: input.reason,
-        changed_by: caller.userId,
-      },
-      { onConflict: "organization_id,role,capability" },
-    )
+
+  const { data: actorRoleRow } = await supabase
+    .from("organization_roles")
+    .select("rank")
+    .eq("id", ctx.roleId)
+    .maybeSingle();
+  const actorRank = (actorRoleRow as { rank: number } | null)?.rank ?? 0;
+  const rank = Math.max(1, Math.min(actorRank - 1, 10));
+
+  let cloneGrants: Array<{ resource: string; action: string }> = [];
+  if (input.cloneFromRoleId) {
+    const cloneRole = await fetchRole(supabase, ctx.orgId, input.cloneFromRoleId);
+    if (!cloneRole) {
+      return err("not_found", "Role to clone from was not found", "errors.identity.roles.cloneSourceNotFound");
+    }
+    const { data: grantRows } = await supabase
+      .from("role_permissions")
+      .select("resource, action, granted")
+      .eq("role_id", input.cloneFromRoleId)
+      .eq("granted", true);
+    cloneGrants = (grantRows as Array<{ resource: string; action: string; granted: boolean }> | null) ?? [];
+  }
+
+  const { data: created, error } = await supabase
+    .from("organization_roles")
+    .insert({ organization_id: ctx.orgId, key, name: input.name, rank, is_system: false })
     .select("id")
     .single();
-  if (error || !upserted) {
-    return err(
-      "internal",
-      error?.message ?? "Failed to save override",
-      error ? "errors.identity.common.internal" : "errors.identity.roles.saveOverrideFailed",
-    );
+  if (error) {
+    if (error.code === "23505") {
+      return err(
+        "conflict",
+        `A role with key '${key}' already exists`,
+        "errors.identity.roles.duplicateKey",
+        undefined,
+        { key },
+      );
+    }
+    return err("internal", error.message, "errors.identity.roles.createFailed");
+  }
+  if (!created) {
+    return err("internal", "Failed to create role", "errors.identity.roles.createFailed");
+  }
+  const createdRow = created as { id: string };
+
+  if (cloneGrants.length > 0) {
+    const rows = cloneGrants.map((g) => ({
+      role_id: createdRow.id,
+      resource: g.resource,
+      action: g.action,
+      granted: true,
+    }));
+    const { error: grantError } = await supabase
+      .from("role_permissions")
+      .upsert(rows, { onConflict: "role_id,resource,action" });
+    if (grantError) return err("internal", grantError.message, "errors.identity.common.internal");
   }
 
-  const ctx = await ctxFor(reauth.userId);
-  await recordAudit(
-    {
-      organizationId: input.organizationId,
-      actorUserId: reauth.userId,
-      actorRole: caller.role,
-      eventType: "identity.role_capability_changed",
-      entityType: "role_capability_overrides",
-      entityId: upserted.id,
-      after: {
-        role: input.role,
-        capability: input.capability,
-        granted: input.granted,
-        reason: input.reason,
-      },
-      reason: input.reason,
-      correlationId: ctx.correlationId,
-      source: "web",
-    },
-    ctx,
-  );
-
-  revalidatePath(`/[organizationSlug]/settings/roles`, "page");
-  return ok({ overrideId: upserted.id });
+  revalidatePath("/[organizationSlug]/settings/roles", "page");
+  return ok({ roleId: createdRow.id });
 }
 
-const ResetRoleInput = z.object({
-  organizationId: z.string().uuid(),
-  role: z.enum(ROLES),
-  reason: z.string().min(10).max(1000),
+// ---------------------------------------------------------------------------
+// renameRoleAction
+// ---------------------------------------------------------------------------
+
+const RenameRoleInput = z.object({
+  organizationSlug: z.string().min(1),
+  roleId: z.string().uuid(),
+  name: z.string().trim().min(1),
+  description: z.string().optional(),
 });
 
-export async function resetRoleToDefaultsAction(
-  rawInput: unknown,
-): Promise<ActionResult<{ removed: number }>> {
-  const reauth = await reauthOrError();
-  if (!reauth.ok) return reauth.result;
-
-  const parsed = ResetRoleInput.safeParse(rawInput);
+export async function renameRoleAction(rawInput: unknown): Promise<ActionResult<void>> {
+  const parsed = RenameRoleInput.safeParse(rawInput);
   if (!parsed.success) {
-    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
+    return err(
+      "validation",
+      "Invalid input",
+      "errors.identity.common.invalidInput",
+      parsed.error.flatten().fieldErrors,
+    );
   }
   const input = parsed.data;
 
-  if (!isRoleEditable(input.role)) {
-    return err(
-      "forbidden",
-      `Role '${input.role}' is not editable`,
-      "errors.identity.roles.notEditable",
-      undefined,
-      { role: input.role },
-    );
-  }
-  const caller = await callerRole(input.organizationId);
-  if ("forbidden" in caller) return err("forbidden", caller.forbidden, callerForbiddenKey(caller.forbidden));
-  if (caller.role !== "owner") {
-    return err("forbidden", "Only the owner can reset capabilities", "errors.identity.roles.ownerOnlyReset");
-  }
+  const guard = await guardEdit(input.organizationSlug);
+  if (!guard.ok) return guard.result;
+  const { ctx } = guard;
 
   const supabase = await createSupabaseServerClient();
-  // Capture the rows we are about to delete for the audit before-image.
-  const { data: beforeRows, error: beforeErr } = await supabase
-    .from("role_capability_overrides")
-    .select("id, capability, granted")
-    .eq("organization_id", input.organizationId)
-    .eq("role", input.role);
-  if (beforeErr) return err("internal", beforeErr.message, "errors.identity.common.internal");
+  const role = await fetchRole(supabase, ctx.orgId, input.roleId);
+  if (!role) return err("not_found", "Role not found", "errors.identity.roles.notFound");
+  if (role.key === "owner") {
+    return err("forbidden", "The owner role cannot be renamed", "errors.identity.roles.ownerLocked");
+  }
+  if (role.is_system) {
+    return err("forbidden", "System roles cannot be renamed", "errors.identity.roles.systemLocked");
+  }
 
-  const { data: deleted, error } = await supabase
-    .from("role_capability_overrides")
-    .delete()
-    .eq("organization_id", input.organizationId)
-    .eq("role", input.role)
-    .select("id");
+  const patch: { name: string; description?: string } = { name: input.name };
+  if (input.description !== undefined) patch.description = input.description;
+
+  const { error } = await supabase.from("organization_roles").update(patch).eq("id", input.roleId);
   if (error) return err("internal", error.message, "errors.identity.common.internal");
-  const removed = (deleted ?? []).length;
 
-  const ctx = await ctxFor(reauth.userId);
-  await recordAudit(
-    {
-      organizationId: input.organizationId,
-      actorUserId: reauth.userId,
-      actorRole: caller.role,
-      eventType: "identity.role_capabilities_reset",
-      entityType: "role_capability_overrides",
-      entityId: null,
-      before: { role: input.role, capabilities: beforeRows ?? [] },
-      after: { role: input.role, removed },
-      reason: input.reason,
-      correlationId: ctx.correlationId,
-      source: "web",
-    },
-    ctx,
-  );
+  revalidatePath("/[organizationSlug]/settings/roles", "page");
+  return ok(undefined);
+}
 
-  revalidatePath(`/[organizationSlug]/settings/roles`, "page");
-  return ok({ removed });
+// ---------------------------------------------------------------------------
+// deleteRoleAction
+// ---------------------------------------------------------------------------
+
+const DeleteRoleInput = z.object({
+  organizationSlug: z.string().min(1),
+  roleId: z.string().uuid(),
+});
+
+export async function deleteRoleAction(rawInput: unknown): Promise<ActionResult<void>> {
+  const parsed = DeleteRoleInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err(
+      "validation",
+      "Invalid input",
+      "errors.identity.common.invalidInput",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+  const input = parsed.data;
+
+  const guard = await guardEdit(input.organizationSlug);
+  if (!guard.ok) return guard.result;
+  const { ctx } = guard;
+
+  const supabase = await createSupabaseServerClient();
+  const role = await fetchRole(supabase, ctx.orgId, input.roleId);
+  if (!role) return err("not_found", "Role not found", "errors.identity.roles.notFound");
+  if (role.key === "owner") {
+    return err("forbidden", "The owner role cannot be deleted", "errors.identity.roles.ownerLocked");
+  }
+  if (role.is_system) {
+    return err("forbidden", "System roles cannot be deleted", "errors.identity.roles.systemLocked");
+  }
+
+  const { data: memberRows } = await supabase
+    .from("organization_members")
+    .select("id")
+    .eq("role_id", input.roleId)
+    .eq("status", "active");
+  if (((memberRows as Array<{ id: string }> | null) ?? []).length > 0) {
+    return err(
+      "conflict",
+      "This role still has active members and cannot be deleted",
+      "errors.identity.roles.hasMembers",
+    );
+  }
+
+  const { error } = await supabase.from("organization_roles").delete().eq("id", input.roleId);
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
+
+  revalidatePath("/[organizationSlug]/settings/roles", "page");
+  return ok(undefined);
+}
+
+// ---------------------------------------------------------------------------
+// setPermissionAction
+// ---------------------------------------------------------------------------
+
+const SetPermissionInput = z.object({
+  organizationSlug: z.string().min(1),
+  roleId: z.string().uuid(),
+  resource: z.string().min(1),
+  action: z.enum([...PAGE_ACTIONS, "use"]),
+  granted: z.boolean(),
+});
+
+/**
+ * Expands a single (resource, action, granted) toggle into the full set of
+ * `role_permissions` rows to upsert, applying the cascade rules: revoking
+ * `view` also revokes `add`/`edit`/`delete` for that resource; granting
+ * `add`/`edit`/`delete` auto-grants `view`. Admin capabilities (`action ===
+ * "use"`) are standalone and never cascade.
+ */
+function permissionRows(
+  roleId: string,
+  resource: string,
+  action: PermissionAction,
+  granted: boolean,
+): Array<{ role_id: string; resource: string; action: PermissionAction; granted: boolean }> {
+  if (action === "use") {
+    return [{ role_id: roleId, resource, action, granted }];
+  }
+  if (action === "view" && !granted) {
+    return PAGE_ACTIONS.map((a) => ({ role_id: roleId, resource, action: a, granted: false }));
+  }
+  if (action !== "view" && granted) {
+    return [
+      { role_id: roleId, resource, action: "view", granted: true },
+      { role_id: roleId, resource, action, granted: true },
+    ];
+  }
+  return [{ role_id: roleId, resource, action, granted }];
+}
+
+export async function setPermissionAction(rawInput: unknown): Promise<ActionResult<void>> {
+  const parsed = SetPermissionInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err(
+      "validation",
+      "Invalid input",
+      "errors.identity.common.invalidInput",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+  const input = parsed.data;
+
+  const guard = await guardEdit(input.organizationSlug);
+  if (!guard.ok) return guard.result;
+  const { ctx } = guard;
+
+  const supabase = await createSupabaseServerClient();
+  const role = await fetchRole(supabase, ctx.orgId, input.roleId);
+  if (!role) return err("not_found", "Role not found", "errors.identity.roles.notFound");
+  if (role.key === "owner") {
+    return err("forbidden", "The owner role's permissions are locked", "errors.identity.roles.ownerLocked");
+  }
+
+  const rows = permissionRows(input.roleId, input.resource, input.action, input.granted);
+  const { error } = await supabase
+    .from("role_permissions")
+    .upsert(rows, { onConflict: "role_id,resource,action" });
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
+
+  revalidatePath("/[organizationSlug]/settings/roles", "page");
+  return ok(undefined);
+}
+
+// ---------------------------------------------------------------------------
+// resetRoleToDefaultsAction
+// ---------------------------------------------------------------------------
+
+const ResetRoleInput = z.object({
+  organizationSlug: z.string().min(1),
+  roleId: z.string().uuid(),
+});
+
+export async function resetRoleToDefaultsAction(rawInput: unknown): Promise<ActionResult<void>> {
+  const parsed = ResetRoleInput.safeParse(rawInput);
+  if (!parsed.success) {
+    return err(
+      "validation",
+      "Invalid input",
+      "errors.identity.common.invalidInput",
+      parsed.error.flatten().fieldErrors,
+    );
+  }
+  const input = parsed.data;
+
+  const guard = await guardEdit(input.organizationSlug);
+  if (!guard.ok) return guard.result;
+  const { ctx } = guard;
+
+  const supabase = await createSupabaseServerClient();
+  const role = await fetchRole(supabase, ctx.orgId, input.roleId);
+  if (!role) return err("not_found", "Role not found", "errors.identity.roles.notFound");
+  if (role.key === "owner") {
+    return err("forbidden", "The owner role's permissions are locked", "errors.identity.roles.ownerLocked");
+  }
+  if (!role.is_system) {
+    return err(
+      "validation",
+      "Custom roles have no default permissions to reset to",
+      "errors.identity.roles.noDefaults",
+    );
+  }
+
+  const defaults = DEFAULT_ROLE_GRANTS[role.key as SystemRoleKey];
+  if (!defaults) return err("internal", "Unknown system role", "errors.identity.common.internal");
+
+  const { error: deleteError } = await supabase.from("role_permissions").delete().eq("role_id", input.roleId);
+  if (deleteError) return err("internal", deleteError.message, "errors.identity.common.internal");
+
+  const rows = Array.from(defaults).map((pk) => {
+    const idx = pk.lastIndexOf(":");
+    return {
+      role_id: input.roleId,
+      resource: pk.slice(0, idx),
+      action: pk.slice(idx + 1) as PermissionAction,
+      granted: true,
+    };
+  });
+  if (rows.length > 0) {
+    const { error: insertError } = await supabase.from("role_permissions").insert(rows);
+    if (insertError) return err("internal", insertError.message, "errors.identity.common.internal");
+  }
+
+  revalidatePath("/[organizationSlug]/settings/roles", "page");
+  return ok(undefined);
 }
