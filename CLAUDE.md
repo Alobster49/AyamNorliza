@@ -15,6 +15,7 @@ gates on (`src/features/data-console/lib/accounts.ts`), all `password123`:
 | admin@gmail.com | org_admin | everything except owner-only screens |
 | seller@gmail.com | seller | catalog, orders, customers, dispatch, loading |
 | warehouse@gmail.com | inventory | warehouse tasks |
+| hr@gmail.com | hr | leave management (My Leave + HR dashboard) |
 | driver1@gmail.com | driver | driver deck (one of two seeded live runs) |
 | driver2@gmail.com | driver | driver deck (the other seeded live run) |
 
