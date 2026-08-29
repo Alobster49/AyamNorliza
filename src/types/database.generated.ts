@@ -2301,10 +2301,19 @@ export type Database = {
         Args: { p_organization_id: string }
         Returns: Json
       }
+      approve_leave_credit: {
+        Args: { p_note?: string; p_request: string }
+        Returns: undefined
+      }
+      approve_leave_request: {
+        Args: { p_note?: string; p_request: string }
+        Returns: undefined
+      }
       can_record_stop: {
         Args: { p_org: string; p_run: string }
         Returns: boolean
       }
+      cancel_leave_request: { Args: { p_request: string }; Returns: undefined }
       cancel_order: {
         Args: { p_order: string; p_reason: string }
         Returns: undefined
@@ -2312,6 +2321,10 @@ export type Database = {
       claim_weigh_task: {
         Args: { p_claim: boolean; p_task: string }
         Returns: undefined
+      }
+      close_leave_year: {
+        Args: { p_org: string; p_year: number }
+        Returns: number
       }
       close_order: { Args: { p_lines: Json; p_order: string }; Returns: number }
       complete_order_task: {
@@ -2430,6 +2443,20 @@ export type Database = {
       is_active_org_member: { Args: { target_org: string }; Returns: boolean }
       is_break_glass_active: { Args: { target_org: string }; Returns: boolean }
       is_org_driver: { Args: { target_org: string }; Returns: boolean }
+      leave_available: {
+        Args: {
+          p_as_of: string
+          p_exclude?: string
+          p_org: string
+          p_type: string
+          p_user: string
+          p_year: number
+        }
+        Returns: {
+          available: number
+          cf_remaining: number
+        }[]
+      }
       link_or_create_customer_for_buyer: {
         Args: { p_buyer_id: string }
         Returns: undefined
@@ -2473,6 +2500,14 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      reject_leave_credit: {
+        Args: { p_note?: string; p_request: string }
+        Returns: undefined
+      }
+      reject_leave_request: {
+        Args: { p_note?: string; p_request: string }
+        Returns: undefined
       }
       reopen_order: {
         Args: { p_order: string; p_reason: string }
