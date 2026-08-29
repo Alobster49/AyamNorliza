@@ -260,7 +260,8 @@
 
 * {
   box-sizing: border-box;
-  border-color: var(--border);
+  /* border-color lives in @layer base below — an un-layered rule here would
+     beat every Tailwind border-color utility (unlayered > @layer). */
 }
 
 html,
