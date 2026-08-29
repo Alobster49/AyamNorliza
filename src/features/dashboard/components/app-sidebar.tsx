@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
@@ -19,6 +20,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { UserAvatar } from "@/features/profile/components/user-avatar";
+import { EditProfileDialog } from "@/features/profile/components/edit-profile-dialog";
 import {
   Collapsible,
   CollapsibleContent,
@@ -211,6 +213,7 @@ function NavUser({
 }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const tSettings = useTranslations("settings.organization");
@@ -279,7 +282,9 @@ function NavUser({
                   {tSettings("title")}
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem
+                onSelect={() => setEditProfileOpen(true)}
+              >
                 <UserRound />
                 {t("sidebar.operatorProfile")}
               </DropdownMenuItem>
@@ -296,6 +301,13 @@ function NavUser({
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
+        <EditProfileDialog
+          open={editProfileOpen}
+          onOpenChange={setEditProfileOpen}
+          avatar={userAvatar}
+          userId={userId}
+          userName={userName}
+        />
       </SidebarMenuItem>
     </SidebarMenu>
   );

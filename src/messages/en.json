@@ -2717,5 +2717,21 @@
       "attachment_required": "This leave type requires a supporting attachment.",
       "uploadFailed": "Attachment upload failed"
     }
+  },
+  "profile": {
+    "edit": {
+      "title": "Edit profile",
+      "description": "Choose an avatar or upload your own photo.",
+      "nameLabel": "Display name",
+      "avatarLabel": "Avatar",
+      "upload": "Upload photo",
+      "invalidType": "Only JPEG, PNG or WebP images are allowed",
+      "tooLarge": "Image must be 2 MB or smaller",
+      "save": "Save",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "saved": "Profile updated",
+      "saveFailed": "Could not save profile. Please try again."
+    }
   }
 }

@@ -2717,5 +2717,21 @@
       "attachment_required": "Jenis cuti ini memerlukan lampiran sokongan.",
       "uploadFailed": "Muat naik lampiran gagal"
     }
+  },
+  "profile": {
+    "edit": {
+      "title": "Sunting profil",
+      "description": "Pilih avatar atau muat naik foto anda sendiri.",
+      "nameLabel": "Nama paparan",
+      "avatarLabel": "Avatar",
+      "upload": "Muat naik foto",
+      "invalidType": "Hanya imej JPEG, PNG atau WebP dibenarkan",
+      "tooLarge": "Imej mesti 2 MB atau lebih kecil",
+      "save": "Simpan",
+      "saving": "Menyimpan…",
+      "cancel": "Batal",
+      "saved": "Profil dikemas kini",
+      "saveFailed": "Profil tidak dapat disimpan. Sila cuba lagi."
+    }
   }
 }
