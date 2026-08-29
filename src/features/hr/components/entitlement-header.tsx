@@ -103,25 +103,85 @@ function Chip({ label, value }: { label: string; value: number }) {
   );
 }
 
-function EquationStat({ label, value, sub }: { label: string; value: number; sub?: string[] }) {
+type EquationTermData = {
+  label: string;
+  value: number;
+  /** operator shown before this term; null for the first term */
+  op: "+" | "-" | "=" | null;
+  sub?: string[];
+  emphasized?: boolean;
+};
+
+/** Desktop: value-first columns on one shared baseline, operators on that line. */
+function EquationRow({ terms }: { terms: EquationTermData[] }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      <span className="text-lg font-semibold tabular-nums">{value}</span>
-      {sub?.map((line) => (
-        <span key={line} className="text-xs text-muted-foreground">
-          {line}
-        </span>
+    <div className="hidden items-start gap-x-4 gap-y-2 overflow-x-auto sm:flex">
+      {terms.map((term) => (
+        <div key={term.label} className="flex items-start gap-4">
+          {term.op && (
+            <span aria-hidden className="select-none text-lg leading-8 text-muted-foreground/60">
+              {term.op === "-" ? "−" : term.op}
+            </span>
+          )}
+          <div className="flex flex-col gap-1">
+            <span
+              className={cn(
+                "text-2xl font-semibold leading-8 tabular-nums",
+                term.emphasized && "text-emerald-600 dark:text-emerald-400",
+              )}
+            >
+              {term.value}
+            </span>
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{term.label}</span>
+            {term.sub?.map((line) => (
+              <span key={line} className="text-xs text-muted-foreground/80">
+                {line}
+              </span>
+            ))}
+          </div>
+        </div>
       ))}
     </div>
   );
 }
 
-function Operator({ symbol }: { symbol: string }) {
+/** Mobile: ledger-receipt rows — label left, value right, result separated. */
+function EquationLedger({ terms }: { terms: EquationTermData[] }) {
   return (
-    <span aria-hidden className="hidden text-xl text-muted-foreground sm:block">
-      {symbol}
-    </span>
+    <div className="flex flex-col gap-2.5 sm:hidden">
+      {terms.map((term) => (
+        <div key={term.label} className={cn(term.emphasized && "border-t pt-2.5")}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span
+              className={cn(
+                "text-sm",
+                term.emphasized ? "font-medium" : "text-muted-foreground",
+              )}
+            >
+              {term.op && (
+                <span aria-hidden className="mr-1.5 inline-block w-3 select-none text-muted-foreground/60">
+                  {term.op === "-" ? "−" : term.op}
+                </span>
+              )}
+              {term.label}
+            </span>
+            <span
+              className={cn(
+                "text-sm font-semibold tabular-nums",
+                term.emphasized && "text-base text-emerald-600 dark:text-emerald-400",
+              )}
+            >
+              {term.value}
+            </span>
+          </div>
+          {term.sub?.map((line) => (
+            <p key={line} className="pl-[18px] text-xs text-muted-foreground/80">
+              {line}
+            </p>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -175,42 +235,44 @@ export function EntitlementHeader({ annualType, balance, asOf, onAsOfChange }: E
                 <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", detailsOpen && "rotate-180")} />
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="mt-3 flex flex-col items-stretch gap-3 rounded-lg border bg-muted/30 p-3 sm:flex-row sm:flex-wrap sm:items-center">
-                  <EquationStat
-                    label={t("carryForward")}
-                    value={balance.carryForward}
-                    sub={
-                      balance.carryForwardExpiresOn
+                {(() => {
+                  const terms: EquationTermData[] = [
+                    {
+                      label: t("carryForward"),
+                      value: balance.carryForward,
+                      op: null,
+                      sub: balance.carryForwardExpiresOn
                         ? [t("carryForwardExpires", { date: formatDisplayDate(balance.carryForwardExpiresOn) })]
-                        : undefined
-                    }
-                  />
-                  <Operator symbol="+" />
-                  <EquationStat label={t("accrued")} value={balance.accrued} />
-                  {balance.credits > 0 && (
-                    <>
-                      <Operator symbol="+" />
-                      <EquationStat label={t("credits")} value={balance.credits} />
-                    </>
-                  )}
-                  <Operator symbol="-" />
-                  <EquationStat
-                    label={t("taken")}
-                    value={takenTotal}
-                    sub={[
-                      t("takenAnnual", { n: balance.takenBase }),
-                      t("takenCarryForward", { n: balance.takenCarryForward }),
-                    ]}
-                  />
-                  {balance.pendingHeld > 0 && (
-                    <>
-                      <Operator symbol="-" />
-                      <EquationStat label={t("pendingHeld")} value={balance.pendingHeld} />
-                    </>
-                  )}
-                  <Operator symbol="=" />
-                  <EquationStat label={t("currentBalance")} value={balance.available} />
-                </div>
+                        : undefined,
+                    },
+                    { label: t("accrued"), value: balance.accrued, op: "+" },
+                    ...(balance.credits > 0
+                      ? [{ label: t("credits"), value: balance.credits, op: "+" as const }]
+                      : []),
+                    {
+                      label: t("taken"),
+                      value: takenTotal,
+                      op: "-",
+                      sub:
+                        takenTotal > 0
+                          ? [
+                              t("takenAnnual", { n: balance.takenBase }),
+                              t("takenCarryForward", { n: balance.takenCarryForward }),
+                            ]
+                          : undefined,
+                    },
+                    ...(balance.pendingHeld > 0
+                      ? [{ label: t("pendingHeld"), value: balance.pendingHeld, op: "-" as const }]
+                      : []),
+                    { label: t("currentBalance"), value: balance.available, op: "=", emphasized: true },
+                  ];
+                  return (
+                    <div className="mt-3 rounded-xl border bg-muted/20 p-4">
+                      <EquationRow terms={terms} />
+                      <EquationLedger terms={terms} />
+                    </div>
+                  );
+                })()}
               </CollapsibleContent>
             </Collapsible>
           </div>
