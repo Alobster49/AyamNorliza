@@ -50,7 +50,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("user_id, display_name, locale, time_zone, contact_preferences, status")
+    .select("user_id, display_name, locale, time_zone, contact_preferences, status, avatar")
     .eq("user_id", userId)
     .maybeSingle();
   if (error) throw error;
@@ -62,6 +62,7 @@ export async function getProfile(userId: string): Promise<Profile | null> {
         timeZone: data.time_zone,
         contactPreferences: (data.contact_preferences ?? {}) as Record<string, unknown>,
         status: data.status,
+        avatar: data.avatar ?? null,
       }
     : null;
 }

@@ -6,7 +6,6 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
   BadgeCheck,
-  Building2,
   ChevronRight,
   ChevronsUpDown,
   Database,
@@ -19,10 +18,7 @@ import {
   Warehouse,
   type LucideIcon,
 } from "lucide-react";
-import {
-  Avatar,
-  AvatarFallback,
-} from "@/components/ui/avatar";
+import { UserAvatar } from "@/features/profile/components/user-avatar";
 import {
   Collapsible,
   CollapsibleContent,
@@ -62,6 +58,8 @@ type AppSidebarProps = {
   organizationRegion: string | null;
   userName: string;
   userEmail: string;
+  userId: string;
+  userAvatar: string | null;
   role?: string;
 };
 
@@ -79,6 +77,8 @@ export function AppSidebar({
   organizationRegion,
   userName,
   userEmail,
+  userId,
+  userAvatar,
   role,
 }: AppSidebarProps) {
   const t = useTranslations("dashboard");
@@ -90,7 +90,6 @@ export function AppSidebar({
       <SidebarHeader>
         <OrganizationSwitcher
           organizationName={organizationName}
-          organizationSlug={organizationSlug}
           organizationRegion={organizationRegion}
         />
       </SidebarHeader>
@@ -151,6 +150,8 @@ export function AppSidebar({
           organizationSlug={organizationSlug}
           userEmail={userEmail}
           userName={userName}
+          userId={userId}
+          userAvatar={userAvatar}
         />
       </SidebarFooter>
     </Sidebar>
@@ -159,60 +160,37 @@ export function AppSidebar({
 
 function OrganizationSwitcher({
   organizationName,
-  organizationSlug,
   organizationRegion,
 }: {
   organizationName: string;
-  organizationSlug: string;
   organizationRegion: string | null;
 }) {
-  const { isMobile } = useSidebar();
   const t = useTranslations("dashboard");
-  const tSettings = useTranslations("settings.organization");
 
   return (
     <SidebarMenu>
       <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              tooltip={organizationName}
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-white">
-                <Image
-                  src="/logo-nb-poultry.webp"
-                  alt="NB Poultry Processing Industries"
-                  width={32}
-                  height={32}
-                  className="size-full rounded-lg object-contain"
-                />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{organizationName}</span>
-                <span className="truncate text-xs text-sidebar-foreground/70">
-                  {organizationRegion ?? t("sidebar.regionFallback")}
-                </span>
-              </div>
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            side={isMobile ? "bottom" : "right"}
-            sideOffset={4}
-            className="min-w-56 rounded-lg"
-          >
-            <DropdownMenuLabel>{t("pages.organization")}</DropdownMenuLabel>
-            <DropdownMenuItem asChild>
-              <Link href={`/${organizationSlug}/settings/organization`}>
-                <Building2 />
-                {tSettings("title")}
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <SidebarMenuButton
+          size="lg"
+          tooltip={organizationName}
+          className="pointer-events-none"
+        >
+          <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-white">
+            <Image
+              src="/logo-nb-poultry.webp"
+              alt="NB Poultry Processing Industries"
+              width={32}
+              height={32}
+              className="size-full rounded-lg object-contain"
+            />
+          </div>
+          <div className="grid flex-1 text-left text-sm leading-tight">
+            <span className="truncate font-medium">{organizationName}</span>
+            <span className="truncate text-xs text-sidebar-foreground/70">
+              {organizationRegion ?? t("sidebar.regionFallback")}
+            </span>
+          </div>
+        </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
   );
@@ -222,14 +200,17 @@ function NavUser({
   organizationSlug,
   userEmail,
   userName,
+  userId,
+  userAvatar,
 }: {
   organizationSlug: string;
   userEmail: string;
   userName: string;
+  userId: string;
+  userAvatar: string | null;
 }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
-  const initials = getUserInitials(userName, userEmail);
   const t = useTranslations("dashboard");
   const tCommon = useTranslations("common");
   const tSettings = useTranslations("settings.organization");
@@ -249,9 +230,13 @@ function NavUser({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                avatar={userAvatar}
+                userId={userId}
+                userName={userName}
+                userEmail={userEmail}
+                className="h-8 w-8 rounded-lg"
+              />
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{userName}</span>
                 <span className="truncate text-xs">{userEmail}</span>
@@ -267,9 +252,13 @@ function NavUser({
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-                </Avatar>
+                <UserAvatar
+                  avatar={userAvatar}
+                  userId={userId}
+                  userName={userName}
+                  userEmail={userEmail}
+                  className="h-8 w-8 rounded-lg"
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{userName}</span>
                   <span className="truncate text-xs">{userEmail}</span>

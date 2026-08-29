@@ -15,7 +15,7 @@ function hash(input: string): number {
 }
 
 function seededPreset(userId: string): ResolvedAvatar {
-  const id = AVATAR_PRESET_IDS[hash(userId) % AVATAR_PRESET_IDS.length];
+  const id = AVATAR_PRESET_IDS[hash(userId) % AVATAR_PRESET_IDS.length] ?? "face-01";
   return { kind: "preset", url: presetUrl(id) };
 }
 

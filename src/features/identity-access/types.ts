@@ -25,6 +25,7 @@ export type Profile = {
   timeZone: string;
   contactPreferences: Record<string, unknown>;
   status: "active" | "inactive";
+  avatar: string | null;
 };
 
 export type OrganizationMember = {

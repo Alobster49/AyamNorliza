@@ -63,6 +63,8 @@ export default async function SellerLayout({
           organizationRegion={org.region}
           userEmail={userEmail}
           userName={userName}
+          userId={user.id}
+          userAvatar={profile?.avatar ?? null}
           role={member.role}
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
