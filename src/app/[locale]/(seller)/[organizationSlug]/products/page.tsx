@@ -1,3 +1,7 @@
+import { redirect } from "@/i18n/navigation";
+import { getLocale } from "next-intl/server";
+import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
+import { STAFF_ROLES } from "@/features/orders/lib/roles";
 import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
 import { getCategories, getProducts } from "@/features/seller/server/actions";
 import { notFound } from "next/navigation";
@@ -9,6 +13,18 @@ export default async function ProductsPage({
   params: Promise<{ organizationSlug: string }>;
 }) {
   const { organizationSlug } = await params;
+
+  // Layout admits all organization members; this page gates itself on STAFF_ROLES
+  let ctx;
+  try {
+    ctx = await requireOrgRole(organizationSlug, STAFF_ROLES);
+  } catch (error) {
+    if (error instanceof OrderPermissionError) {
+      redirect({ href: `/${organizationSlug}`, locale: await getLocale() });
+    }
+    throw error;
+  }
+
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
 
