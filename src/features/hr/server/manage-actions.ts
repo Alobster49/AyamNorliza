@@ -481,8 +481,14 @@ export async function deleteHoliday(organizationSlug: string, id: string): Promi
   const { orgId } = guard;
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("public_holidays").delete().eq("id", id).eq("organization_id", orgId);
+  const { data, error } = await supabase
+    .from("public_holidays")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", orgId)
+    .select("id");
   if (error) return err("internal", "Failed to delete the holiday.", "hr.errors.internal");
+  if ((data ?? []).length === 0) return err("not_found", "That holiday was not found.", "hr.errors.not_found");
 
   revalidatePath(`/${organizationSlug}/leave`);
   revalidatePath(`/${organizationSlug}/leave/manage`);
@@ -515,7 +521,7 @@ export async function updateLeaveType(
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("leave_types")
     .update({
       entitlement_days: input.entitlementDays,
@@ -523,8 +529,10 @@ export async function updateLeaveType(
       requires_attachment: input.requiresAttachment,
     })
     .eq("id", id)
-    .eq("organization_id", orgId);
+    .eq("organization_id", orgId)
+    .select("id");
   if (error) return err("internal", "Failed to update the leave type.", "hr.errors.internal");
+  if ((data ?? []).length === 0) return err("not_found", "That leave type was not found.", "hr.errors.not_found");
 
   revalidatePath(`/${organizationSlug}/leave`);
   revalidatePath(`/${organizationSlug}/leave/manage`);

@@ -502,7 +502,7 @@ export async function requestLeaveCredit(
 
   if (!input.leaveTypeId) return err("validation", "Choose a leave type.", "hr.errors.validation");
   if (!Number.isFinite(input.amount) || input.amount <= 0) {
-    return err("validation", "Amount must be greater than zero.", "hr.errors.invalid_amount");
+    return err("validation", "Amount must be greater than zero.", "hr.errors.validation");
   }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.referenceStart) || !/^\d{4}-\d{2}-\d{2}$/.test(input.referenceEnd)) {
     return err("validation", "Pick valid dates.", "hr.errors.validation");
