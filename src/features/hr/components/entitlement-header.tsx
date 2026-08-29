@@ -185,6 +185,38 @@ function EquationLedger({ terms }: { terms: EquationTermData[] }) {
   );
 }
 
+function buildEquationTerms(
+  balance: BalanceSummary,
+  takenTotal: number,
+  t: ReturnType<typeof useTranslations>,
+): EquationTermData[] {
+  return [
+    {
+      label: t("carryForward"),
+      value: balance.carryForward,
+      op: null,
+      sub: balance.carryForwardExpiresOn
+        ? [t("carryForwardExpires", { date: formatDisplayDate(balance.carryForwardExpiresOn) })]
+        : undefined,
+    },
+    { label: t("accrued"), value: balance.accrued, op: "+" },
+    ...(balance.credits > 0 ? [{ label: t("credits"), value: balance.credits, op: "+" as const }] : []),
+    {
+      label: t("taken"),
+      value: takenTotal,
+      op: "-",
+      sub:
+        takenTotal > 0
+          ? [t("takenAnnual", { n: balance.takenBase }), t("takenCarryForward", { n: balance.takenCarryForward })]
+          : undefined,
+    },
+    ...(balance.pendingHeld > 0
+      ? [{ label: t("pendingHeld"), value: balance.pendingHeld, op: "-" as const }]
+      : []),
+    { label: t("currentBalance"), value: balance.available, op: "=", emphasized: true },
+  ];
+}
+
 export function EntitlementHeader({ annualType, balance, asOf, onAsOfChange }: EntitlementHeaderProps) {
   const t = useTranslations("hr.myLeave");
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -229,52 +261,30 @@ export function EntitlementHeader({ annualType, balance, asOf, onAsOfChange }: E
               </div>
             </div>
 
-            <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen}>
-              <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
-                {t("howCalculated")}
-                <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", detailsOpen && "rotate-180")} />
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                {(() => {
-                  const terms: EquationTermData[] = [
-                    {
-                      label: t("carryForward"),
-                      value: balance.carryForward,
-                      op: null,
-                      sub: balance.carryForwardExpiresOn
-                        ? [t("carryForwardExpires", { date: formatDisplayDate(balance.carryForwardExpiresOn) })]
-                        : undefined,
-                    },
-                    { label: t("accrued"), value: balance.accrued, op: "+" },
-                    ...(balance.credits > 0
-                      ? [{ label: t("credits"), value: balance.credits, op: "+" as const }]
-                      : []),
-                    {
-                      label: t("taken"),
-                      value: takenTotal,
-                      op: "-",
-                      sub:
-                        takenTotal > 0
-                          ? [
-                              t("takenAnnual", { n: balance.takenBase }),
-                              t("takenCarryForward", { n: balance.takenCarryForward }),
-                            ]
-                          : undefined,
-                    },
-                    ...(balance.pendingHeld > 0
-                      ? [{ label: t("pendingHeld"), value: balance.pendingHeld, op: "-" as const }]
-                      : []),
-                    { label: t("currentBalance"), value: balance.available, op: "=", emphasized: true },
-                  ];
-                  return (
-                    <div className="mt-3 rounded-xl border bg-muted/20 p-4">
-                      <EquationRow terms={terms} />
-                      <EquationLedger terms={terms} />
-                    </div>
-                  );
-                })()}
-              </CollapsibleContent>
-            </Collapsible>
+            {(() => {
+              const terms = buildEquationTerms(balance, takenTotal, t);
+              return (
+                <>
+                  {/* Desktop/tablet: room to spare, always shown. */}
+                  <div className="hidden rounded-xl border bg-muted/20 p-4 sm:block">
+                    <EquationRow terms={terms} />
+                  </div>
+
+                  {/* Mobile: folded behind a disclosure to save vertical space. */}
+                  <Collapsible open={detailsOpen} onOpenChange={setDetailsOpen} className="sm:hidden">
+                    <CollapsibleTrigger className="flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">
+                      {t("howCalculated")}
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", detailsOpen && "rotate-180")} />
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <div className="mt-3 rounded-xl border bg-muted/20 p-4">
+                        <EquationLedger terms={terms} />
+                      </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </>
+              );
+            })()}
           </div>
         )}
       </CardContent>
