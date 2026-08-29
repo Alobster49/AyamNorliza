@@ -123,6 +123,11 @@ describe("dashboard shell model", () => {
         href: "/ayam-norliza-pilot/tasks",
         isActive: true,
       },
+      {
+        titleKey: "pages.myLeave",
+        href: "/ayam-norliza-pilot/leave",
+        isActive: false,
+      },
     ]);
   });
 
@@ -153,6 +158,11 @@ describe("dashboard shell model", () => {
         href: "/ayam-norliza-pilot/loading",
         isActive: false,
       },
+      {
+        titleKey: "pages.myLeave",
+        href: "/ayam-norliza-pilot/leave",
+        isActive: false,
+      },
     ]);
   });
 
@@ -163,7 +173,7 @@ describe("dashboard shell model", () => {
       role: "seller",
     });
 
-    expect(groups).toHaveLength(3);
+    expect(groups).toHaveLength(4);
     const salesTitleKeys = groups[0]?.items.map((item) => item.titleKey);
     expect(salesTitleKeys).toEqual([
       "pages.dashboard",
@@ -178,6 +188,11 @@ describe("dashboard shell model", () => {
       href: "/ayam-norliza-pilot/delivery",
       isActive: true,
     });
+
+    // seller is a manager but not a leave approver: HR group shows only
+    // My Leave, Leave Management is filtered out.
+    const hrGroup = groups.find((group) => group.title === "HR");
+    expect(hrGroup?.items.map((item) => item.titleKey)).toEqual(["pages.myLeave"]);
   });
 
   it("returns the full nav when role is undefined (back-compat)", () => {
@@ -186,13 +201,110 @@ describe("dashboard shell model", () => {
       pathname: "/ayam-norliza-pilot/runs",
     });
 
-    expect(groups).toHaveLength(3);
+    expect(groups).toHaveLength(4);
     const runsItem = groups[1]?.items.find((item) => item.titleKey === "pages.deliveryRuns");
     expect(runsItem).toMatchObject({
       titleKey: "pages.deliveryRuns",
       href: "/ayam-norliza-pilot/runs",
       isActive: true,
     });
+  });
+
+  it("gives the hr role both My Leave and Leave Management", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/leave/manage",
+      role: "hr",
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]).toMatchObject({
+      title: "HR",
+      sectionKey: "sections.hr",
+      isActive: true,
+    });
+    expect(groups[0]?.items).toEqual([
+      {
+        titleKey: "pages.myLeave",
+        href: "/ayam-norliza-pilot/leave",
+        // "/leave/manage" is nested under "/leave", so isRouteActive treats
+        // My Leave as active too (prefix match) — same behavior as any
+        // other nested route in this model.
+        isActive: true,
+      },
+      {
+        titleKey: "pages.leaveManagement",
+        href: "/ayam-norliza-pilot/leave/manage",
+        isActive: true,
+      },
+    ]);
+  });
+
+  it("gives the driver role My Leave only", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/leave",
+      role: "driver",
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.title).toBe("HR");
+    expect(groups[0]?.items).toEqual([
+      {
+        titleKey: "pages.myLeave",
+        href: "/ayam-norliza-pilot/leave",
+        isActive: true,
+      },
+    ]);
+  });
+
+  it("shows the owner the HR group including Leave Management", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/leave/manage",
+      role: "owner",
+    });
+
+    const hrGroup = groups.find((group) => group.title === "HR");
+    expect(hrGroup?.sectionKey).toBe("sections.hr");
+    expect(hrGroup?.items).toEqual([
+      {
+        titleKey: "pages.myLeave",
+        href: "/ayam-norliza-pilot/leave",
+        // "/leave/manage" is nested under "/leave", so isRouteActive treats
+        // My Leave as active too (prefix match) — same behavior as any
+        // other nested route in this model.
+        isActive: true,
+      },
+      {
+        titleKey: "pages.leaveManagement",
+        href: "/ayam-norliza-pilot/leave/manage",
+        isActive: true,
+      },
+    ]);
+  });
+
+  it("keeps warehouse nav and adds My Leave for the inventory role", () => {
+    const groups = getDashboardSidebarGroups({
+      organizationSlug: "ayam-norliza-pilot",
+      pathname: "/ayam-norliza-pilot/leave",
+      role: "inventory",
+    });
+
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.title).toBe("Warehouse");
+    expect(groups[0]?.items).toEqual([
+      {
+        titleKey: "pages.warehouseTasks",
+        href: "/ayam-norliza-pilot/tasks",
+        isActive: false,
+      },
+      {
+        titleKey: "pages.myLeave",
+        href: "/ayam-norliza-pilot/leave",
+        isActive: true,
+      },
+    ]);
   });
 
   it("splits sales and fulfillment into separate groups", () => {

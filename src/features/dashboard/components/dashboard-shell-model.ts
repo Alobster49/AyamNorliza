@@ -56,12 +56,29 @@ const routeGroups = [
       { titleKey: "pages.auditLog", segment: "settings/audit-log" },
     ],
   },
+  {
+    title: "HR",
+    sectionKey: "sections.hr",
+    items: [
+      { titleKey: "pages.myLeave", segment: "leave" },
+      { titleKey: "pages.leaveManagement", segment: "leave/manage" },
+    ],
+  },
 ] as const;
 
 // Roles that only see the warehouse queue — no schedule admin, catalog, or
 // customer data. Kept local (not imported from @/features/orders/lib/roles)
 // so this dashboard-layer file has no dependency on the orders feature.
 const STAFF_ONLY_ROLES = ["inventory", "logistics"] as const;
+
+// Managers get the full nav (Sales/Fulfillment/Access control/HR). Kept
+// local (not imported from @/features/orders/lib/roles), same reasoning as
+// STAFF_ONLY_ROLES above.
+const MANAGER_ROLES = ["owner", "org_admin", "seller"] as const;
+
+// Roles that may open Leave Management, not just My Leave. Kept local (not
+// imported from @/features/hr/lib/roles) for the same reason.
+const APPROVER_ROLES = ["owner", "org_admin", "hr"] as const;
 
 export function getDashboardSidebarGroups({
   organizationSlug,
@@ -91,6 +108,12 @@ export function getDashboardSidebarGroups({
         isActive: isRouteActive(pathname, loadingHref),
       });
     }
+    const leaveHref = `/${organizationSlug}/leave`;
+    items.push({
+      titleKey: "pages.myLeave",
+      href: leaveHref,
+      isActive: isRouteActive(pathname, leaveHref),
+    });
     return [
       {
         title: "Warehouse",
@@ -101,15 +124,51 @@ export function getDashboardSidebarGroups({
     ];
   }
 
+  // Roles that are neither managers nor warehouse-only (e.g. driver, hr,
+  // farm_manager) get just the HR group: My Leave for everyone, Leave
+  // Management only for approvers.
+  if (role && !(MANAGER_ROLES as readonly string[]).includes(role)) {
+    const leaveHref = `/${organizationSlug}/leave`;
+    const items: DashboardRoute[] = [
+      {
+        titleKey: "pages.myLeave",
+        href: leaveHref,
+        isActive: isRouteActive(pathname, leaveHref),
+      },
+    ];
+    if ((APPROVER_ROLES as readonly string[]).includes(role)) {
+      const manageHref = `/${organizationSlug}/leave/manage`;
+      items.push({
+        titleKey: "pages.leaveManagement",
+        href: manageHref,
+        isActive: isRouteActive(pathname, manageHref),
+      });
+    }
+    return [
+      {
+        title: "HR",
+        sectionKey: "sections.hr",
+        isActive: items.some((item) => item.isActive),
+        items,
+      },
+    ];
+  }
+
   const groups: DashboardRouteGroup[] = routeGroups.map((group) => {
-    const items = group.items.map((item) => {
-      const href = `/${organizationSlug}/${item.segment}`;
-      return {
-        titleKey: item.titleKey,
-        href,
-        isActive: isRouteActive(pathname, href),
-      };
-    });
+    const items = group.items
+      .filter(
+        (item) =>
+          item.segment !== "leave/manage" ||
+          (!!role && (APPROVER_ROLES as readonly string[]).includes(role)),
+      )
+      .map((item) => {
+        const href = `/${organizationSlug}/${item.segment}`;
+        return {
+          titleKey: item.titleKey,
+          href,
+          isActive: isRouteActive(pathname, href),
+        };
+      });
 
     return {
       title: group.title,

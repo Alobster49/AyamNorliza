@@ -605,7 +605,8 @@
       "accessControl": "Kawalan akses",
       "warehouse": "Gudang",
       "system": "Sistem",
-      "account": "Akaun"
+      "account": "Akaun",
+      "hr": "HR"
     },
     "pages": {
       "dashboard": "Papan pemuka",
@@ -618,6 +619,8 @@
       "loading": "Muatan",
       "deliveryRuns": "Trip penghantaran",
       "warehouseTasks": "Tugasan gudang",
+      "myLeave": "Cuti Saya",
+      "leaveManagement": "Pengurusan Cuti",
       "organization": "Organisasi",
       "users": "Pengguna",
       "roles": "Peranan",

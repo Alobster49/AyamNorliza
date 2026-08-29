@@ -605,7 +605,8 @@
       "accessControl": "Access control",
       "warehouse": "Warehouse",
       "system": "System",
-      "account": "Account"
+      "account": "Account",
+      "hr": "HR"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -618,6 +619,8 @@
       "loading": "Loading",
       "deliveryRuns": "Delivery runs",
       "warehouseTasks": "Warehouse tasks",
+      "myLeave": "My Leave",
+      "leaveManagement": "Leave Management",
       "organization": "Organization",
       "users": "Users",
       "roles": "Roles",
