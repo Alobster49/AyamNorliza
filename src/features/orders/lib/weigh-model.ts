@@ -547,6 +547,9 @@ export function weighReducer(state: WeighState, action: WeighAction): WeighState
       const itemIds = state.queue
         .filter((line) => line.taskId === action.taskId)
         .map((line) => line.itemId);
+      // Task is no longer in the queue (e.g. we already completed it before
+      // this stale rejection arrived) — nothing to reset, cursor stays put.
+      if (itemIds.length === 0) return state;
       const drafts = { ...state.drafts };
       for (const id of itemIds) drafts[id] = { ...EMPTY_DRAFT };
       const claims = { ...state.claims };

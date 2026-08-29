@@ -119,6 +119,21 @@ describe("getTodayTasks", () => {
     });
   });
 
+  it("orders the query deterministically by created_at then id, so claim UPDATEs can't reshuffle the queue", async () => {
+    const supabase = mockSupabaseFor({
+      role: "logistics",
+      tableResults: { order_tasks: { data: [], error: null } },
+    });
+
+    await getTodayTasks("ayam-norliza-pilot");
+
+    const callIndex = supabase.from.mock.calls.findIndex(([table]) => table === "order_tasks");
+    expect(callIndex).toBeGreaterThanOrEqual(0);
+    const builder = supabase.from.mock.results[callIndex]!.value as { order: ReturnType<typeof vi.fn> };
+    expect(builder.order).toHaveBeenNthCalledWith(1, "created_at", { ascending: true });
+    expect(builder.order).toHaveBeenNthCalledWith(2, "id", { ascending: true });
+  });
+
   it("resolves display names for whoever is claiming a weigh task", async () => {
     const CLAIMER_ID = "88888888-8888-8888-8888-888888888888";
     mockSupabaseFor({

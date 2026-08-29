@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   isLineReady,
+  isTaskBlocked,
   type LineDraft,
   type WeighAction,
   type WeighState,
@@ -70,6 +71,15 @@ export function WeighStation({ state, dispatch, people, nowMs, onRelease, classN
                     confirmed={state.confirmed}
                     currentItemId={line.itemId}
                   />
+                  {isTaskBlocked(state, line.taskId, nowMs) && (
+                    <div className="mx-auto w-fit rounded-full bg-amber-500/15 px-3 py-1 text-xs font-medium text-amber-600 dark:text-amber-500">
+                      {(() => {
+                        const by = state.claims[line.taskId]?.by;
+                        const name = by ? people[by] : undefined;
+                        return name ? tQueue("claimedBy", { name }) : tQueue("claimedByFallback");
+                      })()}
+                    </div>
+                  )}
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <h1 className="truncate text-2xl font-semibold">{line.customerName}</h1>

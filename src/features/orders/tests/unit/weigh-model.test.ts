@@ -720,6 +720,28 @@ describe("claims", () => {
     expect(state.drafts[state.queue[1]!.itemId]).toEqual({ weightKg: "", pieces: "" });
   });
 
+  it("CLAIM_REJECTED for a task already completed locally is a no-op (stale rejection after our own COMPLETE_SUCCESS)", () => {
+    // Task X completes (OPTIMISTIC_COMPLETE + COMPLETE_SUCCESS) before a
+    // late-resolving claim RPC for the same task rejects it — the reducer
+    // must not move the cursor or touch drafts for a task no longer queued.
+    const t1 = makeClaimTask();
+    const t2 = makeClaimTask();
+    let state = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    state = fillLine(state, 1, "9"); // draft on the surviving task, to prove it's untouched
+    const taskId = t1.id;
+    state = weighReducer(state, { type: "OPTIMISTIC_COMPLETE", taskId });
+    state = weighReducer(state, { type: "COMPLETE_SUCCESS", taskId });
+    expect(state.queue.some((line) => line.taskId === taskId)).toBe(false);
+    const cursorBefore = state.cursor;
+    const draftsBefore = state.drafts;
+    const confirmedBefore = state.confirmed;
+    const next = weighReducer(state, { type: "CLAIM_REJECTED", taskId, nowMs: NOW });
+    expect(next.cursor).toBe(cursorBefore);
+    expect(next.drafts).toBe(draftsBefore);
+    expect(next.confirmed).toBe(confirmedBefore);
+    expect(next).toBe(state); // fully untouched
+  });
+
   it("falls back to index 0 when every remaining task is blocked, via createWeighState and SYNC_TASKS", () => {
     const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
     const t2 = makeClaimTask({ weigh_claimed_by: "worker-b", weigh_claimed_at: ACTIVE_AT });
@@ -769,6 +791,26 @@ describe("SYNC_TASKS", () => {
     // expect no t1 lines, cursor on t2's first line
     expect(state.queue.some((line) => line.taskId === t1.id)).toBe(false);
     expect(state.queue[state.cursor]!.taskId).toBe(t2.id);
+  });
+
+  it("tracks the same itemId under the cursor when the server returns tasks in a different order", () => {
+    // Deterministic ordering (fix for the BLOCKER: getTodayTasks now orders
+    // by created_at, id) means the server shouldn't actually reshuffle rows,
+    // but SYNC_TASKS itself must still be robust to a permuted list — e.g. a
+    // claim UPDATE racing ahead of the ordered SELECT on an older PG version.
+    const t1 = makeClaimTask();
+    const t2 = makeClaimTask();
+    const t3 = makeClaimTask();
+    let state = createWeighState([t1, t2, t3], { viewerId: "me", nowMs: NOW });
+    state = weighReducer(state, { type: "GO_TO", index: 1 }); // cursor on t2's line
+    state = confirmLine(state, 1, "7");
+    const currentItemId = state.queue[state.cursor]!.itemId;
+
+    const permuted = weighReducer(state, { type: "SYNC_TASKS", tasks: [t3, t1, t2], nowMs: NOW });
+
+    expect(permuted.queue[permuted.cursor]!.itemId).toBe(currentItemId);
+    expect(permuted.drafts[currentItemId]!.weightKg).toBe("7");
+    expect(permuted.confirmed[currentItemId]).toBe(true);
   });
 
   it("does not resurrect tasks in pendingRemovals", () => {

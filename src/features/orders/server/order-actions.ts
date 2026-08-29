@@ -406,7 +406,9 @@ export async function getTodayTasks(
     .eq("organization_id", orgId)
     .eq("status", "pending")
     .eq("order.status", "confirmed")
-    .lte("order.delivery_date", horizon);
+    .lte("order.delivery_date", horizon)
+    .order("created_at", { ascending: true })
+    .order("id", { ascending: true });
 
   if (error) {
     return err("internal", "Failed to load today's tasks");

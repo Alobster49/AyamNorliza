@@ -16,6 +16,7 @@ import { WeighStation } from "@/features/orders/components/weigh-station";
 import { SwipeDeck } from "@/features/orders/components/swipe-deck";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { isClaimActive } from "@/lib/claims";
 
 type TasksClientProps = {
   organizationSlug: string;
@@ -69,11 +70,14 @@ export function TasksClient({
   }, []);
 
   // ---- refetch (shared by realtime, claim failures, releases) ----
-  const inFlightRef = useRef(0);
+  // Sequence guard: two overlapping refetches can resolve out of order, and
+  // an older SYNC_TASKS must not clobber state a newer one already wrote.
+  const refetchSeqRef = useRef(0);
   const refetch = useCallback(async () => {
-    inFlightRef.current += 1;
+    const seq = ++refetchSeqRef.current;
     try {
       const result = await getTodayTasks(organizationSlug);
+      if (seq !== refetchSeqRef.current) return;
       if (result.ok) {
         dispatch({ type: "SYNC_TASKS", tasks: result.data.tasks, nowMs: Date.now() });
         setPeople(result.data.people);
@@ -81,8 +85,6 @@ export function TasksClient({
     } catch {
       // Network hiccup: swallow — the next realtime event or 60s claim-tick
       // retries, and the queue self-heals without surfacing an error.
-    } finally {
-      inFlightRef.current -= 1;
     }
   }, [organizationSlug]);
 
@@ -103,9 +105,15 @@ export function TasksClient({
     if (!line) return;
     const taskId = line.taskId;
     const claim = snapshot.claims[taskId];
-    if (claim?.by === viewerId) return; // already mine (local or synced)
+    // Already mine and still active: nothing to do. An expired own claim
+    // falls through so the RPC re-claims it and refreshes the timestamp.
+    if (claim?.by === viewerId && isClaimActive(claim.at, Date.now())) return;
     // Known-blocked (chip visible): don't fire a doomed RPC per keystroke.
     if (isTaskBlocked(snapshot, taskId, Date.now())) return;
+    // Not an active own claim (unclaimed, someone else's stale claim, or our
+    // own claim expired) — clear any stale attempt marker so a re-claim can
+    // fire instead of being blocked by a marker from the earlier attempt.
+    claimAttemptsRef.current.delete(taskId);
     if (claimAttemptsRef.current.has(taskId)) return;
     claimAttemptsRef.current.add(taskId);
     dispatch({ type: "CLAIM_LOCAL", taskId, by: viewerId, at: new Date().toISOString() });
@@ -114,9 +122,17 @@ export function TasksClient({
         if (result.ok) return;
         // Always allow a later retry — the block may expire or be released.
         claimAttemptsRef.current.delete(taskId);
-        if (result.code === "conflict") {
-          dispatch({ type: "CLAIM_REJECTED", taskId, nowMs: Date.now() });
-          toast({ title: t("claimLostTitle"), description: result.message, variant: "destructive" });
+        // "conflict" also covers task_done: a claim RPC that resolves after
+        // we already completed this task ourselves must not show a bogus
+        // "Order taken" toast or move the cursor. Only claimedByOther means
+        // someone else actually holds it.
+        if (result.messageKey === "errors.orders.tasks.claimedByOther") {
+          // The task may already be gone from the queue (e.g. completed
+          // while this RPC was in flight) — nothing to reject in that case.
+          if (stateRef.current.queue.some((line) => line.taskId === taskId)) {
+            dispatch({ type: "CLAIM_REJECTED", taskId, nowMs: Date.now() });
+            toast({ title: t("claimLostTitle"), description: result.message, variant: "destructive" });
+          }
         } else {
           dispatch({ type: "CLAIM_CLEARED", taskId });
         }
@@ -155,8 +171,8 @@ export function TasksClient({
         })
         .catch(() => {
           // Request never reached the server: the optimistic clear already
-          // happened locally, and claims resync via the next refetch tick
-          // or realtime event, so there's nothing to roll back here.
+          // happened locally, and claims resync on the next realtime event
+          // or interaction, so there's nothing to roll back here.
           toast({ title: t("saveFailedTitle"), variant: "destructive" });
         });
     },
