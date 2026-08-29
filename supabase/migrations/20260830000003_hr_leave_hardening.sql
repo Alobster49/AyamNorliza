@@ -45,6 +45,9 @@ as $$
 $$;
 revoke all on function public.leave_workday_count(uuid, date, date) from public;
 grant execute on function public.leave_workday_count(uuid, date, date) to authenticated;
+-- The insert trigger runs this as the inserting role: service-role inserts
+-- (admin API, seeds) would otherwise fail with "permission denied".
+grant execute on function public.leave_workday_count(uuid, date, date) to service_role;
 
 -- ---------------------------------------------------------------------------
 -- 1b. leave_requests: force year/day_count from the row's own dates/org —
