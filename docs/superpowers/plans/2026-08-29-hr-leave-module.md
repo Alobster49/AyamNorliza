@@ -429,6 +429,12 @@ $$;
 revoke all on function public.leave_available(uuid, uuid, uuid, int, date, uuid) from public;
 grant execute on function public.leave_available(uuid, uuid, uuid, int, date, uuid) to authenticated;
 
+-- One carry-forward grant per member/type/year — close_leave_year's
+-- idempotency check races without this backstop.
+create unique index if not exists leave_ledger_carry_forward_uniq
+  on public.leave_ledger (organization_id, user_id, leave_type_id, year)
+  where kind = 'carry_forward';
+
 create or replace function public.approve_leave_request(p_request uuid, p_note text default null)
 returns void
 language plpgsql volatile security definer
@@ -450,6 +456,13 @@ begin
   if r.status <> 'pending' then
     raise exception using errcode = 'P0001', message = 'invalid_status';
   end if;
+
+  -- Serialize decisions per (org, user, type, year): two approvers acting on
+  -- different requests of the same member would otherwise both read the same
+  -- cf_remaining and double-allocate carry-forward.
+  perform pg_advisory_xact_lock(
+    hashtextextended(r.organization_id::text || ':' || r.user_id::text || ':'
+                     || r.leave_type_id::text || ':' || r.year::text, 0));
 
   select available, cf_remaining into v_avail, v_cf_rem
   from public.leave_available(
@@ -603,10 +616,16 @@ declare
   v_cf_rem numeric;
   v_carry numeric;
   v_count integer := 0;
+  v_inserted integer;
 begin
   if not public.has_org_role(p_org, array['owner','org_admin','hr']) then
     raise exception using errcode = 'P0001', message = 'forbidden';
   end if;
+
+  -- Serialize year-close runs per org/year: the idempotency check below
+  -- (exists ... continue) races against a concurrent close_leave_year call
+  -- without this lock; the unique index is the hard backstop underneath it.
+  perform pg_advisory_xact_lock(hashtextextended(p_org::text || ':' || p_year::text, 0));
 
   for v_type in
     select id, carry_forward_cap from public.leave_types
@@ -625,6 +644,9 @@ begin
       ) then continue; end if;
 
       -- as-of 31 Dec: full accrual, expired CF already excluded.
+      -- Pending requests still hold balance here: clear the approval queue
+      -- before closing the year, or the held days are excluded from
+      -- carry-forward permanently.
       select available into v_avail
       from public.leave_available(
         p_org, v_member.user_id, v_type.id, p_year, make_date(p_year, 12, 31));
@@ -636,8 +658,12 @@ begin
         (organization_id, user_id, leave_type_id, year, kind, days, expires_on, note, created_by)
       values
         (p_org, v_member.user_id, v_type.id, p_year + 1, 'carry_forward', v_carry,
-         make_date(p_year + 1, 10, 31), 'year close ' || p_year, auth.uid());
-      v_count := v_count + 1;
+         make_date(p_year + 1, 10, 31), 'year close ' || p_year, auth.uid())
+      on conflict (organization_id, user_id, leave_type_id, year)
+        where kind = 'carry_forward'
+        do nothing;
+      get diagnostics v_inserted = row_count;
+      if v_inserted > 0 then v_count := v_count + 1; end if;
     end loop;
   end loop;
 
