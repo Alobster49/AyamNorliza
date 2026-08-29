@@ -13,7 +13,7 @@ test("owner changes a member role and sees an audit row", async ({ page }) => {
   // Pick whichever of the two roles the member is not currently in, so the
   // action never short-circuits with "Member already has that role".
   const current = await select.inputValue();
-  await select.selectOption(current === "supervisor" ? "caretaker" : "supervisor");
+  await select.selectOption(current === "supervisor" ? "driver" : "supervisor");
 
   // Role changes are a sensitive action: the server returns `reauth_required`
   // and the island mounts the step-up dialog, which must be completed for the

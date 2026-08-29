@@ -24,17 +24,9 @@ export const ROLES = [
   "org_admin",
   "hr",
   "seller",
-  "driver",
-  "farm_manager",
   "supervisor",
-  "caretaker",
-  "veterinarian",
-  "biosecurity_qa",
-  "maintenance",
+  "driver",
   "inventory",
-  "logistics",
-  "auditor",
-  "support",
 ] as const;
 
 export type Role = (typeof ROLES)[number];
@@ -48,8 +40,6 @@ export const CAPABILITIES = [
   "membership.deactivate",
   "access_review.run",
   "access_review.decide",
-  "support_session.open",
-  "support_session.end",
   "break_glass.open",
   "break_glass.finalize",
   "audit.read",
@@ -65,25 +55,11 @@ export type Capability = (typeof CAPABILITIES)[number];
 
 const matrix: Record<Role, ReadonlySet<Capability>> = {
   owner: new Set<Capability>(CAPABILITIES),
-  org_admin: new Set<Capability>([
-    "organization.manage",
-    "organization.settings.update",
-    "membership.invite",
-    "membership.role.change",
-    "membership.scope.change",
-    "membership.deactivate",
-    "access_review.run",
-    "access_review.decide",
-    "support_session.open",
-    "support_session.end",
-    "audit.read",
-    "audit_log.read",
-    "auth_security.read",
-    "step_up.reauth",
-    "catalog.manage",
-    "orders.manage",
-    "customers.manage",
-  ]),
+  // Admin ("org_admin" is the stored value; the UI label is "Admin") has
+  // full access — every capability, same as owner. The only screen that
+  // separates them is the data console, which is admin-only by page/action
+  // gate, not by capability.
+  org_admin: new Set<Capability>(CAPABILITIES),
   // HR holds none of the MOD-01 capabilities above -- its authority lives in
   // the separate leave domain (LEAVE_APPROVER_ROLES in
   // src/features/hr/lib/roles.ts), which this matrix does not model.
@@ -94,35 +70,21 @@ const matrix: Record<Role, ReadonlySet<Capability>> = {
     "customers.manage",
     "step_up.reauth",
   ]),
+  // Supervisor mirrors seller exactly (same pages, same actions); the SQL
+  // side mirrors this via the supervisor→seller alias in has_org_role.
+  supervisor: new Set<Capability>([
+    "catalog.manage",
+    "orders.manage",
+    "customers.manage",
+    "step_up.reauth",
+  ]),
   // A driver only ever works one run at a time on a phone. Everything they
   // may read is scoped by RLS to the run they are assigned to, so they hold
   // no org-wide capability at all.
   driver: new Set<Capability>([]),
-  farm_manager: new Set<Capability>([
-    "membership.invite",
-    "membership.scope.change",
-    "step_up.reauth",
-  ]),
-  supervisor: new Set<Capability>([
-    "step_up.reauth",
-  ]),
-  caretaker: new Set<Capability>([]),
-  veterinarian: new Set<Capability>([
-    "step_up.reauth",
-  ]),
-  biosecurity_qa: new Set<Capability>([
-    "step_up.reauth",
-  ]),
-  maintenance: new Set<Capability>(["step_up.reauth"]),
+  // Worker ("inventory" is the stored value; the UI label is "Worker"):
+  // warehouse tasks + loading only.
   inventory: new Set<Capability>(["step_up.reauth"]),
-  logistics: new Set<Capability>(["step_up.reauth"]),
-  // `audit.read`/`audit_log.read` are owner/org_admin-only in RLS
-  // (audit_log_select_admin, supabase/migrations/20260624000002_id_access_rls.sql).
-  // A dedicated `auditor` role previously held both, but that granted a
-  // capability the database silently ignored (empty results instead of an
-  // error) — removed so the capability matrix matches enforcement.
-  auditor: new Set<Capability>([]),
-  support: new Set<Capability>([]),
 };
 
 export function can(role: Role, capability: Capability): boolean {
@@ -144,17 +106,9 @@ const roleRank: Record<Role, number> = {
   org_admin: 80,
   hr: 75,
   seller: 60,
-  farm_manager: 60,
-  driver: 30,
-  supervisor: 50,
-  veterinarian: 50,
-  biosecurity_qa: 50,
-  maintenance: 40,
+  supervisor: 60,
   inventory: 40,
-  logistics: 40,
-  caretaker: 30,
-  auditor: 20,
-  support: 10,
+  driver: 30,
 };
 
 /**
@@ -174,7 +128,7 @@ export function canGrantRole(actor: Role, target: Role): boolean {
 export function highestGrantableRole(actor: Role): Role {
   const eligible = (Object.keys(roleRank) as Role[]).filter((r) => canGrantRole(actor, r));
   eligible.sort((a, b) => roleRank[a] - roleRank[b]);
-  return eligible[eligible.length - 1] ?? "support";
+  return eligible[eligible.length - 1] ?? "driver";
 }
 
 /**

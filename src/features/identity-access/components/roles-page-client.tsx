@@ -78,7 +78,6 @@ export const CAPABILITY_AREA_GROUPS: ReadonlyArray<{ id: CapabilityArea }> = [
   { id: "catalog" },
   { id: "sales" },
   { id: "access_review" },
-  { id: "support" },
   { id: "break_glass" },
   { id: "audit" },
 ];

@@ -175,42 +175,6 @@ export const DecideReviewItemInput = z.object({
 export type DecideReviewItemInput = z.infer<typeof DecideReviewItemInput>;
 
 // ---------------------------------------------------------------------------
-// Support sessions
-// ---------------------------------------------------------------------------
-export const OpenSupportSessionInput = z
-  .object({
-    organizationId: uuid,
-    sponsorId: uuid,
-    technicianId: uuid,
-    purpose: z.string().min(5).max(500),
-    permittedScopes: z
-      .array(z.object({ permission: z.string().min(1).max(100), resource: z.string().min(1).max(200) }))
-      .max(20)
-      .default([]),
-    startsAt: isoTimestamp,
-    endsAt: isoTimestamp,
-    recordingReference: z.string().max(200).nullable().optional(),
-  })
-  .refine((v) => new Date(v.endsAt).getTime() > new Date(v.startsAt).getTime(), {
-    message: "endsAt must be after startsAt",
-    path: ["endsAt"],
-  })
-  .refine(
-    (v) =>
-      new Date(v.endsAt).getTime() - new Date(v.startsAt).getTime() <=
-      24 * 60 * 60 * 1000,
-    { message: "support session cannot exceed 24 hours", path: ["endsAt"] },
-  );
-export type OpenSupportSessionInput = z.infer<typeof OpenSupportSessionInput>;
-
-export const EndSupportSessionInput = z.object({
-  sessionId: uuid,
-  reason: reasonSchema.optional(),
-  revokeMembership: z.boolean().default(false),
-});
-export type EndSupportSessionInput = z.infer<typeof EndSupportSessionInput>;
-
-// ---------------------------------------------------------------------------
 // Break-glass
 // ---------------------------------------------------------------------------
 export const OpenBreakGlassInput = z

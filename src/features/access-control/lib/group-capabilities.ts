@@ -47,11 +47,6 @@ export const CAPABILITY_GROUPS: ReadonlyArray<CapabilityGroup> = [
     capabilities: ["access_review.run", "access_review.decide"],
   },
   {
-    id: "support",
-    label: "Support",
-    capabilities: ["support_session.open", "support_session.end"],
-  },
-  {
     id: "break_glass",
     label: "Break-glass",
     capabilities: ["break_glass.open", "break_glass.finalize"],

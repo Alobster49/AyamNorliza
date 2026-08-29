@@ -455,10 +455,6 @@
         "itemNotFound": "Item semakan tidak dijumpai",
         "reviewNotFound": "Semakan tidak dijumpai"
       },
-      "supportSession": {
-        "notFound": "Sesi tidak dijumpai",
-        "alreadyEnded": "Sudah tamat"
-      },
       "breakGlass": {
         "cannotOpen": "Peranan ini tidak boleh membuka break-glass"
       },
@@ -625,7 +621,6 @@
       "users": "Pengguna",
       "roles": "Peranan",
       "accessReviews": "Semakan akses",
-      "supportSessions": "Sesi sokongan",
       "auditLog": "Log audit",
       "dataConsole": "Konsol data",
       "accountSecurity": "Keselamatan saya"
@@ -731,20 +726,12 @@
   },
   "roles": {
     "owner": "Pemilik",
-    "org_admin": "Admin Organisasi",
+    "org_admin": "Admin",
     "hr": "HR",
     "seller": "Penjual",
-    "driver": "Pemandu",
-    "inventory": "Inventori",
-    "logistics": "Logistik",
-    "farm_manager": "Pengurus Ladang",
     "supervisor": "Penyelia",
-    "caretaker": "Penjaga",
-    "veterinarian": "Doktor Veterinar",
-    "biosecurity_qa": "QA Biosekuriti",
-    "maintenance": "Penyelenggaraan",
-    "auditor": "Juruaudit",
-    "support": "Sokongan"
+    "driver": "Pemandu",
+    "inventory": "Pekerja"
   },
   "settings": {
     "organization": {
@@ -770,9 +757,6 @@
     },
     "accessReviews": {
       "title": "Semakan akses"
-    },
-    "supportSessions": {
-      "title": "Sesi sokongan"
     },
     "security": {
       "title": "Keselamatan saya"
@@ -811,30 +795,6 @@
         "modify": "Ubah suai",
         "revoke": "Batalkan",
         "pending": "menunggu"
-      }
-    },
-    "supportSessions": {
-      "openButton": "Buka sesi sokongan",
-      "colPurpose": "Tujuan",
-      "colTechnician": "Juruteknik",
-      "colWindow": "Tempoh",
-      "colStatus": "Status",
-      "colActions": "Tindakan",
-      "window": "{start} → {end}",
-      "end": "Tamatkan",
-      "dialogTitle": "Buka sesi sokongan",
-      "sponsorLabel": "Penaja",
-      "technicianLabel": "ID pengguna juruteknik",
-      "purposeLabel": "Tujuan",
-      "durationLabel": "Tempoh (jam, maksimum 24)",
-      "cancel": "Batal",
-      "opening": "Membuka...",
-      "open": "Buka",
-      "status": {
-        "scheduled": "dijadualkan",
-        "active": "aktif",
-        "ended": "tamat",
-        "revoked": "dibatalkan"
       }
     },
     "userDetail": {
@@ -987,10 +947,6 @@
           "label": "Semakan akses",
           "description": "Pengesahan berkala yang mengesahkan keahlian dan peranan."
         },
-        "support": {
-          "label": "Sesi sokongan",
-          "description": "Akses tinggi bertempoh untuk juruteknik."
-        },
         "break_glass": {
           "label": "Break-glass",
           "description": "Peristiwa pengatasan kecemasan yang direkodkan dalam log audit."
@@ -1033,14 +989,6 @@
           "label": "Putuskan item semakan",
           "description": "Kekalkan, ubah suai, atau batalkan setiap ahli dalam semakan."
         },
-        "supportSessionOpen": {
-          "label": "Buka sesi sokongan",
-          "description": "Beri akses bertempoh kepada juruteknik."
-        },
-        "supportSessionEnd": {
-          "label": "Tamatkan sesi sokongan",
-          "description": "Batalkan sesi aktif dan pilihan keahlian."
-        },
         "breakGlassOpen": {
           "label": "Buka break-glass",
           "description": "Cetuskan pengatasan kecemasan yang diaudit."
@@ -1079,20 +1027,13 @@
         }
       },
       "roleDescription": {
-        "owner": "Kawalan penuh. Menerima setiap keupayaan mengikut struktur dan tidak boleh diedit.",
-        "org_admin": "Mengkonfigurasi organisasi dan menguruskan keahlian.",
-        "seller": "Menguruskan produk, pesanan, dan hubungan pelanggan.",
-        "driver": "Menghantar satu trip pada satu masa. Hanya melihat perhentian pada trip yang ditugaskan.",
-        "farm_manager": "Kepimpinan operasi ke atas tapak dan tugasan.",
-        "supervisor": "Pengawasan barisan hadapan dengan akses baca sahaja kepada sejarah.",
-        "caretaker": "Pekerja langsung. Tiada keistimewaan pentadbiran secara lalai.",
-        "veterinarian": "Pakar kesihatan haiwan, skop mengikut tapak.",
-        "biosecurity_qa": "Semakan pematuhan dan kebolehkesanan.",
-        "maintenance": "Pembaikan dan kitaran peralatan.",
-        "inventory": "Pengurusan stok dan makanan ternakan.",
-        "logistics": "Penghantaran masuk dan keluar.",
-        "auditor": "Akses baca sahaja kepada peristiwa audit dan keselamatan.",
-        "support": "Akses bertempoh diberikan melalui sesi sokongan."
+        "owner": "Kawalan penuh. Menerima setiap keupayaan secara struktur dan tidak boleh diedit.",
+        "org_admin": "Akses penuh kepada semuanya, termasuk konsol data.",
+        "hr": "Mengurus permohonan cuti, kredit, dan tetapan polisi cuti.",
+        "seller": "Mengurus produk, pesanan, pelanggan, harga pasaran, dispatch, dan penghantaran.",
+        "supervisor": "Kebenaran jualan dan penghantaran sama seperti penjual.",
+        "driver": "Menghantar satu run pada satu masa. Hanya nampak hentian run yang ditugaskan.",
+        "inventory": "Tugasan gudang dan pemuatan."
       },
       "grantTitle": "Beri keupayaan",
       "revokeTitle": "Batalkan keupayaan",
@@ -1134,9 +1075,6 @@
         },
         "access_review": {
           "label": "Semakan akses"
-        },
-        "support": {
-          "label": "Sokongan"
         },
         "break_glass": {
           "label": "Break-glass"
@@ -1299,10 +1237,6 @@
     "temporaryAccessExpiring": {
       "subject": "Akses sementara akan luput tidak lama lagi",
       "bodyHtml": "<p>Akses sementara anda kepada <strong>{organizationName}</strong> akan luput pada {expiresAt}.</p><p>Minta pemilik organisasi anda memperbaharuinya jika anda masih memerlukan akses.</p>"
-    },
-    "supportSessionOpened": {
-      "subject": "Sesi sokongan dibuka dalam {organizationName}",
-      "bodyHtml": "<p>Sesi sokongan telah dibuka untuk anda dalam <strong>{organizationName}</strong>.</p><p><strong>Tujuan:</strong> {purpose}</p><p><strong>Tempoh:</strong> {startsAt} → {endsAt}</p>"
     }
   },
   "seller": {

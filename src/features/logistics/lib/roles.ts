@@ -6,4 +6,4 @@
  */
 
 export const FACILITY_ADMIN_ROLES = ["owner", "org_admin"] as const;
-export const DISPATCH_ROLES = ["owner", "org_admin", "seller", "logistics"] as const;
+export const DISPATCH_ROLES = ["owner", "org_admin", "seller", "supervisor"] as const;

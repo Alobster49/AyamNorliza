@@ -7,7 +7,7 @@
  * transaction -> safe field errors -> revalidatePath/Tag).
  *
  * Step-up: sensitive actions (`changeMemberRole`, `changeMemberScope`,
- * `deactivateUser`, `openSupportSession`, `endSupportSession`,
+ * `deactivateUser`,
  * `openBreakGlass`) call `requireReauth()` first. The reauth cookie is
  * issued by `POST /api/auth/reauth`.
  *
@@ -40,11 +40,9 @@ import {
   DeactivateUserInput,
   DecideReviewItemInput,
   EndBreakGlassInput,
-  EndSupportSessionInput,
   FinalizeBreakGlassReviewInput,
   InviteUserInput,
   OpenBreakGlassInput,
-  OpenSupportSessionInput,
   ResendInvitationInput,
   RevokeInvitationInput,
   StartAccessReviewInput,
@@ -1412,162 +1410,6 @@ export async function decideReviewItemAction(
   );
 
   return ok({ itemId: input.itemId });
-}
-
-// ---------------------------------------------------------------------------
-// 12. openSupportSession
-// ---------------------------------------------------------------------------
-export async function openSupportSessionAction(
-  rawInput: unknown,
-): Promise<ActionResult<{ sessionId: string }>> {
-  const reauth = await reauthOrError();
-  if (!reauth.ok) return reauth;
-
-  const parsed = OpenSupportSessionInput.safeParse(rawInput);
-  if (!parsed.success) {
-    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
-  }
-  const input = parsed.data;
-  const supabase = await createSupabaseServerClient();
-  const user = await requireUser();
-  const { data: actor } = await supabase
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", input.organizationId)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!actor || !can(actor.role as Role, "support_session.open")) {
-    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
-  }
-
-  const { data: session, error } = await supabase
-    .from("support_sessions")
-    .insert({
-      organization_id: input.organizationId,
-      sponsor_id: input.sponsorId,
-      technician_id: input.technicianId,
-      purpose: input.purpose,
-      permitted_scopes: input.permittedScopes,
-      starts_at: input.startsAt,
-      ends_at: input.endsAt,
-      recording_reference: input.recordingReference ?? null,
-    })
-    .select("id")
-    .single();
-  if (error) return err("internal", error.message, "errors.identity.common.internal");
-
-  // Ensure the technician has a `support` membership for the window.
-  await supabase.from("organization_members").upsert(
-    {
-      organization_id: input.organizationId,
-      user_id: input.technicianId,
-      role: "support",
-      status: "active",
-      starts_at: input.startsAt,
-      expires_at: input.endsAt,
-      sponsor_id: input.sponsorId,
-    },
-    { onConflict: "organization_id,user_id" },
-  );
-
-  await recordAudit(
-    {
-      organizationId: input.organizationId,
-      actorUserId: user.id,
-      actorRole: actor.role,
-      eventType: "identity.support_session_opened",
-      entityType: "support_sessions",
-      entityId: session.id,
-      after: { purpose: input.purpose, technician: input.technicianId, ends_at: input.endsAt },
-      correlationId: reauth.ctx.correlationId,
-      source: "web",
-    },
-    reauth.ctx,
-  );
-
-  await dispatch({
-    event: "identity.support_session_opened",
-    organizationId: input.organizationId,
-    recipients: [input.technicianId],
-    data: { purpose: input.purpose, ends_at: input.endsAt },
-  });
-
-  revalidatePath(`/[organizationSlug]/settings/support-sessions`, "page");
-  return ok({ sessionId: session.id });
-}
-
-// ---------------------------------------------------------------------------
-// 13. endSupportSession
-// ---------------------------------------------------------------------------
-export async function endSupportSessionAction(
-  rawInput: unknown,
-): Promise<ActionResult<{ sessionId: string }>> {
-  const reauth = await reauthOrError();
-  if (!reauth.ok) return reauth;
-
-  const parsed = EndSupportSessionInput.safeParse(rawInput);
-  if (!parsed.success) {
-    return err("validation", "Invalid input", "errors.identity.common.invalidInput", parsed.error.flatten().fieldErrors);
-  }
-  const input = parsed.data;
-  const supabase = await createSupabaseServerClient();
-  const user = await requireUser();
-
-  const { data: session } = await supabase
-    .from("support_sessions")
-    .select("id, organization_id, technician_id, status")
-    .eq("id", input.sessionId)
-    .maybeSingle();
-  if (!session) return err("not_found", "Session not found", "errors.identity.supportSession.notFound");
-  if (session.status === "ended" || session.status === "revoked") {
-    return err("conflict", "Already ended", "errors.identity.supportSession.alreadyEnded");
-  }
-
-  const { data: actor } = await supabase
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", session.organization_id)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-  if (!actor || !can(actor.role as Role, "support_session.end")) {
-    return err("forbidden", "Insufficient role", "errors.identity.common.forbidden");
-  }
-
-  const { error } = await supabase
-    .from("support_sessions")
-    .update({ status: "ended" })
-    .eq("id", input.sessionId);
-  if (error) return err("internal", error.message, "errors.identity.common.internal");
-
-  if (input.revokeMembership) {
-    await supabase
-      .from("organization_members")
-      .update({ status: "expired" })
-      .eq("user_id", session.technician_id)
-      .eq("role", "support")
-      .eq("organization_id", session.organization_id);
-  }
-
-  await recordAudit(
-    {
-      organizationId: session.organization_id,
-      actorUserId: user.id,
-      actorRole: actor.role,
-      eventType: "identity.support_session_ended",
-      entityType: "support_sessions",
-      entityId: input.sessionId,
-      before: { status: session.status },
-      after: { status: "ended", reason: input.reason ?? null, revoke_membership: input.revokeMembership },
-      correlationId: reauth.ctx.correlationId,
-      source: "web",
-    },
-    reauth.ctx,
-  );
-
-  revalidatePath(`/[organizationSlug]/settings/support-sessions`, "page");
-  return ok({ sessionId: input.sessionId });
 }
 
 // ---------------------------------------------------------------------------

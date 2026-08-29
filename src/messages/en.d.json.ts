@@ -458,10 +458,6 @@ declare const messages: {
         "itemNotFound": "Review item not found",
         "reviewNotFound": "Review not found"
       },
-      "supportSession": {
-        "notFound": "Session not found",
-        "alreadyEnded": "Already ended"
-      },
       "breakGlass": {
         "cannotOpen": "Role cannot open break-glass"
       },
@@ -628,7 +624,6 @@ declare const messages: {
       "users": "Users",
       "roles": "Roles",
       "accessReviews": "Access reviews",
-      "supportSessions": "Support sessions",
       "auditLog": "Audit log",
       "dataConsole": "Data console",
       "accountSecurity": "My security"
@@ -734,20 +729,12 @@ declare const messages: {
   },
   "roles": {
     "owner": "Owner",
-    "org_admin": "Org Admin",
+    "org_admin": "Admin",
     "hr": "HR",
     "seller": "Seller",
-    "driver": "Driver",
-    "inventory": "Inventory",
-    "logistics": "Logistics",
-    "farm_manager": "Farm Manager",
     "supervisor": "Supervisor",
-    "caretaker": "Caretaker",
-    "veterinarian": "Veterinarian",
-    "biosecurity_qa": "Biosecurity QA",
-    "maintenance": "Maintenance",
-    "auditor": "Auditor",
-    "support": "Support"
+    "driver": "Driver",
+    "inventory": "Worker"
   },
   "settings": {
     "organization": {
@@ -773,9 +760,6 @@ declare const messages: {
     },
     "accessReviews": {
       "title": "Access reviews"
-    },
-    "supportSessions": {
-      "title": "Support sessions"
     },
     "security": {
       "title": "My security"
@@ -814,30 +798,6 @@ declare const messages: {
         "modify": "Modify",
         "revoke": "Revoke",
         "pending": "pending"
-      }
-    },
-    "supportSessions": {
-      "openButton": "Open support session",
-      "colPurpose": "Purpose",
-      "colTechnician": "Technician",
-      "colWindow": "Window",
-      "colStatus": "Status",
-      "colActions": "Actions",
-      "window": "{start} → {end}",
-      "end": "End",
-      "dialogTitle": "Open support session",
-      "sponsorLabel": "Sponsor",
-      "technicianLabel": "Technician user id",
-      "purposeLabel": "Purpose",
-      "durationLabel": "Duration (hours, max 24)",
-      "cancel": "Cancel",
-      "opening": "Opening...",
-      "open": "Open",
-      "status": {
-        "scheduled": "scheduled",
-        "active": "active",
-        "ended": "ended",
-        "revoked": "revoked"
       }
     },
     "userDetail": {
@@ -990,10 +950,6 @@ declare const messages: {
           "label": "Access reviews",
           "description": "Periodic attestations that confirm membership and roles."
         },
-        "support": {
-          "label": "Support sessions",
-          "description": "Time-bound elevated access for technicians."
-        },
         "break_glass": {
           "label": "Break-glass",
           "description": "Emergency override events recorded to the audit log."
@@ -1036,14 +992,6 @@ declare const messages: {
           "label": "Decide review items",
           "description": "Keep, modify, or revoke each member in a review."
         },
-        "supportSessionOpen": {
-          "label": "Open support sessions",
-          "description": "Grant time-bound access to a technician."
-        },
-        "supportSessionEnd": {
-          "label": "End support sessions",
-          "description": "Revoke active sessions and optionally the membership."
-        },
         "breakGlassOpen": {
           "label": "Open break-glass",
           "description": "Trigger an audited emergency override."
@@ -1083,19 +1031,12 @@ declare const messages: {
       },
       "roleDescription": {
         "owner": "Full control. Receives every capability by structure and cannot be edited.",
-        "org_admin": "Configures the organization and manages membership.",
-        "seller": "Manages products, orders, and customer relationships.",
+        "org_admin": "Full access to everything, including the data console.",
+        "hr": "Manages leave requests, credits, and leave policy settings.",
+        "seller": "Manages products, orders, customers, market prices, dispatch, and delivery.",
+        "supervisor": "Same sales and delivery permissions as a seller.",
         "driver": "Delivers one run at a time. Sees only the stops on the run they are assigned.",
-        "farm_manager": "Operational leadership over sites and assignments.",
-        "supervisor": "Front-line oversight with read-only access to history.",
-        "caretaker": "Hands-on worker. No administrative privileges by default.",
-        "veterinarian": "Animal-health specialist, scoped per site.",
-        "biosecurity_qa": "Compliance and traceability reviews.",
-        "maintenance": "Repairs and equipment cycles.",
-        "inventory": "Stock and feed management.",
-        "logistics": "Inbound and outbound shipments.",
-        "auditor": "Read-only access to audit and security events.",
-        "support": "Time-bound access granted via support session."
+        "inventory": "Warehouse tasks and loading."
       },
       "grantTitle": "Grant capability",
       "revokeTitle": "Revoke capability",
@@ -1137,9 +1078,6 @@ declare const messages: {
         },
         "access_review": {
           "label": "Access review"
-        },
-        "support": {
-          "label": "Support"
         },
         "break_glass": {
           "label": "Break-glass"
@@ -1302,10 +1240,6 @@ declare const messages: {
     "temporaryAccessExpiring": {
       "subject": "Temporary access expiring soon",
       "bodyHtml": "<p>Your temporary access to <strong>{organizationName}</strong> expires on {expiresAt}.</p><p>Ask your organization owner to renew it if you still need access.</p>"
-    },
-    "supportSessionOpened": {
-      "subject": "Support session opened in {organizationName}",
-      "bodyHtml": "<p>A support session has been opened for you in <strong>{organizationName}</strong>.</p><p><strong>Purpose:</strong> {purpose}</p><p><strong>Window:</strong> {startsAt} → {endsAt}</p>"
     }
   },
   "seller": {

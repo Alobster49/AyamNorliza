@@ -27,8 +27,6 @@ export type NotificationEvent =
   | "identity.organization_settings_changed"
   | "identity.access_review_started"
   | "identity.access_review_decided"
-  | "identity.support_session_opened"
-  | "identity.support_session_ended"
   | "identity.break_glass_review_finalized"
   | "identity.session_revoked";
 

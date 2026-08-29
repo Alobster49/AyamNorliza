@@ -98,8 +98,8 @@ afterEach(() => {
 });
 
 describe("assignOrder", () => {
-  it("allows logistics staff and calls the RPC with source manual", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+  it("allows dispatch-role staff and calls the RPC with source manual", async () => {
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: null });
 
     const result = await assignOrder("ayam-norliza-pilot", {
@@ -168,7 +168,7 @@ describe("unassignOrder", () => {
 describe("autoAssignOrder", () => {
   it("returns assigned:false reason:manual without calling the RPC for a manually-assigned order", async () => {
     const supabase = mockSupabaseFor({
-      role: "logistics",
+      role: "seller",
       tableResults: {
         orders: {
           data: {
@@ -193,7 +193,7 @@ describe("autoAssignOrder", () => {
 
 describe("departTruck", () => {
   it("errors when no run exists for the truck and date", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "not_found" } });
 
     const result = await departTruck("ayam-norliza-pilot", {
@@ -214,7 +214,7 @@ describe("departTruck", () => {
   });
 
   it("departs the run via dispatch_depart_truck", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: null });
 
     const result = await departTruck("ayam-norliza-pilot", {
@@ -230,7 +230,7 @@ describe("departTruck", () => {
   });
 
   it("maps invalid_transition RPC error to a conflict", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "invalid_transition" } });
 
     const result = await departTruck("ayam-norliza-pilot", {
@@ -247,7 +247,7 @@ describe("departTruck", () => {
   });
 
   it("maps not_loaded RPC error to the shared driver-deck loading-gate copy", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "not_loaded" } });
 
     const result = await departTruck("ayam-norliza-pilot", {
@@ -266,7 +266,7 @@ describe("departTruck", () => {
 
 describe("applyPlan", () => {
   it("rejects a malformed payload with a validation error", async () => {
-    mockSupabaseFor({ role: "logistics" });
+    mockSupabaseFor({ role: "seller" });
 
     const result = await applyPlan("ayam-norliza-pilot", { assignments: [] });
 
@@ -275,7 +275,7 @@ describe("applyPlan", () => {
   });
 
   it("applies each assignment via dispatch_assign_order with p_source auto and counts failures per order", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc
       .mockResolvedValueOnce({ data: null, error: null })
       .mockResolvedValueOnce({ data: null, error: { message: "invalid_status" } });
@@ -309,7 +309,7 @@ describe("applyPlan", () => {
 
 describe("setOrderLoaded", () => {
   it("calls dispatch_set_loaded with the parsed flags", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: null });
 
     const result = await setOrderLoaded("ayam-norliza-pilot", {
@@ -325,7 +325,7 @@ describe("setOrderLoaded", () => {
   });
 
   it("maps not_weighed rpc errors to a conflict", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "not_weighed" } });
 
     const result = await setOrderLoaded("ayam-norliza-pilot", {
@@ -342,7 +342,7 @@ describe("setOrderLoaded", () => {
   });
 
   it("maps run_departed rpc errors to a conflict", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "run_departed" } });
 
     const result = await setOrderLoaded("ayam-norliza-pilot", {
@@ -361,7 +361,7 @@ describe("setOrderLoaded", () => {
 
 describe("setOrderLoaded concurrency guards", () => {
   it("maps already_loaded rpc errors to a conflict", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "already_loaded" } });
 
     const result = await setOrderLoaded("ayam-norliza-pilot", {
@@ -378,7 +378,7 @@ describe("setOrderLoaded concurrency guards", () => {
   });
 
   it("maps claimed_by_other rpc errors to a conflict", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "claimed_by_other" } });
 
     const result = await setOrderLoaded("ayam-norliza-pilot", {
@@ -397,7 +397,7 @@ describe("setOrderLoaded concurrency guards", () => {
 
 describe("setLoadingClaim", () => {
   it("calls dispatch_claim_loading with the claim flag", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: null });
 
     const result = await setLoadingClaim("ayam-norliza-pilot", {
@@ -413,7 +413,7 @@ describe("setLoadingClaim", () => {
   });
 
   it("rejects invalid input", async () => {
-    mockSupabaseFor({ role: "logistics" });
+    mockSupabaseFor({ role: "seller" });
 
     const result = await setLoadingClaim("ayam-norliza-pilot", { orderId: "nope", claim: true });
 
@@ -422,7 +422,7 @@ describe("setLoadingClaim", () => {
   });
 
   it("maps claimed_by_other rpc errors to a conflict", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics" });
+    const supabase = mockSupabaseFor({ role: "seller" });
     supabase.rpc.mockResolvedValue({ data: null, error: { message: "claimed_by_other" } });
 
     const result = await setLoadingClaim("ayam-norliza-pilot", {
@@ -438,8 +438,10 @@ describe("setLoadingClaim", () => {
     });
   });
 
-  it("refuses viewers without a dispatch role", async () => {
-    mockSupabaseFor({ role: "inventory" });
+  it("refuses viewers without a loading role", async () => {
+    // Workers ("inventory") may claim on the loading screen (LOADING_ROLES),
+    // so the forbidden case is a role outside both dispatch and loading sets.
+    mockSupabaseFor({ role: "hr" });
 
     const result = await setLoadingClaim("ayam-norliza-pilot", {
       orderId: "5b1f5c1e-0000-4000-8000-000000000001",

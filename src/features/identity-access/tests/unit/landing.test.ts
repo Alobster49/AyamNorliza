@@ -62,17 +62,41 @@ beforeEach(() => {
 });
 
 describe("resolveLandingPathForSlug", () => {
-  it("sends managers to the dashboard", async () => {
+  it.each(["owner", "org_admin"] as const)(
+    "sends %s to the dashboard",
+    async (role) => {
+      mockSupabase({ role });
+      await expect(resolveLandingPathForSlug(ORG.id, ORG.slug)).resolves.toBe(
+        "/ayam-norliza-pilot/dashboard",
+      );
+    },
+  );
+
+  it("sends sellers to the org catalog", async () => {
     mockSupabase({ role: "seller" });
     await expect(resolveLandingPathForSlug(ORG.id, ORG.slug)).resolves.toBe(
-      "/ayam-norliza-pilot/dashboard",
+      "/ayam-norliza-pilot/products",
     );
   });
 
-  it("sends warehouse staff to the org catalog too", async () => {
-    mockSupabase({ role: "logistics" });
+  it("sends supervisors to the org catalog too", async () => {
+    mockSupabase({ role: "supervisor" });
     await expect(resolveLandingPathForSlug(ORG.id, ORG.slug)).resolves.toBe(
       "/ayam-norliza-pilot/products",
+    );
+  });
+
+  it("sends warehouse workers to the warehouse queue", async () => {
+    mockSupabase({ role: "inventory" });
+    await expect(resolveLandingPathForSlug(ORG.id, ORG.slug)).resolves.toBe(
+      "/ayam-norliza-pilot/tasks",
+    );
+  });
+
+  it("sends hr to the leave approval queue", async () => {
+    mockSupabase({ role: "hr" });
+    await expect(resolveLandingPathForSlug(ORG.id, ORG.slug)).resolves.toBe(
+      "/ayam-norliza-pilot/leave/manage",
     );
   });
 
@@ -101,7 +125,7 @@ describe("resolveLandingPathForSlug", () => {
   });
 
   it("never returns the bare org path, which would loop", async () => {
-    for (const role of ["owner", "org_admin", "seller", "inventory", "logistics", "driver", "buyer"]) {
+    for (const role of ["owner", "org_admin", "seller", "supervisor", "inventory", "hr", "driver", "buyer"]) {
       mockSupabase({ role });
       const path = await resolveLandingPathForSlug(ORG.id, ORG.slug);
       expect(path).not.toBe(`/${ORG.slug}`);

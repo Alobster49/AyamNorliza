@@ -7,7 +7,6 @@ import {
   DeactivateUserInput,
   InviteUserInput,
   OpenBreakGlassInput,
-  OpenSupportSessionInput,
   UpdateMemberProfileInput,
   SendPasswordResetInput,
   RemoveMemberInput,
@@ -31,7 +30,7 @@ describe("InviteUserInput", () => {
     const r = InviteUserInput.safeParse({
       organizationId: "11111111-1111-1111-1111-111111111111",
       email: "x@example.com",
-      role: "caretaker",
+      role: "driver",
       scopes: [],
     });
     expect(r.success).toBe(true);
@@ -49,7 +48,7 @@ describe("InviteUserInput", () => {
     const r = InviteUserInput.safeParse({
       organizationId: "11111111-1111-1111-1111-111111111111",
       email: "x@example.com",
-      role: "caretaker",
+      role: "driver",
       scopes: [
         { siteId: "11111111-1111-1111-1111-111111111111", zoneId: "22222222-2222-2222-2222-222222222222" },
       ],
@@ -63,7 +62,7 @@ describe("ChangeRoleInput", () => {
     expect(
       ChangeRoleInput.safeParse({
         memberId: "11111111-1111-1111-1111-111111111111",
-        newRole: "caretaker",
+        newRole: "driver",
         reason: "too short",
       }).success,
     ).toBe(false);
@@ -88,41 +87,6 @@ describe("DeactivateUserInput", () => {
       DeactivateUserInput.safeParse({
         memberId: "11111111-1111-1111-1111-111111111111",
         reason: "offboarded",
-      }).success,
-    ).toBe(true);
-  });
-});
-
-describe("OpenSupportSessionInput", () => {
-  const orgId = "11111111-1111-1111-1111-111111111111";
-  const userId = "22222222-2222-2222-2222-222222222222";
-  it("rejects >24h windows", () => {
-    const startsAt = new Date().toISOString();
-    const endsAt = new Date(Date.now() + 25 * 60 * 60 * 1000).toISOString();
-    expect(
-      OpenSupportSessionInput.safeParse({
-        organizationId: orgId,
-        sponsorId: userId,
-        technicianId: userId,
-        purpose: "Database migration support",
-        permittedScopes: [],
-        startsAt,
-        endsAt,
-      }).success,
-    ).toBe(false);
-  });
-  it("accepts a 2h window", () => {
-    const startsAt = new Date().toISOString();
-    const endsAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
-    expect(
-      OpenSupportSessionInput.safeParse({
-        organizationId: orgId,
-        sponsorId: userId,
-        technicianId: userId,
-        purpose: "Database migration support",
-        permittedScopes: [],
-        startsAt,
-        endsAt,
       }).success,
     ).toBe(true);
   });
@@ -198,7 +162,7 @@ describe("CreateUserInput", () => {
         organizationId: UUID,
         email: "staff@ayam.my",
         displayName: "New Staff",
-        role: "caretaker",
+        role: "driver",
       }).success,
     ).toBe(true);
   });
@@ -218,7 +182,7 @@ describe("CreateUserInput", () => {
         organizationId: UUID,
         email: "staff@ayam.my",
         displayName: "New Staff",
-        role: "caretaker",
+        role: "driver",
         clientOperationId: "22222222-2222-2222-2222-222222222222",
       }).success,
     ).toBe(true);
@@ -229,7 +193,7 @@ describe("CreateUserInput", () => {
         organizationId: UUID,
         email: "staff@ayam.my",
         displayName: "New Staff",
-        role: "caretaker",
+        role: "driver",
         clientOperationId: "not-a-uuid",
       }).success,
     ).toBe(false);

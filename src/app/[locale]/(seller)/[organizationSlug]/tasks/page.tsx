@@ -1,7 +1,7 @@
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
-import { STAFF_ROLES } from "@/features/orders/lib/roles";
+import { WAREHOUSE_ROLES } from "@/features/orders/lib/roles";
 import { getTodayTasks } from "@/features/orders/server/order-actions";
 import { TasksClient } from "./tasks-client";
 
@@ -17,7 +17,7 @@ export default async function TasksPage({
 
   let ctx;
   try {
-    ctx = await requireOrgRole(organizationSlug, STAFF_ROLES);
+    ctx = await requireOrgRole(organizationSlug, WAREHOUSE_ROLES);
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}`, locale: await getLocale() });

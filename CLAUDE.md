@@ -11,11 +11,12 @@ gates on (`src/features/data-console/lib/accounts.ts`), all `password123`:
 
 | Email | Role | Opens |
 |---|---|---|
-| owner@gmail.com | owner | everything, including the data console |
-| admin@gmail.com | org_admin | everything except owner-only screens |
-| seller@gmail.com | seller | catalog, orders, customers, dispatch, loading |
-| warehouse@gmail.com | inventory | warehouse tasks |
-| hr@gmail.com | hr | leave management (My Leave + HR dashboard) |
+| admin@gmail.com | org_admin ("Admin") | everything, including the data console |
+| owner@gmail.com | owner | everything except the data console |
+| seller@gmail.com | seller | products, orders, customers, market prices, dispatch, delivery runs, delivery setup, My Leave |
+| supervisor@gmail.com | supervisor | same as seller |
+| worker@gmail.com | inventory ("Worker") | warehouse tasks, loading, My Leave |
+| hr@gmail.com | hr | My Leave + Leave Management |
 | driver1@gmail.com | driver | driver deck (one of two seeded live runs) |
 | driver2@gmail.com | driver | driver deck (the other seeded live run) |
 

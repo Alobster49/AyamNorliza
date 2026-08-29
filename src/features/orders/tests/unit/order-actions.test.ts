@@ -95,9 +95,9 @@ afterEach(() => {
 });
 
 describe("getTodayTasks", () => {
-  it("allows a staff role (logistics)", async () => {
+  it("allows a staff role (inventory)", async () => {
     mockSupabaseFor({
-      role: "logistics",
+      role: "inventory",
       tableResults: { order_tasks: { data: [], error: null } },
     });
 
@@ -106,8 +106,8 @@ describe("getTodayTasks", () => {
     expect(result).toEqual({ ok: true, data: { tasks: [], people: {} } });
   });
 
-  it("forbids the support role", async () => {
-    mockSupabaseFor({ role: "support" });
+  it("forbids the driver role", async () => {
+    mockSupabaseFor({ role: "driver" });
 
     const result = await getTodayTasks("ayam-norliza-pilot");
 
@@ -121,7 +121,7 @@ describe("getTodayTasks", () => {
 
   it("orders the query deterministically by created_at then id, so claim UPDATEs can't reshuffle the queue", async () => {
     const supabase = mockSupabaseFor({
-      role: "logistics",
+      role: "inventory",
       tableResults: { order_tasks: { data: [], error: null } },
     });
 
@@ -137,7 +137,7 @@ describe("getTodayTasks", () => {
   it("resolves display names for whoever is claiming a weigh task", async () => {
     const CLAIMER_ID = "88888888-8888-8888-8888-888888888888";
     mockSupabaseFor({
-      role: "logistics",
+      role: "inventory",
       tableResults: {
         order_tasks: {
           data: [
@@ -180,7 +180,7 @@ describe("claimWeighTask", () => {
   const TASK_ID = "11111111-1111-4111-8111-111111111111";
 
   it("calls claim_weigh_task and returns ok", async () => {
-    const supabase = mockSupabaseFor({ role: "logistics", rpcResult: { data: null, error: null } });
+    const supabase = mockSupabaseFor({ role: "inventory", rpcResult: { data: null, error: null } });
 
     const result = await claimWeighTask({
       organizationSlug: "ayam-norliza-pilot",
@@ -194,7 +194,7 @@ describe("claimWeighTask", () => {
 
   it("maps claimed_by_other to a conflict with the tasks messageKey", async () => {
     mockSupabaseFor({
-      role: "logistics",
+      role: "inventory",
       rpcResult: { data: null, error: { message: "claimed_by_other" } },
     });
 
@@ -225,7 +225,7 @@ describe("claimWeighTask", () => {
 describe("completeTask claim conflict", () => {
   it("maps claimed_by_other with the tasks messageKey", async () => {
     mockSupabaseFor({
-      role: "logistics",
+      role: "inventory",
       rpcResult: { data: null, error: { message: "claimed_by_other" } },
     });
 

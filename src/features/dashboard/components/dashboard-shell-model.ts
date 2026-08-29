@@ -52,7 +52,6 @@ const routeGroups = [
       { titleKey: "pages.users", segment: "settings/users" },
       { titleKey: "pages.roles", segment: "settings/roles" },
       { titleKey: "pages.accessReviews", segment: "settings/access-reviews" },
-      { titleKey: "pages.supportSessions", segment: "settings/support-sessions" },
       { titleKey: "pages.auditLog", segment: "settings/audit-log" },
     ],
   },
@@ -66,15 +65,21 @@ const routeGroups = [
   },
 ] as const;
 
-// Roles that only see the warehouse queue — no schedule admin, catalog, or
-// customer data. Kept local (not imported from @/features/orders/lib/roles)
-// so this dashboard-layer file has no dependency on the orders feature.
-const STAFF_ONLY_ROLES = ["inventory", "logistics"] as const;
+// Worker ("inventory" is the stored value) only sees the warehouse queue,
+// loading, and My Leave. Kept local (not imported from
+// @/features/orders/lib/roles) so this dashboard-layer file has no
+// dependency on the orders feature.
+const STAFF_ONLY_ROLES = ["inventory"] as const;
 
-// Managers get the full nav (Sales/Fulfillment/Access control/HR). Kept
-// local (not imported from @/features/orders/lib/roles), same reasoning as
-// STAFF_ONLY_ROLES above.
-const MANAGER_ROLES = ["owner", "org_admin", "seller"] as const;
+// Owner + Admin get the full nav (Sales/Fulfillment/Access control/HR).
+// Kept local (not imported from @/features/orders/lib/roles), same
+// reasoning as STAFF_ONLY_ROLES above.
+const ADMIN_ROLES = ["owner", "org_admin"] as const;
+
+// Seller and Supervisor share the sales-side nav: products, orders,
+// customers, market prices, dispatch, delivery runs, delivery setup, and
+// My Leave — no sales dashboard, warehouse queue, loading, or settings.
+const SALES_ROLES = ["seller", "supervisor"] as const;
 
 // Roles that may open Leave Management, not just My Leave. Kept local (not
 // imported from @/features/hr/lib/roles) for the same reason.
@@ -85,113 +90,75 @@ export function getDashboardSidebarGroups({
   pathname,
   role,
 }: DashboardPathInput): DashboardRouteGroup[] {
-  if (role && (STAFF_ONLY_ROLES as readonly string[]).includes(role)) {
-    const tasksHref = `/${organizationSlug}/tasks`;
-    const items: DashboardRoute[] = [
-      {
-        titleKey: "pages.warehouseTasks",
-        href: tasksHref,
-        isActive: isRouteActive(pathname, tasksHref),
-      },
-    ];
-    if (role === "logistics") {
-      const dispatchHref = `/${organizationSlug}/dispatch`;
-      items.push({
-        titleKey: "pages.dispatch",
-        href: dispatchHref,
-        isActive: isRouteActive(pathname, dispatchHref),
-      });
-      const loadingHref = `/${organizationSlug}/loading`;
-      items.push({
-        titleKey: "pages.loading",
-        href: loadingHref,
-        isActive: isRouteActive(pathname, loadingHref),
-      });
-    }
-    const leaveHref = `/${organizationSlug}/leave`;
-    items.push({
-      titleKey: "pages.myLeave",
-      href: leaveHref,
-      isActive: isRouteActive(pathname, leaveHref),
-    });
-    return [
-      {
-        title: "Warehouse",
-        sectionKey: "sections.warehouse",
-        isActive: items.some((item) => item.isActive),
-        items,
-      },
-    ];
-  }
-
-  // Roles that are neither managers nor warehouse-only (e.g. driver, hr,
-  // farm_manager) get just the HR group: My Leave for everyone, Leave
-  // Management only for approvers.
-  if (role && !(MANAGER_ROLES as readonly string[]).includes(role)) {
-    const leaveHref = `/${organizationSlug}/leave`;
-    const items: DashboardRoute[] = [
-      {
-        titleKey: "pages.myLeave",
-        href: leaveHref,
-        isActive: isRouteActive(pathname, leaveHref),
-      },
-    ];
-    if ((APPROVER_ROLES as readonly string[]).includes(role)) {
-      const manageHref = `/${organizationSlug}/leave/manage`;
-      items.push({
-        titleKey: "pages.leaveManagement",
-        href: manageHref,
-        isActive: isRouteActive(pathname, manageHref),
-      });
-    }
-    return [
-      {
-        title: "HR",
-        sectionKey: "sections.hr",
-        isActive: items.some((item) => item.isActive),
-        items,
-      },
-    ];
-  }
-
-  const groups: DashboardRouteGroup[] = routeGroups.map((group) => {
-    const items = group.items
-      .filter(
-        (item) =>
-          item.segment !== "leave/manage" ||
-          (!!role && (APPROVER_ROLES as readonly string[]).includes(role)),
-      )
-      .map((item) => {
-        const href = `/${organizationSlug}/${item.segment}`;
-        return {
-          titleKey: item.titleKey,
-          href,
-          isActive: isRouteActive(pathname, href),
-        };
-      });
-
-    return {
-      title: group.title,
-      sectionKey: group.sectionKey,
-      isActive: items.some((item) => item.isActive),
-      items,
-    };
+  const item = (titleKey: string, segment: string): DashboardRoute => {
+    const href = `/${organizationSlug}/${segment}`;
+    return { titleKey, href, isActive: isRouteActive(pathname, href) };
+  };
+  const group = (
+    title: string,
+    sectionKey: string,
+    items: DashboardRoute[],
+  ): DashboardRouteGroup => ({
+    title,
+    sectionKey,
+    isActive: items.some((i) => i.isActive),
+    items,
   });
 
-  if (role === "owner") {
-    const consoleHref = `/${organizationSlug}/data-console`;
-    groups.push({
-      title: "System",
-      sectionKey: "sections.system",
-      isActive: isRouteActive(pathname, consoleHref),
-      items: [
-        {
-          titleKey: "pages.dataConsole",
-          href: consoleHref,
-          isActive: isRouteActive(pathname, consoleHref),
-        },
-      ],
-    });
+  if (role && (STAFF_ONLY_ROLES as readonly string[]).includes(role)) {
+    return [
+      group("Warehouse", "sections.warehouse", [
+        item("pages.warehouseTasks", "tasks"),
+        item("pages.loading", "loading"),
+        item("pages.myLeave", "leave"),
+      ]),
+    ];
+  }
+
+  if (role && (SALES_ROLES as readonly string[]).includes(role)) {
+    return [
+      group("Sales", "sections.sales", [
+        item("pages.products", "products"),
+        item("pages.orders", "orders"),
+        item("pages.customers", "customers"),
+        item("pages.marketPrices", "market-prices"),
+      ]),
+      group("Fulfillment", "sections.fulfillment", [
+        item("pages.dispatch", "dispatch"),
+        item("pages.deliveryRuns", "runs"),
+        item("pages.deliverySetup", "delivery"),
+      ]),
+      group("HR", "sections.hr", [item("pages.myLeave", "leave")]),
+    ];
+  }
+
+  // Roles that are neither admins, sales, nor warehouse (driver, hr) get
+  // just the HR group: My Leave for everyone, Leave Management only for
+  // approvers.
+  if (role && !(ADMIN_ROLES as readonly string[]).includes(role)) {
+    const items: DashboardRoute[] = [item("pages.myLeave", "leave")];
+    if ((APPROVER_ROLES as readonly string[]).includes(role)) {
+      items.push(item("pages.leaveManagement", "leave/manage"));
+    }
+    return [group("HR", "sections.hr", items)];
+  }
+
+  const groups: DashboardRouteGroup[] = routeGroups.map((g) =>
+    group(
+      g.title,
+      g.sectionKey,
+      g.items.map((i) => item(i.titleKey, i.segment)),
+    ),
+  );
+
+  // Data console is admin-only: the owner runs the business, the admin runs
+  // the system.
+  if (role === "org_admin") {
+    groups.push(
+      group("System", "sections.system", [
+        item("pages.dataConsole", "data-console"),
+      ]),
+    );
   }
 
   return groups;
@@ -201,9 +168,9 @@ export function getDashboardPageContext({
   organizationSlug,
   pathname,
 }: DashboardPathInput): { section: string; title: string } {
-  // Pass role: "owner" so the owner-only System group (Data console) is
+  // Pass role: "org_admin" so the admin-only System group (Data console) is
   // considered when resolving the active section/title. Route access to
-  // those pages is owner-gated anyway, so this only affects which label the
+  // those pages is admin-gated anyway, so this only affects which label the
   // header shows, never actual permissions.
   // Account pages live in the user menu, not the sidebar, so they resolve
   // here instead of through the sidebar groups.
@@ -211,7 +178,7 @@ export function getDashboardPageContext({
     return { section: "sections.account", title: "pages.accountSecurity" };
   }
 
-  const groups = getDashboardSidebarGroups({ organizationSlug, pathname, role: "owner" });
+  const groups = getDashboardSidebarGroups({ organizationSlug, pathname, role: "org_admin" });
   const activeGroup = groups.find((group) => group.isActive);
   const activeItem = activeGroup?.items.find((item) => item.isActive);
 

@@ -9,7 +9,7 @@ export default async function DataConsolePage({
 }) {
   const { organizationSlug } = await params;
   try {
-    await requireOrgRole(organizationSlug, ["owner"]);
+    await requireOrgRole(organizationSlug, ["org_admin"]);
   } catch (e) {
     if (e instanceof OrderPermissionError) notFound();
     throw e;

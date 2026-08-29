@@ -32,7 +32,7 @@ with seed_users as (
       '10000000-0000-0000-0000-000000000002'::uuid,
       'target@ayam-norliza-pilot.example',
       'Target User',
-      'caretaker'
+      'driver'
     ),
     (
       '10000000-0000-0000-0000-000000000003'::uuid,

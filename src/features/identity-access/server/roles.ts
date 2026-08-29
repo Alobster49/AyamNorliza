@@ -41,7 +41,7 @@ import { recordAudit } from "@/lib/audit/events";
 // Public types: shape the UI receives
 // ---------------------------------------------------------------------------
 
-export type CapabilityArea = "organization" | "membership" | "audit" | "support" | "access_review" | "break_glass" | "catalog" | "sales";
+export type CapabilityArea = "organization" | "membership" | "audit" | "access_review" | "break_glass" | "catalog" | "sales";
 
 /**
  * `Capability` ids are dotted (e.g. "organization.settings.update"), which
@@ -60,8 +60,6 @@ export const CAPABILITY_MESSAGE_KEY: Record<Capability, string> = {
   "membership.deactivate": "membershipDeactivate",
   "access_review.run": "accessReviewRun",
   "access_review.decide": "accessReviewDecide",
-  "support_session.open": "supportSessionOpen",
-  "support_session.end": "supportSessionEnd",
   "break_glass.open": "breakGlassOpen",
   "break_glass.finalize": "breakGlassFinalize",
   "audit.read": "auditRead",
@@ -104,11 +102,6 @@ export const CAPABILITY_AREAS: ReadonlyArray<{
     description: "Periodic attestations that confirm membership and roles.",
   },
   {
-    id: "support",
-    label: "Support sessions",
-    description: "Time-bound elevated access for technicians.",
-  },
-  {
     id: "break_glass",
     label: "Break-glass",
     description: "Emergency override events recorded to the audit log.",
@@ -132,8 +125,6 @@ const CAPABILITY_AREA: Record<Capability, CapabilityArea> = {
   "customers.manage": "sales",
   "access_review.run": "access_review",
   "access_review.decide": "access_review",
-  "support_session.open": "support",
-  "support_session.end": "support",
   "break_glass.open": "break_glass",
   "break_glass.finalize": "break_glass",
   "audit.read": "audit",
@@ -190,8 +181,8 @@ const ROLE_LABELS: Record<Role, { label: string; description: string; rank: numb
     rank: 100,
   },
   org_admin: {
-    label: "Org admin",
-    description: "Configures the organization and manages membership.",
+    label: "Admin",
+    description: "Full access to everything, including the data console.",
     rank: 80,
   },
   hr: {
@@ -201,7 +192,12 @@ const ROLE_LABELS: Record<Role, { label: string; description: string; rank: numb
   },
   seller: {
     label: "Seller",
-    description: "Manages products, orders, and customer relationships.",
+    description: "Manages products, orders, customers, market prices, dispatch, and delivery.",
+    rank: 60,
+  },
+  supervisor: {
+    label: "Supervisor",
+    description: "Same sales and delivery permissions as a seller.",
     rank: 60,
   },
   driver: {
@@ -209,55 +205,10 @@ const ROLE_LABELS: Record<Role, { label: string; description: string; rank: numb
     description: "Delivers one run at a time. Sees only the stops on the run they are assigned.",
     rank: 30,
   },
-  farm_manager: {
-    label: "Farm manager",
-    description: "Operational leadership over sites and assignments.",
-    rank: 60,
-  },
-  supervisor: {
-    label: "Supervisor",
-    description: "Front-line oversight with read-only access to history.",
-    rank: 50,
-  },
-  caretaker: {
-    label: "Caretaker",
-    description: "Hands-on worker. No administrative privileges by default.",
-    rank: 30,
-  },
-  veterinarian: {
-    label: "Veterinarian",
-    description: "Animal-health specialist, scoped per site.",
-    rank: 50,
-  },
-  biosecurity_qa: {
-    label: "Biosecurity & QA",
-    description: "Compliance and traceability reviews.",
-    rank: 50,
-  },
-  maintenance: {
-    label: "Maintenance",
-    description: "Repairs and equipment cycles.",
-    rank: 40,
-  },
   inventory: {
-    label: "Inventory",
-    description: "Stock and feed management.",
+    label: "Worker",
+    description: "Warehouse tasks and loading.",
     rank: 40,
-  },
-  logistics: {
-    label: "Logistics",
-    description: "Inbound and outbound shipments.",
-    rank: 40,
-  },
-  auditor: {
-    label: "Auditor",
-    description: "Read-only access to audit and security events.",
-    rank: 20,
-  },
-  support: {
-    label: "Support",
-    description: "Time-bound access granted via support session.",
-    rank: 10,
   },
 };
 
@@ -293,14 +244,6 @@ const CAPABILITY_LABELS: Record<Capability, { label: string; description: string
   "access_review.decide": {
     label: "Decide review items",
     description: "Keep, modify, or revoke each member in a review.",
-  },
-  "support_session.open": {
-    label: "Open support sessions",
-    description: "Grant time-bound access to a technician.",
-  },
-  "support_session.end": {
-    label: "End support sessions",
-    description: "Revoke active sessions and optionally the membership.",
   },
   "break_glass.open": {
     label: "Open break-glass",

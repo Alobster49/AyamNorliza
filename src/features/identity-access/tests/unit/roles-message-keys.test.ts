@@ -52,7 +52,7 @@ beforeEach(() => {
 });
 
 describe("updateRoleCapabilityAction", () => {
-  const validInput = { organizationId: ORG_ID, role: "caretaker", capability: "catalog.manage", granted: true, reason: REASON };
+  const validInput = { organizationId: ORG_ID, role: "driver", capability: "catalog.manage", granted: true, reason: REASON };
 
   it("returns common.reauthRequired when step-up is needed", async () => {
     vi.mocked(requireReauth).mockRejectedValue(new ReauthRequiredError());
@@ -128,7 +128,7 @@ describe("updateRoleCapabilityAction", () => {
 });
 
 describe("resetRoleToDefaultsAction", () => {
-  const validInput = { organizationId: ORG_ID, role: "caretaker", reason: REASON };
+  const validInput = { organizationId: ORG_ID, role: "driver", reason: REASON };
 
   it("returns roles.notEditable with the role param for a locked role", async () => {
     const result = await resetRoleToDefaultsAction({ ...validInput, role: "owner" });

@@ -18,7 +18,7 @@ export type ActionResult<T> =
 
 async function guardOwner(organizationSlug: string) {
   try {
-    return await requireOrgRole(organizationSlug, ["owner"]);
+    return await requireOrgRole(organizationSlug, ["org_admin"]);
   } catch (e) {
     if (e instanceof OrderPermissionError) return null;
     throw e;

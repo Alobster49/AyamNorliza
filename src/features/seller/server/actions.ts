@@ -43,7 +43,7 @@ export async function requireSellerRole(orgSlug: string): Promise<boolean> {
     .eq("status", "active")
     .maybeSingle();
 
-  return !!member && ["owner", "org_admin", "seller"].includes(member.role);
+  return !!member && ["owner", "org_admin", "seller", "supervisor"].includes(member.role);
 }
 
 function revalidateSellerPath(orgSlug: string | undefined, page: string) {

@@ -17,7 +17,6 @@ import type {
   Organization,
   OrganizationMember,
   Profile,
-  SupportSession,
 } from "../types";
 
 export async function listOrganizationsForCurrentUser(): Promise<Organization[]> {
@@ -195,34 +194,6 @@ export async function listAccessReviewItems(
     evidence: (row.evidence ?? {}) as Record<string, unknown>,
     decidedAt: row.decided_at,
     decidedBy: row.decided_by,
-  }));
-}
-
-export async function listSupportSessions(
-  organizationId: string,
-): Promise<SupportSession[]> {
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase
-    .from("support_sessions")
-    .select(
-      "id, organization_id, sponsor_id, technician_id, purpose, permitted_scopes, starts_at, ends_at, recording_reference, status",
-    )
-    .eq("organization_id", organizationId)
-    .order("starts_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    organizationId: row.organization_id,
-    sponsorId: row.sponsor_id,
-    technicianId: row.technician_id,
-    purpose: row.purpose,
-    permittedScopes: Array.isArray(row.permitted_scopes)
-      ? (row.permitted_scopes as SupportSession["permittedScopes"])
-      : [],
-    startsAt: row.starts_at,
-    endsAt: row.ends_at,
-    recordingReference: row.recording_reference,
-    status: row.status,
   }));
 }
 

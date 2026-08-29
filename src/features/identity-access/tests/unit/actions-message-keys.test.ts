@@ -95,8 +95,6 @@ import {
   createUserAction,
   startAccessReviewAction,
   decideReviewItemAction,
-  openSupportSessionAction,
-  endSupportSessionAction,
   openBreakGlassAction,
 } from "../../server/actions";
 
@@ -131,7 +129,7 @@ describe("updateOrganizationSettingsAction", () => {
   });
 
   it("returns organization.updateForbidden when the role lacks the capability", async () => {
-    vi.mocked(requireOrgMember).mockResolvedValue({ role: "caretaker", user_id: "user-1" } as never);
+    vi.mocked(requireOrgMember).mockResolvedValue({ role: "driver", user_id: "user-1" } as never);
     const result = await updateOrganizationSettingsAction({ organizationId: "11111111-1111-1111-1111-111111111111" });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.organization.updateForbidden");
@@ -139,10 +137,10 @@ describe("updateOrganizationSettingsAction", () => {
 });
 
 describe("inviteUserAction", () => {
-  const validInput = { organizationId: "11111111-1111-1111-1111-111111111111", email: "x@y.com", role: "caretaker", scopes: [] };
+  const validInput = { organizationId: "11111111-1111-1111-1111-111111111111", email: "x@y.com", role: "driver", scopes: [] };
 
   it("returns invite.invalidInput for a bad payload", async () => {
-    const result = await inviteUserAction({ organizationId: "bad", email: "x", role: "caretaker", scopes: [] });
+    const result = await inviteUserAction({ organizationId: "bad", email: "x", role: "driver", scopes: [] });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.invite.invalidInput");
   });
@@ -162,7 +160,7 @@ describe("inviteUserAction", () => {
   });
 
   it("returns invite.roleCannotInvite when the caller's role can't invite", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("caretaker")] });
+    setSupabase({ organization_members: [ACTIVE_MEMBER("driver")] });
     const result = await inviteUserAction(validInput);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.invite.roleCannotInvite");
@@ -224,7 +222,7 @@ describe("resendInvitationAction", () => {
   it("returns common.forbidden when the caller can't invite", async () => {
     setSupabase({
       invitations: [{ data: { id: "inv-1", organization_id: "org-1", accepted_at: null, revoked_at: null }, error: null }],
-      organization_members: [{ data: { role: "caretaker" }, error: null }],
+      organization_members: [{ data: { role: "driver" }, error: null }],
     });
     const result = await resendInvitationAction({ invitationId: "11111111-1111-1111-1111-111111111111" });
     expect(result.ok).toBe(false);
@@ -278,7 +276,7 @@ describe("acceptInvitationAction", () => {
 });
 
 describe("changeMemberRoleAction", () => {
-  const validInput = { memberId: "11111111-1111-1111-1111-111111111111", newRole: "caretaker", reason: "reason text long enough" };
+  const validInput = { memberId: "11111111-1111-1111-1111-111111111111", newRole: "driver", reason: "reason text long enough" };
 
   it("returns common.reauthRequired when step-up is needed", async () => {
     vi.mocked(requireReauth).mockRejectedValue(new ReauthRequiredError());
@@ -297,7 +295,7 @@ describe("changeMemberRoleAction", () => {
   it("returns member.alreadyHasRole when the role is unchanged", async () => {
     setSupabase({
       organization_members: [
-        { data: { id: "m-1", organization_id: "org-1", role: "caretaker", user_id: "target-1" }, error: null },
+        { data: { id: "m-1", organization_id: "org-1", role: "driver", user_id: "target-1" }, error: null },
         ACTIVE_MEMBER("org_admin"),
       ],
     });
@@ -319,8 +317,8 @@ describe("changeMemberRoleAction", () => {
   });
 
   // The following demote-an-owner scenarios (target role "owner", newRole
-  // "caretaker" from validInput) are the confirmed exploit path: an
-  // org_admin's canGrantRole check passes for "caretaker" (rank <= org_admin),
+  // "driver" from validInput) are the confirmed exploit path: an
+  // org_admin's canGrantRole check passes for "driver" (rank <= org_admin),
   // so these reach the approver gate the same way the reported bug did.
 
   it("returns member.ownerNeedsApprover when demoting an owner without an approver", async () => {
@@ -393,7 +391,7 @@ describe("changeMemberRoleAction", () => {
         { data: { id: "m-1", organization_id: "org-1", role: "owner", user_id: "target-1" }, error: null },
         ACTIVE_MEMBER("org_admin"),
         { data: { role: "owner" }, error: null }, // approver lookup: active owner
-        { data: { id: "m-1", role: "caretaker" }, error: null }, // the update itself
+        { data: { id: "m-1", role: "driver" }, error: null }, // the update itself
       ],
     });
     const result = await changeMemberRoleAction({
@@ -429,7 +427,7 @@ describe("deactivateUserAction", () => {
 describe("updateMemberProfileAction", () => {
   const UUID = "11111111-1111-1111-1111-111111111111";
   const validInput = { memberId: UUID, displayName: "New Name", reason: "correcting name" };
-  const TARGET = { data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "caretaker" }, error: null };
+  const TARGET = { data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "driver" }, error: null };
 
   it("returns common.invalidInput when nothing to update", async () => {
     const result = await updateMemberProfileAction({ memberId: UUID, reason: "no fields to change" });
@@ -445,7 +443,7 @@ describe("updateMemberProfileAction", () => {
   });
 
   it("returns common.forbidden when the actor's role can't manage members", async () => {
-    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("caretaker")] });
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("driver")] });
     const result = await updateMemberProfileAction(validInput);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
@@ -489,7 +487,7 @@ describe("removeMemberAction", () => {
   const UUID = "11111111-1111-1111-1111-111111111111";
   const validInput = { memberId: UUID, reason: "left the farm" };
   const TARGET = (over: Partial<{ user_id: string; role: string; status: string }> = {}) => ({
-    data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "caretaker", status: "active", ...over },
+    data: { id: UUID, organization_id: "org-1", user_id: "u-target", role: "driver", status: "active", ...over },
     error: null,
   });
 
@@ -515,7 +513,7 @@ describe("removeMemberAction", () => {
   });
 
   it("returns common.forbidden when the actor lacks membership.deactivate", async () => {
-    setSupabase({ organization_members: [TARGET(), ACTIVE_MEMBER("caretaker")] });
+    setSupabase({ organization_members: [TARGET(), ACTIVE_MEMBER("driver")] });
     const result = await removeMemberAction(validInput);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
@@ -542,7 +540,7 @@ describe("sendPasswordResetAction", () => {
   });
 
   it("returns common.forbidden when the actor cannot invite", async () => {
-    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("caretaker")] });
+    setSupabase({ organization_members: [TARGET, ACTIVE_MEMBER("driver")] });
     const result = await sendPasswordResetAction({ memberId: UUID });
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.forbidden");
@@ -580,7 +578,7 @@ describe("createUserAction", () => {
     organizationId: "11111111-1111-1111-1111-111111111111",
     email: "staff@ayam.my",
     displayName: "New Staff",
-    role: "caretaker",
+    role: "driver",
   };
 
   it("returns common.invalidInput for a bad payload", async () => {
@@ -597,7 +595,7 @@ describe("createUserAction", () => {
   });
 
   it("returns invite.roleCannotInvite when the caller's role can't invite", async () => {
-    setSupabase({ organization_members: [ACTIVE_MEMBER("caretaker")] });
+    setSupabase({ organization_members: [ACTIVE_MEMBER("driver")] });
     const result = await createUserAction(validInput);
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.identity.invite.roleCannotInvite");
@@ -640,7 +638,7 @@ describe("createUserAction", () => {
 
 describe("startAccessReviewAction", () => {
   it("returns common.forbidden when the caller lacks access_review.run", async () => {
-    setSupabase({ organization_members: [{ data: { role: "caretaker" }, error: null }] });
+    setSupabase({ organization_members: [{ data: { role: "driver" }, error: null }] });
     const result = await startAccessReviewAction({
       organizationId: "11111111-1111-1111-1111-111111111111",
       periodStart: new Date().toISOString(),
@@ -672,41 +670,6 @@ describe("decideReviewItemAction", () => {
   });
 });
 
-describe("openSupportSessionAction", () => {
-  it("returns common.reauthRequired when step-up is needed", async () => {
-    vi.mocked(requireReauth).mockRejectedValue(new ReauthRequiredError());
-    const result = await openSupportSessionAction({
-      organizationId: "11111111-1111-1111-1111-111111111111",
-      sponsorId: "11111111-1111-1111-1111-111111111111",
-      technicianId: "11111111-1111-1111-1111-111111111111",
-      purpose: "purpose text",
-      permittedScopes: [],
-      startsAt: new Date().toISOString(),
-      endsAt: new Date().toISOString(),
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.messageKey).toBe("errors.identity.common.reauthRequired");
-  });
-});
-
-describe("endSupportSessionAction", () => {
-  it("returns supportSession.notFound when the session doesn't exist", async () => {
-    setSupabase({ support_sessions: [{ data: null, error: null }] });
-    const result = await endSupportSessionAction({ sessionId: "11111111-1111-1111-1111-111111111111", revokeMembership: false });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.messageKey).toBe("errors.identity.supportSession.notFound");
-  });
-
-  it("returns supportSession.alreadyEnded when the session already ended", async () => {
-    setSupabase({
-      support_sessions: [{ data: { id: "s-1", organization_id: "org-1", technician_id: "tech-1", status: "ended" }, error: null }],
-    });
-    const result = await endSupportSessionAction({ sessionId: "11111111-1111-1111-1111-111111111111", revokeMembership: false });
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.messageKey).toBe("errors.identity.supportSession.alreadyEnded");
-  });
-});
-
 describe("openBreakGlassAction", () => {
   it("returns common.notMember when the caller has no active membership", async () => {
     setSupabase({ organization_members: [{ data: null, error: null }] });
@@ -721,7 +684,7 @@ describe("openBreakGlassAction", () => {
   });
 
   it("returns breakGlass.cannotOpen when the role lacks break_glass.open", async () => {
-    setSupabase({ organization_members: [{ data: { role: "caretaker" }, error: null }] });
+    setSupabase({ organization_members: [{ data: { role: "driver" }, error: null }] });
     const result = await openBreakGlassAction({
       organizationId: "11111111-1111-1111-1111-111111111111",
       reason: "0123456789",

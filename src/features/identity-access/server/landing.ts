@@ -2,10 +2,10 @@
  * Where a signed-in user lands when they arrive without a specific
  * destination: after login, on "/", or on a bare "/{organizationSlug}".
  *
- * Managers (owner/org_admin/seller) land on the dashboard, so the app opens
- * on the KPI overview rather than the catalog. Warehouse staff
- * (inventory/logistics) keep Products, since the dashboard's sales analytics
- * aren't relevant to their job. Drivers still land on the driver deck by
+ * Owner and Admin land on the dashboard, so the app opens on the KPI
+ * overview rather than the catalog. Sellers and supervisors land on
+ * Products (the sales dashboard is admin-only now). Workers (stored role
+ * "inventory") land on the warehouse queue. Drivers still land on the driver deck by
  * default — that is the job they're here to do — even though the (seller)
  * layout now admits any active member (so a driver *can* open the seller
  * shell, e.g. for My Leave; see the driver deck's leave link and the layout's
@@ -21,17 +21,20 @@
 import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { MANAGER_ROLES, STAFF_ROLES } from "@/features/orders/lib/roles";
+import { ADMIN_ROLES } from "@/features/orders/lib/roles";
 import { listOrganizationsForCurrentUser } from "./queries";
 
 export const NO_ORGANIZATION_PATH = "/signup";
 
 function pathForRole(role: string, slug: string): string {
-  if ((MANAGER_ROLES as readonly string[]).includes(role)) {
+  if ((ADMIN_ROLES as readonly string[]).includes(role)) {
     return `/${slug}/dashboard`;
   }
-  if ((STAFF_ROLES as readonly string[]).includes(role)) {
+  if (role === "seller" || role === "supervisor") {
     return `/${slug}/products`;
+  }
+  if (role === "inventory") {
+    return `/${slug}/tasks`;
   }
   if (role === "driver") {
     return `/drive/${slug}`;

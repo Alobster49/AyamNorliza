@@ -30,14 +30,23 @@ function dispatchPermissionMessageKey(message: string): string {
   return "errors.logistics.dispatch.forbidden";
 }
 
+/**
+ * The loading screen is also worked by Workers (stored role "inventory"),
+ * who hold no dispatch permission — the board read and the two loading
+ * mutations below admit them on top of DISPATCH_ROLES. SQL enforces the
+ * same set via the inventory→logistics alias in has_org_role.
+ */
+const LOADING_ROLES = [...DISPATCH_ROLES, "inventory"] as const;
+
 async function guardDispatch(
   organizationSlug: string,
+  roles: readonly string[] = DISPATCH_ROLES,
 ): Promise<
   | { ok: true; orgId: string; userId: string }
   | { ok: false; code: "forbidden"; message: string; messageKey: string }
 > {
   try {
-    const ctx = await requireOrgRole(organizationSlug, DISPATCH_ROLES);
+    const ctx = await requireOrgRole(organizationSlug, roles);
     return { ok: true, orgId: ctx.orgId, userId: ctx.userId };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
@@ -117,7 +126,7 @@ export async function getDispatchBoard(
   organizationSlug: string,
   date: string,
 ): Promise<ActionResult<DispatchBoardData>> {
-  const guard = await guardDispatch(organizationSlug);
+  const guard = await guardDispatch(organizationSlug, LOADING_ROLES);
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -439,7 +448,7 @@ export async function setOrderLoaded(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<void>> {
-  const guard = await guardDispatch(organizationSlug);
+  const guard = await guardDispatch(organizationSlug, LOADING_ROLES);
   if (!guard.ok) return guard;
 
   const parsed = SetLoadedSchema.safeParse(rawInput);
@@ -467,7 +476,7 @@ export async function setLoadingClaim(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<void>> {
-  const guard = await guardDispatch(organizationSlug);
+  const guard = await guardDispatch(organizationSlug, LOADING_ROLES);
   if (!guard.ok) return guard;
 
   const parsed = SetClaimSchema.safeParse(rawInput);

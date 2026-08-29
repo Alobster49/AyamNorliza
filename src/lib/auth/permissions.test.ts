@@ -54,58 +54,45 @@ describe("permissions matrix", () => {
     expect(can("owner", "audit_log.read")).toBe(true);
   });
 
-  it("caretaker has no MOD-01 capabilities", () => {
-    expect(can("caretaker", "membership.invite")).toBe(false);
-    expect(can("caretaker", "audit.read")).toBe(false);
+  it("driver has no MOD-01 capabilities", () => {
+    expect(can("driver", "membership.invite")).toBe(false);
+    expect(can("driver", "audit.read")).toBe(false);
   });
 
   it("org_admin can change roles but not grant owner", () => {
     expect(can("org_admin", "membership.role.change")).toBe(true);
     expect(canGrantRole("org_admin", "owner")).toBe(false);
-    expect(canGrantRole("org_admin", "caretaker")).toBe(true);
+    expect(canGrantRole("org_admin", "driver")).toBe(true);
     expect(canGrantRole("org_admin", "org_admin")).toBe(true);
   });
 
-  it("farm_manager can invite/scope members but not run access reviews or change roles", () => {
-    // access_review.run is owner/org_admin-only in RLS
-    // (access_reviews_admin_write, supabase/migrations/20260624000002_id_access_rls.sql),
-    // so farm_manager must not hold the capability either.
-    expect(can("farm_manager", "access_review.run")).toBe(false);
-    expect(can("farm_manager", "membership.role.change")).toBe(false);
-    expect(can("farm_manager", "membership.invite")).toBe(true);
+  it("org_admin has every capability (full access)", () => {
+    for (const c of CAPABILITIES) {
+      expect(can("org_admin", c)).toBe(true);
+    }
   });
 
-  it("remaining org_admin capabilities are correct; farm_manager/supervisor have no audit read", () => {
-    expect(can("org_admin", "membership.invite")).toBe(true);
-    expect(can("org_admin", "audit.read")).toBe(true);
-    // audit_log_select_admin (same migration) restricts audit reads to
-    // owner/org_admin, so these roles must not report the capability.
-    expect(can("farm_manager", "audit.read")).toBe(false);
+  it("supervisor mirrors seller", () => {
+    for (const c of CAPABILITIES) {
+      expect(can("supervisor", c)).toBe(can("seller", c));
+    }
+    // audit_log_select_admin restricts audit reads to owner/org_admin, so
+    // sales roles must not report the capability.
     expect(can("supervisor", "audit.read")).toBe(false);
-  });
-
-  it("auditor has no MOD-01 capabilities (audit reads are owner/org_admin-only in RLS)", () => {
-    expect(can("auditor", "audit.read")).toBe(false);
-    expect(can("auditor", "audit_log.read")).toBe(false);
-    expect(can("auditor", "membership.role.change")).toBe(false);
-    expect(canGrantRole("auditor", "caretaker")).toBe(false);
-  });
-
-  it("biosecurity_qa has no audit read capability", () => {
-    expect(can("biosecurity_qa", "audit.read")).toBe(false);
   });
 
   it("highestGrantableRole walks down the rank table", () => {
     expect(highestGrantableRole("owner")).toBe("owner");
     expect(highestGrantableRole("org_admin")).toBe("org_admin");
-    // caretakers lack membership.role.change so canGrantRole() returns
-    // false for every role; the helper still surfaces `support` as the
-    // minimum (the role they can grant via support-session flows).
-    expect(highestGrantableRole("caretaker")).toBe("support");
+    // drivers lack membership.role.change so canGrantRole() returns
+    // false for every role; the helper still surfaces the minimum role.
+    expect(highestGrantableRole("driver")).toBe("driver");
   });
 
-  it("every role is in ROLES", () => {
-    expect(ROLES.length).toBeGreaterThanOrEqual(8);
+  it("exactly the seven realigned roles exist", () => {
+    expect([...ROLES]).toEqual([
+      "owner", "org_admin", "hr", "seller", "supervisor", "driver", "inventory",
+    ]);
   });
 });
 
@@ -188,16 +175,16 @@ describe("default capability resolution", () => {
 
 describe("override semantics", () => {
   it("grants a capability that the default matrix disables", async () => {
-    // caretaker has no MOD-01 capabilities in the default; grant them
+    // driver has no MOD-01 capabilities in the default; grant them
     // membership.invite via override.
     mockRpc.mockResolvedValue({
-      data: { caretaker: { "membership.invite": true } },
+      data: { driver: { "membership.invite": true } },
       error: null,
     });
     const resolved = await resolveCapabilitiesForOrg("00000000-0000-0000-0000-000000000004");
-    expect(resolved.caretaker["membership.invite"]).toBe(true);
+    expect(resolved.driver["membership.invite"]).toBe(true);
     // Other capabilities stay at default.
-    expect(resolved.caretaker["audit.read"]).toBe(false);
+    expect(resolved.driver["audit.read"]).toBe(false);
   });
 
   it("revokes a capability that the default matrix enables", async () => {

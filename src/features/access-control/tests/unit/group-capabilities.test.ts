@@ -3,15 +3,14 @@ import { CAPABILITIES } from "@/lib/auth/permissions";
 import { CAPABILITY_GROUPS, groupCapabilities } from "@/features/access-control/lib/group-capabilities";
 
 describe("groupCapabilities", () => {
-  it("returns 8 groups with editorial labels", () => {
-    expect(CAPABILITY_GROUPS.length).toBe(8);
+  it("returns 7 groups with editorial labels", () => {
+    expect(CAPABILITY_GROUPS.length).toBe(7);
     expect(CAPABILITY_GROUPS.map((g) => g.label)).toEqual([
       "Organization",
       "Membership",
       "Catalog",
       "Sales",
       "Access review",
-      "Support",
       "Break-glass",
       "Audit & auth",
     ]);

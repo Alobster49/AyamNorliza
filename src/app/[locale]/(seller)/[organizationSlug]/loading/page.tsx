@@ -2,7 +2,7 @@ import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { todayInTimeZone } from "@/lib/time/org-date";
 import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
-import { DISPATCH_ROLES } from "@/features/logistics/lib/roles";
+import { WAREHOUSE_ROLES } from "@/features/orders/lib/roles";
 import { getDispatchBoard } from "@/features/logistics/server/dispatch-actions";
 import { LoadingClient } from "@/features/logistics/components/loading-client";
 
@@ -17,7 +17,7 @@ export default async function LoadingPage({
   let orgId: string;
   let userId: string;
   try {
-    ({ timeZone, orgId, userId } = await requireOrgRole(organizationSlug, DISPATCH_ROLES));
+    ({ timeZone, orgId, userId } = await requireOrgRole(organizationSlug, WAREHOUSE_ROLES));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });

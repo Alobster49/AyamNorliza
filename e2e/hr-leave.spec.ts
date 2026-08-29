@@ -9,7 +9,7 @@ import { signIn, OWNER, TARGET } from "./_fixtures";
  * Accounts: both come from `supabase/seed.sql`'s pilot-org fixtures (the same
  * ones `e2e/_fixtures.ts` already exports), so this spec is reproducible from
  * a bare `npm run db:reset` with no data-console seeding step. TARGET
- * (caretaker) is an ordinary member — any role in ALL_MEMBER_ROLES may open
+ * (driver) is an ordinary member — any role in ALL_MEMBER_ROLES may open
  * `/leave` (src/features/hr/lib/roles.ts) — and OWNER's `owner` role sits in
  * LEAVE_APPROVER_ROLES, so it can decide requests on `/leave/manage`.
  */

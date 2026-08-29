@@ -38,7 +38,7 @@ export async function RankLadder() {
       <p className="text-xs text-muted-foreground">
         {t("descriptionPrefix")}
         <span className="px-1 font-medium text-foreground lowercase">
-          {tRoles(roleLabelKey("support"))}
+          {tRoles(roleLabelKey("driver"))}
         </span>
         {t("descriptionMiddle")}
         <span className="px-1 font-medium text-foreground lowercase">

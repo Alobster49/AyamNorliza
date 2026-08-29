@@ -16,7 +16,6 @@ import { renderInvite } from "@/lib/email/render-invite";
 import { renderBreakGlassUsed } from "@/lib/email/render-break-glass";
 import { renderMfaEnrolled } from "@/lib/email/render-mfa-enrolled";
 import { renderTemporaryAccessExpiring } from "@/lib/email/render-temporary-access-expiring";
-import { renderSupportSessionOpened } from "@/lib/email/render-support-session-opened";
 
 describe("email templates", () => {
   it("renderInvite interpolates fields", () => {
@@ -56,15 +55,6 @@ describe("email templates", () => {
     expect(html).toContain("AyamNorliza");
   });
 
-  it("renderSupportSessionOpened interpolates purpose", () => {
-    const { html } = renderSupportSessionOpened({
-      organizationName: "AyamNorliza",
-      purpose: "DB migration",
-      startsAt: new Date(),
-      endsAt: new Date(Date.now() + 3600_000),
-    });
-    expect(html).toContain("DB migration");
-  });
 
   describe("locale", () => {
     it("renderInvite renders English by default and explicitly", () => {
@@ -142,26 +132,6 @@ describe("email templates", () => {
       expect(html).toContain("luput pada");
     });
 
-    it("renderSupportSessionOpened renders English by default", () => {
-      const { subject } = renderSupportSessionOpened({
-        organizationName: "AyamNorliza",
-        purpose: "DB migration",
-        startsAt: new Date(),
-        endsAt: new Date(Date.now() + 3600_000),
-      });
-      expect(subject).toContain("Support session opened in");
-    });
 
-    it("renderSupportSessionOpened renders Bahasa Melayu when locale is ms", () => {
-      const { subject, html } = renderSupportSessionOpened({
-        organizationName: "AyamNorliza",
-        purpose: "DB migration",
-        startsAt: new Date(),
-        endsAt: new Date(Date.now() + 3600_000),
-        locale: "ms",
-      });
-      expect(subject).toContain("Sesi sokongan dibuka dalam");
-      expect(html).toContain("Tujuan");
-    });
   });
 });

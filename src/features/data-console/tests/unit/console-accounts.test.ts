@@ -12,7 +12,8 @@ describe("CONSOLE_ACCOUNTS", () => {
       { email: "admin@gmail.com", displayName: "Hafiz Samad", role: "org_admin" },
       { email: "hr@gmail.com", displayName: "HR Manager", role: "hr" },
       { email: "seller@gmail.com", displayName: "Seller", role: "seller" },
-      { email: "warehouse@gmail.com", displayName: "Warehouse", role: "inventory" },
+      { email: "supervisor@gmail.com", displayName: "Supervisor", role: "supervisor" },
+      { email: "worker@gmail.com", displayName: "Worker", role: "inventory" },
       { email: "driver1@gmail.com", displayName: "Driver One", role: "driver" },
       { email: "driver2@gmail.com", displayName: "Driver Two", role: "driver" },
     ]);

@@ -10,11 +10,11 @@ import {
 import { buildCapabilityMatrix } from "@/features/access-control/lib/capability-matrix";
 
 describe("buildCapabilityMatrix", () => {
-  it("orders rows by roleRank descending (owner first, support last)", () => {
+  it("orders rows by roleRank descending (owner first, driver last)", () => {
     const matrix = buildCapabilityMatrix();
     const rowRoles = matrix.rows.map((r) => r.role);
     expect(rowRoles[0]).toBe("owner");
-    expect(rowRoles[rowRoles.length - 1]).toBe("support");
+    expect(rowRoles[rowRoles.length - 1]).toBe("driver");
     // Ranks come from the permissions module rather than a copy here: a new
     // role (driver) only has to be ranked in one place.
     expect(rowRoles).toEqual(

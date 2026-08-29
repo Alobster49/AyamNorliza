@@ -6,7 +6,7 @@ const member = (id: string, userId: string): OrganizationMember => ({
   id,
   organizationId: "org-1",
   userId,
-  role: "caretaker",
+  role: "driver",
   status: "active",
   startsAt: "2026-01-01T00:00:00Z",
   expiresAt: null,

@@ -92,19 +92,6 @@ export type AccessReviewItem = {
   decidedBy: string | null;
 };
 
-export type SupportSession = {
-  id: string;
-  organizationId: string;
-  sponsorId: string;
-  technicianId: string;
-  purpose: string;
-  permittedScopes: Array<{ permission: string; resource: string }>;
-  startsAt: string;
-  endsAt: string;
-  recordingReference: string | null;
-  status: "scheduled" | "active" | "ended" | "revoked";
-};
-
 export type BreakGlassEvent = {
   id: string;
   organizationId: string;

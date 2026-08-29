@@ -16,7 +16,7 @@ function row(partial: Partial<MemberRow> & { startsAt: string; id: string }): Me
     id: partial.id,
     userId: partial.userId ?? `user-${partial.id}`,
     displayName: partial.displayName ?? `Name ${partial.id}`,
-    role: partial.role ?? "caretaker",
+    role: partial.role ?? "driver",
     status: partial.status ?? "active",
     startsAt: partial.startsAt,
   };
@@ -90,7 +90,7 @@ describe("bucketizeMembers", () => {
 
 describe("Role re-export", () => {
   it("re-exports Role as a literal-union type assignable to ROLES entries", () => {
-    const sample: Role = "caretaker";
+    const sample: Role = "driver";
     expect(ROLES).toContain(sample);
   });
 });
@@ -108,7 +108,7 @@ describe("filterMembers", () => {
   const baseRows: MemberRow[] = [
     row({ id: "a", startsAt: "2026-07-11T09:00:00Z", role: "owner", status: "active", displayName: "Ada Lovelace", userId: "u-1" }),
     row({ id: "b", startsAt: "2026-07-10T09:00:00Z", role: "supervisor", status: "invited", displayName: "Bob", userId: "u-2" }),
-    row({ id: "c", startsAt: "2026-07-09T09:00:00Z", role: "caretaker", status: "suspended", displayName: "Cici", userId: "u-3" }),
+    row({ id: "c", startsAt: "2026-07-09T09:00:00Z", role: "driver", status: "suspended", displayName: "Cici", userId: "u-3" }),
   ];
   const emptyIndex = new Map<string, string>();
 
