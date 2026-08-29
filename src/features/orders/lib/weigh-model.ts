@@ -401,6 +401,30 @@ function advance(state: WeighState, nowMs: number): WeighState {
   return { ...state, cursor: next ?? state.cursor, entryTarget: "weight" };
 }
 
+/**
+ * Like `advance`, but also skips lines belonging to `excludeTaskId` — used by
+ * CLAIM_REJECTED so the cursor never lands on a sibling line of the very task
+ * that was just rejected (multi-line tasks would otherwise re-land on
+ * themselves). Bounded to one lap of the queue, so an all-excluded/blocked
+ * queue leaves the cursor untouched instead of looping.
+ */
+function advanceOffTask(state: WeighState, excludeTaskId: string, nowMs: number): WeighState {
+  const { queue } = state;
+  for (let step = 1; step <= queue.length; step++) {
+    const index = (state.cursor + step) % queue.length;
+    const line = queue[index];
+    if (
+      line &&
+      line.taskId !== excludeTaskId &&
+      !state.confirmed[line.itemId] &&
+      !isTaskBlocked(state, line.taskId, nowMs)
+    ) {
+      return { ...state, cursor: index, entryTarget: "weight" };
+    }
+  }
+  return { ...state, entryTarget: "weight" };
+}
+
 export function weighReducer(state: WeighState, action: WeighAction): WeighState {
   switch (action.type) {
     case "DIGIT":
@@ -528,7 +552,9 @@ export function weighReducer(state: WeighState, action: WeighAction): WeighState
       const claims = { ...state.claims };
       delete claims[action.taskId];
       const next = { ...state, drafts, confirmed: unconfirm(state.confirmed, itemIds), claims };
-      return advance(next, action.nowMs);
+      // advance() alone can land back on a sibling line of this same
+      // multi-line task, so also exclude the rejected task's own lines.
+      return advanceOffTask(next, action.taskId, action.nowMs);
     }
     default:
       return state;

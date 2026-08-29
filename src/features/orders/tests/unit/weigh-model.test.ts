@@ -692,6 +692,51 @@ describe("claims", () => {
     expect(state.confirmed[state.queue[0]!.itemId]).toBeUndefined();
     expect(state.queue[state.cursor]!.taskId).toBe(t2.id);
   });
+
+  it("CLAIM_REJECTED on a multi-line task advances past all of that task's own lines", () => {
+    // t1 has 2 lines; cursor sits on t1's first line when rejected.
+    const t1 = makeTask([makeItem({ mode: "kg", quantity: 10 }), makeItem({ mode: "kg", quantity: 5 })]);
+    const t2 = makeClaimTask();
+    let state = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    expect(state.cursor).toBe(0);
+    state = confirmLine(state, 0, "5");
+    state = fillLine(state, 1, "3");
+    state = weighReducer(state, { type: "CLAIM_REJECTED", taskId: t1.id, nowMs: NOW });
+    // both of t1's lines have their drafts reset and confirmations withdrawn
+    expect(state.drafts[state.queue[0]!.itemId]).toEqual({ weightKg: "", pieces: "" });
+    expect(state.drafts[state.queue[1]!.itemId]).toEqual({ weightKg: "", pieces: "" });
+    expect(state.confirmed[state.queue[0]!.itemId]).toBeUndefined();
+    expect(state.confirmed[state.queue[1]!.itemId]).toBeUndefined();
+    // cursor must land on a genuinely different task, not a sibling line of t1
+    expect(state.queue[state.cursor]!.taskId).toBe(t2.id);
+  });
+
+  it("CLAIM_REJECTED on the only task in the queue leaves the cursor in place", () => {
+    const t1 = makeTask([makeItem({ mode: "kg", quantity: 10 }), makeItem({ mode: "kg", quantity: 5 })]);
+    let state = createWeighState([t1], { viewerId: "me", nowMs: NOW });
+    state = weighReducer(state, { type: "GO_TO", index: 1 });
+    state = weighReducer(state, { type: "CLAIM_REJECTED", taskId: t1.id, nowMs: NOW });
+    expect(state.cursor).toBe(1);
+    expect(state.drafts[state.queue[1]!.itemId]).toEqual({ weightKg: "", pieces: "" });
+  });
+
+  it("falls back to index 0 when every remaining task is blocked, via createWeighState and SYNC_TASKS", () => {
+    const t1 = makeClaimTask({ weigh_claimed_by: "worker-a", weigh_claimed_at: ACTIVE_AT });
+    const t2 = makeClaimTask({ weigh_claimed_by: "worker-b", weigh_claimed_at: ACTIVE_AT });
+    const allBlocked = createWeighState([t1, t2], { viewerId: "me", nowMs: NOW });
+    expect(allBlocked.cursor).toBe(0);
+    expect(isTaskBlocked(allBlocked, allBlocked.queue[0]!.taskId, NOW)).toBe(true);
+
+    // same fallback path inside the reducer: cursor is stranded on a task
+    // that vanishes, and every task left after the sync is blocked.
+    const t3 = makeClaimTask();
+    let synced = createWeighState([t3, t1], { viewerId: "me", nowMs: NOW });
+    expect(synced.queue[synced.cursor]!.taskId).toBe(t3.id);
+    synced = weighReducer(synced, { type: "SYNC_TASKS", tasks: [t1], nowMs: NOW });
+    expect(synced.queue.some((line) => line.taskId === t3.id)).toBe(false);
+    expect(synced.cursor).toBe(0);
+    expect(isTaskBlocked(synced, synced.queue[0]!.taskId, NOW)).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
