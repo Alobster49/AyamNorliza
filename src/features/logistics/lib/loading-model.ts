@@ -16,17 +16,11 @@
 import type { DispatchBoardData, DispatchTicket, DispatchTruck } from "../types";
 import { buildBoardView } from "./dispatch-board-model";
 import { orderWeightKg, totalWeightKg } from "./plan-model";
+import { CLAIM_TTL_MS, isClaimActive } from "@/lib/claims";
+
+export { CLAIM_TTL_MS, isClaimActive };
 
 export type LoadLine = { name: string; quantity: number; pieces: number | null; weightKg: number | null };
-
-/** Advisory claims expire after this long; an expired claim is no claim. */
-export const CLAIM_TTL_MS = 10 * 60 * 1000;
-
-export function isClaimActive(claimedAt: string | null, nowMs: number): boolean {
-  if (claimedAt === null) return false;
-  const at = Date.parse(claimedAt);
-  return Number.isFinite(at) && nowMs - at < CLAIM_TTL_MS;
-}
 
 export type LoadClaim = {
   userId: string;
