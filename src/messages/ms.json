@@ -2566,6 +2566,7 @@
       "dayCount": "{n} hari",
       "remaining": "{n} baki",
       "uponRequest": "Ikut Permohonan",
+      "noticeHint": "Cuti tahunan perlu notis {days} hari — tarikh mula terawal ialah {date}.",
       "crossYearNote": "Pratonton baki tidak tersedia untuk {year}",
       "submit": "Mohon",
       "success": "Permohonan cuti telah dihantar.",
@@ -2711,6 +2712,7 @@
       "internal": "Berlaku ralat. Sila cuba lagi.",
       "invalid_range": "Tarikh tamat mesti sama atau selepas tarikh mula.",
       "zero_workdays": "Julat tarikh ini tiada hari bekerja untuk dimohon.",
+      "insufficient_notice": "Cuti tahunan mesti dimohon sekurang-kurangnya satu minggu lebih awal.",
       "insufficient_balance": "Baki cuti tidak mencukupi untuk permohonan ini.",
       "attachment_required": "Jenis cuti ini memerlukan lampiran sokongan.",
       "uploadFailed": "Muat naik lampiran gagal"

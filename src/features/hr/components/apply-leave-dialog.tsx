@@ -14,7 +14,7 @@
  * the action; the file itself never touches the Server Action payload.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,7 +32,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { applyLeave } from "../server/leave-actions";
-import { computeBalance, validateApplication, workdayCount } from "../lib/leave-model";
+import {
+  computeBalance,
+  earliestStartDate,
+  minNoticeDays,
+  validateApplication,
+  workdayCount,
+} from "../lib/leave-model";
+import { formatDisplayDate } from "../lib/date-format";
 import type { LedgerEntry, LeaveRequestSummary, LeaveTypeInfo } from "../types";
 
 const ATTACHMENT_ACCEPT = "image/jpeg,image/png,image/webp,application/pdf";
@@ -111,18 +118,26 @@ export function ApplyLeaveDialog({
   const dayCount =
     startDate && endDate ? workdayCount(startDate, endDate, holidays) : 0;
 
-  const validation = useMemo(() => {
-    if (!selectedType || !startDate || !endDate) return null;
-    const balance = computeBalance(selectedType, ledger, requests, startYear, asOfForBalance);
-    return validateApplication({
-      type: selectedType,
-      startDate,
-      endDate,
-      dayCount,
-      balance,
-      attachmentProvided: !!file,
-    });
-  }, [selectedType, startDate, endDate, dayCount, ledger, requests, startYear, asOfForBalance, file]);
+  // Advance-notice floor for the selected type (annual: today + 7 calendar
+  // days). Doubles as the date input's `min`, so the picker greys out the
+  // barred days instead of only rejecting them after the fact.
+  const earliestStart = selectedType ? earliestStartDate(selectedType, today) : today;
+  const noticeDays = selectedType ? minNoticeDays(selectedType) : 0;
+
+  // Plain computation, not useMemo: React Compiler memoizes this for us, and
+  // a hand-written dep list here is one it refuses to preserve.
+  const validation =
+    selectedType && startDate && endDate
+      ? validateApplication({
+          type: selectedType,
+          today,
+          startDate,
+          endDate,
+          dayCount,
+          balance: computeBalance(selectedType, ledger, requests, startYear, asOfForBalance),
+          attachmentProvided: !!file,
+        })
+      : null;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -227,6 +242,7 @@ export function ApplyLeaveDialog({
                 id="apply-leave-start"
                 type="date"
                 value={startDate}
+                min={earliestStart}
                 onChange={(e) => setStartDate(e.target.value)}
                 required
               />
@@ -237,11 +253,18 @@ export function ApplyLeaveDialog({
                 id="apply-leave-end"
                 type="date"
                 value={endDate}
+                min={startDate || earliestStart}
                 onChange={(e) => setEndDate(e.target.value)}
                 required
               />
             </div>
           </div>
+
+          {noticeDays > 0 && (
+            <p className="text-xs text-muted-foreground">
+              {t("noticeHint", { days: noticeDays, date: formatDisplayDate(earliestStart) })}
+            </p>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="apply-leave-justification">{t("justificationLabel")}</Label>

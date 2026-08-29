@@ -19,8 +19,14 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { ActionResult } from "@/features/orders/types";
+import { todayInTimeZone } from "@/lib/time/org-date";
 import { requireMember, OrderPermissionError } from "./guards";
-import { workdayCount, validateApplication, computeBalance } from "../lib/leave-model";
+import {
+  workdayCount,
+  validateApplication,
+  computeBalance,
+  type ApplicationRejection,
+} from "../lib/leave-model";
 import type { LeaveTypeInfo, LedgerEntry, LeaveRequestSummary } from "../types";
 
 type LeaveErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
@@ -93,14 +99,14 @@ function leaveRpcError(rawMessage: string): { code: LeaveErrorCode; message: str
 }
 
 /** Same reasons `validateApplication` returns, in plain English. */
-function validationMessage(
-  reason: "invalid_range" | "zero_workdays" | "insufficient_balance" | "attachment_required",
-): string {
+function validationMessage(reason: ApplicationRejection): string {
   switch (reason) {
     case "invalid_range":
       return "End date must be on or after the start date.";
     case "zero_workdays":
       return "This date range has no working days to apply for.";
+    case "insufficient_notice":
+      return "Annual leave must be applied for at least one week in advance.";
     case "insufficient_balance":
       return "There is not enough leave balance for this request.";
     case "attachment_required":
@@ -378,7 +384,7 @@ export async function applyLeave(
 ): Promise<ActionResult<{ id: string }>> {
   const guard = await guardMember(organizationSlug);
   if (!guard.ok) return err(guard.code, guard.message, guard.messageKey);
-  const { orgId, userId } = guard;
+  const { orgId, userId, timeZone } = guard;
 
   if (!input.leaveTypeId) return err("validation", "Choose a leave type.", "hr.errors.validation");
   if (!input.justification || input.justification.trim().length === 0) {
@@ -454,6 +460,10 @@ export async function applyLeave(
 
   const validation = validateApplication({
     type,
+    // The advance-notice rule is measured against the depot's calendar day,
+    // not the server's — see lib/time/org-date. The insert trigger derives
+    // the same date from `organizations.default_time_zone`.
+    today: todayInTimeZone(timeZone),
     startDate: input.startDate,
     endDate: input.endDate,
     dayCount,
@@ -480,6 +490,17 @@ export async function applyLeave(
     .select("id")
     .single();
   if (insertErr || !inserted) {
+    // The BEFORE INSERT trigger re-checks the same rules atomically, so it can
+    // still reject a request this action just accepted — the notice cutoff
+    // moves when the depot's clock rolls past midnight between the two. Show
+    // the real reason rather than a generic failure.
+    if (insertErr?.message === "insufficient_notice") {
+      return err(
+        "validation",
+        validationMessage("insufficient_notice"),
+        "hr.errors.insufficient_notice",
+      );
+    }
     return err("internal", "Failed to submit your leave request.", "hr.errors.internal");
   }
 

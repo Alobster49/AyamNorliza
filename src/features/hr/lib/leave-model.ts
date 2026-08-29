@@ -10,6 +10,9 @@
  * - full accrual: entitlement, unaffected by asOf.
  * - upon-request (entitlementDays null): unlimited (Infinity available).
  * - available = max(CF - takenCF, 0) + accrued + credits - takenBase - pendingHeld.
+ * - advance notice: annual leave must start >= 7 calendar days from today
+ *   (MIN_NOTICE_DAYS_BY_CODE), enforced again by the insert trigger in
+ *   20260830000004_hr_leave_notice.sql.
  *
  * As-of convention: for applying/validating a request, `asOf` is the LEAVE
  * START DATE, not "today" — a December request must be checked against
@@ -20,7 +23,7 @@
  * which asks "what is this member's balance right now" and uses today.
  */
 
-import { eachDayOfInterval, format, getMonth, isWeekend, parseISO } from "date-fns";
+import { addDays, eachDayOfInterval, format, getMonth, isWeekend, parseISO } from "date-fns";
 import type { BalanceSummary, LeaveRequestSummary, LeaveTypeInfo, LedgerEntry } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -162,21 +165,67 @@ export function computeBalance(
 }
 
 // ---------------------------------------------------------------------------
+// Advance notice
+// ---------------------------------------------------------------------------
+
+/**
+ * Calendar days of advance notice a leave type requires, keyed by leave type
+ * `code`. Annual leave is planned time off and must be booked a week ahead;
+ * medical, hospitalization and emergency leave are unplanned by nature and
+ * require none.
+ *
+ * Mirrored by `leave_min_notice_days` in the SQL twin
+ * (supabase/migrations/20260830000004_hr_leave_notice.sql), which the
+ * `leave_requests` BEFORE INSERT trigger enforces so a direct PostgREST
+ * insert cannot bypass this — divergence between the two is a bug.
+ *
+ * Calendar days, not workdays: "one week ahead" is what a member reads it as,
+ * and a workday-based cutoff would silently drift with public holidays.
+ */
+const MIN_NOTICE_DAYS_BY_CODE: Record<string, number> = { annual: 7 };
+
+export function minNoticeDays(type: LeaveTypeInfo): number {
+  return MIN_NOTICE_DAYS_BY_CODE[type.code] ?? 0;
+}
+
+/**
+ * Earliest start date `type` may be booked for, given the org's today. Equal
+ * to `today` for types that need no notice, so callers can use it as an
+ * unconditional `min` on a date input.
+ */
+export function earliestStartDate(type: LeaveTypeInfo, today: string): string {
+  const notice = minNoticeDays(type);
+  if (notice <= 0) return today;
+  return format(addDays(parseISO(today), notice), "yyyy-MM-dd");
+}
+
+// ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
 
+export type ApplicationRejection =
+  | "invalid_range"
+  | "zero_workdays"
+  | "insufficient_notice"
+  | "insufficient_balance"
+  | "attachment_required";
+
 export function validateApplication(input: {
   type: LeaveTypeInfo;
+  /** The org's today (see lib/time/org-date), not the server's. */
+  today: string;
   startDate: string;
   endDate: string;
   dayCount: number;
   balance: BalanceSummary;
   attachmentProvided: boolean;
-}):
-  | { ok: true }
-  | { ok: false; reason: "invalid_range" | "zero_workdays" | "insufficient_balance" | "attachment_required" } {
+}): { ok: true } | { ok: false; reason: ApplicationRejection } {
   if (input.endDate < input.startDate) return { ok: false, reason: "invalid_range" };
   if (input.dayCount <= 0) return { ok: false, reason: "zero_workdays" };
+  // ISO dates compare lexically, so no parsing needed here.
+  if (input.startDate < earliestStartDate(input.type, input.today)) {
+    return { ok: false, reason: "insufficient_notice" };
+  }
   if (input.type.requiresAttachment && !input.attachmentProvided) {
     return { ok: false, reason: "attachment_required" };
   }

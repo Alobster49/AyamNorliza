@@ -2566,6 +2566,7 @@
       "dayCount": "{n} days",
       "remaining": "{n} remaining",
       "uponRequest": "Upon Request",
+      "noticeHint": "Annual leave needs {days} days' notice — the earliest you can start is {date}.",
       "crossYearNote": "Balance preview unavailable for {year}",
       "submit": "Apply",
       "success": "Leave request submitted.",
@@ -2711,6 +2712,7 @@
       "internal": "Something went wrong. Please try again.",
       "invalid_range": "End date must be on or after the start date.",
       "zero_workdays": "This date range has no working days to apply for.",
+      "insufficient_notice": "Annual leave must be applied for at least one week in advance.",
       "insufficient_balance": "There is not enough leave balance for this request.",
       "attachment_required": "This leave type requires a supporting attachment.",
       "uploadFailed": "Attachment upload failed"

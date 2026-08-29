@@ -13,7 +13,7 @@
  * manage-actions-message-keys.test.ts.
  */
 
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
@@ -102,8 +102,17 @@ function uponRequestTypeRow() {
   };
 }
 
+/**
+ * `applyLeave` measures the annual advance-notice rule against the org's
+ * today, so these tests pin the clock — otherwise the fixture dates below
+ * silently slide inside the 7-day window as the real date advances, and the
+ * suite starts failing on a calendar boundary rather than on a code change.
+ */
+const FROZEN_NOW = new Date("2026-08-10T02:00:00Z"); // 10:00 MYT, 10 Aug 2026
+
 const validApplyInput = {
   leaveTypeId: "type-1",
+  // Comfortably past the annual notice cutoff (10 Aug + 7 = 17 Aug).
   startDate: "2026-09-01",
   endDate: "2026-09-04",
   justification: "family matters",
@@ -111,6 +120,12 @@ const validApplyInput = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.useFakeTimers();
+  vi.setSystemTime(FROZEN_NOW);
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe("guard-first (applyLeave)", () => {
@@ -246,6 +261,111 @@ describe("applyLeave day-count recompute", () => {
     // vacuous assertion against a full 4-day range (the action has no
     // client-supplied day-count field at all — it's always recomputed).
     expect(expectedDayCount).toBeLessThan(4);
+  });
+});
+
+describe("applyLeave advance notice (annual: 7 calendar days)", () => {
+  /**
+   * The dialog's `min` on the start-date input stops this in the browser, so
+   * these pin the layer underneath it: a caller that skips the UI entirely
+   * still gets refused, and never reaches the insert.
+   */
+  it("refuses annual leave starting inside the notice window", async () => {
+    mockMemberGuard();
+    const { builders } = mockSupabaseTables({
+      leave_types: [{ data: uponRequestTypeRow(), error: null }],
+      public_holidays: [{ data: [], error: null }],
+      leave_ledger: [{ data: [], error: null }],
+      leave_requests: [
+        { data: [], error: null },
+        { data: { id: "should-never-be-inserted" }, error: null },
+      ],
+    });
+
+    // Frozen today is 2026-08-10, so the cutoff is 2026-08-17.
+    const result = await applyLeave("ayam-norliza-pilot", {
+      ...validApplyInput,
+      startDate: "2026-08-13",
+      endDate: "2026-08-14",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("hr.errors.insufficient_notice");
+    }
+    // Only the balance-read `.from("leave_requests")` ran; validation
+    // short-circuits before the insert builder is ever constructed.
+    expect(builders.leave_requests).toHaveLength(1);
+  });
+
+  it("accepts annual leave starting exactly on the cutoff", async () => {
+    mockMemberGuard();
+    const { builders } = mockSupabaseTables({
+      leave_types: [{ data: uponRequestTypeRow(), error: null }],
+      public_holidays: [{ data: [], error: null }],
+      leave_ledger: [{ data: [], error: null }],
+      leave_requests: [
+        { data: [], error: null },
+        { data: { id: "new-request" }, error: null },
+      ],
+    });
+
+    const result = await applyLeave("ayam-norliza-pilot", {
+      ...validApplyInput,
+      startDate: "2026-08-17", // 2026-08-10 + 7
+      endDate: "2026-08-18",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(builders.leave_requests![1]!.insert).toHaveBeenCalled();
+  });
+
+  it("leaves unplanned types ungated — medical may start tomorrow", async () => {
+    mockMemberGuard();
+    const { builders } = mockSupabaseTables({
+      leave_types: [
+        { data: { ...uponRequestTypeRow(), code: "medical", name: "Medical" }, error: null },
+      ],
+      public_holidays: [{ data: [], error: null }],
+      leave_ledger: [{ data: [], error: null }],
+      leave_requests: [
+        { data: [], error: null },
+        { data: { id: "new-request" }, error: null },
+      ],
+    });
+
+    const result = await applyLeave("ayam-norliza-pilot", {
+      ...validApplyInput,
+      startDate: "2026-08-11",
+      endDate: "2026-08-11",
+    });
+
+    expect(result.ok).toBe(true);
+    expect(builders.leave_requests![1]!.insert).toHaveBeenCalled();
+  });
+
+  it("surfaces the trigger's insufficient_notice as a validation err, not a generic failure", async () => {
+    // The insert trigger re-checks the rule atomically and can reject what
+    // this action just accepted — the cutoff moves when the depot clock rolls
+    // past midnight between the two.
+    mockMemberGuard();
+    mockSupabaseTables({
+      leave_types: [{ data: uponRequestTypeRow(), error: null }],
+      public_holidays: [{ data: [], error: null }],
+      leave_ledger: [{ data: [], error: null }],
+      leave_requests: [
+        { data: [], error: null },
+        { data: null, error: { message: "insufficient_notice" } },
+      ],
+    });
+
+    const result = await applyLeave("ayam-norliza-pilot", validApplyInput);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.code).toBe("validation");
+      expect(result.messageKey).toBe("hr.errors.insufficient_notice");
+    }
   });
 });
 

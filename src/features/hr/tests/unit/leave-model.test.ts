@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   accruedDays,
   computeBalance,
+  earliestStartDate,
+  minNoticeDays,
   validateApplication,
   workdayCount,
 } from "../../lib/leave-model";
@@ -29,6 +31,17 @@ function makeType(overrides: Partial<LeaveTypeInfo> = {}): LeaveTypeInfo {
     sort: 1,
     ...overrides,
   };
+}
+
+/**
+ * `validateApplication` with a `today` far enough in the past that the
+ * advance-notice rule never fires, so every test below pins the rule it
+ * actually names. Notice has its own describe block, which passes `today`
+ * explicitly.
+ */
+type ValidateInput = Parameters<typeof validateApplication>[0];
+function validate(input: Omit<ValidateInput, "today"> & { today?: string }) {
+  return validateApplication({ today: "2026-01-01", ...input });
 }
 
 function makeLedger(overrides: Partial<LedgerEntry> = {}): LedgerEntry {
@@ -239,7 +252,7 @@ describe("as-of convention (asOf = startDate, not today)", () => {
     const balance = computeBalance(type, [], [], 2026, startDate);
     expect(balance.accrued).toBe(12);
 
-    const result = validateApplication({
+    const result = validate({
       type,
       startDate,
       endDate,
@@ -259,7 +272,7 @@ describe("as-of convention (asOf = startDate, not today)", () => {
 
     const augustAccrual = computeBalance(type, [], [], 2026, "2026-08-29");
     expect(augustAccrual.accrued).toBe(8);
-    const tooManyDaysForAugust = validateApplication({
+    const tooManyDaysForAugust = validate({
       type,
       startDate,
       endDate: longEndDate,
@@ -270,7 +283,7 @@ describe("as-of convention (asOf = startDate, not today)", () => {
     expect(tooManyDaysForAugust).toEqual({ ok: false, reason: "insufficient_balance" });
 
     const decemberAccrual = computeBalance(type, [], [], 2026, startDate);
-    const sameRequestAgainstDecemberAccrual = validateApplication({
+    const sameRequestAgainstDecemberAccrual = validate({
       type,
       startDate,
       endDate: longEndDate,
@@ -279,6 +292,117 @@ describe("as-of convention (asOf = startDate, not today)", () => {
       attachmentProvided: false,
     });
     expect(sameRequestAgainstDecemberAccrual).toEqual({ ok: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Advance notice (annual: 7 calendar days)
+// ---------------------------------------------------------------------------
+
+describe("advance notice", () => {
+  const TODAY = "2026-08-29"; // a Saturday
+  const annual = makeType();
+  const medical = makeType({
+    id: "type-medical",
+    code: "medical",
+    name: "Medical",
+    accrual: "full",
+    entitlementDays: 14,
+    carryForwardCap: null,
+  });
+
+  function noticeBalance(): BalanceSummary {
+    return {
+      uponRequest: false,
+      entitlement: 12,
+      accrued: 12,
+      carryForward: 0,
+      carryForwardExpiresOn: null,
+      credits: 0,
+      takenBase: 0,
+      takenCarryForward: 0,
+      pendingHeld: 0,
+      available: 12,
+    };
+  }
+
+  it("requires 7 days for annual and none for other types", () => {
+    expect(minNoticeDays(annual)).toBe(7);
+    expect(minNoticeDays(medical)).toBe(0);
+  });
+
+  it("earliestStartDate shifts by calendar days, weekends and holidays included", () => {
+    // 29 Aug + 7 = 5 Sep, straight calendar arithmetic — the weekend in
+    // between does not extend it, and neither would Merdeka Day on 31 Aug.
+    expect(earliestStartDate(annual, TODAY)).toBe("2026-09-05");
+    expect(earliestStartDate(medical, TODAY)).toBe(TODAY);
+  });
+
+  it("rejects annual leave starting inside the notice window", () => {
+    for (const startDate of ["2026-08-31", "2026-09-03", "2026-09-04"]) {
+      const result = validateApplication({
+        type: annual,
+        today: TODAY,
+        startDate,
+        endDate: startDate,
+        dayCount: 1,
+        balance: noticeBalance(),
+        attachmentProvided: false,
+      });
+      expect(result, startDate).toEqual({ ok: false, reason: "insufficient_notice" });
+    }
+  });
+
+  it("accepts annual leave starting exactly 7 days out — the boundary is inclusive", () => {
+    const result = validateApplication({
+      type: annual,
+      today: TODAY,
+      startDate: "2026-09-05",
+      endDate: "2026-09-07",
+      dayCount: 1,
+      balance: noticeBalance(),
+      attachmentProvided: false,
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("still rejects a same-day annual request applied for in the past", () => {
+    const result = validateApplication({
+      type: annual,
+      today: TODAY,
+      startDate: "2026-08-20",
+      endDate: "2026-08-20",
+      dayCount: 1,
+      balance: noticeBalance(),
+      attachmentProvided: false,
+    });
+    expect(result).toEqual({ ok: false, reason: "insufficient_notice" });
+  });
+
+  it("does not gate unplanned leave types — medical can start today", () => {
+    const result = validateApplication({
+      type: medical,
+      today: TODAY,
+      startDate: TODAY,
+      endDate: TODAY,
+      dayCount: 1,
+      balance: noticeBalance(),
+      attachmentProvided: false,
+    });
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("reports notice before balance, so a short-notice request names the real problem", () => {
+    const result = validateApplication({
+      type: annual,
+      today: TODAY,
+      startDate: "2026-08-31",
+      endDate: "2026-08-31",
+      dayCount: 99, // also over balance
+      balance: noticeBalance(),
+      attachmentProvided: false,
+    });
+    expect(result).toEqual({ ok: false, reason: "insufficient_notice" });
   });
 });
 
@@ -304,7 +428,7 @@ describe("validateApplication", () => {
   }
 
   it("rejects end < start", () => {
-    const result = validateApplication({
+    const result = validate({
       type: makeType(),
       startDate: "2026-08-29",
       endDate: "2026-08-28",
@@ -316,7 +440,7 @@ describe("validateApplication", () => {
   });
 
   it("rejects zero workdays", () => {
-    const result = validateApplication({
+    const result = validate({
       type: makeType(),
       startDate: "2026-08-29",
       endDate: "2026-08-30",
@@ -328,7 +452,7 @@ describe("validateApplication", () => {
   });
 
   it("rejects over-balance requests", () => {
-    const result = validateApplication({
+    const result = validate({
       type: makeType(),
       startDate: "2026-08-24",
       endDate: "2026-09-04",
@@ -348,7 +472,7 @@ describe("validateApplication", () => {
       carryForwardCap: null,
       requiresAttachment: true,
     });
-    const result = validateApplication({
+    const result = validate({
       type: medical,
       startDate: "2026-08-24",
       endDate: "2026-08-24",
@@ -360,7 +484,7 @@ describe("validateApplication", () => {
   });
 
   it("accepts a valid in-balance application", () => {
-    const result = validateApplication({
+    const result = validate({
       type: makeType(),
       startDate: "2026-08-24",
       endDate: "2026-08-24",
@@ -378,7 +502,7 @@ describe("validateApplication", () => {
       entitlementDays: null,
       carryForwardCap: null,
     });
-    const result = validateApplication({
+    const result = validate({
       type: emergency,
       startDate: "2026-08-24",
       endDate: "2026-08-24",
