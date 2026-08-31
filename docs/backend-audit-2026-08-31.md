@@ -227,13 +227,26 @@ KPDN price sync have never run automatically in production. The one
 documented successful prod ingest (683 aggregates, 2026-08-23) was a manual
 invocation.
 
-**This means the GUC-based design in `20260901000008` works locally but is
-undeployable as written.** The hosted fix is Supabase Vault —
-`vault.create_secret()` plus `vault.decrypted_secrets` — which is the
-documented pattern for exactly this (pg_cron calling an Edge Function with a
-secret) and needs no elevated role. The migration should move
-`app.cron_secret` (and ideally the two pre-existing settings) onto Vault
-before anyone expects the schedules to run.
+**Resolved the same day by `20260901000009_cron_config_via_vault.sql`.** Job
+config moved from `app.*` settings into Vault, read through a small
+invoker-rights `public.cron_config()` helper that is granted to no API role.
+Vault is writable and readable by `postgres` on hosted Supabase — verified
+with a probe secret before designing around it — and is Supabase's documented
+answer for pg_cron calling an Edge Function with a secret. The dead
+`Authorization: Bearer app.functions_key` header is dropped; these functions
+are `verify_jwt = false`, so it authenticated nothing.
+
+Deployed and proven end to end on production: firing the exact job path
+(`net.http_post` with the URL and secret read from Vault) at
+`temporary-access-expiry` returned **HTTP 200** with a real body,
+`{"notified":0,"memberships":0,"break_glass":0}` — Vault read, header sent,
+function accepted, handler ran. All three prod jobs now show
+`uses_vault = true`, no legacy setting, `active = true`. That target was
+chosen deliberately: it had nothing to notify, so the test sent no email.
+
+**One consequence to expect:** there are 4 access reviews already due within
+48 hours on production that have never been notified, because the job never
+ran. The first real tick at 09:00 MYT will email their reviewers.
 
 Nothing regressed by deploying the guard: since cron never invoked these
 functions on prod, requiring the header broke no working automation. To
