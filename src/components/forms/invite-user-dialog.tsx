@@ -5,15 +5,20 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { inviteUserAction } from "@/features/identity-access/server/actions";
-import { ROLES } from "@/lib/auth/permissions";
-import { roleLabelKey } from "@/features/access-control/components/role-label";
+import { roleDisplayLabel } from "@/features/access-control/components/role-label";
+import type { OrganizationRole } from "@/features/identity-access/types";
 
 export function InviteUserDialog({
   organizationId,
+  roles,
   open,
   onClose,
 }: {
   organizationId: string;
+  /** Org roles the current actor may grant (already filtered to
+   * `rank <= actor's rank` by the server page), rendered instead of the
+   * hardcoded `ROLES` list so a custom role shows up without a code change. */
+  roles: OrganizationRole[];
   open: boolean;
   onClose: () => void;
 }) {
@@ -22,7 +27,7 @@ export function InviteUserDialog({
   const tRoot = useTranslations();
   const tRoles = useTranslations("roles");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<string>("caretaker");
+  const [roleId, setRoleId] = useState<string>(roles[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -32,7 +37,7 @@ export function InviteUserDialog({
     e.preventDefault();
     setError(null);
     setPending(true);
-    const result = await inviteUserAction({ organizationId, email, role, scopes: [] });
+    const result = await inviteUserAction({ organizationId, email, roleId, scopes: [] });
     setPending(false);
     if (!result.ok) {
       // `messageKey` is a dynamic full path (e.g. "errors.identity.roles.cannotGrantRole");
@@ -41,7 +46,7 @@ export function InviteUserDialog({
       return;
     }
     setEmail("");
-    setRole("caretaker");
+    setRoleId(roles[0]?.id ?? "");
     onClose();
     router.refresh();
   }
@@ -62,10 +67,10 @@ export function InviteUserDialog({
         </label>
         <label>
           {t("roleLabel")}
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {tRoles(roleLabelKey(r))}
+          <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {roleDisplayLabel(tRoles, r)}
               </option>
             ))}
           </select>

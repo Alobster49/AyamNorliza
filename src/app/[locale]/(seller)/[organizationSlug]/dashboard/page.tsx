@@ -1,7 +1,7 @@
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
-import { ADMIN_ROLES } from "@/features/orders/lib/roles";
-import { OrderPermissionError, requireOrgRole } from "@/features/orders/server/guards";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
 import {
   getDashboardInsights,
   getDashboardSales,
@@ -21,7 +21,7 @@ export default async function DashboardPage({
   let orgId: string;
   let timeZone: string;
   try {
-    ({ orgId, timeZone } = await requireOrgRole(organizationSlug, ADMIN_ROLES));
+    ({ orgId, timeZone } = await requirePermission(organizationSlug, "dashboard", "view"));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}`, locale: await getLocale() });

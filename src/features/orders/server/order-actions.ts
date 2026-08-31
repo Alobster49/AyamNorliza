@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
 import type { MarketSuggestion } from "@/features/market/types";
-import { requireOrgRole, OrderPermissionError } from "./guards";
+import { OrderPermissionError } from "./guards";
+import { requirePermission } from "@/lib/auth/require-permission";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import { tomorrowInTimeZone } from "@/lib/time/org-date";
-import { MANAGER_ROLES, STAFF_ROLES } from "../lib/roles";
 import { mapRpcError } from "../lib/rpc-errors";
 import {
   PlaceOrderSchema,
@@ -55,7 +56,7 @@ function ok<T>(data: T): ActionResult<T> {
  * `errors.drive.run.*` variant of this same mapping). Only the seller
  * order-pipeline screens converted so far (order-detail-client,
  * new-order-client, board-dialogs — Phase 3 Task 6) read `messageKey`;
- * every other caller of `guardRoles` keeps reading `message`.
+ * every other caller of `guardPermission` keeps reading `message`.
  */
 function permissionMessageKey(message: string): string {
   if (message === "Not authenticated") return "errors.orders.permission.unauthenticated";
@@ -63,15 +64,16 @@ function permissionMessageKey(message: string): string {
   return "errors.orders.permission.forbidden";
 }
 
-async function guardRoles(
+async function guardPermission(
   organizationSlug: string,
-  roles: readonly string[],
+  resource: string,
+  action: PermissionAction,
 ): Promise<
-  | { ok: true; orgId: string; userId: string; role: string; timeZone: string }
+  | { ok: true; orgId: string; userId: string; roleId: string; roleKey: string; timeZone: string }
   | { ok: false; code: "forbidden"; message: string; messageKey: string }
 > {
   try {
-    const ctx = await requireOrgRole(organizationSlug, roles);
+    const ctx = await requirePermission(organizationSlug, resource, action);
     return { ok: true, ...ctx };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
@@ -94,7 +96,7 @@ export async function getOrders(
   organizationSlug: string,
   status?: OrderStatus,
 ): Promise<ActionResult<OrderListItem[]>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -121,7 +123,7 @@ export async function getOrderDetail(
   organizationSlug: string,
   orderId: string,
 ): Promise<ActionResult<OrderWithItems>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -228,7 +230,7 @@ export async function createManualOrder(
     );
   }
 
-  const guard = await guardRoles(input.organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(input.organizationSlug, "orders", "add");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -296,7 +298,7 @@ export async function confirmOrder(rawInput: unknown): Promise<ActionResult> {
   }
   const input = parsed.data;
 
-  const guard = await guardRoles(input.organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(input.organizationSlug, "orders", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -348,7 +350,7 @@ export async function cancelOrder(
   orderId: string,
   reason: string,
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -374,7 +376,7 @@ export async function cancelOrder(
 export async function getTodayTasks(
   organizationSlug: string,
 ): Promise<ActionResult<TodayTasksData>> {
-  const guard = await guardRoles(organizationSlug, STAFF_ROLES);
+  const guard = await guardPermission(organizationSlug, "warehouse_tasks", "edit");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -462,7 +464,7 @@ export async function completeTask(rawInput: unknown): Promise<ActionResult> {
   }
   const input = parsed.data;
 
-  const guard = await guardRoles(input.organizationSlug, STAFF_ROLES);
+  const guard = await guardPermission(input.organizationSlug, "warehouse_tasks", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -495,7 +497,7 @@ export async function claimWeighTask(rawInput: unknown): Promise<ActionResult> {
   }
   const input = parsed.data;
 
-  const guard = await guardRoles(input.organizationSlug, STAFF_ROLES);
+  const guard = await guardPermission(input.organizationSlug, "warehouse_tasks", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -521,7 +523,7 @@ export async function getRuns(
   organizationSlug: string,
   date: string,
 ): Promise<ActionResult<RunWithOrders[]>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -591,7 +593,7 @@ export async function getRuns(
 
 /** Active driver-role members, for the run header's driver picker. */
 export async function getOrgDrivers(organizationSlug: string): Promise<ActionResult<RunDriver[]>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -623,7 +625,7 @@ export async function assignRunDriver(
   runId: string,
   driverId: string | null,
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -646,7 +648,7 @@ export async function setRunStatus(
   runId: string,
   status: RunStatus,
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -681,7 +683,7 @@ export async function reorderRun(
   runId: string,
   orderIds: string[],
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -703,7 +705,7 @@ export async function getRunManifest(
   organizationSlug: string,
   runId: string,
 ): Promise<ActionResult<RunWithOrders>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -745,7 +747,7 @@ export async function getRunManifest(
 export async function getSettlementQueue(
   organizationSlug: string,
 ): Promise<ActionResult<OrderWithItems[]>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -782,7 +784,7 @@ export async function getSettlementQueue(
 export async function getPriceHints(
   organizationSlug: string,
 ): Promise<ActionResult<MarketSuggestion[]>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -827,7 +829,7 @@ export async function closeOrder(
   }
   const input = parsed.data;
 
-  const guard = await guardRoles(input.organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(input.organizationSlug, "orders", "edit");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -872,7 +874,7 @@ export async function reopenOrder(
   orderId: string,
   reason: string,
 ): Promise<ActionResult> {
-  const guard = await guardRoles(organizationSlug, ["owner", "org_admin"]);
+  const guard = await guardPermission(organizationSlug, "orders.reopen", "use");
   if (!guard.ok) return guard;
 
   const supabase = await createSupabaseServerClient();
@@ -893,15 +895,15 @@ export async function reopenOrder(
 
 // ---------------------------------------------------------------------------
 // Manager variant of the buyer-portal delivery-options lookup (used by the
-// manual-order screen, which is gated by MANAGER_ROLES rather than
-// requireBuyer).
+// manual-order screen, which checks the ('orders','view') permission rather
+// than requireBuyer).
 // ---------------------------------------------------------------------------
 
 export async function getDeliveryOptionsForOrg(
   organizationSlug: string,
   zoneId: string,
 ): Promise<ActionResult<DeliveryOption[]>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -947,7 +949,7 @@ export async function resolveDeliveryZone(
   organizationSlug: string,
   postcode: string,
 ): Promise<ActionResult<{ zoneId: string | null }>> {
-  const guard = await guardRoles(organizationSlug, MANAGER_ROLES);
+  const guard = await guardPermission(organizationSlug, "orders", "view");
   if (!guard.ok) return guard;
 
   if (!/^[0-9]{5}$/.test(postcode)) {

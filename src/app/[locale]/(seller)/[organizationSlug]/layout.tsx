@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
-import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
+import { resolvePermissionsForOrg } from "@/lib/auth/require-permission";
 import {
   getOrganizationBySlug,
   getProfile,
@@ -21,25 +21,21 @@ export default async function SellerLayout({
   const { organizationSlug } = await params;
   const user = await requireUserOrRedirect(`/${organizationSlug}`, { requireAal2: true });
 
-  // Check the caller is an active member of this org at all.
-  const supabase = await createClient();
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
 
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", org.id)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .single();
+  // Single resolution of the caller's membership + grant set for this org —
+  // React 18 has no `cache()`, so this is called once per layout render and
+  // threaded down (see resolvePermissionsForOrg's doc comment).
+  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
 
   // Any active org member may open this shell — the sidebar (AppSidebar /
-  // dashboard-shell-model.ts) narrows the nav per role, and per-page
-  // `requireOrgRole` guards are the real security boundary: a role that
-  // shouldn't see a given page gets redirected there, not here. This layout
-  // only rejects users who aren't an active member of the org at all.
-  if (!member) {
+  // dashboard-shell-model.ts) narrows the nav per grant, and per-page
+  // `requirePermission`/`requireOrgRole` guards are the real security
+  // boundary: a caller that shouldn't see a given page gets redirected
+  // there, not here. This layout only rejects users who aren't an active
+  // member of the org at all.
+  if (!context) {
     // Locale-prefixed explicitly (same pattern as requireUserOrRedirect):
     // a bare path bounces through the middleware 307 and drops the locale.
     redirect(`/${await getLocale()}/${organizationSlug}`);
@@ -65,7 +61,7 @@ export default async function SellerLayout({
           userName={userName}
           userId={user.id}
           userAvatar={profile?.avatar ?? null}
-          role={member.role}
+          grants={[...grants]}
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
           <DashboardShellHeader

@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission, requireAnyPermission } from "@/lib/auth/require-permission";
 import type { ActionResult } from "@/features/orders/types";
 import { suggestTruck, type AssignmentContext } from "../lib/assignment";
-import { DISPATCH_ROLES } from "../lib/roles";
 import type { DispatchBoardData, DispatchTicket, DispatchTruck, Facility, Bay, ZonePostcodeRange } from "../types";
 
 type DispatchErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
@@ -30,23 +30,44 @@ function dispatchPermissionMessageKey(message: string): string {
   return "errors.logistics.dispatch.forbidden";
 }
 
-/**
- * The loading screen is also worked by Workers (stored role "inventory"),
- * who hold no dispatch permission — the board read and the two loading
- * mutations below admit them on top of DISPATCH_ROLES. SQL enforces the
- * same set via the inventory→logistics alias in has_org_role.
- */
-const LOADING_ROLES = [...DISPATCH_ROLES, "inventory"] as const;
-
 async function guardDispatch(
   organizationSlug: string,
-  roles: readonly string[] = DISPATCH_ROLES,
 ): Promise<
   | { ok: true; orgId: string; userId: string }
   | { ok: false; code: "forbidden"; message: string; messageKey: string }
 > {
   try {
-    const ctx = await requireOrgRole(organizationSlug, roles);
+    const ctx = await requirePermission(organizationSlug, "dispatch", "edit");
+    return { ok: true, orgId: ctx.orgId, userId: ctx.userId };
+  } catch (e) {
+    if (e instanceof OrderPermissionError) {
+      return {
+        ok: false,
+        code: "forbidden",
+        message: e.message,
+        messageKey: dispatchPermissionMessageKey(e.message),
+      };
+    }
+    throw e;
+  }
+}
+
+/**
+ * The loading screen is also worked by Workers (stored role "inventory"),
+ * who hold no `dispatch` permission but do hold `loading` — the board read
+ * and the two loading mutations below admit either grant.
+ */
+async function guardLoading(
+  organizationSlug: string,
+): Promise<
+  | { ok: true; orgId: string; userId: string }
+  | { ok: false; code: "forbidden"; message: string; messageKey: string }
+> {
+  try {
+    const ctx = await requireAnyPermission(organizationSlug, [
+      ["loading", "edit"],
+      ["dispatch", "edit"],
+    ]);
     return { ok: true, orgId: ctx.orgId, userId: ctx.userId };
   } catch (e) {
     if (e instanceof OrderPermissionError) {
@@ -126,7 +147,7 @@ export async function getDispatchBoard(
   organizationSlug: string,
   date: string,
 ): Promise<ActionResult<DispatchBoardData>> {
-  const guard = await guardDispatch(organizationSlug, LOADING_ROLES);
+  const guard = await guardLoading(organizationSlug);
   if (!guard.ok) return guard;
   const { orgId } = guard;
 
@@ -448,7 +469,7 @@ export async function setOrderLoaded(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<void>> {
-  const guard = await guardDispatch(organizationSlug, LOADING_ROLES);
+  const guard = await guardLoading(organizationSlug);
   if (!guard.ok) return guard;
 
   const parsed = SetLoadedSchema.safeParse(rawInput);
@@ -476,7 +497,7 @@ export async function setLoadingClaim(
   organizationSlug: string,
   rawInput: unknown,
 ): Promise<ActionResult<void>> {
-  const guard = await guardDispatch(organizationSlug, LOADING_ROLES);
+  const guard = await guardLoading(organizationSlug);
   if (!guard.ok) return guard;
 
   const parsed = SetClaimSchema.safeParse(rawInput);

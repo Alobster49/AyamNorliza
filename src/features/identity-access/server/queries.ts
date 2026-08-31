@@ -16,6 +16,7 @@ import type {
   MemberScope,
   Organization,
   OrganizationMember,
+  OrganizationRole,
   Profile,
 } from "../types";
 
@@ -74,7 +75,7 @@ export async function listMembers(
   let query = supabase
     .from("organization_members")
     .select(
-      "id, organization_id, user_id, role, status, starts_at, expires_at, invited_by, sponsor_id, client_operation_id",
+      "id, organization_id, user_id, role, role_id, status, starts_at, expires_at, invited_by, sponsor_id, client_operation_id",
     )
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
@@ -103,6 +104,35 @@ export async function listMembers(
     if (display.includes(q)) matchingIds.add(p.user_id);
   }
   return rows.filter((r) => matchingIds.has(r.userId));
+}
+
+/**
+ * Roles a picker may offer: every `organization_roles` row for this org,
+ * optionally filtered to `rank <= maxRank` (a caller may only ever grant a
+ * role at or below their own rank -- see `canGrantRole` in
+ * `@/lib/auth/permissions`). Ordered by rank descending so pickers read
+ * top-down the same way the rank ladder does.
+ */
+export async function listOrganizationRoles(
+  organizationId: string,
+  opts: { maxRank?: number } = {},
+): Promise<OrganizationRole[]> {
+  const supabase = await createSupabaseServerClient();
+  let query = supabase
+    .from("organization_roles")
+    .select("id, key, name, rank, is_system")
+    .eq("organization_id", organizationId)
+    .order("rank", { ascending: false });
+  if (opts.maxRank !== undefined) query = query.lte("rank", opts.maxRank);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    key: row.key,
+    name: row.name,
+    rank: row.rank,
+    isSystem: row.is_system,
+  }));
 }
 
 export async function listProfilesByUserIds(
@@ -280,6 +310,7 @@ function rowToMember(row: {
   organization_id: string;
   user_id: string;
   role: string;
+  role_id: string;
   status: "invited" | "active" | "suspended" | "expired";
   starts_at: string;
   expires_at: string | null;
@@ -292,6 +323,7 @@ function rowToMember(row: {
     organizationId: row.organization_id,
     userId: row.user_id,
     role: row.role,
+    roleId: row.role_id,
     status: row.status,
     startsAt: row.starts_at,
     expiresAt: row.expires_at,

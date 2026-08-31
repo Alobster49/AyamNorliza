@@ -61,6 +61,7 @@ const eslintConfig = [
       "src/app/\\[locale\\]/(auth)/invite/\\[token\\]/page.tsx",
       "src/lib/auth/require-user.ts",
       "src/lib/auth/buyer-auth.ts",
+      "src/lib/auth/require-permission.ts",
       "src/features/orders/server/guards.ts",
     ],
     rules: {

@@ -5,16 +5,20 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { resolveMessageKey } from "@/lib/i18n/resolve-message-key";
 import { createUserAction, type ActionResult } from "@/features/identity-access/server/actions";
-import { ROLES } from "@/lib/auth/permissions";
-import { roleLabelKey } from "@/features/access-control/components/role-label";
+import { roleDisplayLabel } from "@/features/access-control/components/role-label";
+import type { OrganizationRole } from "@/features/identity-access/types";
 
 export function CreateUserDialog({
   organizationId,
+  roles,
   open,
   onClose,
   onReauthNeeded,
 }: {
   organizationId: string;
+  /** Org roles the current actor may grant (already filtered to
+   * `rank <= actor's rank` by the server page). */
+  roles: OrganizationRole[];
   open: boolean;
   onClose: () => void;
   onReauthNeeded: (retry: () => Promise<ActionResult<unknown>>) => void;
@@ -25,7 +29,7 @@ export function CreateUserDialog({
   const tRoles = useTranslations("roles");
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<string>("caretaker");
+  const [roleId, setRoleId] = useState<string>(roles[0]?.id ?? "");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -35,7 +39,7 @@ export function CreateUserDialog({
     e.preventDefault();
     setError(null);
     setPending(true);
-    const payload = { organizationId, email, displayName, role };
+    const payload = { organizationId, email, displayName, roleId };
     const result = await createUserAction(payload);
     setPending(false);
     if (!result.ok) {
@@ -43,7 +47,7 @@ export function CreateUserDialog({
         onReauthNeeded(() => createUserAction(payload));
         setDisplayName("");
         setEmail("");
-        setRole("caretaker");
+        setRoleId(roles[0]?.id ?? "");
         onClose();
         return;
       }
@@ -52,7 +56,7 @@ export function CreateUserDialog({
     }
     setDisplayName("");
     setEmail("");
-    setRole("caretaker");
+    setRoleId(roles[0]?.id ?? "");
     onClose();
     router.refresh();
   }
@@ -82,10 +86,10 @@ export function CreateUserDialog({
         </label>
         <label>
           {t("roleLabel")}
-          <select value={role} onChange={(e) => setRole(e.target.value)}>
-            {ROLES.map((r) => (
-              <option key={r} value={r}>
-                {tRoles(roleLabelKey(r))}
+          <select value={roleId} onChange={(e) => setRoleId(e.target.value)}>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {roleDisplayLabel(tRoles, r)}
               </option>
             ))}
           </select>

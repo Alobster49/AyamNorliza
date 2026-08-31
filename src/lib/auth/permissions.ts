@@ -120,15 +120,20 @@ export function getRoleRank(role: Role): number {
   return roleRank[role];
 }
 
-export function canGrantRole(actor: Role, target: Role): boolean {
-  if (!can(actor, "membership.role.change")) return false;
-  return roleRank[target] <= roleRank[actor];
-}
-
-export function highestGrantableRole(actor: Role): Role {
-  const eligible = (Object.keys(roleRank) as Role[]).filter((r) => canGrantRole(actor, r));
-  eligible.sort((a, b) => roleRank[a] - roleRank[b]);
-  return eligible[eligible.length - 1] ?? "driver";
+/**
+ * Dynamic-RBAC rank check (see `src/lib/auth/require-permission.ts`):
+ * `organization_roles.rank` replaces the hardcoded `roleRank` table above as
+ * the source of truth once a caller has real rows to compare, so this is
+ * kept pure and numeric rather than keyed by the legacy `Role` union.
+ * `actorCanChangeRoles` is the caller's `membership.role.change` capability,
+ * resolved via `actorCan()` by the caller (this function stays DB-free).
+ */
+export function canGrantRole(
+  actorRank: number,
+  targetRank: number,
+  actorCanChangeRoles: boolean,
+): boolean {
+  return actorCanChangeRoles && targetRank <= actorRank;
 }
 
 /**

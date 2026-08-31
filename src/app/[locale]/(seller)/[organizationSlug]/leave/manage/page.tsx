@@ -1,6 +1,7 @@
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
-import { requireLeaveApprover, OrderPermissionError } from "@/features/hr/server/guards";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
 import { getManageData } from "@/features/hr/server/manage-actions";
 import { todayInTimeZone } from "@/lib/time/org-date";
 import { ManageClient } from "@/features/hr/components/manage-client";
@@ -17,7 +18,7 @@ export default async function LeaveManagePage({
 
   let ctx;
   try {
-    ctx = await requireLeaveApprover(organizationSlug);
+    ctx = await requirePermission(organizationSlug, "leave_management", "view");
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}/leave`, locale: await getLocale() });

@@ -12,7 +12,6 @@
  */
 
 import { z } from "zod";
-import { ROLES } from "@/lib/auth/permissions";
 
 const slugSchema = z
   .string()
@@ -76,7 +75,7 @@ export type UpdateOrganizationInput = z.infer<typeof UpdateOrganizationInput>;
 export const InviteUserInput = z.object({
   organizationId: uuid,
   email: z.string().email().max(254),
-  role: z.enum(ROLES),
+  roleId: uuid,
   scopes: z.array(scopeRow).max(50).default([]),
   expiresAt: z.string().datetime({ offset: true }).optional(),
   clientOperationId: uuid.optional(),
@@ -102,7 +101,7 @@ export type AcceptInvitationInput = z.infer<typeof AcceptInvitationInput>;
 
 export const ChangeRoleInput = z.object({
   memberId: uuid,
-  newRole: z.enum(ROLES),
+  newRoleId: uuid,
   reason: reasonSchema,
   approverUserId: uuid.optional(),
 });
@@ -149,7 +148,7 @@ export const CreateUserInput = z.object({
   organizationId: uuid,
   email: z.string().email().max(254),
   displayName: z.string().min(1).max(150),
-  role: z.enum(ROLES),
+  roleId: uuid,
   clientOperationId: uuid.optional(),
 });
 export type CreateUserInput = z.infer<typeof CreateUserInput>;

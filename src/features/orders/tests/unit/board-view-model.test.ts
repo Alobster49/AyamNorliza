@@ -38,21 +38,21 @@ describe("displayAmount", () => {
 
 describe("classifyDropTarget", () => {
   it("is idle on the origin column", () => {
-    expect(classifyDropTarget("pending", "pending", "owner")).toEqual({ mode: "idle" });
+    expect(classifyDropTarget("pending", "pending", true)).toEqual({ mode: "idle" });
   });
 
   it("invites legal workflow targets", () => {
-    expect(classifyDropTarget("pending", "confirmed", "seller")).toEqual({ mode: "invite" });
-    expect(classifyDropTarget("delivered", "closed", "seller")).toEqual({ mode: "invite" });
-    expect(classifyDropTarget("closed", "delivered", "owner")).toEqual({ mode: "invite" });
+    expect(classifyDropTarget("pending", "confirmed", false)).toEqual({ mode: "invite" });
+    expect(classifyDropTarget("delivered", "closed", false)).toEqual({ mode: "invite" });
+    expect(classifyDropTarget("closed", "delivered", true)).toEqual({ mode: "invite" });
   });
 
   it("declines blocked targets with the short hint", () => {
-    expect(classifyDropTarget("pending", "ready", "seller")).toEqual({
+    expect(classifyDropTarget("pending", "ready", false)).toEqual({
       mode: "decline",
       hintKey: "orders.board.hint.ready",
     });
-    expect(classifyDropTarget("closed", "delivered", "seller")).toEqual({
+    expect(classifyDropTarget("closed", "delivered", false)).toEqual({
       mode: "decline",
       hintKey: "orders.board.hint.reopenRole",
     });

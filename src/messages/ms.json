@@ -418,7 +418,8 @@
         "notMember": "Bukan ahli organisasi ini",
         "reauthRequired": "Pengesahan semula diperlukan",
         "internal": "Sesuatu tidak kena. Sila cuba lagi.",
-        "invalidInput": "Input tidak sah"
+        "invalidInput": "Input tidak sah",
+        "orgNotFound": "Organisasi tidak dijumpai"
       },
       "organization": {
         "invalidUpdate": "Kemas kini organisasi tidak sah",
@@ -464,7 +465,17 @@
         "ownerOnlyEdit": "Hanya pemilik boleh menyunting keupayaan",
         "ownerOnlyReset": "Hanya pemilik boleh menetapkan semula keupayaan",
         "cannotGrantRole": "Tidak boleh memberikan peranan '{role}'",
-        "saveOverrideFailed": "Gagal menyimpan override"
+        "saveOverrideFailed": "Gagal menyimpan override",
+        "forbidden": "Anda tidak mempunyai kebenaran untuk menguruskan peranan",
+        "invalidName": "Nama mesti mengandungi sekurang-kurangnya satu huruf atau nombor",
+        "cloneSourceNotFound": "Peranan sumber klon tidak dijumpai",
+        "duplicateKey": "Peranan dengan kunci '{key}' sudah wujud",
+        "createFailed": "Tidak dapat mencipta peranan. Sila cuba lagi.",
+        "notFound": "Peranan tidak dijumpai",
+        "ownerLocked": "Peranan pemilik tidak boleh diubah",
+        "systemLocked": "Peranan sistem tidak boleh dinamakan semula atau dipadam",
+        "hasMembers": "Peranan ini masih mempunyai ahli aktif dan tidak boleh dipadam",
+        "noDefaults": "Peranan tersuai tiada tetapan lalai untuk ditetapkan semula"
       },
       "auth": {
         "invalidLogin": "Log masuk tidak sah",
@@ -1105,14 +1116,157 @@
     },
     "rolesMasthead": {
       "kicker": "Kawalan akses — {organizationName}",
-      "issueTag": "Isu 01 · Fasa 1 baca sahaja",
+      "issueTag": "Isu 02 · Boleh disunting",
       "titleRoles": "Peranan",
       "titlePermissions": "Kebenaran",
-      "description": "Paparan baca sahaja bagi setiap peranan dalam organisasi ini dan setiap keupayaan yang diberikan kepada setiap peranan. Penyuntingan matriks ini dikendalikan oleh MOD-19 — sehingga itu, halaman ini adalah gambaran rasmi.",
+      "description": "Setiap peranan dalam organisasi ini dan setiap kebenaran yang diberikan kepada setiap peranan. Admin dan pemilik boleh mencipta peranan tersuai dan melaraskan kebenaran di sini — setiap perubahan direkodkan dalam log audit.",
       "statRoles": "Peranan",
       "statCapabilities": "Keupayaan",
       "statCategories": "Kategori",
       "lastRevised": "Disemak kali terakhir {date}"
+    },
+    "rolesEditor": {
+      "newRoleButton": "Peranan baharu",
+      "systemRolesHeading": "Peranan sistem",
+      "customRolesHeading": "Peranan tersuai",
+      "systemBadge": "Sistem",
+      "memberCountLabel": "{count, plural, one {# ahli} other {# ahli}}",
+      "nameLabel": "Nama peranan",
+      "descriptionLabel": "Penerangan",
+      "save": "Simpan",
+      "cancel": "Batal",
+      "deleteButton": "Padam peranan",
+      "deleteDisabledOwner": "Peranan pemilik tidak boleh dipadam",
+      "deleteDisabledSystem": "Peranan sistem tidak boleh dipadam",
+      "deleteDisabledHasMembers": "Tukar peranan ahli yang memegang peranan ini sebelum memadamnya",
+      "confirmDeleteTitle": "Padam {role}?",
+      "confirmDeleteDescription": "Peranan ini akan dibuang secara kekal. Tindakan ini tidak boleh diundur.",
+      "deleteSuccess": "Peranan dipadam",
+      "deleteErrorTitle": "Gagal memadam peranan",
+      "renameDisabledOwner": "Peranan pemilik tidak boleh dinamakan semula",
+      "renameDisabledSystem": "Nama peranan sistem tidak boleh diubah",
+      "renameSuccess": "Peranan dikemas kini",
+      "renameErrorTitle": "Gagal menyimpan peranan",
+      "resetButton": "Tetapkan semula kepada lalai",
+      "resetConfirmTitle": "Tetapkan semula {role} kepada lalai?",
+      "resetConfirmDescription": "Semua perubahan kebenaran tersuai bagi peranan ini akan dibuang dan digantikan dengan tetapan lalai terbina.",
+      "resetSuccess": "Peranan ditetapkan semula kepada lalai",
+      "resetErrorTitle": "Gagal menetapkan semula peranan",
+      "ownerLockNote": "Peranan pemilik sentiasa mempunyai setiap kebenaran. Ia tidak boleh disunting.",
+      "readOnlyNote": "Anda tidak mempunyai kebenaran untuk menyunting peranan.",
+      "toggleErrorTitle": "Gagal mengemas kini kebenaran",
+      "toggleAriaLabel": "Togol {action} pada {resource}",
+      "pagesHeading": "Halaman",
+      "pagesDescription": "Apa yang peranan ini boleh lihat dan lakukan pada setiap halaman.",
+      "colResource": "Halaman",
+      "colView": "Lihat",
+      "colAdd": "Tambah",
+      "colEdit": "Sunting",
+      "colDelete": "Padam",
+      "adminHeading": "Pentadbiran",
+      "adminDescription": "Keupayaan seluruh organisasi yang tidak terikat kepada satu halaman.",
+      "resources": {
+        "dashboard": "Papan pemuka",
+        "products": "Produk",
+        "orders": "Pesanan",
+        "customers": "Pelanggan",
+        "marketPrices": "Harga pasaran",
+        "dispatch": "Penghantaran",
+        "deliveryRuns": "Larian penghantaran",
+        "deliverySetup": "Persediaan penghantaran",
+        "warehouseTasks": "Tugas gudang",
+        "loading": "Pemuatan",
+        "driverDeck": "Papan pemandu",
+        "leave": "Cuti Saya",
+        "leaveManagement": "Pengurusan Cuti",
+        "users": "Pengguna",
+        "roles": "Peranan",
+        "dataConsole": "Konsol data",
+        "settings": "Tetapan"
+      },
+      "groups": {
+        "organization": "Organisasi",
+        "membership": "Keahlian",
+        "sales": "Jualan",
+        "access_review": "Semakan akses",
+        "break_glass": "Break-glass",
+        "audit_auth": "Audit & pengesahan"
+      },
+      "capabilities": {
+        "organizationManage": {
+          "label": "Urus organisasi",
+          "description": "Cipta, arkibkan, dan kaitkan dengan bil."
+        },
+        "organizationSettingsUpdate": {
+          "label": "Kemas kini tetapan organisasi",
+          "description": "Identiti, lokaliti, zon waktu, wilayah."
+        },
+        "membershipInvite": {
+          "label": "Jemput pengguna",
+          "description": "Hantar jemputan dan cipta keahlian belum selesai."
+        },
+        "membershipRoleChange": {
+          "label": "Tukar peranan ahli",
+          "description": "Naikkan, turunkan, atau pindahkan ahli antara peranan."
+        },
+        "membershipScopeChange": {
+          "label": "Tukar skop ahli",
+          "description": "Hadkan ahli kepada tapak, zon, atau rumah tertentu."
+        },
+        "membershipDeactivate": {
+          "label": "Nyahaktifkan ahli",
+          "description": "Gantung atau pindahkan pemilikan semasa nyahaktif."
+        },
+        "accessReviewRun": {
+          "label": "Jalankan semakan akses",
+          "description": "Mulakan kempen pengesahan suku tahunan atau sekali sahaja."
+        },
+        "accessReviewDecide": {
+          "label": "Putuskan item semakan",
+          "description": "Kekalkan, ubah, atau batalkan setiap ahli dalam semakan."
+        },
+        "breakGlassOpen": {
+          "label": "Buka break-glass",
+          "description": "Cetuskan override kecemasan yang diaudit."
+        },
+        "breakGlassFinalize": {
+          "label": "Selesaikan semakan break-glass",
+          "description": "Tutup acara break-glass dengan semakan selepas guna."
+        },
+        "auditRead": {
+          "label": "Baca log audit",
+          "description": "Semak sejarah tidak boleh ubah bagi setiap perubahan."
+        },
+        "auditLogRead": {
+          "label": "Baca log audit (mentah)",
+          "description": "Semak jadual audit_log yang mendasari."
+        },
+        "authSecurityRead": {
+          "label": "Baca acara keselamatan",
+          "description": "Semak acara log masuk, MFA, dan kitaran hayat sesi."
+        },
+        "ordersReopen": {
+          "label": "Buka semula pesanan ditutup",
+          "description": "Pindahkan pesanan yang ditutup atau dibatalkan semula untuk pembetulan."
+        },
+        "dataConsoleManage": {
+          "label": "Urus konsol data",
+          "description": "Jalankan pertanyaan dan eksport konsol data yang berhak istimewa."
+        }
+      },
+      "createDialog": {
+        "title": "Peranan baharu",
+        "description": "Berikan nama peranan dan pilih untuk memulakan daripada kebenaran peranan sedia ada.",
+        "nameLabel": "Nama",
+        "namePlaceholder": "cth. Jualan Serantau",
+        "cloneLabel": "Klon kebenaran daripada (pilihan)",
+        "cloneNone": "Mula dari kosong (tiada kebenaran)",
+        "cancel": "Batal",
+        "create": "Cipta peranan",
+        "creating": "Mencipta…",
+        "success": "Peranan dicipta",
+        "errorTitle": "Gagal mencipta peranan"
+      }
     },
     "updateOrganizationForm": {
       "cardTitle": "Umum",

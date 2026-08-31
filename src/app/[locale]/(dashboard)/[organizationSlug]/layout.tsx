@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { resolvePermissionsForOrg } from "@/lib/auth/require-permission";
 import {
   getOrganizationBySlug,
   getProfile,
@@ -27,19 +27,14 @@ export default async function OrganizationLayout({
   // member of this organization. Without this, a suspended/deactivated user
   // kept full dashboard access until their access token expired, and any
   // authenticated user could load another organization's shell. Mirrors the
-  // membership check in the (seller) layout.
-  const supabase = await createSupabaseServerClient();
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", org.id)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
+  // membership check in the (seller) layout. Single resolution of the
+  // caller's membership + grant set — React 18 has no `cache()`, so this is
+  // called once per layout render and threaded down.
+  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
   // Locale-prefixed explicitly (same pattern as `requireUserOrRedirect`):
   // a bare `/login` here bounced through the middleware's 307 and dropped
   // the active locale.
-  if (!member) redirect(`/${await getLocale()}/login`);
+  if (!context) redirect(`/${await getLocale()}/login`);
 
   const t = await getTranslations("dashboard");
   const profile = await getProfile(user.id);
@@ -60,7 +55,7 @@ export default async function OrganizationLayout({
           userName={userName}
           userId={user.id}
           userAvatar={profile?.avatar ?? null}
-          role={member.role}
+          grants={[...grants]}
         />
         <SidebarInset className="min-w-0 overflow-x-hidden">
           <DashboardShellHeader

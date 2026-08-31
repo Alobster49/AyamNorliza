@@ -33,7 +33,8 @@ function mockApproverGuard() {
   vi.mocked(requireLeaveApprover).mockResolvedValue({
     orgId: "org-1",
     userId: "approver-1",
-    role: "hr",
+    roleId: "role-1",
+    roleKey: "hr",
     timeZone: "Asia/Kuala_Lumpur",
   });
 }

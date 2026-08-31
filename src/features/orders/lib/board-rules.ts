@@ -14,8 +14,6 @@ export type DropResolution =
   | { kind: "reopen" }
   | { kind: "blocked"; reasonKey: string; hintKey: string };
 
-const REOPEN_ROLES = ["owner", "org_admin"];
-
 const blocked = (slug: string): DropResolution => ({
   kind: "blocked",
   reasonKey: `orders.board.blocked.${slug}`,
@@ -25,7 +23,7 @@ const blocked = (slug: string): DropResolution => ({
 export function resolveDrop(
   from: OrderStatus,
   to: OrderStatus,
-  callerRole: string,
+  canReopen: boolean,
 ): DropResolution {
   if (from === to) return { kind: "noop" };
 
@@ -38,7 +36,7 @@ export function resolveDrop(
   if (from === "delivered" && to === "closed") return { kind: "settle" };
 
   if (from === "closed" && to === "delivered") {
-    if (REOPEN_ROLES.includes(callerRole)) return { kind: "reopen" };
+    if (canReopen) return { kind: "reopen" };
     return blocked("reopenRole");
   }
 

@@ -26,7 +26,7 @@ import { OrdersBoard } from "@/features/orders/components/orders-board";
 
 type OrdersClientProps = {
   organizationSlug: string;
-  callerRole: string;
+  canReopen: boolean;
   initialOrders: OrderListItem[];
   today: string;
 };
@@ -37,7 +37,7 @@ const VIEW_STORAGE_KEY = "orders-view";
 const TABS = ["all", ...ORDER_STATUSES] as const;
 type TabValue = (typeof TABS)[number];
 
-export function OrdersClient({ organizationSlug, callerRole, initialOrders, today }: OrdersClientProps) {
+export function OrdersClient({ organizationSlug, canReopen, initialOrders, today }: OrdersClientProps) {
   const router = useRouter();
   const t = useTranslations("orders.client");
   const tStatus = useTranslations("status.order");
@@ -188,7 +188,7 @@ export function OrdersClient({ organizationSlug, callerRole, initialOrders, toda
             <OrdersBoard
               organizationSlug={organizationSlug}
               orders={visibleBase}
-              callerRole={callerRole}
+              canReopen={canReopen}
               onOrderStatusChange={(orderId, status) =>
                 setOrders((prev) => prev.map((o) => (o.id === orderId ? { ...o, status } : o)))
               }

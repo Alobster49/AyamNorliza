@@ -2,8 +2,8 @@ import { notFound } from "next/navigation";
 import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { requireUserOrRedirect } from "@/lib/auth/require-user";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { DRIVER_AND_MANAGER_ROLES } from "@/features/orders/lib/roles";
+import { resolvePermissionsForOrg } from "@/lib/auth/require-permission";
+import { grantKey } from "@/lib/auth/rbac";
 import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
 import { SupabaseSessionProvider } from "@/components/providers/supabase-session-provider";
 
@@ -27,16 +27,8 @@ export default async function DriveLayout({
   const org = await getOrganizationBySlug(organizationSlug);
   if (!org) notFound();
 
-  const supabase = await createSupabaseServerClient();
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", org.id)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  if (!member || !DRIVER_AND_MANAGER_ROLES.includes(member.role as never)) {
+  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
+  if (!context || !grants.has(grantKey("driver_deck", "view"))) {
     redirect({ href: "/", locale: await getLocale() });
   }
 

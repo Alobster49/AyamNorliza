@@ -1,8 +1,7 @@
-import { notFound } from "next/navigation";
-import { redirect } from "@/i18n/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
-import { requireOrgRole, OrderPermissionError, getOrgTimeZone } from "@/features/orders/server/guards";
-import { MANAGER_ROLES } from "@/features/orders/lib/roles";
+import { resolvePermissionsForOrg } from "@/lib/auth/require-permission";
+import { grantKey } from "@/lib/auth/rbac";
 import { getOrders } from "@/features/orders/server/order-actions";
 import { todayInTimeZone } from "@/lib/time/org-date";
 import { OrdersClient } from "./orders-client";
@@ -14,18 +13,13 @@ export default async function OrdersPage({
 }) {
   const { organizationSlug } = await params;
 
-  let callerRole: string;
-  try {
-    ({ role: callerRole } = await requireOrgRole(organizationSlug, MANAGER_ROLES));
-  } catch (error) {
-    if (error instanceof OrderPermissionError) {
-      redirect({ href: `/${organizationSlug}`, locale: await getLocale() });
-    }
-    throw error;
+  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
+  if (!context || !grants.has(grantKey("orders", "view"))) {
+    redirect(`/${await getLocale()}/${organizationSlug}`);
   }
 
-  const timeZone = await getOrgTimeZone(organizationSlug);
-  const today = todayInTimeZone(timeZone);
+  const today = todayInTimeZone(context.timeZone);
+  const canReopen = grants.has(grantKey("orders.reopen", "use"));
 
   const result = await getOrders(organizationSlug);
   if (!result.ok) notFound();
@@ -33,7 +27,7 @@ export default async function OrdersPage({
   return (
     <OrdersClient
       organizationSlug={organizationSlug}
-      callerRole={callerRole}
+      canReopen={canReopen}
       initialOrders={result.data}
       today={today}
     />

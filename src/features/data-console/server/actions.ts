@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { admin, type AdminContext } from "@/lib/supabase/admin";
 import { recordAudit } from "@/lib/audit/events";
-import { requireOrgRole, OrderPermissionError } from "@/features/orders/server/guards";
+import { OrderPermissionError } from "@/features/orders/server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
 import { CONSOLE_ACCOUNTS, REALWORLD_DRIVER_ACCOUNTS } from "../lib/accounts";
 
 // Committed on purpose: pilot-only demo logins, accepted risk documented in
@@ -18,7 +19,7 @@ export type ActionResult<T> =
 
 async function guardOwner(organizationSlug: string) {
   try {
-    return await requireOrgRole(organizationSlug, ["org_admin"]);
+    return await requirePermission(organizationSlug, "data_console.manage", "use");
   } catch (e) {
     if (e instanceof OrderPermissionError) return null;
     throw e;
@@ -54,7 +55,7 @@ export async function clearAllData(
     {
       organizationId: ctx.orgId,
       actorUserId: ctx.userId,
-      actorRole: ctx.role,
+      actorRole: ctx.roleKey,
       eventType: "org.data_cleared",
       entityType: "organization",
       entityId: ctx.orgId,
@@ -152,7 +153,7 @@ export async function seedDemoData(
     {
       organizationId: ctx.orgId,
       actorUserId: ctx.userId,
-      actorRole: ctx.role,
+      actorRole: ctx.roleKey,
       eventType: "org.data_seeded",
       entityType: "organization",
       entityId: ctx.orgId,
@@ -192,7 +193,7 @@ export async function seedSetupData(
     {
       organizationId: ctx.orgId,
       actorUserId: ctx.userId,
-      actorRole: ctx.role,
+      actorRole: ctx.roleKey,
       eventType: "org.data_seeded",
       entityType: "organization",
       entityId: ctx.orgId,
@@ -306,7 +307,7 @@ export async function seedRealworldData(
     {
       organizationId: ctx.orgId,
       actorUserId: ctx.userId,
-      actorRole: ctx.role,
+      actorRole: ctx.roleKey,
       eventType: "org.data_seeded",
       entityType: "organization",
       entityId: ctx.orgId,

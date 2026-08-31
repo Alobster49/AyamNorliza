@@ -33,12 +33,24 @@ export type OrganizationMember = {
   organizationId: string;
   userId: string;
   role: string;
+  roleId: string;
   status: "invited" | "active" | "suspended" | "expired";
   startsAt: string;
   expiresAt: string | null;
   invitedBy: string | null;
   sponsorId: string | null;
   clientOperationId: string | null;
+};
+
+/** A row from `organization_roles`: system (seeded) or org-defined custom
+ * role. Pickers render these instead of the hardcoded `ROLES` list so a
+ * custom role shows up without a code change. */
+export type OrganizationRole = {
+  id: string;
+  key: string;
+  name: string;
+  rank: number;
+  isSystem: boolean;
 };
 
 export type MemberScope = {

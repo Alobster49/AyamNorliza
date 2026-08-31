@@ -47,9 +47,9 @@ export type DropTarget = { mode: "invite" | "decline" | "idle"; hintKey?: string
 export function classifyDropTarget(
   active: OrderStatus,
   target: OrderStatus,
-  callerRole: string,
+  canReopen: boolean,
 ): DropTarget {
-  const resolution = resolveDrop(active, target, callerRole);
+  const resolution = resolveDrop(active, target, canReopen);
   if (resolution.kind === "noop") return { mode: "idle" };
   if (resolution.kind === "blocked") return { mode: "decline", hintKey: resolution.hintKey };
   return { mode: "invite" };

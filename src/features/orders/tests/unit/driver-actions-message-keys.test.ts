@@ -14,16 +14,13 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
 
-vi.mock("../../server/guards", async () => {
-  const actual = await vi.importActual<typeof import("../../server/guards")>("../../server/guards");
-  return {
-    OrderPermissionError: actual.OrderPermissionError,
-    requireOrgRole: vi.fn(),
-  };
-});
+vi.mock("@/lib/auth/require-permission", () => ({
+  requirePermission: vi.fn(),
+}));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireOrgRole, OrderPermissionError } from "../../server/guards";
+import { requirePermission } from "@/lib/auth/require-permission";
+import { OrderPermissionError } from "../../server/guards";
 import {
   getDriverRun,
   arriveStop,
@@ -61,10 +58,11 @@ function mockSupabaseRpc(rpcResult: { error: { message: string } | null }) {
 }
 
 function mockDriverGuard() {
-  vi.mocked(requireOrgRole).mockResolvedValue({
+  vi.mocked(requirePermission).mockResolvedValue({
     orgId: "org-1",
     userId: "user-1",
-    role: "driver",
+    roleId: "role-1",
+    roleKey: "driver",
     timeZone: "Asia/Kuala_Lumpur",
   });
 }
@@ -75,35 +73,35 @@ beforeEach(() => {
 
 describe("getDriverRun", () => {
   it("returns drive.run.unauthenticated when the caller isn't signed in", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Not authenticated"));
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError("Not authenticated"));
     const result = await getDriverRun("ayam-norliza-pilot");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.unauthenticated");
   });
 
   it("returns drive.run.orgNotFound when the org slug doesn't resolve", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Organization not found"));
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError("Organization not found"));
     const result = await getDriverRun("no-such-org");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.orgNotFound");
   });
 
   it("returns drive.run.forbidden for the generic permission-denied case", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError());
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError());
     const result = await getDriverRun("ayam-norliza-pilot");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.forbidden");
   });
 
   it("returns drive.run.internal for an unexpected guard failure", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new Error("boom"));
+    vi.mocked(requirePermission).mockRejectedValue(new Error("boom"));
     const result = await getDriverRun("ayam-norliza-pilot");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.internal");
   });
 
   it("returns drive.run.loadFailed when the runs query errors", async () => {
-    vi.mocked(requireOrgRole).mockResolvedValue({ orgId: "org-1", userId: "user-1", role: "driver", timeZone: "Asia/Kuala_Lumpur" });
+    vi.mocked(requirePermission).mockResolvedValue({ orgId: "org-1", userId: "user-1", roleId: "role-1", roleKey: "driver", timeZone: "Asia/Kuala_Lumpur" });
     mockSupabase({ data: null, error: { message: "db down" } });
     const result = await getDriverRun("ayam-norliza-pilot");
     expect(result.ok).toBe(false);
@@ -111,7 +109,7 @@ describe("getDriverRun", () => {
   });
 
   it("succeeds with no run and no messageKey when there's nothing to open", async () => {
-    vi.mocked(requireOrgRole).mockResolvedValue({ orgId: "org-1", userId: "user-1", role: "driver", timeZone: "Asia/Kuala_Lumpur" });
+    vi.mocked(requirePermission).mockResolvedValue({ orgId: "org-1", userId: "user-1", roleId: "role-1", roleKey: "driver", timeZone: "Asia/Kuala_Lumpur" });
     mockSupabase({ data: [], error: null });
     const result = await getDriverRun("ayam-norliza-pilot");
     expect(result.ok).toBe(true);
@@ -121,7 +119,7 @@ describe("getDriverRun", () => {
 
 describe("arriveStop", () => {
   it("returns drive.run.forbidden when the guard rejects the caller", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError());
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError());
     const result = await arriveStop("ayam-norliza-pilot", "order-1");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.forbidden");
@@ -187,7 +185,7 @@ describe("deliverStop", () => {
   });
 
   it("returns drive.run.orgNotFound when the guard can't resolve the org", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Organization not found"));
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError("Organization not found"));
     const result = await deliverStop("no-such-org", "order-1", {
       lines: [{ itemId: "item-1", finalWeightKg: 1 }],
     });
@@ -214,7 +212,7 @@ describe("failStop", () => {
   });
 
   it("returns drive.run.internal for an unexpected guard failure", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new Error("boom"));
+    vi.mocked(requirePermission).mockRejectedValue(new Error("boom"));
     const result = await failStop("ayam-norliza-pilot", "order-1", "other");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.internal");
@@ -325,7 +323,7 @@ describe("deliverStop weights", () => {
 
 describe("getDriverInvoice", () => {
   it("returns forbidden messageKey when the guard rejects", async () => {
-    vi.mocked(requireOrgRole).mockRejectedValue(new OrderPermissionError("Not authenticated"));
+    vi.mocked(requirePermission).mockRejectedValue(new OrderPermissionError("Not authenticated"));
     const result = await getDriverInvoice("org-slug", "order-1");
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.messageKey).toBe("errors.drive.run.unauthenticated");

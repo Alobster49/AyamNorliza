@@ -110,9 +110,13 @@ export type ActiveOrgMember = {
   organization_id: string;
   user_id: string;
   role: string;
+  role_id: string;
   status: string;
   starts_at: string;
   expires_at: string | null;
+  /** Null only if `role_id` somehow points at a deleted role row -- treat
+   * as rank 0 (grant nothing) rather than crashing a picker. */
+  organization_roles: { rank: number } | null;
 };
 
 export async function requireOrgMember(
@@ -122,15 +126,17 @@ export async function requireOrgMember(
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("organization_members")
-    .select("id, organization_id, user_id, role, status, starts_at, expires_at")
+    .select(
+      "id, organization_id, user_id, role, role_id, status, starts_at, expires_at, organization_roles(rank)",
+    )
     .eq("organization_id", organizationId)
     .eq("user_id", user.id)
     .eq("status", "active")
     .is("expires_at", null)
-    .maybeSingle();
+    .maybeSingle<ActiveOrgMember>();
   if (error) throw error;
   if (!data) throw new PermissionError("Not a member of this organization");
-  return data as ActiveOrgMember;
+  return data;
 }
 
 export async function isActiveOrgMember(

@@ -40,7 +40,7 @@ type PendingWorkflow =
 type OrdersBoardProps = {
   organizationSlug: string;
   orders: OrderListItem[];
-  callerRole: string;
+  canReopen: boolean;
   onOrderStatusChange: (orderId: string, status: OrderStatus) => void;
   today: string;
 };
@@ -48,7 +48,7 @@ type OrdersBoardProps = {
 export function OrdersBoard({
   organizationSlug,
   orders,
-  callerRole,
+  canReopen,
   onOrderStatusChange,
   today,
 }: OrdersBoardProps) {
@@ -159,7 +159,7 @@ export function OrdersBoard({
       over ? t("announce.over", { column: columnOf(over.id) }) : undefined,
     onDragEnd: ({ active, over }) => {
       const o = orders.find((x) => x.id === active.id);
-      if (over && o && classifyDropTarget(o.status, over.id as OrderStatus, callerRole).mode === "decline") {
+      if (over && o && classifyDropTarget(o.status, over.id as OrderStatus, canReopen).mode === "decline") {
         return t("moveNotAllowedTitle");
       }
       return over ? t("announce.dropped", { column: columnOf(over.id) }) : t("announce.cancelled");
@@ -193,7 +193,7 @@ export function OrdersBoard({
     const order = orders.find((o) => o.id === active.id);
     if (!order) return;
     const to = over.id as OrderStatus;
-    const resolution = resolveDrop(order.status, to, callerRole);
+    const resolution = resolveDrop(order.status, to, canReopen);
 
     switch (resolution.kind) {
       case "noop":
@@ -284,7 +284,7 @@ export function OrdersBoard({
         >
           {ORDER_STATUSES.map((status) => {
             const dropTarget = activeOrder
-              ? classifyDropTarget(activeOrder.status, status, callerRole)
+              ? classifyDropTarget(activeOrder.status, status, canReopen)
               : null;
             return (
               <BoardColumn

@@ -1,7 +1,11 @@
 /**
  * Unit tests for manager/staff order Server Actions. The Supabase server
- * client is mocked; `requireOrgRole` (in ./guards) is exercised indirectly
- * through the actions.
+ * client is mocked; the dynamic-RBAC `requirePermission` guard (in
+ * @/lib/auth/require-permission) is mocked directly, driven by a small
+ * role -> grant table that mirrors the `orders`/`warehouse_tasks` grants the
+ * DEFAULT_ROLE_GRANTS seed in supabase/migrations/20260901000001_dynamic_rbac_schema.sql
+ * assigns each role — so "role X allowed / role Y forbidden" keeps meaning
+ * what it used to under the old role-array guard.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,11 +14,18 @@ vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
 
+vi.mock("@/lib/auth/require-permission", () => ({
+  requirePermission: vi.fn(),
+}));
+
 vi.mock("@/features/logistics/server/dispatch-actions", () => ({
   autoAssignOrder: vi.fn().mockResolvedValue({ ok: true, data: { assigned: true } }),
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/require-permission";
+import { OrderPermissionError } from "../../server/guards";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
 import {
   getTodayTasks,
@@ -43,6 +54,22 @@ function chain(result: QueryResult) {
   return builder;
 }
 
+/**
+ * Grants each role holds on the two resources order-actions.ts checks,
+ * mirroring DEFAULT_ROLE_GRANTS in the dynamic-RBAC schema migration:
+ * owner/org_admin get full CRUD on every resource; seller/supervisor get
+ * `orders` CRUD only; inventory ("Worker") gets `warehouse_tasks` CRUD
+ * only; driver gets neither.
+ */
+const ROLE_GRANTS: Record<string, Partial<Record<string, PermissionAction[]>>> = {
+  owner: { orders: ["view", "add", "edit", "delete"], warehouse_tasks: ["view", "add", "edit", "delete"] },
+  org_admin: { orders: ["view", "add", "edit", "delete"], warehouse_tasks: ["view", "add", "edit", "delete"] },
+  seller: { orders: ["view", "add", "edit", "delete"] },
+  supervisor: { orders: ["view", "add", "edit", "delete"] },
+  inventory: { warehouse_tasks: ["view", "add", "edit", "delete"] },
+  driver: {},
+};
+
 function mockSupabaseFor({
   userId = "user-1",
   orgId = "org-1",
@@ -56,6 +83,14 @@ function mockSupabaseFor({
   tableResults?: Record<string, QueryResult>;
   rpcResult?: { data: unknown; error: { message: string } | null };
 }) {
+  vi.mocked(requirePermission).mockImplementation(async (_slug, resource, action) => {
+    const grants = (role && ROLE_GRANTS[role]) || {};
+    if (!userId || !orgId || !(grants[resource] ?? []).includes(action)) {
+      throw new OrderPermissionError();
+    }
+    return { orgId, userId, roleId: "role-1", roleKey: role!, timeZone: "Asia/Kuala_Lumpur" };
+  });
+
   const supabase = {
     auth: {
       getUser: vi.fn().mockResolvedValue({
@@ -64,12 +99,6 @@ function mockSupabaseFor({
       }),
     },
     from: vi.fn((table: string) => {
-      if (table === "organizations") {
-        return chain({ data: orgId ? { id: orgId } : null, error: null });
-      }
-      if (table === "organization_members") {
-        return chain({ data: role ? { role } : null, error: null });
-      }
       if (tableResults[table]) {
         return chain(tableResults[table]);
       }

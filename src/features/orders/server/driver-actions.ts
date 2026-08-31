@@ -2,9 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { requireOrgRole, OrderPermissionError } from "./guards";
+import { OrderPermissionError } from "./guards";
+import { requirePermission } from "@/lib/auth/require-permission";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import { mapRpcError } from "../lib/rpc-errors";
-import { DRIVER_AND_MANAGER_ROLES } from "../lib/roles";
 import type {
   ActionResult,
   DeliveryFailureReason,
@@ -27,7 +28,7 @@ function ok<T>(data: T): ActionResult<T> {
 }
 
 type GuardResult =
-  | { ok: true; orgId: string; userId: string; role: string }
+  | { ok: true; orgId: string; userId: string; roleKey: string }
   | { ok: false; code: DriverErrorCode; message: string; messageKey: string };
 
 /**
@@ -43,10 +44,10 @@ function permissionMessageKey(message: string): string {
   return "errors.drive.run.forbidden";
 }
 
-async function guard(organizationSlug: string): Promise<GuardResult> {
+async function guard(organizationSlug: string, action: PermissionAction = "view"): Promise<GuardResult> {
   try {
-    const ctx = await requireOrgRole(organizationSlug, DRIVER_AND_MANAGER_ROLES);
-    return { ok: true, ...ctx };
+    const ctx = await requirePermission(organizationSlug, "driver_deck", action);
+    return { ok: true, orgId: ctx.orgId, userId: ctx.userId, roleKey: ctx.roleKey };
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       return {
@@ -156,7 +157,7 @@ async function callStopRpc(
   fn: string,
   args: Record<string, unknown>,
 ): Promise<ActionResult> {
-  const ctx = await guard(organizationSlug);
+  const ctx = await guard(organizationSlug, "edit");
   if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
 
   const supabase = await createSupabaseServerClient();
@@ -197,7 +198,7 @@ function startRunMessageKey(rawMessage: string): string {
 
 /** The driver pulls out of the yard. Refused until every stop is loaded. */
 export async function startRun(organizationSlug: string, runId: string): Promise<ActionResult> {
-  const ctx = await guard(organizationSlug);
+  const ctx = await guard(organizationSlug, "edit");
   if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
 
   const supabase = await createSupabaseServerClient();
@@ -234,7 +235,7 @@ function finishRunMessageKey(rawMessage: string): string {
  * `set_run_status`, nothing is swept to "delivered" on the way out.
  */
 export async function finishRun(organizationSlug: string, runId: string): Promise<ActionResult> {
-  const ctx = await guard(organizationSlug);
+  const ctx = await guard(organizationSlug, "edit");
   if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
 
   const supabase = await createSupabaseServerClient();
