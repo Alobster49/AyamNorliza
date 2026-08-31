@@ -852,6 +852,7 @@ export type Database = {
           proposed_scopes: Json
           revoked_at: string | null
           role: string
+          role_id: string | null
           token_hash: string
         }
         Insert: {
@@ -866,6 +867,7 @@ export type Database = {
           proposed_scopes?: Json
           revoked_at?: string | null
           role: string
+          role_id?: string | null
           token_hash: string
         }
         Update: {
@@ -880,6 +882,7 @@ export type Database = {
           proposed_scopes?: Json
           revoked_at?: string | null
           role?: string
+          role_id?: string | null
           token_hash?: string
         }
         Relationships: [
@@ -888,6 +891,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitations_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "organization_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -1606,6 +1616,7 @@ export type Database = {
           invited_by: string | null
           organization_id: string
           role: string
+          role_id: string
           sponsor_id: string | null
           starts_at: string
           status: string
@@ -1621,6 +1632,7 @@ export type Database = {
           invited_by?: string | null
           organization_id: string
           role: string
+          role_id: string
           sponsor_id?: string | null
           starts_at?: string
           status?: string
@@ -1636,6 +1648,7 @@ export type Database = {
           invited_by?: string | null
           organization_id?: string
           role?: string
+          role_id?: string
           sponsor_id?: string | null
           starts_at?: string
           status?: string
@@ -1646,6 +1659,57 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "organization_members_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_members_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "organization_roles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_system: boolean
+          key: string
+          name: string
+          organization_id: string
+          rank: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          key: string
+          name: string
+          organization_id: string
+          rank?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_system?: boolean
+          key?: string
+          name?: string
+          organization_id?: string
+          rank?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_roles_organization_id_fkey"
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
@@ -1835,6 +1899,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar: string | null
           contact_preferences: Json
           created_at: string
           display_name: string
@@ -1846,6 +1911,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          avatar?: string | null
           contact_preferences?: Json
           created_at?: string
           display_name: string
@@ -1857,6 +1923,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          avatar?: string | null
           contact_preferences?: Json
           created_at?: string
           display_name?: string
@@ -1901,46 +1968,31 @@ export type Database = {
           },
         ]
       }
-      role_capability_overrides: {
+      role_permissions: {
         Row: {
-          capability: string
-          changed_by: string | null
-          created_at: string
+          action: string
           granted: boolean
-          id: string
-          organization_id: string
-          reason: string | null
-          role: string
-          updated_at: string
+          resource: string
+          role_id: string
         }
         Insert: {
-          capability: string
-          changed_by?: string | null
-          created_at?: string
-          granted: boolean
-          id?: string
-          organization_id: string
-          reason?: string | null
-          role: string
-          updated_at?: string
+          action: string
+          granted?: boolean
+          resource: string
+          role_id: string
         }
         Update: {
-          capability?: string
-          changed_by?: string | null
-          created_at?: string
+          action?: string
           granted?: boolean
-          id?: string
-          organization_id?: string
-          reason?: string | null
-          role?: string
-          updated_at?: string
+          resource?: string
+          role_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "role_capability_overrides_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: "role_permissions_role_id_fkey"
+            columns: ["role_id"]
             isOneToOne: false
-            referencedRelation: "organizations"
+            referencedRelation: "organization_roles"
             referencedColumns: ["id"]
           },
         ]
@@ -2309,6 +2361,7 @@ export type Database = {
         Args: { p_note?: string; p_request: string }
         Returns: undefined
       }
+      caller_role_rank: { Args: { target_org: string }; Returns: number }
       can_record_stop: {
         Args: { p_org: string; p_run: string }
         Returns: boolean
@@ -2389,9 +2442,6 @@ export type Database = {
       driver_finish_run: { Args: { p_run: string }; Returns: undefined }
       driver_run_ids: { Args: never; Returns: string[] }
       driver_start_run: { Args: { p_run: string }; Returns: undefined }
-      effective_capabilities:
-        | { Args: { p_org: string }; Returns: Json }
-        | { Args: { p_org: string; p_role: string }; Returns: Json }
       extract_postcode: { Args: { p_address: string }; Returns: string }
       get_dashboard_insights: {
         Args: { p_from: string; p_organization_id: string; p_to: string }
@@ -2440,6 +2490,10 @@ export type Database = {
         Args: { roles: string[]; target_org: string }
         Returns: boolean
       }
+      has_permission: {
+        Args: { p_action: string; p_resource: string; target_org: string }
+        Returns: boolean
+      }
       is_active_org_member: { Args: { target_org: string }; Returns: boolean }
       is_break_glass_active: { Args: { target_org: string }; Returns: boolean }
       is_org_driver: { Args: { target_org: string }; Returns: boolean }
@@ -2457,6 +2511,7 @@ export type Database = {
           cf_remaining: number
         }[]
       }
+      leave_min_notice_days: { Args: { p_code: string }; Returns: number }
       leave_workday_count: {
         Args: { p_end: string; p_org: string; p_start: string }
         Returns: number
@@ -2466,6 +2521,10 @@ export type Database = {
         Returns: undefined
       }
       normalize_phone: { Args: { p_raw: string }; Returns: string }
+      org_role_rank: {
+        Args: { role_key: string; target_org: string }
+        Returns: number
+      }
       place_order: {
         Args: {
           p_address: string
@@ -2517,11 +2576,15 @@ export type Database = {
         Args: { p_order: string; p_reason: string }
         Returns: undefined
       }
+      reset_role_to_defaults: {
+        Args: { p_role_id: string }
+        Returns: undefined
+      }
       resolve_zone_for_postcode: {
         Args: { p_org: string; p_postcode: string }
         Returns: string
       }
-      role_rank: { Args: { role: string }; Returns: number }
+      seed_system_roles: { Args: { target_org: string }; Returns: undefined }
       set_run_status: {
         Args: {
           p_run: string
