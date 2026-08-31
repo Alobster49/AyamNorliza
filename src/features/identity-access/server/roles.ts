@@ -9,17 +9,23 @@
  *
  * Every mutation:
  *   1. Zod-parses the input
- *   2. Gates on `requirePermission(slug, 'roles', 'edit')`
- *   3. Re-validates the DB-trigger rules in TS so callers get a clean
+ *   2. Gates on `requirePermission(slug, 'roles', 'edit')`, then loads the
+ *      acting role's own rank and grants — `roles:edit` is permission to
+ *      manage roles, not to invent authority, so both bound what follows
+ *      (see `EditorAuthority`)
+ *   3. Re-validates the DB-trigger and RLS rules in TS so callers get a clean
  *      `messageKey` instead of a raw Postgres exception (the triggers in
- *      20260901000001/3 back these up, they are not the primary defense):
+ *      20260901000001/3/5 back these up, they are not the primary defense):
  *        - the `owner` role's grants/name/existence can never be edited
  *        - system roles (`is_system`) can't be renamed or deleted, but
  *          their grants can be edited
+ *        - a role ranked above the caller's own is out of reach entirely
+ *        - a grant must be a capability the caller already holds; revoking
+ *          carries no such bound
  *        - a role can't be deleted while it still has active members
  *        - every `roleId` is validated to belong to the caller's org
- *   4. Writes via Supabase (RLS is the final backstop: `roles_write_editor`
- *      requires `has_permission(org, 'roles', 'edit')`)
+ *   4. Writes via Supabase (RLS is the final backstop: `role_perms_write_editor`
+ *      re-applies the rank ceiling and the self-authority rule in SQL)
  *   5. `revalidatePath`s the roles settings page
  *
  * `getRolesView` is read-only, gated on `('roles','view')`, and returns a
@@ -39,11 +45,9 @@ import { requirePermission } from "@/lib/auth/require-permission";
 import { OrderPermissionError } from "@/features/orders/server/guards";
 import {
   PAGE_ACTIONS,
-  DEFAULT_ROLE_GRANTS,
   grantKey,
   type PermissionAction,
   type PermissionKey,
-  type SystemRoleKey,
 } from "@/lib/auth/rbac";
 
 // ---------------------------------------------------------------------------
@@ -116,19 +120,71 @@ function permissionMessageKey(message: string): string {
 
 type RoleContext = { orgId: string; userId: string; roleId: string; roleKey: string };
 
+/**
+ * What the acting role is allowed to do with the roles editor.
+ *
+ * Holding `roles:edit` is permission to *manage* roles, not permission to
+ * invent authority. Two bounds apply to everything below, mirroring
+ * `20260901000005_bound_role_grants.sql` so the app refuses with a readable
+ * message where RLS would otherwise refuse with a bare policy violation:
+ *
+ *   - `actorGrants` caps what may be handed out. A grant must be something
+ *     the caller already holds; revokes are unrestricted.
+ *   - `actorRank` caps which roles may be touched at all, the same ceiling
+ *     `org_members_update_admin` applies to memberships.
+ */
+type EditorAuthority = {
+  ctx: RoleContext;
+  actorRank: number;
+  actorGrants: ReadonlySet<PermissionKey>;
+};
+
+type ActorAuthorityRow = {
+  rank: number;
+  role_permissions: Array<{ resource: string; action: string; granted: boolean }> | null;
+};
+
 async function guardEdit(
   organizationSlug: string,
-): Promise<{ ok: true; ctx: RoleContext } | { ok: false; result: ActionResult<never> }> {
+): Promise<{ ok: true; auth: EditorAuthority } | { ok: false; result: ActionResult<never> }> {
+  let ctx: RoleContext;
   try {
-    const ctx = await requirePermission(organizationSlug, "roles", "edit");
-    return { ok: true, ctx };
+    ctx = await requirePermission(organizationSlug, "roles", "edit");
   } catch (e) {
     if (e instanceof OrderPermissionError) {
       return { ok: false, result: err("forbidden", e.message, permissionMessageKey(e.message)) };
     }
     throw e;
   }
+
+  const supabase = await createSupabaseServerClient();
+  const { data } = await supabase
+    .from("organization_roles")
+    .select("rank, role_permissions(resource, action, granted)")
+    .eq("id", ctx.roleId)
+    .maybeSingle<ActorAuthorityRow>();
+
+  // A missing row would mean the caller's own role vanished mid-request.
+  // Rank 0 with no grants fails every check below rather than opening one.
+  const actorGrants = new Set<PermissionKey>(
+    (data?.role_permissions ?? [])
+      .filter((g) => g.granted)
+      .map((g) => grantKey(g.resource, g.action as PermissionAction)),
+  );
+
+  return { ok: true, auth: { ctx, actorRank: data?.rank ?? 0, actorGrants } };
 }
+
+/**
+ * The rank ceiling. Equal ranks may edit each other, matching the
+ * `rank <= caller_role_rank(...)` comparison in the RLS policies.
+ */
+function outranks(actorRank: number, targetRank: number): boolean {
+  return targetRank > actorRank;
+}
+
+const OUTRANKED = "errors.identity.roles.outranked";
+const BEYOND_AUTHORITY = "errors.identity.roles.beyondOwnAuthority";
 
 type SupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -261,7 +317,7 @@ export async function createRoleAction(rawInput: unknown): Promise<ActionResult<
 
   const guard = await guardEdit(input.organizationSlug);
   if (!guard.ok) return guard.result;
-  const { ctx } = guard;
+  const { ctx, actorRank, actorGrants } = guard.auth;
 
   const key = slugify(input.name);
   if (!key) {
@@ -275,12 +331,6 @@ export async function createRoleAction(rawInput: unknown): Promise<ActionResult<
 
   const supabase = await createSupabaseServerClient();
 
-  const { data: actorRoleRow } = await supabase
-    .from("organization_roles")
-    .select("rank")
-    .eq("id", ctx.roleId)
-    .maybeSingle();
-  const actorRank = (actorRoleRow as { rank: number } | null)?.rank ?? 0;
   const rank = Math.max(1, Math.min(actorRank - 1, 10));
 
   let cloneGrants: Array<{ resource: string; action: string }> = [];
@@ -294,9 +344,18 @@ export async function createRoleAction(rawInput: unknown): Promise<ActionResult<
       .select("resource, action, granted")
       .eq("role_id", input.cloneFromRoleId)
       .eq("granted", true);
+    // A clone hands the new role everything the source holds, so it is a
+    // grant like any other and carries the same bound: copy only what the
+    // caller could have granted by hand. `data_console.manage` stays
+    // excluded outright, as it is admin-only by seed convention rather than
+    // by anyone's rank.
     cloneGrants = (
       (grantRows as Array<{ resource: string; action: string; granted: boolean }> | null) ?? []
-    ).filter((g) => g.resource !== "data_console.manage");
+    ).filter(
+      (g) =>
+        g.resource !== "data_console.manage" &&
+        actorGrants.has(grantKey(g.resource, g.action as PermissionAction)),
+    );
   }
 
   const { data: created, error } = await supabase
@@ -363,7 +422,7 @@ export async function renameRoleAction(rawInput: unknown): Promise<ActionResult<
 
   const guard = await guardEdit(input.organizationSlug);
   if (!guard.ok) return guard.result;
-  const { ctx } = guard;
+  const { ctx, actorRank, actorGrants } = guard.auth;
 
   const supabase = await createSupabaseServerClient();
   const role = await fetchRole(supabase, ctx.orgId, input.roleId);
@@ -373,6 +432,9 @@ export async function renameRoleAction(rawInput: unknown): Promise<ActionResult<
   }
   if (role.is_system) {
     return err("forbidden", "System roles cannot be renamed", "errors.identity.roles.systemLocked");
+  }
+  if (outranks(actorRank, role.rank)) {
+    return err("forbidden", "That role outranks yours", OUTRANKED);
   }
 
   const patch: { name: string; description?: string } = { name: input.name };
@@ -408,7 +470,7 @@ export async function deleteRoleAction(rawInput: unknown): Promise<ActionResult<
 
   const guard = await guardEdit(input.organizationSlug);
   if (!guard.ok) return guard.result;
-  const { ctx } = guard;
+  const { ctx, actorRank, actorGrants } = guard.auth;
 
   const supabase = await createSupabaseServerClient();
   const role = await fetchRole(supabase, ctx.orgId, input.roleId);
@@ -418,6 +480,9 @@ export async function deleteRoleAction(rawInput: unknown): Promise<ActionResult<
   }
   if (role.is_system) {
     return err("forbidden", "System roles cannot be deleted", "errors.identity.roles.systemLocked");
+  }
+  if (outranks(actorRank, role.rank)) {
+    return err("forbidden", "That role outranks yours", OUTRANKED);
   }
 
   const { data: memberRows } = await supabase
@@ -494,7 +559,7 @@ export async function setPermissionAction(rawInput: unknown): Promise<ActionResu
 
   const guard = await guardEdit(input.organizationSlug);
   if (!guard.ok) return guard.result;
-  const { ctx } = guard;
+  const { ctx, actorRank, actorGrants } = guard.auth;
 
   const supabase = await createSupabaseServerClient();
   const role = await fetchRole(supabase, ctx.orgId, input.roleId);
@@ -519,7 +584,29 @@ export async function setPermissionAction(rawInput: unknown): Promise<ActionResu
     );
   }
 
+  if (outranks(actorRank, role.rank)) {
+    return err("forbidden", "That role outranks yours", OUTRANKED);
+  }
+
   const rows = permissionRows(input.roleId, input.resource, input.action, input.granted);
+
+  // Self-authority: a grant may only pass on something the caller holds.
+  // Checked per row because `permissionRows` cascades -- granting `edit`
+  // also grants `view`, and both have to be within the caller's own set.
+  // Revokes carry no such bound; taking a capability away is never an
+  // escalation.
+  const beyond = rows.find(
+    (r) => r.granted && !actorGrants.has(grantKey(r.resource, r.action)),
+  );
+  if (beyond) {
+    return err(
+      "forbidden",
+      `You cannot grant '${grantKey(beyond.resource, beyond.action)}' because you do not hold it`,
+      BEYOND_AUTHORITY,
+      undefined,
+      { capability: grantKey(beyond.resource, beyond.action) },
+    );
+  }
   const { error } = await supabase
     .from("role_permissions")
     .upsert(rows, { onConflict: "role_id,resource,action" });
@@ -552,7 +639,7 @@ export async function resetRoleToDefaultsAction(rawInput: unknown): Promise<Acti
 
   const guard = await guardEdit(input.organizationSlug);
   if (!guard.ok) return guard.result;
-  const { ctx } = guard;
+  const { ctx, actorRank, actorGrants } = guard.auth;
 
   const supabase = await createSupabaseServerClient();
   const role = await fetchRole(supabase, ctx.orgId, input.roleId);
@@ -568,25 +655,20 @@ export async function resetRoleToDefaultsAction(rawInput: unknown): Promise<Acti
     );
   }
 
-  const defaults = DEFAULT_ROLE_GRANTS[role.key as SystemRoleKey];
-  if (!defaults) return err("internal", "Unknown system role", "errors.identity.common.internal");
-
-  const { error: deleteError } = await supabase.from("role_permissions").delete().eq("role_id", input.roleId);
-  if (deleteError) return err("internal", deleteError.message, "errors.identity.common.internal");
-
-  const rows = Array.from(defaults).map((pk) => {
-    const idx = pk.lastIndexOf(":");
-    return {
-      role_id: input.roleId,
-      resource: pk.slice(0, idx),
-      action: pk.slice(idx + 1) as PermissionAction,
-      granted: true,
-    };
-  });
-  if (rows.length > 0) {
-    const { error: insertError } = await supabase.from("role_permissions").insert(rows);
-    if (insertError) return err("internal", insertError.message, "errors.identity.common.internal");
+  if (outranks(actorRank, role.rank)) {
+    return err("forbidden", "That role outranks yours", OUTRANKED);
   }
+
+  // Restoring a documented baseline is not the same act as granting a
+  // capability, so this deliberately sits outside the self-authority bound:
+  // Admin's defaults include `data_console.manage`, which an owner does not
+  // hold and therefore could not re-grant by hand. The definer RPC re-seeds
+  // from the same SQL source the org was created with, and re-checks
+  // roles:edit and the rank ceiling itself. It also makes the reset atomic —
+  // the previous delete-then-insert pair could leave a role with no
+  // permissions at all if the second call failed.
+  const { error } = await supabase.rpc("reset_role_to_defaults", { p_role_id: input.roleId });
+  if (error) return err("internal", error.message, "errors.identity.common.internal");
 
   revalidatePath("/[organizationSlug]/settings/roles", "page");
   return ok(undefined);
