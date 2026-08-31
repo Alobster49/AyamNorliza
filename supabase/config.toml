@@ -87,6 +87,14 @@ enabled = true
 [functions.invitation-accept]
 verify_jwt = true
 
+# The three scheduled functions below stay verify_jwt = false: pg_cron calls
+# them server-to-server, not on behalf of a signed-in user. They are not
+# unauthenticated, though -- each requires an `x-cron-secret` header matching
+# its CRON_SECRET env var (supabase/functions/_shared/cron-guard.ts, wired up
+# by 20260901000008_cron_shared_secret.sql). Turning verify_jwt on would not
+# help: the anon key alone satisfies it, so it gates nothing a URL-guesser
+# could not supply.
+
 [functions.access-review-reminder]
 verify_jwt = false
 

@@ -8,6 +8,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { sendEmail } from "../_shared/resend.ts";
 import { getMessages, interpolate } from "../_shared/messages.ts";
+import { cronGuard } from "../_shared/cron-guard.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -17,7 +18,10 @@ const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const denied = cronGuard(req);
+  if (denied) return denied;
+
   const cutoff = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
   const { data: reviews, error } = await admin
     .from("access_reviews")

@@ -20,6 +20,7 @@ import {
   parsePriceRow,
   TRACKED_ITEM_CODES,
 } from "./logic.ts";
+import { cronGuard } from "../_shared/cron-guard.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -109,7 +110,10 @@ async function premiseStateMap(): Promise<Map<number, string>> {
   return map;
 }
 
-Deno.serve(async () => {
+Deno.serve(async (req) => {
+  const denied = cronGuard(req);
+  if (denied) return denied;
+
   try {
     // Refreshing the premise lookup and parsing a month of price rows are
     // each affordable alone but together exceed the edge runtime's budget:
