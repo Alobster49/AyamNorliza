@@ -28,16 +28,18 @@ on conflict (id) do nothing;
 insert into auth.users (id) values
   ('c0000000-0000-0000-0000-000000000001'), -- owner (org A)
   ('c0000000-0000-0000-0000-000000000002'), -- seller (org A)
-  ('c0000000-0000-0000-0000-000000000003'), -- logistics (org A)
-  ('c0000000-0000-0000-0000-000000000004')  -- inventory (org A, no dispatch rights)
+  ('c0000000-0000-0000-0000-000000000003'), -- supervisor (org A, dispatch rights)
+  ('c0000000-0000-0000-0000-000000000004'), -- inventory (org A, no dispatch rights)
+  ('c0000000-0000-0000-0000-000000000005')  -- hr (org A, no loading rights)
 on conflict (id) do nothing;
 
 insert into public.organization_members (organization_id, user_id, role, status)
 values
   ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000001', 'owner', 'active'),
   ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000002', 'seller', 'active'),
-  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000003', 'logistics', 'active'),
-  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000004', 'inventory', 'active')
+  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000003', 'supervisor', 'active'),
+  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000004', 'inventory', 'active'),
+  ('c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000005', 'hr', 'active')
 on conflict (organization_id, user_id) do nothing;
 
 -- Facility/bay for org A, plus a facility for org B used only to prove
@@ -199,7 +201,7 @@ select results_eq(
 -- 3. bays insert: rejected for logistics role (not a manager role).
 -- ---------------------------------------------------------------------------
 set local role authenticated;
-set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000004';
 
 select throws_ok(
   $$
@@ -208,7 +210,7 @@ select throws_ok(
   $$,
   '42501',
   null,
-  'logistics-role member cannot insert a bay'
+  'a member without delivery_runs:add cannot insert a bay'
 );
 
 reset role;
@@ -249,7 +251,19 @@ select results_eq(
 -- ---------------------------------------------------------------------------
 -- 6. dispatch_depart_truck: releases the non-ready ticket back to the pool
 -- and departs the run, while leaving the ready ticket attached.
+--
+-- Departing has been gated on every ready order being loaded since
+-- 20260828000002_depart_loading_gate, so the ready ticket is marked loaded
+-- first. Done as postgres because this step is fixture setup, not the
+-- behaviour under test.
 -- ---------------------------------------------------------------------------
+update public.orders
+set loaded_at = now(), loaded_by = 'c0000000-0000-0000-0000-000000000001'
+where run_id in (select id from public.delivery_runs
+                  where truck_id = 'c0000000-0000-0000-0000-000000000051'
+                    and run_date = current_date + 1)
+  and status = 'ready';
+
 set local role authenticated;
 set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000003';
 
@@ -385,7 +399,7 @@ insert into public.orders (
 ) values
   (
     'c0000000-0000-0000-0000-000000000091', 'c0000000-0000-0000-0000-00000000000a', 'c0000000-0000-0000-0000-000000000040',
-    'c0000000-0000-0000-0000-000000000001', 'manual', 'confirmed',
+    'c0000000-0000-0000-0000-000000000001', 'manual', 'ready',
     'c0000000-0000-0000-0000-000000000020', '6 Loading Street', current_date + 1, 'c0000000-0000-0000-0000-000000000060',
     'c0000000-0000-0000-0000-000000000050', 'none'
   ),
@@ -405,13 +419,13 @@ on conflict (id) do nothing;
 
 -- 9a. Guards.
 set local role authenticated;
-set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000004';
+set local "request.jwt.claim.sub" to 'c0000000-0000-0000-0000-000000000005';
 
 select throws_ok(
   $$ select public.dispatch_set_loaded('c0000000-0000-0000-0000-000000000091', true) $$,
   'P0001',
   'forbidden',
-  'dispatch_set_loaded is forbidden for a non-dispatch role'
+  'dispatch_set_loaded is forbidden for a role with no loading grant'
 );
 
 reset role;

@@ -150,7 +150,7 @@ select results_eq(
 -- supabase/tests/rls/16_data_console.sql does.
 -- ---------------------------------------------------------------------------
 insert into public.organization_members (organization_id, user_id, role, status)
-values ('f0000000-0000-0000-0000-0000000000ff', 'e0000000-0000-0000-0000-0000000000ee', 'owner', 'active')
+values ('f0000000-0000-0000-0000-0000000000ff', 'e0000000-0000-0000-0000-0000000000ee', 'org_admin', 'active')
 on conflict (organization_id, user_id) do nothing;
 
 create or replace function pg_temp.impersonate(p_user uuid) returns void
@@ -165,7 +165,7 @@ $$;
 select pg_temp.impersonate('e0000000-0000-0000-0000-0000000000ee');
 select lives_ok(
   $$ select public.admin_seed_demo_data('f0000000-0000-0000-0000-0000000000ff') $$,
-  'owner can seed demo data (also wipes this org''s earlier fixture rows -- run last)'
+  'org_admin can seed demo data (also wipes this org''s earlier fixture rows -- run last)'
 );
 
 select set_config('role', 'postgres', true);

@@ -654,7 +654,15 @@ reset role;
 -- ---------------------------------------------------------------------------
 -- 11. set_run_status: planned -> departed -> completed, flips ready orders
 -- to delivered on completion, and rejects completed -> departed.
+--
+-- Departing has been gated on every ready order being loaded since
+-- 20260828000002_depart_loading_gate, so the run's ready orders are marked
+-- loaded first. Fixture setup as postgres, not the behaviour under test.
 -- ---------------------------------------------------------------------------
+update public.orders
+set loaded_at = now(), loaded_by = 'b0000000-0000-0000-0000-000000000001'
+where run_id = 'b0000000-0000-0000-0000-000000000014'::uuid and status = 'ready';
+
 set local role authenticated;
 set local "request.jwt.claim.sub" to 'b0000000-0000-0000-0000-000000000001';
 

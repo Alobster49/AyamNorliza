@@ -82,7 +82,12 @@ begin
 end;
 $$;
 
--- 1-2: non-owners are refused.
+-- The data console is Admin-only since the role realignment
+-- (20260831000001): `data_console.manage` is seeded to org_admin and
+-- deliberately withheld from owner, so the owner/org_admin expectations
+-- below are the reverse of what this file originally asserted.
+
+-- 1-2: a seller is refused.
 select pg_temp.impersonate('dc000000-0000-0000-0000-000000000002');
 select throws_ok(
   $$ select public.admin_clear_org_data('dc000000-0000-0000-0000-00000000000a') $$,
@@ -91,17 +96,18 @@ select throws_ok(
   $$ select public.admin_seed_demo_data('dc000000-0000-0000-0000-00000000000a') $$,
   'P0001', 'forbidden', 'seller cannot seed');
 
--- 3: org_admin is also refused (owner only).
-select pg_temp.impersonate('dc000000-0000-0000-0000-000000000003');
+-- 3: the owner is refused too -- holding every other capability does not
+-- include this one.
+select pg_temp.impersonate('dc000000-0000-0000-0000-000000000001');
 select throws_ok(
   $$ select public.admin_clear_org_data('dc000000-0000-0000-0000-00000000000a') $$,
-  'P0001', 'forbidden', 'org_admin cannot clear');
+  'P0001', 'forbidden', 'owner cannot clear -- data_console.manage is admin-only');
 
--- 4: owner clear succeeds.
-select pg_temp.impersonate('dc000000-0000-0000-0000-000000000001');
+-- 4: org_admin clear succeeds.
+select pg_temp.impersonate('dc000000-0000-0000-0000-000000000003');
 select lives_ok(
   $$ select public.admin_clear_org_data('dc000000-0000-0000-0000-00000000000a') $$,
-  'owner can clear');
+  'org_admin can clear');
 
 -- 5-6: business graph is gone.
 select set_config('role', 'postgres', true);
@@ -113,11 +119,11 @@ select is((select count(*) from public.organization_members where organization_i
 select is((select count(*) from public.buyers where id = 'dc000000-0000-0000-0000-000000000004'), 1::bigint, 'buyer kept');
 select ok((select customer_id is null from public.buyers where id = 'dc000000-0000-0000-0000-000000000004'), 'buyer unlinked from deleted customer');
 
--- 10-11: owner seed produces the demo dataset.
-select pg_temp.impersonate('dc000000-0000-0000-0000-000000000001');
+-- 10-11: org_admin seed produces the demo dataset.
+select pg_temp.impersonate('dc000000-0000-0000-0000-000000000003');
 select lives_ok(
   $$ select public.admin_seed_demo_data('dc000000-0000-0000-0000-00000000000a') $$,
-  'owner can seed');
+  'org_admin can seed');
 select set_config('role', 'postgres', true);
 select results_eq(
   $$ select
@@ -130,7 +136,7 @@ select results_eq(
   'seed row counts (10 demo customers + 1 relinked buyer customer; 18 live + 49 history orders, 3 live + 21 history runs)');
 
 -- 12: seeding twice is idempotent.
-select pg_temp.impersonate('dc000000-0000-0000-0000-000000000001');
+select pg_temp.impersonate('dc000000-0000-0000-0000-000000000003');
 select lives_ok(
   $$ select public.admin_seed_demo_data('dc000000-0000-0000-0000-00000000000a') $$,
   'seed is idempotent');
