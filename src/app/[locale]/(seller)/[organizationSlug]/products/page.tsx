@@ -2,9 +2,7 @@ import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { OrderPermissionError } from "@/features/orders/server/guards";
 import { requirePermission } from "@/lib/auth/require-permission";
-import { getOrganizationBySlug } from "@/features/identity-access/server/queries";
 import { getCategories, getProducts } from "@/features/seller/server/actions";
-import { notFound } from "next/navigation";
 import { ProductsClient } from "./products-client";
 
 export default async function ProductsPage({
@@ -15,9 +13,9 @@ export default async function ProductsPage({
   const { organizationSlug } = await params;
 
   // Layout admits all organization members; this page gates itself on products.view permission
-  let ctx;
+  let orgId: string;
   try {
-    ctx = await requirePermission(organizationSlug, "products", "view");
+    ({ orgId } = await requirePermission(organizationSlug, "products", "view"));
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}`, locale: await getLocale() });
@@ -25,15 +23,12 @@ export default async function ProductsPage({
     throw error;
   }
 
-  const org = await getOrganizationBySlug(organizationSlug);
-  if (!org) notFound();
-
-  const categories = await getCategories(org.id);
-  const products = await getProducts(org.id);
+  const categories = await getCategories(organizationSlug);
+  const products = await getProducts(organizationSlug);
 
   return (
     <ProductsClient
-      organizationId={org.id}
+      organizationId={orgId}
       organizationSlug={organizationSlug}
       initialCategories={categories}
       initialProducts={products}

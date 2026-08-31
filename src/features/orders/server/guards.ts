@@ -13,6 +13,7 @@ import "server-only";
 import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { activeMembershipWindow } from "@/lib/auth/membership-window";
 
 export class OrderPermissionError extends Error {
   readonly code = "forbidden";
@@ -58,6 +59,7 @@ export async function requireOrgRole(
     .eq("organization_id", org.id)
     .eq("user_id", user.id)
     .eq("status", "active")
+    .or(activeMembershipWindow())
     .maybeSingle();
 
   if (!member || !roles.includes(member.role)) {

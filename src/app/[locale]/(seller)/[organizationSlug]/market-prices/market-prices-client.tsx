@@ -28,7 +28,6 @@ const SPARK_W = 160;
 const SPARK_H = 36;
 
 type Props = {
-  organizationId: string;
   organizationSlug: string;
   state: string;
   trend: MarketPriceRow[];
@@ -36,7 +35,6 @@ type Props = {
 };
 
 export function MarketPricesClient({
-  organizationId,
   organizationSlug,
   state,
   trend,
@@ -63,7 +61,7 @@ export function MarketPricesClient({
   const handleStateChange = (next: string) => {
     startTransition(async () => {
       try {
-        await setMarketState(organizationId, next, organizationSlug);
+        await setMarketState(organizationSlug, next);
         router.refresh();
       } catch (error) {
         toast({

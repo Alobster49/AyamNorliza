@@ -21,7 +21,6 @@ import { useToast } from "@/hooks/use-toast";
 type CategoryDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationId: string;
   organizationSlug: string;
   category?: Category;
   onSaved: (category: Category) => void;
@@ -30,7 +29,6 @@ type CategoryDialogProps = {
 export function CategoryDialog({
   open,
   onOpenChange,
-  organizationId,
   organizationSlug,
   category,
   onSaved,
@@ -51,8 +49,8 @@ export function CategoryDialog({
         display_order: Number(data.get("display_order")) || 0,
       };
       const saved = category
-        ? await updateCategory(category.id, input, organizationSlug)
-        : await createCategory(organizationId, { ...input, is_active: true }, organizationSlug);
+        ? await updateCategory(organizationSlug, category.id, input)
+        : await createCategory(organizationSlug, { ...input, is_active: true });
       onSaved(saved);
       onOpenChange(false);
       toast({ title: category ? t("updated") : t("created") });

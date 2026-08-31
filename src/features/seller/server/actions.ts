@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient as createClient } from "@/lib/supabase/server";
+import { requireAnyPermission, requirePermission } from "@/lib/auth/require-permission";
+import type { PermissionAction } from "@/lib/auth/rbac";
 import { parseCustomerAddress, parseCustomerEmail } from "../lib/customer-schema";
 import type {
   CategoryInsert,
@@ -15,45 +17,62 @@ import type {
   CustomerWithPortal,
 } from "../types";
 
-export async function getOrganizationId(orgSlug: string): Promise<string | null> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("organizations")
-    .select("id")
-    .eq("slug", orgSlug)
-    .single();
-  return data?.id ?? null;
+/**
+ * Every action here takes the organization *slug* and resolves the org id
+ * through `requirePermission`, which throws `OrderPermissionError` when the
+ * caller is not an active member holding the (resource, action) grant. The
+ * id is never accepted from the client: a caller who could pass one could
+ * otherwise aim a write at another org, and the app should refuse that
+ * itself rather than leaning on RLS to catch it.
+ *
+ * Row-targeted updates and deletes additionally filter on
+ * `organization_id`, so a guessed row id from another org matches nothing.
+ */
+async function guard(organizationSlug: string, resource: string, action: PermissionAction) {
+  const { orgId, userId } = await requirePermission(organizationSlug, resource, action);
+  return { orgId, userId };
 }
 
-export async function requireSellerRole(orgSlug: string): Promise<boolean> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-
-  const orgId = await getOrganizationId(orgSlug);
-  if (!orgId) return false;
-
-  const { data: member } = await supabase
-    .from("organization_members")
-    .select("role")
-    .eq("organization_id", orgId)
-    .eq("user_id", user.id)
-    .eq("status", "active")
-    .maybeSingle();
-
-  return !!member && ["owner", "org_admin", "seller", "supervisor"].includes(member.role);
+/**
+ * The catalog read the new-order screen needs before an order exists. That
+ * page gates itself on `orders:add`, so requiring `products:view` here
+ * would break order-taking for a custom role given orders but not the
+ * catalog page. Safe to widen because the `products` and `categories`
+ * SELECT policies admit any active member.
+ *
+ * Deliberately not used for customers: `customers_select` requires
+ * `customers:view` since 20260901000006, so widening the guard there would
+ * only trade a clear refusal for a silently empty result list.
+ */
+async function guardForOrderTaking(organizationSlug: string, resource: "products") {
+  const { orgId } = await requireAnyPermission(organizationSlug, [
+    [resource, "view"],
+    ["orders", "add"],
+  ]);
+  return { orgId };
 }
 
-function revalidateSellerPath(orgSlug: string | undefined, page: string) {
-  if (orgSlug) revalidatePath(`/${orgSlug}/${page}`);
+/**
+ * Postgres error text is internal detail (constraint names, column names),
+ * and Next.js redacts uncaught Server Action messages in production anyway.
+ * Known constraint violations get a message the seller can act on; anything
+ * else surfaces as a generic failure.
+ */
+function dbError(error: { code?: string; message: string }, fallback: string): Error {
+  if (error.code === "23505") return new Error("That name is already used. Pick a different one.");
+  if (error.code === "PGRST116") return new Error("That record no longer exists.");
+  return new Error(fallback);
+}
+
+function revalidateSellerPath(orgSlug: string, page: string) {
+  revalidatePath(`/${orgSlug}/${page}`);
 }
 
 // ---------------------------------------------------------------------------
 // Categories
 // ---------------------------------------------------------------------------
-export async function getCategories(orgId: string) {
+export async function getCategories(organizationSlug: string) {
+  const { orgId } = await guard(organizationSlug, "products", "view");
   const supabase = await createClient();
   const { data } = await supabase
     .from("categories")
@@ -64,10 +83,10 @@ export async function getCategories(orgId: string) {
 }
 
 export async function createCategory(
-  orgId: string,
+  organizationSlug: string,
   input: Omit<CategoryInsert, "organization_id">,
-  orgSlug?: string,
 ) {
+  const { orgId } = await guard(organizationSlug, "products", "add");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("categories")
@@ -75,41 +94,53 @@ export async function createCategory(
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "products");
+  if (error) throw dbError(error, "Could not create the category.");
+  revalidateSellerPath(organizationSlug, "products");
   return data;
 }
 
-export async function updateCategory(id: string, input: CategoryUpdate, orgSlug?: string) {
+export async function updateCategory(
+  organizationSlug: string,
+  id: string,
+  input: CategoryUpdate,
+) {
+  const { orgId } = await guard(organizationSlug, "products", "edit");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("categories")
     .update(input)
     .eq("id", id)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "products");
+  if (error) throw dbError(error, "Could not update the category.");
+  revalidateSellerPath(organizationSlug, "products");
   return data;
 }
 
-export async function deleteCategory(id: string, orgSlug?: string) {
+export async function deleteCategory(organizationSlug: string, id: string) {
+  const { orgId } = await guard(organizationSlug, "products", "delete");
   const supabase = await createClient();
-  const { error } = await supabase.from("categories").delete().eq("id", id);
+  const { error } = await supabase
+    .from("categories")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", orgId);
   if (error) {
     if (error.code === "23503") {
       throw new Error("This category still has products. Move or delete them first.");
     }
-    throw new Error(error.message);
+    throw dbError(error, "Could not delete the category.");
   }
-  revalidateSellerPath(orgSlug, "products");
+  revalidateSellerPath(organizationSlug, "products");
 }
 
 // ---------------------------------------------------------------------------
 // Products
 // ---------------------------------------------------------------------------
-export async function getProducts(orgId: string) {
+export async function getProducts(organizationSlug: string) {
+  const { orgId } = await guard(organizationSlug, "products", "view");
   const supabase = await createClient();
   const { data } = await supabase
     .from("products")
@@ -119,21 +150,11 @@ export async function getProducts(orgId: string) {
   return data ?? [];
 }
 
-export async function getProductWithVariants(productId: string) {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("products")
-    .select("*, category:categories(*), variants:product_variants(*)")
-    .eq("id", productId)
-    .single();
-  return data;
-}
-
 export async function createProduct(
-  orgId: string,
+  organizationSlug: string,
   input: Omit<ProductInsert, "organization_id">,
-  orgSlug?: string,
 ) {
+  const { orgId } = await guard(organizationSlug, "products", "add");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("products")
@@ -141,22 +162,28 @@ export async function createProduct(
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "products");
+  if (error) throw dbError(error, "Could not create the product.");
+  revalidateSellerPath(organizationSlug, "products");
   return data;
 }
 
-export async function updateProduct(id: string, input: ProductUpdate, orgSlug?: string) {
+export async function updateProduct(
+  organizationSlug: string,
+  id: string,
+  input: ProductUpdate,
+) {
+  const { orgId } = await guard(organizationSlug, "products", "edit");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("products")
     .update(input)
     .eq("id", id)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "products");
+  if (error) throw dbError(error, "Could not update the product.");
+  revalidateSellerPath(organizationSlug, "products");
   return data;
 }
 
@@ -166,54 +193,82 @@ export async function updateProduct(id: string, input: ProductUpdate, orgSlug?: 
  * at a row that exists. Hard delete stays available only for products that have
  * never been ordered (enforced by order_items.product_id ON DELETE RESTRICT).
  */
-export async function setProductArchived(id: string, archived: boolean, orgSlug?: string) {
+export async function setProductArchived(
+  organizationSlug: string,
+  id: string,
+  archived: boolean,
+) {
+  const { orgId } = await guard(organizationSlug, "products", "edit");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("products")
     .update({ is_active: !archived })
     .eq("id", id)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "products");
+  if (error) throw dbError(error, "Could not update the product.");
+  revalidateSellerPath(organizationSlug, "products");
   return data;
 }
 
-/** How many historical order lines reference this product. */
-export async function countProductOrderItems(id: string): Promise<number> {
+/**
+ * How many historical order lines reference this product. `order_items` has
+ * no `organization_id` of its own, so the product is confirmed to belong to
+ * the caller's org before the count runs.
+ */
+export async function countProductOrderItems(
+  organizationSlug: string,
+  id: string,
+): Promise<number> {
+  const { orgId } = await guard(organizationSlug, "products", "view");
   const supabase = await createClient();
+
+  const { data: product } = await supabase
+    .from("products")
+    .select("id")
+    .eq("id", id)
+    .eq("organization_id", orgId)
+    .maybeSingle();
+  if (!product) throw new Error("That product no longer exists.");
+
   const { count, error } = await supabase
     .from("order_items")
     .select("id", { count: "exact", head: true })
     .eq("product_id", id);
 
-  if (error) throw new Error(error.message);
+  if (error) throw dbError(error, "Could not check this product's order history.");
   return count ?? 0;
 }
 
-export async function deleteProduct(id: string, orgSlug?: string) {
+export async function deleteProduct(organizationSlug: string, id: string) {
+  const { orgId } = await guard(organizationSlug, "products", "delete");
   const supabase = await createClient();
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", orgId);
   if (error) {
     if (error.code === "23503") {
       throw new Error(
         "This product has past orders, so deleting it would destroy order history. Archive it instead — it disappears from the shop but the orders stay intact.",
       );
     }
-    throw new Error(error.message);
+    throw dbError(error, "Could not delete the product.");
   }
-  revalidateSellerPath(orgSlug, "products");
+  revalidateSellerPath(organizationSlug, "products");
 }
 
 // ---------------------------------------------------------------------------
 // Product Variants
 // ---------------------------------------------------------------------------
 export async function createVariant(
-  orgId: string,
+  organizationSlug: string,
   input: Omit<ProductVariantInsert, "organization_id">,
-  orgSlug?: string,
 ) {
+  const { orgId } = await guard(organizationSlug, "products", "add");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("product_variants")
@@ -221,89 +276,119 @@ export async function createVariant(
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "products");
+  if (error) throw dbError(error, "Could not create the size/option.");
+  revalidateSellerPath(organizationSlug, "products");
   return data;
 }
 
-export async function updateVariant(id: string, input: ProductVariantUpdate, orgSlug?: string) {
+export async function updateVariant(
+  organizationSlug: string,
+  id: string,
+  input: ProductVariantUpdate,
+) {
+  const { orgId } = await guard(organizationSlug, "products", "edit");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("product_variants")
     .update(input)
     .eq("id", id)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "products");
+  if (error) throw dbError(error, "Could not update the size/option.");
+  revalidateSellerPath(organizationSlug, "products");
   return data;
 }
 
-export async function deleteVariant(id: string, orgSlug?: string) {
+export async function deleteVariant(organizationSlug: string, id: string) {
+  const { orgId } = await guard(organizationSlug, "products", "delete");
   const supabase = await createClient();
-  const { error } = await supabase.from("product_variants").delete().eq("id", id);
+  const { error } = await supabase
+    .from("product_variants")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", orgId);
   if (error) {
     if (error.code === "23503") {
-      throw new Error("This size/option has been ordered before and cannot be deleted. Mark it unavailable instead.");
+      throw new Error(
+        "This size/option has been ordered before and cannot be deleted. Mark it unavailable instead.",
+      );
     }
-    throw new Error(error.message);
+    throw dbError(error, "Could not delete the size/option.");
   }
-  revalidateSellerPath(orgSlug, "products");
+  revalidateSellerPath(organizationSlug, "products");
 }
 
 // ---------------------------------------------------------------------------
 // Customers
 // ---------------------------------------------------------------------------
-export async function getCustomers(orgId: string): Promise<CustomerWithPortal[]> {
+export async function getCustomers(organizationSlug: string): Promise<CustomerWithPortal[]> {
+  const { orgId } = await guard(organizationSlug, "customers", "view");
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("customers")
     .select("*, buyers(id)")
     .eq("organization_id", orgId)
     .order("name");
-  if (error) throw new Error(error.message);
+  if (error) throw dbError(error, "Could not load customers.");
   return (data ?? []).map(({ buyers, ...customer }) => ({
     ...customer,
     has_portal_account: (buyers?.length ?? 0) > 0,
   }));
 }
 
-export async function searchCustomers(orgId: string, query: string) {
+/**
+ * PostgREST parses `or()` as filter syntax, so raw search text could inject
+ * extra filter terms (a comma starts a new one, a quote ends a value).
+ * Wrapping the pattern in double quotes makes the whole thing one literal
+ * value; the backslash/quote escape keeps the wrapper from being closed
+ * early. `%`/`_` are left alone — they only widen the searcher's own match.
+ */
+function quoteSearchPattern(query: string): string {
+  return `"%${query.replace(/[\\"]/g, (c) => `\\${c}`)}%"`;
+}
+
+export async function searchCustomers(organizationSlug: string, query: string) {
+  const { orgId } = await guard(organizationSlug, "customers", "view");
   const supabase = await createClient();
+  const pattern = quoteSearchPattern(query.slice(0, 100));
   const { data } = await supabase
     .from("customers")
     .select("*")
     .eq("organization_id", orgId)
-    .or(`name.ilike.%${query}%,phone.ilike.%${query}%`)
+    .or(`name.ilike.${pattern},phone.ilike.${pattern}`)
     .limit(10);
   return data ?? [];
 }
 
 export async function createCustomer(
-  orgId: string,
+  organizationSlug: string,
   input: Omit<CustomerInsert, "organization_id" | "created_by">,
-  orgSlug?: string,
 ) {
+  const { orgId, userId } = await guard(organizationSlug, "customers", "add");
   const supabase = await createClient();
-  const { data: user } = await supabase.auth.getUser();
-  if (!user.user) throw new Error("Not authenticated");
 
   const email = parseCustomerEmail(input.email);
   const address = parseCustomerAddress(input);
 
   const { data, error } = await supabase
     .from("customers")
-    .insert({ ...input, email, ...address, organization_id: orgId, created_by: user.user.id })
+    .insert({ ...input, email, ...address, organization_id: orgId, created_by: userId })
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "customers");
+  if (error) throw dbError(error, "Could not create the customer.");
+  revalidateSellerPath(organizationSlug, "customers");
   return data;
 }
 
-export async function updateCustomer(id: string, input: CustomerUpdate, orgSlug?: string) {
+export async function updateCustomer(
+  organizationSlug: string,
+  id: string,
+  input: CustomerUpdate,
+) {
+  const { orgId } = await guard(organizationSlug, "customers", "edit");
   const supabase = await createClient();
   const touchesAddress =
     "address" in input || "postcode" in input || "state" in input || "area" in input;
@@ -317,22 +402,29 @@ export async function updateCustomer(id: string, input: CustomerUpdate, orgSlug?
     .from("customers")
     .update(patch)
     .eq("id", id)
+    .eq("organization_id", orgId)
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "customers");
+  if (error) throw dbError(error, "Could not update the customer.");
+  revalidateSellerPath(organizationSlug, "customers");
   return data;
 }
 
-export async function deleteCustomer(id: string, orgSlug?: string) {
+export async function deleteCustomer(organizationSlug: string, id: string) {
+  const { orgId } = await guard(organizationSlug, "customers", "delete");
   const supabase = await createClient();
-  const { error } = await supabase.from("customers").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-  revalidateSellerPath(orgSlug, "customers");
+  const { error } = await supabase
+    .from("customers")
+    .delete()
+    .eq("id", id)
+    .eq("organization_id", orgId);
+  if (error) throw dbError(error, "Could not delete the customer.");
+  revalidateSellerPath(organizationSlug, "customers");
 }
 
-export async function getCatalogForOrdering(orgId: string) {
+export async function getCatalogForOrdering(organizationSlug: string) {
+  const { orgId } = await guardForOrderTaking(organizationSlug, "products");
   const supabase = await createClient();
   const { data } = await supabase
     .from("categories")

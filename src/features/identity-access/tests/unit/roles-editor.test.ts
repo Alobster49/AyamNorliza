@@ -20,6 +20,7 @@ vi.mock("@/lib/auth/require-permission", () => ({
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/require-permission";
 import { OrderPermissionError } from "@/features/orders/server/guards";
+import { DEFAULT_ROLE_GRANTS } from "@/lib/auth/rbac";
 import {
   getRolesView,
   createRoleAction,
@@ -52,16 +53,58 @@ const OTHER_ORG_ROLE_ID = "44444444-4444-4444-4444-444444444444";
 const ACTOR_ROLE_ID = "55555555-5555-5555-5555-555555555555";
 
 /**
+ * The acting role's own rank and grants, which `guardEdit` reads before any
+ * mutation so it can bound what the caller is allowed to hand out. Defaults
+ * to org_admin: rank 80, holding everything.
+ */
+type Actor = { rank?: number; grants?: Array<[string, string]> };
+
+const ADMIN_GRANTS: Array<[string, string]> = Array.from(
+  DEFAULT_ROLE_GRANTS.org_admin,
+).map((pk) => {
+  const idx = pk.lastIndexOf(":");
+  return [pk.slice(0, idx), pk.slice(idx + 1)] as [string, string];
+});
+
+/**
  * Queues canned results per table; each `.from(table)` call shifts the next
  * queued result (falling back to `{ data: null, error: null }` once drained).
+ *
+ * `guardEdit` makes the first `organization_roles` call of every mutation to
+ * load the actor's own authority, so that row is prepended here rather than
+ * repeated in every test's queue.
  */
-function mockSupabase(queues: Record<string, QueryResult[]>) {
+function mockSupabase(
+  queues: Record<string, QueryResult[]>,
+  actor: Actor | null = {},
+) {
+  const actorRow: QueryResult | null = actor
+    ? {
+        data: {
+          rank: actor.rank ?? 80,
+          role_permissions: (actor.grants ?? ADMIN_GRANTS).map(([resource, action]) => ({
+            resource,
+            action,
+            granted: true,
+          })),
+        },
+        error: null,
+      }
+    : null;
+  // `getRolesView` is read-only and never calls `guardEdit`, so it passes
+  // `null` to keep its own queue at the front.
+  const merged: Record<string, QueryResult[]> = {
+    ...queues,
+    organization_roles: actorRow
+      ? [actorRow, ...(queues.organization_roles ?? [])]
+      : (queues.organization_roles ?? []),
+  };
   const from = vi.fn((table: string) => {
-    const queue = queues[table];
+    const queue = merged[table];
     const result = queue && queue.length > 0 ? queue.shift()! : { data: null, error: null };
     return chain(result);
   });
-  const supabase = { from };
+  const supabase = { from, rpc: vi.fn().mockResolvedValue({ data: null, error: null }) };
   vi.mocked(createSupabaseServerClient).mockResolvedValue(
     supabase as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>,
   );
@@ -92,7 +135,8 @@ afterEach(() => {
 describe("getRolesView", () => {
   it("returns roles, grants, canEdit and actorRank for a permitted viewer", async () => {
     mockPermission({ canView: true, canEdit: false });
-    mockSupabase({
+    mockSupabase(
+      {
       organization_roles: [
         {
           data: [
@@ -111,7 +155,9 @@ describe("getRolesView", () => {
           error: null,
         },
       ],
-    });
+      },
+      null,
+    );
 
     const view = await getRolesView("acme");
 
@@ -474,7 +520,6 @@ describe("createRoleAction", () => {
     mockPermission();
     const supabase = mockSupabase({
       organization_roles: [
-        { data: { rank: 80 }, error: null }, // actor rank lookup
         { data: { id: "new-role-id" }, error: null }, // insert
       ],
     });
@@ -493,7 +538,6 @@ describe("createRoleAction", () => {
     mockPermission();
     const supabase = mockSupabase({
       organization_roles: [
-        { data: { rank: 80 }, error: null },
         { data: { id: "new-role-id" }, error: null },
       ],
     });
@@ -508,7 +552,6 @@ describe("createRoleAction", () => {
     mockPermission();
     mockSupabase({
       organization_roles: [
-        { data: { rank: 80 }, error: null },
         { data: null, error: { code: "23505", message: "duplicate key value violates unique constraint" } },
       ],
     });
@@ -543,7 +586,6 @@ describe("createRoleAction", () => {
     mockPermission();
     const supabase = mockSupabase({
       organization_roles: [
-        { data: { rank: 80 }, error: null }, // actor rank
         {
           data: { id: CUSTOM_ROLE_ID, key: "custom-1", name: "Custom", description: null, rank: 5, is_system: false },
           error: null,
@@ -580,7 +622,6 @@ describe("createRoleAction", () => {
     mockPermission();
     const supabase = mockSupabase({
       organization_roles: [
-        { data: { rank: 80 }, error: null }, // actor rank
         {
           data: { id: CUSTOM_ROLE_ID, key: "custom-1", name: "Custom", description: null, rank: 5, is_system: false },
           error: null,
@@ -623,7 +664,6 @@ describe("createRoleAction", () => {
     mockPermission();
     mockSupabase({
       organization_roles: [
-        { data: { rank: 80 }, error: null },
         { data: null, error: null }, // clone source not found in this org
       ],
     });
@@ -704,5 +744,198 @@ describe("resetRoleToDefaultsAction", () => {
     const result = await resetRoleToDefaultsAction({ organizationSlug: "acme", roleId: SYSTEM_ROLE_ID });
 
     expect(result).toEqual({ ok: true, data: undefined });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Bounds on `roles.edit` (20260901000005_bound_role_grants.sql)
+// ---------------------------------------------------------------------------
+
+/** Queues a target role row for the action to fetch after the guard. */
+function targetRole(overrides: Partial<{ id: string; key: string; rank: number; is_system: boolean }> = {}) {
+  return {
+    data: {
+      id: CUSTOM_ROLE_ID,
+      key: "clerk",
+      name: "Clerk",
+      description: null,
+      rank: 5,
+      is_system: false,
+      ...overrides,
+    },
+    error: null,
+  };
+}
+
+describe("grant bounds on setPermissionAction", () => {
+  it("refuses to grant a capability the actor does not hold", async () => {
+    mockPermission();
+    mockSupabase(
+      { organization_roles: [targetRole()] },
+      // A narrow role editor: it can manage roles, and nothing else.
+      { rank: 5, grants: [["roles", "view"], ["roles", "edit"]] },
+    );
+
+    const result = await setPermissionAction({
+      organizationSlug: "acme",
+      roleId: CUSTOM_ROLE_ID,
+      resource: "users",
+      action: "delete",
+      granted: true,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "forbidden",
+      messageKey: "errors.identity.roles.beyondOwnAuthority",
+    });
+  });
+
+  it("allows granting a capability the actor does hold", async () => {
+    mockPermission();
+    mockSupabase(
+      { organization_roles: [targetRole()] },
+      { rank: 5, grants: [["roles", "edit"], ["products", "view"]] },
+    );
+
+    const result = await setPermissionAction({
+      organizationSlug: "acme",
+      roleId: CUSTOM_ROLE_ID,
+      resource: "products",
+      action: "view",
+      granted: true,
+    });
+
+    expect(result).toEqual({ ok: true, data: undefined });
+  });
+
+  it("allows revoking a capability the actor does not hold", async () => {
+    mockPermission();
+    mockSupabase(
+      { organization_roles: [targetRole()] },
+      { rank: 5, grants: [["roles", "edit"]] },
+    );
+
+    const result = await setPermissionAction({
+      organizationSlug: "acme",
+      roleId: CUSTOM_ROLE_ID,
+      resource: "users",
+      action: "delete",
+      granted: false,
+    });
+
+    expect(result).toEqual({ ok: true, data: undefined });
+  });
+
+  it("refuses to touch a role ranked above the actor", async () => {
+    mockPermission();
+    mockSupabase(
+      { organization_roles: [targetRole({ key: "seller", rank: 60, is_system: true })] },
+      { rank: 5, grants: [["roles", "edit"], ["products", "view"]] },
+    );
+
+    const result = await setPermissionAction({
+      organizationSlug: "acme",
+      roleId: SYSTEM_ROLE_ID,
+      resource: "products",
+      action: "view",
+      granted: true,
+    });
+
+    expect(result).toMatchObject({
+      ok: false,
+      code: "forbidden",
+      messageKey: "errors.identity.roles.outranked",
+    });
+  });
+});
+
+describe("rank bounds on rename and delete", () => {
+  it("refuses to rename a role ranked above the actor", async () => {
+    mockPermission();
+    mockSupabase(
+      { organization_roles: [targetRole({ rank: 40 })] },
+      { rank: 5, grants: [["roles", "edit"]] },
+    );
+
+    const result = await renameRoleAction({
+      organizationSlug: "acme",
+      roleId: CUSTOM_ROLE_ID,
+      name: "Hijacked",
+    });
+
+    expect(result).toMatchObject({ ok: false, code: "forbidden", messageKey: "errors.identity.roles.outranked" });
+  });
+
+  it("refuses to delete a role ranked above the actor", async () => {
+    mockPermission();
+    mockSupabase(
+      { organization_roles: [targetRole({ rank: 40 })] },
+      { rank: 5, grants: [["roles", "edit"]] },
+    );
+
+    const result = await deleteRoleAction({ organizationSlug: "acme", roleId: CUSTOM_ROLE_ID });
+
+    expect(result).toMatchObject({ ok: false, code: "forbidden", messageKey: "errors.identity.roles.outranked" });
+  });
+});
+
+describe("clone bounds on createRoleAction", () => {
+  it("copies only the grants the actor itself holds", async () => {
+    mockPermission();
+    const supabase = mockSupabase(
+      {
+        organization_roles: [
+          targetRole({ id: SYSTEM_ROLE_ID, key: "seller", rank: 5, is_system: true }),
+          { data: { id: "new-role" }, error: null },
+        ],
+        role_permissions: [
+          {
+            // The clone source holds more than the actor does.
+            data: [
+              { resource: "products", action: "view", granted: true },
+              { resource: "users", action: "delete", granted: true },
+            ],
+            error: null,
+          },
+          { data: null, error: null },
+        ],
+      },
+      { rank: 5, grants: [["roles", "edit"], ["products", "view"]] },
+    );
+
+    await createRoleAction({
+      organizationSlug: "acme",
+      name: "Clerk",
+      cloneFromRoleId: SYSTEM_ROLE_ID,
+    });
+
+    const upserted = supabase.from.mock.results
+      .flatMap((r) => {
+        const builder = r.value as { upsert?: { mock: { calls: unknown[][] } } };
+        return builder.upsert?.mock.calls ?? [];
+      })
+      .flat();
+    const rows = (upserted[0] ?? []) as Array<{ resource: string }>;
+    expect(rows.map((r) => r.resource)).toEqual(["products"]);
+  });
+});
+
+describe("resetRoleToDefaultsAction", () => {
+  it("delegates to the reset_role_to_defaults RPC", async () => {
+    mockPermission();
+    const supabase = mockSupabase({
+      organization_roles: [targetRole({ id: SYSTEM_ROLE_ID, key: "driver", rank: 30, is_system: true })],
+    });
+
+    const result = await resetRoleToDefaultsAction({
+      organizationSlug: "acme",
+      roleId: SYSTEM_ROLE_ID,
+    });
+
+    expect(result).toEqual({ ok: true, data: undefined });
+    expect(supabase.rpc).toHaveBeenCalledWith("reset_role_to_defaults", {
+      p_role_id: SYSTEM_ROLE_ID,
+    });
   });
 });

@@ -15,6 +15,7 @@ import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OrderPermissionError } from "@/features/orders/server/guards";
+import { activeMembershipWindow } from "./membership-window";
 import { grantKey, type PermissionAction, type PermissionKey } from "./rbac";
 
 export type PermissionContext = {
@@ -77,6 +78,7 @@ async function loadContextAndGrants(organizationSlug: string): Promise<{
     .eq("organization_id", org.id)
     .eq("user_id", user.id)
     .eq("status", "active")
+    .or(activeMembershipWindow())
     .maybeSingle<MembershipRow>();
 
   if (!member || !member.organization_roles) {

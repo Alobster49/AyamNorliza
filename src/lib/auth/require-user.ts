@@ -12,6 +12,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { activeMembershipWindow } from "./membership-window";
 import { PATHNAME_HEADER, toLocaleAgnostic } from "./next-path";
 
 export class PermissionError extends Error {
@@ -132,7 +133,7 @@ export async function requireOrgMember(
     .eq("organization_id", organizationId)
     .eq("user_id", user.id)
     .eq("status", "active")
-    .is("expires_at", null)
+    .or(activeMembershipWindow())
     .maybeSingle<ActiveOrgMember>();
   if (error) throw error;
   if (!data) throw new PermissionError("Not a member of this organization");
@@ -153,7 +154,7 @@ export async function isActiveOrgMember(
     .eq("organization_id", organizationId)
     .eq("user_id", user.id)
     .eq("status", "active")
-    .is("expires_at", null)
+    .or(activeMembershipWindow())
     .maybeSingle();
   return Boolean(data);
 }

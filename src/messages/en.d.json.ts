@@ -465,6 +465,8 @@ declare const messages: {
       "roles": {
         "notEditable": "Role '{role}' is not editable",
         "capabilityLocked": "Capability '{capability}' is locked",
+        "beyondOwnAuthority": "You cannot grant '{capability}' because your own role does not have it",
+        "outranked": "That role ranks above yours, so you cannot change it",
         "ownerOnlyEdit": "Only the owner can edit capabilities",
         "ownerOnlyReset": "Only the owner can reset capabilities",
         "cannotGrantRole": "Cannot grant role '{role}'",

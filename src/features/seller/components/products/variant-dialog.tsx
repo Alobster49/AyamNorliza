@@ -29,7 +29,6 @@ import { MARKET_ITEMS, type MarketMarginType } from "@/features/market/types";
 type VariantDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  organizationId: string;
   organizationSlug: string;
   productId: string;
   variant?: ProductVariant;
@@ -39,7 +38,6 @@ type VariantDialogProps = {
 export function VariantDialog({
   open,
   onOpenChange,
-  organizationId,
   organizationSlug,
   productId,
   variant,
@@ -78,8 +76,8 @@ export function VariantDialog({
         market_margin_value: tracked ? Number(data.get("market_margin_value")) : null,
       };
       const saved = variant
-        ? await updateVariant(variant.id, input, organizationSlug)
-        : await createVariant(organizationId, { ...input, product_id: productId }, organizationSlug);
+        ? await updateVariant(organizationSlug, variant.id, input)
+        : await createVariant(organizationSlug, { ...input, product_id: productId });
       onSaved(saved);
       onOpenChange(false);
       toast({ title: variant ? t("updated") : t("created") });

@@ -25,6 +25,9 @@ import {
 
 type QueryResult = { data: unknown; error: { code?: string; message: string } | null };
 
+/** The builder handed to each table, kept so tests can inspect the filters. */
+const builders = new Map<string, Record<string, ReturnType<typeof vi.fn>>>();
+
 function chain(result: QueryResult) {
   const builder: Record<string, unknown> = {};
   const methods = ["select", "insert", "update", "delete", "eq", "in", "or", "order", "is", "limit"];
@@ -35,6 +38,13 @@ function chain(result: QueryResult) {
   builder.maybeSingle = vi.fn(() => Promise.resolve(result));
   builder.then = (resolve: (v: QueryResult) => unknown, reject?: (e: unknown) => unknown) =>
     Promise.resolve(result).then(resolve, reject);
+  return builder;
+}
+
+/** Records the builder for `table` before returning it. */
+function tracked(table: string, result: QueryResult) {
+  const builder = chain(result);
+  builders.set(table, builder as Record<string, ReturnType<typeof vi.fn>>);
   return builder;
 }
 
@@ -74,7 +84,7 @@ function mockSupabaseFor({
         });
       }
       if (table === "organization_members") {
-        return chain({
+        return tracked(table, {
           data: member
             ? {
                 role_id: roleId,
@@ -101,6 +111,7 @@ function mockSupabaseFor({
 
 beforeEach(() => {
   vi.mocked(createSupabaseServerClient).mockReset();
+  builders.clear();
 });
 
 afterEach(() => {
@@ -164,6 +175,23 @@ describe("requirePermission", () => {
     await expect(requirePermission("acme", "products", "view")).rejects.toThrow(
       OrderPermissionError,
     );
+  });
+
+  it("excludes memberships whose temporary access has already expired", async () => {
+    // Only Postgres can apply the filter, so what is pinned here is that the
+    // guard asks for the same window the RLS policies use rather than
+    // treating any `status='active'` row as current.
+    mockSupabaseFor({
+      permissions: [{ resource: "products", action: "view", granted: true }],
+    });
+
+    await requirePermission("acme", "products", "view");
+
+    const orFilters =
+      builders.get("organization_members")?.or?.mock.calls.map((c) => c[0]) ?? [];
+    expect(
+      orFilters.some((f: string) => /expires_at\.is\.null.*expires_at\.gt\./.test(f)),
+    ).toBe(true);
   });
 });
 

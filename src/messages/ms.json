@@ -462,6 +462,8 @@
       "roles": {
         "notEditable": "Peranan '{role}' tidak boleh disunting",
         "capabilityLocked": "Keupayaan '{capability}' dikunci",
+        "beyondOwnAuthority": "Anda tidak boleh memberikan '{capability}' kerana peranan anda sendiri tidak memilikinya",
+        "outranked": "Peranan itu lebih tinggi daripada peranan anda, jadi anda tidak boleh mengubahnya",
         "ownerOnlyEdit": "Hanya pemilik boleh menyunting keupayaan",
         "ownerOnlyReset": "Hanya pemilik boleh menetapkan semula keupayaan",
         "cannotGrantRole": "Tidak boleh memberikan peranan '{role}'",
