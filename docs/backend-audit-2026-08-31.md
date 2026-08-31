@@ -210,8 +210,19 @@ env var. `CRON_SECRET` is set on the prod project and the new function code is
 deployed; verified from the open internet that anonymous callers and wrong
 secrets both get **401** where they previously got a full run.
 
-**Discovered while doing it: the pg_cron schedules have never fired on
-production, and could not.**
+**Discovered while doing it: the pg_cron jobs ran daily and did nothing.**
+
+Correction to an earlier draft of this section, which said the schedules had
+"never fired". They fired: `cron.job_run_details` holds 145 runs going back to
+2026-06-25, every one `status = succeeded`. What never happened was the HTTP
+call inside them — `net._http_response` contained exactly one row, id 1, which
+was the manual verification on 2026-09-01. pg_net's sequence starting at 1 is
+the proof no request had ever gone out.
+
+That is the trap worth remembering: a green `cron.job_run_details` means the
+job body ran without raising, and a body whose first act is to no-op reports
+success just as loudly as one that did the work. Check `net._http_response`,
+not the run log.
 
 `app.functions_url` and `app.functions_key` are both unset on the prod
 database, so all three jobs hit their own no-op guard and return without
@@ -245,8 +256,16 @@ function accepted, handler ran. All three prod jobs now show
 chosen deliberately: it had nothing to notify, so the test sent no email.
 
 **One consequence to expect:** there are 4 access reviews already due within
-48 hours on production that have never been notified, because the job never
-ran. The first real tick at 09:00 MYT will email their reviewers.
+48 hours on production that have never been notified, because the HTTP call
+never went out. The next tick will email their reviewers.
+
+**Also found: the schedule comments are wrong by 8 hours.** The prod database
+runs in UTC, and pg_cron reads its expressions in the database timezone, so
+`0 9 * * *` fires at 09:00 UTC — 17:00 MYT, not the "09:00 MYT" the migration
+comments claim. Actual daily times: market-price-sync 05:15 UTC (13:15 MYT,
+correctly documented), access-review-reminder 09:00 UTC (17:00 MYT),
+temporary-access-expiry 09:30 UTC (17:30 MYT). Either fix the comments or
+shift the expressions to 01:00/01:30 UTC if 09:00 MYT was the intent.
 
 Nothing regressed by deploying the guard: since cron never invoked these
 functions on prod, requiring the header broke no working automation. To
