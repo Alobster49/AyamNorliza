@@ -8,6 +8,7 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireBuyer, NotABuyerError } from "@/lib/auth/buyer-auth";
 import type { BuyerAddress } from "../types";
@@ -67,10 +68,12 @@ const CreateAddressInput = z.object({
 
 const AddressId = z.string().uuid();
 
-async function guard(): Promise<{ buyerId: string } | BuyerActionResult<never>> {
+async function guard(): Promise<
+  { buyerId: string; organizationId: string } | BuyerActionResult<never>
+> {
   try {
     const buyer = await requireBuyer();
-    return { buyerId: buyer.id };
+    return { buyerId: buyer.id, organizationId: buyer.organization_id };
   } catch (e) {
     if (e instanceof NotABuyerError) {
       // `NotABuyerError.message` is one of two fixed strings set by
@@ -83,6 +86,25 @@ async function guard(): Promise<{ buyerId: string } | BuyerActionResult<never>> 
     }
     throw e;
   }
+}
+
+/**
+ * The buyer address actions only carry `organizationId`, not the slug the
+ * `buyer_portal` routes are keyed by — resolve it so a mutation can
+ * `revalidatePath` the checkout page (the one buyer_portal route that reads
+ * buyer-scoped data server-side). Best-effort: a lookup failure just means
+ * the page stays cached a little longer, not a failed mutation.
+ */
+async function resolveOrgSlug(
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
+  organizationId: string,
+): Promise<string | null> {
+  const { data } = await supabase
+    .from("organizations")
+    .select("slug")
+    .eq("id", organizationId)
+    .maybeSingle();
+  return (data as { slug: string } | null)?.slug ?? null;
 }
 
 export async function listMyAddresses(): Promise<BuyerActionResult<BuyerAddress[]>> {
@@ -158,6 +180,9 @@ export async function createAddress(
     }
     return err("internal", "errors.buyer.address.saveFailed");
   }
+
+  const slug = await resolveOrgSlug(supabase, g.organizationId);
+  if (slug) revalidatePath(`/buyer_portal/${slug}/checkout`);
   return ok(mapRow(data as AddressRow));
 }
 
@@ -194,6 +219,9 @@ export async function setDefaultAddress(
     .single();
 
   if (error || !data) return err("not_found", "errors.buyer.address.notFound");
+
+  const slug = await resolveOrgSlug(supabase, g.organizationId);
+  if (slug) revalidatePath(`/buyer_portal/${slug}/checkout`);
   return ok(mapRow(data as AddressRow));
 }
 
@@ -233,5 +261,7 @@ export async function deleteAddress(
     }
   }
 
+  const slug = await resolveOrgSlug(supabase, g.organizationId);
+  if (slug) revalidatePath(`/buyer_portal/${slug}/checkout`);
   return ok({ deletedId: deleted.id });
 }

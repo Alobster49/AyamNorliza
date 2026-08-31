@@ -1256,12 +1256,8 @@ export async function sendPasswordResetAction(
       locale: resolveLocale(org?.default_locale),
     });
     await sendEmail({ to: [email], subject, html });
-  } catch (e) {
-    return err(
-      "internal",
-      e instanceof Error ? e.message : "Could not send the reset email",
-      "errors.identity.member.resetFailed",
-    );
+  } catch {
+    return err("internal", "Could not send the reset email", "errors.identity.member.resetFailed");
   }
 
   const ctx = await ctxFor(user.id);

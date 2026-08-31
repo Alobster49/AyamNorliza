@@ -6,6 +6,7 @@
 "use server";
 
 import { z } from "zod";
+import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   Buyer,
@@ -202,6 +203,17 @@ export async function updateBuyerProfile(
   if (error || !buyer) {
     return err("internal", "errors.buyer.profile.updateFailed");
   }
+
+  // Revalidate the checkout page: it renders `displayName`/`phone` from a
+  // server-side buyer lookup (see `CheckoutPage`'s `initialBuyer`), so a
+  // profile edit here would otherwise show stale values there.
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("slug")
+    .eq("id", (buyer as Buyer).organization_id)
+    .maybeSingle();
+  const slug = (org as { slug: string } | null)?.slug;
+  if (slug) revalidatePath(`/buyer_portal/${slug}/checkout`);
 
   return ok(buyer as Buyer);
 }

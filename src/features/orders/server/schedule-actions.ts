@@ -130,7 +130,7 @@ export async function createZone(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to create zone");
+    return err("internal", "Failed to create zone");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -166,7 +166,7 @@ export async function updateZone(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to update zone");
+    return err("internal", "Failed to update zone");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -192,7 +192,7 @@ export async function deleteZone(
     if (error.code === "23503") {
       return err("conflict", "This zone has orders using it. Remove or reassign those first.");
     }
-    return err("internal", error.message);
+    return err("internal", "Failed to delete zone");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -236,7 +236,7 @@ export async function createTruck(
     if (error?.code === "23505") {
       return err("conflict", "That truck code is already in use.");
     }
-    return err("internal", error?.message ?? "Failed to create truck");
+    return err("internal", "Failed to create truck");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -277,7 +277,7 @@ export async function updateTruck(
     if (error?.code === "23505") {
       return err("conflict", "That truck code is already in use.");
     }
-    return err("internal", error?.message ?? "Failed to update truck");
+    return err("internal", "Failed to update truck");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -303,7 +303,7 @@ export async function deleteTruck(
     if (error.code === "23503") {
       return err("conflict", "This truck has delivery runs or orders attached. Remove those first.");
     }
-    return err("internal", error.message);
+    return err("internal", "Failed to delete truck");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -331,7 +331,7 @@ export async function setTruckZones(
     .eq("truck_id", truckId)
     .eq("organization_id", orgId);
   if (deleteError) {
-    return err("internal", deleteError.message);
+    return err("internal", "Failed to update truck zones");
   }
 
   if (parsed.data.length > 0) {
@@ -343,7 +343,7 @@ export async function setTruckZones(
       })),
     );
     if (insertError) {
-      return err("internal", insertError.message);
+      return err("internal", "Failed to update truck zones");
     }
   }
 
@@ -386,7 +386,7 @@ export async function createSlot(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to create slot");
+    return err("internal", "Failed to create slot");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -425,7 +425,7 @@ export async function updateSlot(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to update slot");
+    return err("internal", "Failed to update slot");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -451,7 +451,7 @@ export async function deleteSlot(
     if (error.code === "23503") {
       return err("conflict", "This slot has orders booked against it. Remove those first.");
     }
-    return err("internal", error.message);
+    return err("internal", "Failed to delete slot");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -493,7 +493,7 @@ export async function createBlock(
     if (error?.code === "23505") {
       return err("conflict", "That date is already blocked for this truck.");
     }
-    return err("internal", error?.message ?? "Failed to create block");
+    return err("internal", "Failed to create block");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -516,7 +516,7 @@ export async function deleteBlock(
     .eq("organization_id", orgId);
 
   if (error) {
-    return err("internal", error.message);
+    return err("internal", "Failed to delete block");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);

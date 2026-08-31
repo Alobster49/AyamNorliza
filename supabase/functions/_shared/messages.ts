@@ -16,7 +16,7 @@ export type IdentityMessages = {
 const en: IdentityMessages = {
   invite: {
     subject: "You are invited to {organizationName}",
-    bodyHtml: "<p>{inviterName} invited you to join <strong>{organizationName}</strong> as <strong>{role}</strong>.</p><p>Expires {expiresAt}.</p><p><a href=\"{acceptUrl}\">Accept invitation</a></p>",
+    bodyHtml: "<p>{inviterName} invited you to join <strong>{organizationName}</strong> as <strong>{role}</strong>.</p><p>This invitation expires {expiresAt}.</p><p><a>Accept invitation</a></p>",
   },
   inviteResent: {
     subject: "Reminder: your invitation to {organizationName}",
@@ -28,15 +28,15 @@ const en: IdentityMessages = {
   },
   mfaEnrolled: {
     subject: "Two-factor authentication enabled",
-    bodyHtml: "<p>Two-factor authentication was enabled on your AyamNorliza account.</p>",
+    bodyHtml: "<p>Two-factor authentication was enabled on your AyamNorliza account.</p><p>If this was not you, contact your organization owner immediately.</p>",
   },
   breakGlassUsed: {
     subject: "[{organizationName}] Break-glass access used",
-    bodyHtml: "<p><strong>{userEmail}</strong> used break-glass access in <strong>{organizationName}</strong>.</p><p><strong>Reason:</strong> {reason}</p><p><strong>Expires:</strong> {expiresAt}</p>",
+    bodyHtml: "<p><strong>{userEmail}</strong> used break-glass access in <strong>{organizationName}</strong>.</p><p><strong>Reason:</strong> {reason}</p><p><strong>Ticket:</strong> {ticketReference}</p><p><strong>Expires:</strong> {expiresAt}</p><p>A post-use review is required after the session ends.</p>",
   },
   temporaryAccessExpiring: {
     subject: "Temporary access expiring soon",
-    bodyHtml: "<p>Your temporary access expires on {expiresAt}.</p>",
+    bodyHtml: "<p>Your temporary access to <strong>{organizationName}</strong> expires on {expiresAt}.</p><p>Ask your organization owner to renew it if you still need access.</p>",
   },
   supportSessionOpened: {
     subject: "Support session opened in {organizationName}",

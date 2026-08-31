@@ -134,7 +134,7 @@ function mapRpcError<T = void>(message: string): ActionResult<T> {
   if (message.includes("not_found")) {
     return err("not_found", "Order not found.", "errors.logistics.dispatch.notFound");
   }
-  return err("internal", message, "errors.logistics.dispatch.internal");
+  return err("internal", "Something went wrong. Please try again.", "errors.logistics.dispatch.internal");
 }
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;

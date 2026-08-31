@@ -192,7 +192,7 @@ describe("cancelMyOrder", () => {
     vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
     mockSupabase({ rpcResult: { data: null, error: { message: "invalid_status" } } });
 
-    const result = await cancelMyOrder("order-1", "Changed my mind");
+    const result = await cancelMyOrder("ayam-norliza-pilot", "order-1", "Changed my mind");
 
     expect(result).toEqual({
       ok: false,
@@ -204,7 +204,7 @@ describe("cancelMyOrder", () => {
   it("returns the unauthenticated key when the caller is not a buyer", async () => {
     vi.mocked(requireBuyer).mockRejectedValue(new NotABuyerError("Not registered as a buyer"));
 
-    const result = await cancelMyOrder("order-1");
+    const result = await cancelMyOrder("ayam-norliza-pilot", "order-1");
 
     expect(result).toEqual({
       ok: false,
@@ -217,7 +217,7 @@ describe("cancelMyOrder", () => {
     vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
     mockSupabase({ rpcResult: { data: null, error: { message: "forbidden" } } });
 
-    const result = await cancelMyOrder("order-1");
+    const result = await cancelMyOrder("ayam-norliza-pilot", "order-1");
 
     expect(result).toEqual({
       ok: false,
@@ -230,7 +230,7 @@ describe("cancelMyOrder", () => {
     vi.mocked(requireBuyer).mockResolvedValue(testBuyer);
     mockSupabase({ rpcResult: { data: null, error: { message: "some_unknown_code" } } });
 
-    const result = await cancelMyOrder("order-1");
+    const result = await cancelMyOrder("ayam-norliza-pilot", "order-1");
 
     expect(result).toEqual({
       ok: false,

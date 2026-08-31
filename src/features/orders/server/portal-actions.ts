@@ -280,7 +280,11 @@ export async function getMyOrder(orderId: string): Promise<ActionResult<OrderWit
   });
 }
 
-export async function cancelMyOrder(orderId: string, reason?: string): Promise<BuyerOrderActionResult> {
+export async function cancelMyOrder(
+  organizationSlug: string,
+  orderId: string,
+  reason?: string,
+): Promise<BuyerOrderActionResult> {
   try {
     await requireBuyer();
   } catch (e) {
@@ -301,6 +305,7 @@ export async function cancelMyOrder(orderId: string, reason?: string): Promise<B
     return errKey(mapped.code, mapped.messageKey);
   }
 
+  revalidatePath(`/buyer_portal/${organizationSlug}/orders`);
   return ok(undefined);
 }
 

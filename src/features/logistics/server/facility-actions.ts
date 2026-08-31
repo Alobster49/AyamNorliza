@@ -125,7 +125,7 @@ export async function updateFacility(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to update facility");
+    return err("internal", "Failed to update facility");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -158,7 +158,7 @@ export async function createBay(
     .eq("id", input.facilityId)
     .eq("organization_id", orgId)
     .maybeSingle();
-  if (facilityError) return err("internal", facilityError.message);
+  if (facilityError) return err("internal", "Failed to create bay");
   if (!facility) return err("validation", "Unknown facility");
 
   const { data, error } = await supabase
@@ -175,7 +175,7 @@ export async function createBay(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to create bay");
+    return err("internal", "Failed to create bay");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -211,7 +211,7 @@ export async function updateBay(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to update bay");
+    return err("internal", "Failed to update bay");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -234,7 +234,7 @@ export async function deleteBay(
     .eq("organization_id", orgId);
 
   if (error) {
-    return err("internal", error.message);
+    return err("internal", "Failed to delete bay");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -264,7 +264,7 @@ export async function setTruckBay(
       .eq("id", parsed.data)
       .eq("organization_id", orgId)
       .maybeSingle();
-    if (bayError) return err("internal", bayError.message);
+    if (bayError) return err("internal", "Failed to update truck bay");
     if (!bay) return err("validation", "Unknown bay");
   }
 
@@ -275,7 +275,7 @@ export async function setTruckBay(
     .eq("organization_id", orgId);
 
   if (error) {
-    return err("internal", error.message);
+    return err("internal", "Failed to update truck bay");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -308,7 +308,7 @@ export async function addPostcodeRange(
     .eq("id", input.zoneId)
     .eq("organization_id", orgId)
     .maybeSingle();
-  if (zoneError) return err("internal", zoneError.message);
+  if (zoneError) return err("internal", "Failed to add postcode range");
   if (!zone) return err("validation", "Unknown zone");
 
   const { data, error } = await supabase
@@ -324,7 +324,7 @@ export async function addPostcodeRange(
     .single();
 
   if (error || !data) {
-    return err("internal", error?.message ?? "Failed to add postcode range");
+    return err("internal", "Failed to add postcode range");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);
@@ -347,7 +347,7 @@ export async function deletePostcodeRange(
     .eq("organization_id", orgId);
 
   if (error) {
-    return err("internal", error.message);
+    return err("internal", "Failed to delete postcode range");
   }
 
   revalidatePath(`/${organizationSlug}/delivery`);

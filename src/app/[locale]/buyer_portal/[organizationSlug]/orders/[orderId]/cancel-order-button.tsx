@@ -23,7 +23,7 @@ type CancelOrderButtonProps = {
   orderId: string;
 };
 
-export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
+export function CancelOrderButton({ organizationSlug, orderId }: CancelOrderButtonProps) {
   const router = useRouter();
   const { toast } = useToast();
   const t = useTranslations("buyer.orderDetail");
@@ -34,7 +34,7 @@ export function CancelOrderButton({ orderId }: CancelOrderButtonProps) {
 
   const handleCancel = async () => {
     setSubmitting(true);
-    const result = await cancelMyOrder(orderId, reason.trim() || undefined);
+    const result = await cancelMyOrder(organizationSlug, orderId, reason.trim() || undefined);
     setSubmitting(false);
 
     if (!result.ok) {
