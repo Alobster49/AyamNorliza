@@ -9,6 +9,7 @@ export type IdentityMessages = {
   mfaEnrolled: { subject: string; bodyHtml: string };
   breakGlassUsed: { subject: string; bodyHtml: string };
   temporaryAccessExpiring: { subject: string; bodyHtml: string };
+  accessReviewDue: { subject: string; bodyHtml: string };
   supportSessionOpened: { subject: string; bodyHtml: string };
 };
 
@@ -20,6 +21,10 @@ const en: IdentityMessages = {
   inviteResent: {
     subject: "Reminder: your invitation to {organizationName}",
     bodyHtml: "<p>{inviterName} resent the invitation.</p><p>Expires {expiresAt}.</p><p><a href=\"{acceptUrl}\">Accept invitation</a></p>",
+  },
+  accessReviewDue: {
+    subject: "[{organizationName}] Access review due {dueAt}",
+    bodyHtml: "<p>Hello,</p><p>Access review <code>{reviewId}</code> in <strong>{organizationName}</strong> is due by {dueAt}.</p><p><a href=\"{reviewUrl}\">Open review</a></p>",
   },
   mfaEnrolled: {
     subject: "Two-factor authentication enabled",

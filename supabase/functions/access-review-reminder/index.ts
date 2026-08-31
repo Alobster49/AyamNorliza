@@ -38,12 +38,18 @@ Deno.serve(async (req) => {
     const { data: user } = await admin.auth.admin.getUserById(r.reviewer_id);
     if (!user?.user?.email) continue;
     const messages = getMessages("en");
-    const subject = messages.invite.subject.replace("{organizationName}", org.name);
-    const html = `
-      <p>Hello,</p>
-      <p>Access review <code>${r.id}</code> in <strong>${org.name}</strong> is due by ${r.due_at}.</p>
-      <p><a href="${SITE_URL}/${org.slug}/settings/access-reviews">Open review</a></p>
-    `;
+    // This used to render `messages.invite.subject`, so a reviewer with a
+    // review falling due received an email titled "You are invited to
+    // <org>". The body was always about the review; only the subject was
+    // borrowed from the wrong template.
+    const values = {
+      organizationName: org.name,
+      reviewId: r.id,
+      dueAt: r.due_at,
+      reviewUrl: `${SITE_URL}/${org.slug}/settings/access-reviews`,
+    };
+    const subject = interpolate(messages.accessReviewDue.subject, values);
+    const html = interpolate(messages.accessReviewDue.bodyHtml, values);
     try {
       await sendEmail({ to: [user.user.email], subject, html });
       notified += 1;
@@ -51,8 +57,5 @@ Deno.serve(async (req) => {
       console.error("sendEmail failed", e);
     }
   }
-  // Silence unused-var warning for interpolate import (used elsewhere in
-  // the lib; kept here so the file shape mirrors the app copy).
-  void interpolate;
   return new Response(JSON.stringify({ notified }), { status: 200 });
 });
