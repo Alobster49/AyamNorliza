@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useFormatter, useTranslations } from "next-intl";
 import { createCustomer, updateCustomer, deleteCustomer } from "@/features/seller/server/actions";
 import type { CustomerWithPortal } from "@/features/seller/types";
 import { Badge } from "@/components/ui/badge";
@@ -48,6 +48,7 @@ export function CustomersClient({
   initialCustomers,
 }: CustomersClientProps) {
   const { toast } = useToast();
+  const format = useFormatter();
   const t = useTranslations("seller.customers");
   const tCommon = useTranslations("common");
   const [customers, setCustomers] = useState(initialCustomers);
@@ -175,13 +176,11 @@ export function CustomersClient({
     }
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-MY", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-  };
+  // Was `toLocaleDateString("en-MY", ...)`, which pinned the format to English
+  // regardless of the active locale -- every sibling screen goes through
+  // next-intl's formatter, so this column alone ignored a switch to Malay.
+  const formatDate = (date: string) =>
+    format.dateTime(new Date(date), { day: "2-digit", month: "short", year: "numeric" });
 
   return (
     <div className="space-y-6">

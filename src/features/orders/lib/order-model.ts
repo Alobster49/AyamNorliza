@@ -118,14 +118,12 @@ export function weightWarnings(
 // Formatters
 // ---------------------------------------------------------------------------
 
-const myr = new Intl.NumberFormat("en-MY", {
-  style: "currency",
-  currency: "MYR",
-});
-
-export function formatPrice(amount: number): string {
-  return myr.format(amount);
-}
+/**
+ * Re-exported rather than redefined: this was a byte-identical copy of the
+ * seller helper, so the two could drift into formatting the same amount
+ * differently on the orders screen and the catalog screen.
+ */
+export { formatPrice } from "@/features/seller/lib/pricing";
 
 export function formatWeight(kg: number): string {
   return `${Number(kg.toFixed(3))} kg`;
