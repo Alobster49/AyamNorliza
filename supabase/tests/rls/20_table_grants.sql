@@ -9,7 +9,7 @@
 
 begin;
 
-select plan(9);
+select plan(11);
 
 -- ---------------------------------------------------------------------------
 -- anon: reads the storefront, writes nothing.
@@ -30,13 +30,15 @@ select is_empty(
   'anon cannot truncate -- truncate ignores RLS entirely'
 );
 
+-- `organizations` moved to a column-level grant in 20260901000013, so it no
+-- longer appears in role_table_grants; it is asserted separately below.
 select set_eq(
   $$ select table_name::text
      from information_schema.role_table_grants
      where table_schema = 'public' and grantee = 'anon'
        and privilege_type = 'SELECT' $$,
-  array['categories', 'delivery_zones', 'organizations', 'product_variants', 'products'],
-  'anon reads exactly the five buyer-portal storefront tables'
+  array['categories', 'delivery_zones', 'product_variants', 'products'],
+  'anon reads exactly the four buyer-portal storefront tables'
 );
 
 -- ---------------------------------------------------------------------------
@@ -104,6 +106,28 @@ select is_empty(
        and d.defaclrole = 'postgres'::regrole
        and entry::text ~ '^(anon|authenticated)=[a-zA-Z]*[arwd]' $$,
   'schema public hands new tables no anon/authenticated DML by default'
+);
+
+-- `organizations` is readable by anon at column level only. The row is
+-- genuinely public (the shop page needs the org's name before anyone signs
+-- in); the invoice letterhead added later is not.
+select set_eq(
+  $$ select column_name::text
+     from information_schema.column_privileges
+     where table_schema = 'public' and table_name = 'organizations'
+       and grantee = 'anon' and privilege_type = 'SELECT' $$,
+  array['id', 'slug', 'name', 'region', 'default_time_zone', 'default_locale', 'status'],
+  'anon reads only the public identity columns of organizations'
+);
+
+select is_empty(
+  $$ select column_name::text
+     from information_schema.column_privileges
+     where table_schema = 'public' and table_name = 'organizations'
+       and grantee = 'anon' and privilege_type = 'SELECT'
+       and column_name in ('registration_no', 'address', 'phone', 'email',
+                           'created_by', 'updated_by', 'legal_name') $$,
+  'the invoice letterhead and internal columns are not among them'
 );
 
 select * from finish();
