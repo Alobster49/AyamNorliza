@@ -25,10 +25,19 @@ concentrated in two places:
 Nothing here is an open exploit for the current 7 built-in roles. But **custom
 roles are not safe to ship to real users until the items in §1 land.**
 
-> **Status, 2026-09-01.** Items 1.1 (partly), 1.2, 1.3, 1.4 and 1.5 have since
-> been fixed; see the notes inline. What remains before custom roles are safe
-> is the deferred half of 1.1 — 13 policies covering the operational reads and
-> the admin tables. Everything below is otherwise the audit as first written.
+> **Status, 2026-09-01 (final).** Every P0 and P1 item is closed, along with
+> most of P2 and the delete list. Policies naming a hardcoded role went from
+> **59 to 1** (the survivor is `organizations_insert_owner`, which has no
+> membership to check at org-creation time). The pgTAP suite went from 16
+> failures plus a file that would not parse, to **33 files / 347 tests green**.
+> Custom roles are safe to ship.
+>
+> Fixing the suite was worth more than the green tick: it had been hiding two
+> real regressions shipped to production by the RBAC merge, and a third bug
+> (an access-review email sent under the invite subject line) surfaced while
+> reconciling the duplicated edge-function templates.
+>
+> Still open, all deliberate — see "What is left" at the end of this document.
 >
 > One caveat that applies to all of it: the pgTAP suite was **already red on
 > `main`** before any of this work — 16 failures across 6 files, plus
@@ -420,3 +429,47 @@ tables cleanly. Do the same for the RBAC leftovers.
 4. `roles.edit` grant-bounding decision + enforcement (1.4).
 5. Cron-function shared secret (1.6).
 6. Delete list (§3) + dedup toolkit (§4) opportunistically alongside.
+
+
+---
+
+## What is left (2026-09-01)
+
+Everything below was considered and consciously deferred, not missed.
+
+**Structural, wanted but not urgent**
+
+- *Shared action toolkit.* Ten near-identical `guard*()` wrappers, six copies
+  of the `permissionMessageKey` switch and five independent definitions of
+  `ActionResult<T>` remain. Collapsing them is the single biggest readability
+  win left, but it touches ~10 server files at once and is the wrong shape of
+  change to land unattended.
+- *Buyer type divergence.* `Product` and `CatalogWithProducts` are declared
+  twice with the same names and different shapes — DB-generated in
+  `seller/types.ts`, hand-rolled in `buyer/types.ts`. Should be `Pick<>`s off
+  the generated types.
+- *Input validation.* Roughly half the server actions zod-parse their input;
+  the rest take positional args unchecked. `order-actions.ts` is inconsistent
+  within a single file.
+
+**Judgement calls, left as they are**
+
+- `market_prices.item_code` has no CHECK constraint. Valid codes live in a
+  comment. Left alone deliberately: only the ingest writes this column and it
+  writes a fixed list, so a constraint tight enough to be useful is also tight
+  enough to break the next time KPDN adds an item.
+- `endBreakGlassAction` / `finalizeBreakGlassReviewAction` are unreferenced.
+  Whether break-glass should have a close/review flow at all is a product
+  decision, not dead-code removal.
+- 17 of the migrations lack explicit `begin`/`commit`. Cosmetic.
+
+**Needs a person**
+
+- *2027 public holidays.* `leave_workday_count` now refuses rather than
+  miscounting, so on 1 January leave applications fail until the dates are
+  entered. Add them to `seed_public_holidays()` when gazetted.
+- *Roles editor UI.* Out-of-authority permission toggles still render and fail
+  on submit rather than being disabled. `getRolesView` returns `actorRank`
+  already; it would also need the actor's grant set.
+- *The frontend has never been deployed.* Unchanged, and still the item that
+  decides whether any of the rest matters.
