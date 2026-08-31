@@ -49,22 +49,49 @@ Deno.serve(async (req: Request) => {
   }
 
   // Find or create the auth user.
-  const { data: list, error: listErr } = await admin.auth.admin.listUsers({
+  //
+  // This used to call listUsers({ email, page: 1, perPage: 1 }) and treat the
+  // first row as the invitee. listUsers takes no email filter -- the property
+  // was silently dropped -- so the "lookup" returned whichever account happened
+  // to sort first in the project, and the invitation was then activated against
+  // that stranger while the real invitee got nothing. It only type-checked as
+  // an error, but it was a wrong-account bug.
+  //
+  // Create first and fall back to a scan, mirroring `ensureUserWithPassword`
+  // in src/lib/supabase/admin.ts. A 1000-user page is ample at pilot scale,
+  // and an address that is registered but missing from it fails closed rather
+  // than guessing.
+  let userId: string;
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email: invitation.email,
-    page: 1,
-    perPage: 1,
+    email_confirm: true,
   });
-  if (listErr) return json({ error: "user_lookup_failed", detail: listErr.message }, 500);
-  let userId: string | undefined = list?.users?.[0]?.id;
-  if (!userId) {
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
-      email: invitation.email,
-      email_confirm: true,
-    });
-    if (createErr || !created.user) {
+
+  if (!createErr && created?.user) {
+    userId = created.user.id;
+  } else {
+    const status = (createErr as { status?: number } | null)?.status;
+    const code = (createErr as { code?: string } | null)?.code;
+    const emailAlreadyExists = code === "email_exists" || status === 422;
+    if (!emailAlreadyExists) {
       return json({ error: "user_create_failed", detail: createErr?.message }, 500);
     }
-    userId = created.user.id;
+
+    const { data: list, error: listErr } = await admin.auth.admin.listUsers({
+      page: 1,
+      perPage: 1000,
+    });
+    if (listErr) return json({ error: "user_lookup_failed", detail: listErr.message }, 500);
+
+    const wanted = invitation.email.toLowerCase();
+    const existing = list.users.find((u) => u.email?.toLowerCase() === wanted);
+    if (!existing) {
+      return json(
+        { error: "user_lookup_failed", detail: "invited address is registered but was not found" },
+        500,
+      );
+    }
+    userId = existing.id;
   }
 
   // Profile (idempotent).
