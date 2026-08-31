@@ -2802,6 +2802,7 @@ declare const messages: {
       "validation": "Check the form and try again.",
       "not_found": "That request was not found.",
       "invalid_status": "This request has already been decided.",
+      "holidays_not_configured": "Public holidays have not been set for one of the years in this date range. Add them on the leave management page, then try again.",
       "internal": "Something went wrong. Please try again.",
       "invalid_range": "End date must be on or after the start date.",
       "zero_workdays": "This date range has no working days to apply for.",

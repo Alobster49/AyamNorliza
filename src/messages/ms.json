@@ -2799,6 +2799,7 @@
       "validation": "Semak borang dan cuba lagi.",
       "not_found": "Permohonan itu tidak dijumpai.",
       "invalid_status": "Permohonan ini telah pun diputuskan.",
+      "holidays_not_configured": "Cuti umum belum ditetapkan bagi salah satu tahun dalam julat tarikh ini. Tambahkannya di halaman pengurusan cuti, kemudian cuba lagi.",
       "internal": "Berlaku ralat. Sila cuba lagi.",
       "invalid_range": "Tarikh tamat mesti sama atau selepas tarikh mula.",
       "zero_workdays": "Julat tarikh ini tiada hari bekerja untuk dimohon.",

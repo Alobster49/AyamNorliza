@@ -83,6 +83,13 @@ function leaveRpcError(rawMessage: string): { code: LeaveErrorCode; message: str
         message: "You do not have permission to do that.",
         messageKey: "hr.errors.forbidden",
       };
+    case "holidays_not_configured":
+      return {
+        code: "conflict",
+        message:
+          "Public holidays have not been set for one of the years in this date range. Add them on the leave management page, then try again.",
+        messageKey: "hr.errors.holidays_not_configured",
+      };
     case "invalid_status":
       return {
         code: "conflict",
