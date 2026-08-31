@@ -6,6 +6,7 @@ import { autoAssignOrder } from "@/features/logistics/server/dispatch-actions";
 import type { MarketSuggestion } from "@/features/market/types";
 import { OrderPermissionError } from "./guards";
 import { requirePermission } from "@/lib/auth/require-permission";
+import { activeMembershipWindow } from "@/lib/auth/membership-window";
 import type { PermissionAction } from "@/lib/auth/rbac";
 import { tomorrowInTimeZone } from "@/lib/time/org-date";
 import { mapRpcError } from "../lib/rpc-errors";
@@ -603,7 +604,8 @@ export async function getOrgDrivers(organizationSlug: string): Promise<ActionRes
     .select("user_id")
     .eq("organization_id", orgId)
     .eq("role", "driver")
-    .eq("status", "active");
+    .eq("status", "active")
+    .or(activeMembershipWindow());
 
   if (error) return err("internal", "Failed to load drivers");
 
