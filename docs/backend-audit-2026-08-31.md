@@ -202,7 +202,47 @@ Fix applied: one shared `activeMembershipWindow()` in
 new runs). Admin *listing* queries were deliberately left alone — those
 should keep showing expired members.
 
-**1.6 Lock down the 3 cron edge functions.**
+**1.6 Lock down the 3 cron edge functions.** *(Fixed and deployed 2026-09-01
+— `20260901000008_cron_shared_secret.sql` + `_shared/cron-guard.ts`.)*
+
+All three now require an `x-cron-secret` header matching their `CRON_SECRET`
+env var. `CRON_SECRET` is set on the prod project and the new function code is
+deployed; verified from the open internet that anonymous callers and wrong
+secrets both get **401** where they previously got a full run.
+
+**Discovered while doing it: the pg_cron schedules have never fired on
+production, and could not.**
+
+`app.functions_url` and `app.functions_key` are both unset on the prod
+database, so all three jobs hit their own no-op guard and return without
+making the HTTP call. Worse, they cannot be set from the app's own
+credentials: the `postgres` role on hosted Supabase is refused with
+`42501: permission denied to set parameter` for `app.cron_secret`,
+`app.settings.cron_probe`, and by extension the two existing settings —
+tried at both database and role scope. The `app.settings.jwt_exp` entry that
+does exist was written by Supabase's provisioning, not by us.
+
+So the daily access-review reminders, temporary-access expiry warnings and
+KPDN price sync have never run automatically in production. The one
+documented successful prod ingest (683 aggregates, 2026-08-23) was a manual
+invocation.
+
+**This means the GUC-based design in `20260901000008` works locally but is
+undeployable as written.** The hosted fix is Supabase Vault —
+`vault.create_secret()` plus `vault.decrypted_secrets` — which is the
+documented pattern for exactly this (pg_cron calling an Edge Function with a
+secret) and needs no elevated role. The migration should move
+`app.cron_secret` (and ideally the two pre-existing settings) onto Vault
+before anyone expects the schedules to run.
+
+Nothing regressed by deploying the guard: since cron never invoked these
+functions on prod, requiring the header broke no working automation. To
+invoke one by hand now, send `-H "x-cron-secret: <value>"`; the value is in
+`.env.local`.
+
+Original finding:
+
+
 `access-review-reminder`, `temporary-access-expiry`, `market-price-sync` run
 `verify_jwt = false` with **no internal secret check** and a service-role
 client. Anyone with the (guessable) function URL can trigger real emails to org
