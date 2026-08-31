@@ -91,10 +91,6 @@ export function can(role: Role, capability: Capability): boolean {
   return matrix[role].has(capability);
 }
 
-export function requireAny(role: Role, capabilities: Capability[]): boolean {
-  return capabilities.some((c) => can(role, c));
-}
-
 /**
  * MOD-01 §6.7: "A user may never grant a role or scope broader than their
  * own delegated authority." An `org_admin` cannot grant `owner`. An
