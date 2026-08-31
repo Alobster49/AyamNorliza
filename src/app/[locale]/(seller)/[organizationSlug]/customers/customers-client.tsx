@@ -40,13 +40,11 @@ import { useToast } from "@/hooks/use-toast";
 
 type CustomersClientProps = {
   organizationSlug: string;
-  organizationId: string;
   initialCustomers: CustomerWithPortal[];
 };
 
 export function CustomersClient({
   organizationSlug,
-  organizationId,
   initialCustomers,
 }: CustomersClientProps) {
   const { toast } = useToast();
@@ -129,7 +127,7 @@ export function CustomersClient({
     }
     try {
       if (editingCustomer) {
-        const updated = await updateCustomer(editingCustomer.id, {
+        const updated = await updateCustomer(organizationSlug, editingCustomer.id, {
           name: formData.name,
           phone: formData.phone,
           email: formData.email || null,
@@ -148,7 +146,7 @@ export function CustomersClient({
         );
         toast({ title: t("customerUpdated") });
       } else {
-        const newCustomer = await createCustomer(organizationId, {
+        const newCustomer = await createCustomer(organizationSlug, {
           name: formData.name,
           phone: formData.phone,
           email: formData.email || null,
@@ -169,7 +167,7 @@ export function CustomersClient({
 
   const performDelete = async (id: string) => {
     try {
-      await deleteCustomer(id);
+      await deleteCustomer(organizationSlug, id);
       setCustomers(customers.filter((c) => c.id !== id));
       toast({ title: t("customerDeleted") });
     } catch (error) {

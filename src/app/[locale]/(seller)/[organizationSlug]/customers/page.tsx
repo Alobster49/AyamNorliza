@@ -12,9 +12,8 @@ export default async function CustomersPage({
 }) {
   const { organizationSlug } = await params;
 
-  let orgId: string;
   try {
-    ({ orgId } = await requirePermission(organizationSlug, "customers", "view"));
+    await requirePermission(organizationSlug, "customers", "view");
   } catch (error) {
     if (error instanceof OrderPermissionError) {
       redirect({ href: `/${organizationSlug}`, locale: await getLocale() });
@@ -22,12 +21,11 @@ export default async function CustomersPage({
     throw error;
   }
 
-  const customers = await getCustomers(orgId);
+  const customers = await getCustomers(organizationSlug);
 
   return (
     <CustomersClient
       organizationSlug={organizationSlug}
-      organizationId={orgId}
       initialCustomers={customers}
     />
   );

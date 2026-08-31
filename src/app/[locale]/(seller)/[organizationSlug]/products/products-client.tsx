@@ -129,7 +129,7 @@ export function ProductsClient({
 
   const performDeleteCategory = async (category: Category) => {
     try {
-      await deleteCategory(category.id, organizationSlug);
+      await deleteCategory(organizationSlug, category.id);
       setCategories((prev) => prev.filter((c) => c.id !== category.id));
       if (selectedCategoryId === category.id) setSelectedCategoryId(null);
       toast({ title: t("categoryDeleted") });
@@ -144,7 +144,7 @@ export function ProductsClient({
 
   const handleArchiveProduct = async (product: CatalogProduct, archived: boolean) => {
     try {
-      const saved = await setProductArchived(product.id, archived, organizationSlug);
+      const saved = await setProductArchived(organizationSlug, product.id, archived);
       setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, ...saved } : p)));
       toast({
         title: archived ? t("productArchived") : t("productRestored"),
@@ -168,7 +168,7 @@ export function ProductsClient({
    */
   const requestDeleteProduct = async (product: CatalogProduct) => {
     try {
-      const orderCount = await countProductOrderItems(product.id);
+      const orderCount = await countProductOrderItems(organizationSlug, product.id);
       if (orderCount > 0) {
         toast({
           title: t("cannotDeleteTitle"),
@@ -189,7 +189,7 @@ export function ProductsClient({
 
   const performDeleteProduct = async (product: CatalogProduct) => {
     try {
-      await deleteProduct(product.id, organizationSlug);
+      await deleteProduct(organizationSlug, product.id);
       setProducts((prev) => prev.filter((p) => p.id !== product.id));
       toast({ title: t("productDeleted") });
     } catch (error) {
@@ -223,7 +223,7 @@ export function ProductsClient({
     const next = !variant.is_available;
     setVariantAvailability(variant.id, product.id, next);
     try {
-      await updateVariant(variant.id, { is_available: next }, organizationSlug);
+      await updateVariant(organizationSlug, variant.id, { is_available: next });
     } catch (error) {
       setVariantAvailability(variant.id, product.id, !next);
       toast({
@@ -236,7 +236,7 @@ export function ProductsClient({
 
   const performDeleteVariant = async (product: CatalogProduct, variant: ProductVariant) => {
     try {
-      await deleteVariant(variant.id, organizationSlug);
+      await deleteVariant(organizationSlug, variant.id);
       setProducts((prev) =>
         prev.map((p) =>
           p.id === product.id
@@ -369,7 +369,6 @@ export function ProductsClient({
       <CategoryDialog
         open={dialog?.kind === "category"}
         onOpenChange={closeDialog}
-        organizationId={organizationId}
         organizationSlug={organizationSlug}
         category={dialog?.kind === "category" ? dialog.category : undefined}
         onSaved={handleCategorySaved}
@@ -391,7 +390,6 @@ export function ProductsClient({
         key={dialog?.kind === "variant" ? `variant-${dialog.variant?.id ?? "new"}` : "variant-idle"}
         open={dialog?.kind === "variant"}
         onOpenChange={closeDialog}
-        organizationId={organizationId}
         organizationSlug={organizationSlug}
         productId={dialog?.kind === "variant" ? dialog.productId : ""}
         variant={dialog?.kind === "variant" ? dialog.variant : undefined}

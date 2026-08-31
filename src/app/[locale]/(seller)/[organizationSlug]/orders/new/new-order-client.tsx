@@ -113,7 +113,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
 
   useEffect(() => {
     (async () => {
-      const catalog = (await getCatalogForOrdering(organizationId)) as CategoryWithProducts;
+      const catalog = (await getCatalogForOrdering(organizationSlug)) as CategoryWithProducts;
       const flattened: ProductOption[] = catalog.flatMap((category) =>
         category.products.map((product) => ({
           id: product.id,
@@ -145,7 +145,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
     setCustomerSearching(true);
     searchTimerRef.current = setTimeout(async () => {
       try {
-        const results = await searchCustomers(organizationId, trimmed);
+        const results = await searchCustomers(organizationSlug, trimmed);
         if (searchSeqRef.current !== seq) return;
         setCustomerResults(results);
       } catch (error) {
@@ -227,7 +227,7 @@ export function NewOrderClient({ organizationSlug, organizationId }: NewOrderCli
       return;
     }
     try {
-      const customer = await createCustomer(organizationId, {
+      const customer = await createCustomer(organizationSlug, {
         name: newCustomer.name,
         phone: newCustomer.phone,
         address: newCustomer.address || null,

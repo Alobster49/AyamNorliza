@@ -72,8 +72,8 @@ export function ProductDialog({
         image_url: imageUrl,
       };
       const saved = product
-        ? await updateProduct(product.id, input, organizationSlug)
-        : await createProduct(organizationId, { ...input, is_active: true }, organizationSlug);
+        ? await updateProduct(organizationSlug, product.id, input)
+        : await createProduct(organizationSlug, { ...input, is_active: true });
       onSaved(saved);
       onOpenChange(false);
       toast({ title: product ? t("updated") : t("created") });

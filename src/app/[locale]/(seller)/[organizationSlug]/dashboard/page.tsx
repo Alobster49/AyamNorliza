@@ -39,7 +39,7 @@ export default async function DashboardPage({
     ),
     getDashboardToday(organizationSlug),
     getDashboardInsights(organizationSlug, initialRange.from, initialRange.to),
-    getMarketSuggestions(orgId).catch(() => []),
+    getMarketSuggestions(organizationSlug).catch(() => []),
   ]);
 
   return (
