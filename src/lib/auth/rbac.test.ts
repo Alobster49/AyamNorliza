@@ -51,8 +51,11 @@ describe("DEFAULT_ROLE_GRANTS parity with legacy access", () => {
       if (cap === "orders.reopen" || cap === "data_console.manage") continue;
       for (const { key: role } of SYSTEM_ROLES) {
         const seeded = DEFAULT_ROLE_GRANTS[role].has(grantKey(cap, "use"));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        expect(seeded, `${role}/${cap}`).toBe(can(role as Role, cap as any));
+        // The two `continue`s above narrow `cap` to exactly the admin
+        // capabilities that also exist in CAPABILITIES, so no cast is needed
+        // here -- if a new ADMIN_CAPABILITIES entry has no `can()` counterpart,
+        // this should fail to compile rather than be silenced by `any`.
+        expect(seeded, `${role}/${cap}`).toBe(can(role as Role, cap));
       }
     }
     // New capabilities preserve today's inline owner/org_admin checks:
