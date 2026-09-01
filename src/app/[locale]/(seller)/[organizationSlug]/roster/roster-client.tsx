@@ -43,7 +43,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
       startTransition(async () => {
         const result = await getDriverRoster(organizationSlug, fromDate, days);
         if (!result.ok) {
-          toast({ title: t("toasts.couldNotSave"), description: result.message, variant: "destructive" });
+          toast({ title: t("toasts.couldNotLoad"), description: result.message, variant: "destructive" });
           return;
         }
         setData(result.data);

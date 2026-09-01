@@ -2904,7 +2904,7 @@
       "saved": "Pemandu tetap dikemas kini."
     },
     "mobile": { "gaps": "Kekosongan", "trucks": "Lori", "drivers": "Pemandu", "assignCover": "Tetapkan pengganti", "range": "{days} hari", "needsDriver": "kekosongan untuk diisi · {days} hari akan datang", "noGaps": "Semua lori ada pemandu.", "badgeGap": "tiada pemandu", "badgeRisk": "berisiko", "usually": "Tetap · {truck}", "pool": "Pemandu ganti" },
-    "toasts": { "couldNotSave": "Perubahan jadual tidak dapat disimpan." }
+    "toasts": { "couldNotSave": "Perubahan jadual tidak dapat disimpan.", "couldNotLoad": "Jadual tidak dapat dimuatkan." }
   },
   "profile": {
     "edit": {

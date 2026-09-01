@@ -19,7 +19,6 @@ export type RosterData = {
   days: number;
   today: string;
   canEdit: boolean;
-  orgId: string;
 };
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -163,7 +162,7 @@ export async function getDriverRoster(
     holidays: (holidays.data ?? []).map((h) => ({ date: h.holiday_date, name: h.name })),
   };
 
-  return ok({ view: buildRoster(input), fromDate, days, today: input.today, canEdit, orgId });
+  return ok({ view: buildRoster(input), fromDate, days, today: input.today, canEdit });
 }
 
 export async function setRegularDriver(

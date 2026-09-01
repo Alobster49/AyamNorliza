@@ -2907,7 +2907,7 @@ declare const messages: {
       "saved": "Regular drivers updated."
     },
     "mobile": { "gaps": "Gaps", "trucks": "Trucks", "drivers": "Drivers", "assignCover": "Assign cover", "range": "{days} days", "needsDriver": "gaps to cover · next {days} days", "noGaps": "Every truck has a driver.", "badgeGap": "no driver", "badgeRisk": "at risk", "usually": "Regular · {truck}", "pool": "Cover pool" },
-    "toasts": { "couldNotSave": "Could not save the roster change." }
+    "toasts": { "couldNotSave": "Could not save the roster change.", "couldNotLoad": "Could not load the roster." }
   },
   "profile": {
     "edit": {
