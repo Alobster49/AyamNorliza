@@ -174,14 +174,22 @@ export async function setRegularDriver(
   const g = await guard(organizationSlug, "edit");
   if (!g.ok) return g.result;
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
+  // `trucks_update` is gated by delivery_runs:edit, not driver_roster:edit, so
+  // a custom role that holds only the roster grant gets error === null and
+  // zero rows updated. Select the ids back and treat "nothing matched" as a
+  // denial rather than reporting a save that never happened.
+  const { data, error } = await supabase
     .from("trucks")
     .update({ regular_driver_id: driverId })
     .eq("id", truckId)
-    .eq("organization_id", g.ctx.orgId);
+    .eq("organization_id", g.ctx.orgId)
+    .select("id");
   if (error) {
     const mapped = writeErrorKey(error.message);
     return err(mapped.code, mapped.message, mapped.messageKey);
+  }
+  if ((data ?? []).length === 0) {
+    return err("forbidden", "You do not have permission to change this truck's driver.", `${KEY}.forbidden`);
   }
   revalidatePath(`/${organizationSlug}/roster`);
   return ok(undefined);

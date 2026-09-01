@@ -7,6 +7,11 @@
 
 -- ---------------------------------------------------------------------------
 -- 1. trucks.regular_driver_id
+--
+-- NOTE: writes to regular_driver_id are gated by the existing `trucks_update`
+-- policy, which checks delivery_runs:edit -- NOT driver_roster:edit. A custom
+-- role holding only the roster grant therefore updates zero rows without an
+-- error; setRegularDriver() selects the ids back and reports that as denied.
 -- ---------------------------------------------------------------------------
 alter table public.trucks
   add column if not exists regular_driver_id uuid null references auth.users(id) on delete set null;
@@ -60,6 +65,10 @@ begin
   end if;
 end;
 $$;
+
+-- Only the trigger functions below need it, and they are security definer
+-- owned by the same role, so they keep executing it after this revoke.
+revoke all on function public.roster_assert_driver_member(uuid, uuid) from public;
 
 create or replace function public.trucks_validate_regular_driver()
 returns trigger
@@ -154,6 +163,16 @@ create policy truck_covers_delete on public.truck_covers
 
 grant select, insert, update, delete on public.truck_covers to authenticated;
 
+-- delivery_runs select is gated by has_ops_read, which HR does not hold, so
+-- the roster would silently read zero runs for them and show the regular
+-- driver where a run already names someone else. This second permissive
+-- policy admits exactly the roles that can see the roster; drivers hold no
+-- driver_roster grant, so their own narrowed policy still bounds them.
+drop policy if exists delivery_runs_select_roster on public.delivery_runs;
+create policy delivery_runs_select_roster on public.delivery_runs
+  for select to authenticated
+  using (public.has_permission(organization_id, 'driver_roster', 'view'));
+
 -- ---------------------------------------------------------------------------
 -- 5. leave_roster: safe columns + status, for roster viewers only.
 --    (leave_whos_away stays approved-only for colleagues.)
@@ -163,7 +182,17 @@ with (security_invoker = false) as
 select r.organization_id, r.user_id, r.leave_type_id, r.start_date, r.end_date, r.status
 from public.leave_requests r
 where r.status in ('approved', 'pending')
-  and public.has_permission(r.organization_id, 'driver_roster', 'view');
+  and public.has_permission(r.organization_id, 'driver_roster', 'view')
+  -- Drivers' leave only. The roster has no use for anyone else's absence,
+  -- and this view is readable by every roster viewer (seller, supervisor),
+  -- who otherwise cannot see leave_requests at all.
+  and exists (
+    select 1 from public.organization_members m
+    where m.organization_id = r.organization_id
+      and m.user_id = r.user_id
+      and m.status = 'active'
+      and m.role = 'driver'
+  );
 
 grant select on public.leave_roster to authenticated;
 

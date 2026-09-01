@@ -14,7 +14,11 @@
  *                     planned has pending leave -> risk
  *                     planned == regular -> regular, else cover
  *
- * A driver whose leave is still pending counts as free — the office can still book them, and the roster will flag the day as at risk.
+ * A driver whose leave is still pending counts as free only while nothing
+ * else is booked for them that day — the office can still send them out, and
+ * the roster flags the day as at risk. Drivers have no fixed rest days in v1
+ * (spec assumption 3): they are available every day the org is open, so a
+ * truck that runs on Sunday can be covered on Sunday.
  */
 
 import { shiftIsoDate } from "@/lib/time/org-date";
@@ -153,12 +157,17 @@ export function buildRoster(input: RosterInput): RosterView {
     driver,
     cells: days.map((day): DriverCell => {
       if (day.holiday) return { date: day.date, state: "holiday", truckCode: null, leaveType: null };
-      if (day.orgBlocked || day.weekday === 0) return { date: day.date, state: "off", truckCode: null, leaveType: null };
+      // No per-driver rest days in v1 (spec assumption 3): a driver is
+      // available on any day the org itself is open, Sunday included.
+      if (day.orgBlocked) return { date: day.date, state: "off", truckCode: null, leaveType: null };
       const approved = leaveOn(input.leave, driver.userId, day.date, "approved");
       if (approved) return { date: day.date, state: "leave", truckCode: null, leaveType: approved.typeName };
-      const pending = leaveOn(input.leave, driver.userId, day.date, "pending");
-      if (pending) return { date: day.date, state: "pending", truckCode: null, leaveType: pending.typeName };
       const on = plannedOn.get(`${driver.userId}|${day.date}`);
+      // Pending leave keeps the truck the driver is planned on: they are
+      // still booked that day, so the cover ranking must not treat them as
+      // free just because their leave has not been approved yet.
+      const pending = leaveOn(input.leave, driver.userId, day.date, "pending");
+      if (pending) return { date: day.date, state: "pending", truckCode: on?.code ?? null, leaveType: pending.typeName };
       if (on) return { date: day.date, state: on.id === driver.regularTruckId ? "driving" : "cover", truckCode: on.code, leaveType: null };
       return { date: day.date, state: "free", truckCode: null, leaveType: null };
     }),
@@ -167,7 +176,10 @@ export function buildRoster(input: RosterInput): RosterView {
   const freeByDay: Record<string, string[]> = {};
   days.forEach((day, i) => {
     freeByDay[day.date] = driverRows
-      .filter((r) => { const s = r.cells[i]?.state; return s === "free" || s === "pending"; })
+      .filter((r) => {
+        const c = r.cells[i];
+        return c?.state === "free" || (c?.state === "pending" && c.truckCode === null);
+      })
       .map((r) => r.driver.userId);
   });
   for (const g of gaps) g.freeDriverIds = freeByDay[g.date] ?? [];
@@ -196,14 +208,17 @@ export function buildRoster(input: RosterInput): RosterView {
  */
 export function rankCoverCandidates(view: RosterView, truckId: string, date: string): CoverCandidate[] {
   const out: CoverCandidate[] = [];
+  const targetCode = view.truckRows.find((t) => t.truck.id === truckId)?.truck.code;
   for (const row of view.driverRows) {
     const cell = row.cells.find((c) => c.date === date);
     if (!cell || cell.state === "leave" || cell.state === "holiday" || cell.state === "off") continue;
-    if (cell.state === "free" || cell.state === "pending") {
+    // `pending` carries a truck code when the driver is already planned
+    // somewhere, so it ranks busy like `cover`/`driving` does.
+    if (cell.truckCode === null && (cell.state === "free" || cell.state === "pending")) {
       out.push({ driver: row.driver, tier: "free", busyTruckCode: null });
       continue;
     }
-    if (cell.truckCode && cell.truckCode !== view.truckRows.find((t) => t.truck.id === truckId)?.truck.code) {
+    if (cell.truckCode && cell.truckCode !== targetCode) {
       out.push({ driver: row.driver, tier: "busy", busyTruckCode: cell.truckCode });
     }
   }

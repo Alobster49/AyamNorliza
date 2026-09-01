@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(16);
+select plan(19);
 
 -- Fixtures (postgres bypasses RLS). 00a org; 001 owner, 002 seller, 003 hr,
 -- 004 driver A (regular on truck 008), 005 driver B (cover pool), 006 driver
@@ -87,6 +87,20 @@ from _roster_test_dates d
 union all
 select 'f0000000-0000-0000-0000-000000000022'::uuid, 'f0000000-0000-0000-0000-00000000000a'::uuid, 'f0000000-0000-0000-0000-000000000004'::uuid, 'f0000000-0000-0000-0000-000000000020'::uuid, extract(year from d.leave2)::int, d.leave2, d.leave2, 1, 'pending one', 'pending'
 from _roster_test_dates d
+union all
+-- The inventory worker also has leave. leave_roster must NOT show it: the
+-- view is readable by every roster viewer, and only drivers' absences are
+-- the roster's business.
+select 'f0000000-0000-0000-0000-000000000023'::uuid, 'f0000000-0000-0000-0000-00000000000a'::uuid, 'f0000000-0000-0000-0000-000000000007'::uuid, 'f0000000-0000-0000-0000-000000000020'::uuid, extract(year from d.leave1)::int, d.leave1, d.leave1, 1, 'worker one', 'pending'
+from _roster_test_dates d
+on conflict (id) do nothing;
+
+-- A run far outside every leave/cover date above, so section 5's inserts do
+-- not collide with it on unique(truck_id, run_date). Inserted as postgres
+-- before the first `set local role`, with no regular driver or cover in
+-- place yet, so delivery_runs_default_driver leaves driver_id null.
+insert into public.delivery_runs (id, organization_id, truck_id, run_date)
+values ('f0000000-0000-0000-0000-000000000030', 'f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000008', current_date + 40)
 on conflict (id) do nothing;
 
 -- 1. Owner can set a regular driver who is a driver-role member of the org.
@@ -172,6 +186,13 @@ select results_eq(
   'leave_roster exposes approved and pending rows to a roster viewer'
 );
 
+select is_empty(
+  $$ select user_id from public.leave_roster
+     where organization_id = 'f0000000-0000-0000-0000-00000000000a'
+       and user_id = 'f0000000-0000-0000-0000-000000000007' $$,
+  'leave_roster hides a non-driver member''s leave'
+);
+
 reset role;
 
 -- 3. HR reads covers (driver_roster:view) but cannot write.
@@ -191,6 +212,15 @@ select throws_ok(
   'hr cannot write truck covers'
 );
 
+-- has_ops_read excludes hr, so without delivery_runs_select_roster the roster
+-- would read zero runs for them and fall back to the regular driver.
+select results_eq(
+  $$ select id from public.delivery_runs
+     where organization_id = 'f0000000-0000-0000-0000-00000000000a' $$,
+  $$ values ('f0000000-0000-0000-0000-000000000030'::uuid) $$,
+  'hr reads delivery runs through the roster view grant'
+);
+
 reset role;
 
 -- 4. A driver sees no covers and no leave_roster rows.
@@ -205,6 +235,11 @@ select is_empty(
 select is_empty(
   $$ select user_id from public.leave_roster where organization_id = 'f0000000-0000-0000-0000-00000000000a' $$,
   'a driver sees no leave_roster rows'
+);
+
+select is_empty(
+  $$ select id from public.delivery_runs where organization_id = 'f0000000-0000-0000-0000-00000000000a' $$,
+  'delivery_runs_select_roster does not widen drivers beyond their own runs'
 );
 
 reset role;

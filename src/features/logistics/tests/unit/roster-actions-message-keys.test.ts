@@ -118,3 +118,40 @@ describe("trigger errors", () => {
     expect(!result.ok && result.message).toBe("Could not save the roster change.");
   });
 });
+
+describe("setRegularDriver", () => {
+  // trucks_update RLS is gated by delivery_runs:edit, not driver_roster:edit,
+  // so a custom role holding only driver_roster:edit gets error === null and
+  // zero rows back. `.select("id")` is what makes that visible.
+  function supabaseThatUpdates(result: { data: { id: string }[] | null; error: { message: string } | null }) {
+    const select = vi.fn().mockResolvedValue(result);
+    const chain: Record<string, unknown> = { select };
+    chain.eq = vi.fn().mockReturnValue(chain);
+    const update = vi.fn().mockReturnValue(chain);
+    const from = vi.fn().mockReturnValue({ update });
+    return { from } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>;
+  }
+
+  it("reports forbidden when RLS silently matched no truck row", async () => {
+    vi.mocked(requirePermission).mockResolvedValue(CTX);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(supabaseThatUpdates({ data: [], error: null }));
+    const result = await setRegularDriver("ayam-norliza-pilot", "t1", "d1");
+    expect(result.ok).toBe(false);
+    expect(!result.ok && result.code).toBe("forbidden");
+    expect(!result.ok && result.messageKey).toBe("errors.logistics.roster.forbidden");
+  });
+
+  it("succeeds when the update returns the row", async () => {
+    vi.mocked(requirePermission).mockResolvedValue(CTX);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(supabaseThatUpdates({ data: [{ id: "t1" }], error: null }));
+    const result = await setRegularDriver("ayam-norliza-pilot", "t1", "d1");
+    expect(result.ok).toBe(true);
+  });
+
+  it("still maps a trigger error to its curated key", async () => {
+    vi.mocked(requirePermission).mockResolvedValue(CTX);
+    vi.mocked(createSupabaseServerClient).mockResolvedValue(supabaseThatUpdates({ data: null, error: { message: "driver_not_member" } }));
+    const result = await setRegularDriver("ayam-norliza-pilot", "t1", "d1");
+    expect(!result.ok && result.messageKey).toBe("errors.logistics.roster.driverNotMember");
+  });
+});
