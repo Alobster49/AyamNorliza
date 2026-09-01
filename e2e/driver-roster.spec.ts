@@ -5,10 +5,12 @@ import { OWNER, TARGET, dismissToasts, seedZoneWithCoverage, signIn } from "./_f
  * Read the roster's "N gaps" alert pill. The pilot org's base fixtures
  * (TRK-A, TRK-B, both with no regular driver) already put the roster in a
  * many-gaps state on a bare `db:reset`, so this spec can't assert a literal
- * "1 gap" -- it reads the count before and after its own truck's leave is
- * approved and asserts it went up by exactly one instead. `AlertPill`
- * renders nothing at all when there are zero gaps and zero risks, so an
- * absent pill reads as 0.
+ * "1 gap" -- it reads the count before and after each of its own writes and
+ * asserts the delta instead. `AlertPill` renders nothing at all when there
+ * are zero gaps and zero risks, so an absent pill reads as 0.
+ *
+ * This spec is NOT idempotent: it seeds a truck per run and the pilot org
+ * has exactly one driver, so run it against a fresh `npm run db:reset`.
  */
 async function gapCount(page: Page): Promise<number> {
   const pill = page.getByTestId("roster-gap-count");
@@ -18,14 +20,18 @@ async function gapCount(page: Page): Promise<number> {
 }
 
 /**
- * Owner makes TARGET the regular driver of a fresh truck, TARGET applies
- * emergency leave for tomorrow (the only weekday that truck has a slot on),
- * owner approves, and the roster shows the truck as "No driver" tomorrow.
+ * The whole cover loop on one freshly seeded truck:
+ *   A. no regular driver -> tomorrow is a gap -> assign TARGET as cover ->
+ *      the cell flips to TARGET and the gap count drops by one.
+ *   B. clear that cover -> the gap comes back.
+ *   C. make TARGET the truck's regular driver, TARGET takes emergency leave
+ *      tomorrow, owner approves -> the cell reads "No driver" again and the
+ *      count rises by one over the post-regular baseline.
  * Emergency leave is upon-request with no advance-notice rule, so tomorrow
  * is a legal date (annual leave would need 7 days' notice).
  */
-test("approved driver leave surfaces as a truck gap on the roster", async ({ page, browser }) => {
-  test.setTimeout(150_000);
+test("assigning and clearing a cover, then approved leave, move the roster gap count", async ({ page, browser }) => {
+  test.setTimeout(240_000);
   const stamp = Date.now().toString().slice(-6);
   const truckCode = `RST-${stamp}`;
   // Local Y-M-D, not `toISOString().slice(0, 10)`: this machine runs at
@@ -41,8 +47,39 @@ test("approved driver leave surfaces as a truck gap on the roster", async ({ pag
   await signIn(page, OWNER.email, OWNER.password);
   await seedZoneWithCoverage(page, `Roster zone ${stamp}`, `Roster truck ${stamp}`, truckCode);
 
-  // Regular driver = TARGET.
   await page.goto("/ayam-norliza-pilot/roster");
+  const truckRow = page.getByTestId(`roster-truck-row-${truckCode}`);
+  // The truck's only slot is on tomorrow's weekday, which falls twice inside
+  // the default 14-day window -- so "the button named /no driver/i" is
+  // ambiguous. Every clickable cell carries a `title` of
+  // "{code} · {ISO date} · {state}" (roster-grid.tsx), which pins the column.
+  const tomorrowCell = truckRow.locator(`button[title*="${tomorrowIso}"]`);
+
+  // --- A. assign a cover on a truck that has no regular driver -------------
+  await expect(tomorrowCell).toHaveAccessibleName(/no driver/i, { timeout: 15_000 });
+  const gapsBeforeCover = await gapCount(page);
+
+  await tomorrowCell.click();
+  const assign = page.getByRole("dialog");
+  await assign.getByRole("radio", { name: /target/i }).click();
+  await assign.getByRole("button", { name: /^assign .* to /i }).click();
+  await expect(assign).toBeHidden({ timeout: 15_000 });
+  await dismissToasts(page);
+
+  await expect(tomorrowCell).toHaveAccessibleName(/target/i, { timeout: 15_000 });
+  await expect.poll(() => gapCount(page), { timeout: 15_000 }).toBe(gapsBeforeCover - 1);
+
+  // --- B. clear it again ---------------------------------------------------
+  await tomorrowCell.click();
+  const clearDialog = page.getByRole("dialog");
+  await clearDialog.getByRole("button", { name: /^clear cover$/i }).click();
+  await expect(clearDialog).toBeHidden({ timeout: 15_000 });
+  await dismissToasts(page);
+
+  await expect(tomorrowCell).toHaveAccessibleName(/no driver/i, { timeout: 15_000 });
+  await expect.poll(() => gapCount(page), { timeout: 15_000 }).toBe(gapsBeforeCover);
+
+  // --- C. regular driver + approved leave ----------------------------------
   await page.getByRole("button", { name: /set regular drivers/i }).click();
   const dialog = page.getByRole("dialog");
   // selectOption's `label` matcher takes a string, not a RegExp (unlike
@@ -88,7 +125,6 @@ test("approved driver leave surfaces as a truck gap on the roster", async ({ pag
 
   // Roster shows the gap.
   await page.goto("/ayam-norliza-pilot/roster");
-  const truckRow = page.getByTestId(`roster-truck-row-${truckCode}`);
   await expect(truckRow.getByRole("button", { name: /no driver/i })).toBeVisible({ timeout: 15_000 });
   await expect
     .poll(() => gapCount(page), { timeout: 15_000 })
