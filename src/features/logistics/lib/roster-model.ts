@@ -13,6 +13,8 @@
  *                     planned null or planned on approved leave -> gap
  *                     planned has pending leave -> risk
  *                     planned == regular -> regular, else cover
+ *
+ * A driver whose leave is still pending counts as free — the office can still book them, and the roster will flag the day as at risk.
  */
 
 import { shiftIsoDate } from "@/lib/time/org-date";
@@ -86,7 +88,6 @@ export function buildRoster(input: RosterInput): RosterView {
   const coverByKey = new Map(input.covers.map((c) => [`${c.truckId}|${c.date}`, c]));
   const runByKey = new Map(input.runs.map((r) => [`${r.truckId}|${r.runDate}`, r]));
   const driverById = new Map(input.drivers.map((d) => [d.userId, d]));
-  const truckByDriver = new Map(input.trucks.filter((t) => t.regularDriverId).map((t) => [t.regularDriverId as string, t]));
 
   const days: RosterDay[] = [];
   for (let i = 0; i < input.days; i++) {
@@ -121,7 +122,7 @@ export function buildRoster(input: RosterInput): RosterView {
 
       const absent = planned ? leaveOn(input.leave, planned.userId, day.date, "approved") : null;
       if (!planned || absent) {
-        // The gap's reason names the regular driver's leave when that is the cause.
+        // The gap's reason names the planned driver's own leave first (a cover who then went on leave), else the regular driver's leave.
         const regularLeave = regularDriver ? leaveOn(input.leave, regularDriver.userId, day.date, "approved") : null;
         const cause = absent ?? regularLeave;
         const reason: GapReason =
@@ -164,11 +165,11 @@ export function buildRoster(input: RosterInput): RosterView {
   }));
 
   const freeByDay: Record<string, string[]> = {};
-  for (const day of days) {
+  days.forEach((day, i) => {
     freeByDay[day.date] = driverRows
-      .filter((r) => r.cells.find((c) => c.date === day.date)?.state === "free")
+      .filter((r) => { const s = r.cells[i]?.state; return s === "free" || s === "pending"; })
       .map((r) => r.driver.userId);
-  }
+  });
   for (const g of gaps) g.freeDriverIds = freeByDay[g.date] ?? [];
   for (const r of risks) r.freeDriverIds = freeByDay[r.date] ?? [];
 

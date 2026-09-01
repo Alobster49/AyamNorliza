@@ -100,6 +100,7 @@ describe("truck cells", () => {
       covers: [{ truckId: "t1", date: "2026-09-03", driverId: "ravi", note: null }],
     }));
     expect(cell(view, "JHR-01", "2026-09-03").state).toBe("gap");
+    expect(view.gaps[0]!.reason).toEqual({ kind: "leave", driverName: "Ravi", leaveType: "Medical", startDate: "2026-09-03", endDate: "2026-09-03", status: "approved" });
   });
 
   it("is risk when the planned driver has pending leave", () => {
@@ -161,6 +162,12 @@ describe("driver cells and free lists", () => {
     expect(view.freeByDay["2026-09-01"]).toEqual(["ravi"]);
     expect(view.freeByDay["2026-09-02"]).toEqual([]);
     expect(view.freeByDay["2026-09-06"]).toEqual([]);
+  });
+
+  it("freeByDay keeps drivers whose leave is still pending, matching the cover ranking", () => {
+    const view = buildRoster(base({ leave: [{ userId: "ravi", startDate: "2026-09-02", endDate: "2026-09-02", status: "pending", typeName: "Annual" }] }));
+    expect(view.freeByDay["2026-09-02"]).toEqual(["ravi"]);
+    expect(rankCoverCandidates(view, "t1", "2026-09-02").map((c) => [c.driver.userId, c.tier])).toEqual([["ravi", "free"], ["faizal", "busy"]]);
   });
 
   it("gap.freeDriverIds lists that day's free drivers", () => {
