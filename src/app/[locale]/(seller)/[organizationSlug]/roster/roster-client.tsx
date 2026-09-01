@@ -9,6 +9,9 @@ import { HenEmptyState } from "@/components/shared/hen-empty-state";
 import { useToast } from "@/hooks/use-toast";
 import { RosterGrid } from "@/features/logistics/components/roster/roster-grid";
 import { AlertPill, RosterLegend } from "@/features/logistics/components/roster/roster-legend";
+import { RosterRail } from "@/features/logistics/components/roster/roster-rail";
+import { AssignCoverDialog } from "@/features/logistics/components/roster/assign-cover-dialog";
+import { RegularDriversDialog } from "@/features/logistics/components/roster/regular-drivers-dialog";
 import { getDriverRoster, type RosterData } from "@/features/logistics/server/roster-actions";
 import { mondayOf } from "@/features/logistics/lib/roster-model";
 import { shiftIsoDate } from "@/lib/time/org-date";
@@ -28,8 +31,9 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
   const { toast } = useToast();
   const [data, setData] = useState<RosterData>(initial);
   const [pending, startTransition] = useTransition();
-  const [assignTarget, setAssignTarget] = useState<{ truckId: string; date: string } | null>(null);
+  const [assignTarget, setAssignTarget] = useState<{ truckId: string; date: string; driverId?: string } | null>(null);
   const [regularOpen, setRegularOpen] = useState(false);
+  const openAssign = useCallback((truckId: string, date: string, driverId?: string) => setAssignTarget({ truckId, date, driverId }), []);
 
   const load = useCallback(
     (fromDate: string, days: number) => {
@@ -88,11 +92,29 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
         ) : <span />}
         <RosterLegend />
       </div>
-      <div className="hidden md:block">
-        <RosterGrid view={view} canEdit={data.canEdit} locale={locale} compact={data.days === 7} onCellClick={(truckId, date) => setAssignTarget({ truckId, date })} />
+      {/* Desktop: grid + rail side by side. Tablet (md..lg): grid, then rail docked below in two columns. */}
+      <div className="hidden md:flex md:flex-col md:gap-4 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1">
+          <RosterGrid view={view} canEdit={data.canEdit} locale={locale} compact={data.days === 7} onCellClick={(truckId, date) => openAssign(truckId, date)} />
+        </div>
+        <aside className="lg:w-[300px] lg:shrink-0">
+          <div className="hidden lg:block"><RosterRail view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} /></div>
+          <div className="lg:hidden"><RosterRail view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} docked /></div>
+        </aside>
       </div>
-      {/* Task 6 mounts the rail here; Task 7 mounts the mobile tabs + dialogs. */}
-      <span hidden data-assign-target={assignTarget ? `${assignTarget.truckId}|${assignTarget.date}` : ""} data-regular-open={regularOpen ? "1" : "0"} onClick={refresh} />
+
+      <AssignCoverDialog
+        open={assignTarget !== null}
+        onOpenChange={(o) => { if (!o) setAssignTarget(null); }}
+        organizationSlug={organizationSlug}
+        view={view}
+        truckId={assignTarget?.truckId ?? null}
+        date={assignTarget?.date ?? null}
+        preselectDriverId={assignTarget?.driverId ?? null}
+        locale={locale}
+        onDone={refresh}
+      />
+      <RegularDriversDialog open={regularOpen} onOpenChange={setRegularOpen} organizationSlug={organizationSlug} view={view} onDone={refresh} />
     </div>
   );
 }
