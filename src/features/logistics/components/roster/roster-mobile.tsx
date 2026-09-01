@@ -87,10 +87,10 @@ export function RosterMobile({ view, days, canEdit, locale, onAssign }: { view: 
 
   return (
     <Tabs value={tab} onValueChange={setTab} className="md:hidden">
-      <TabsList className="h-11 w-full">
-        <TabsTrigger value="gaps" className="h-10 flex-1">{t("mobile.gaps")}</TabsTrigger>
-        <TabsTrigger value="trucks" className="h-10 flex-1">{t("mobile.trucks")}</TabsTrigger>
-        <TabsTrigger value="drivers" className="h-10 flex-1">{t("mobile.drivers")}</TabsTrigger>
+      <TabsList className="h-auto w-full">
+        <TabsTrigger value="gaps" className="h-11 flex-1">{t("mobile.gaps")}</TabsTrigger>
+        <TabsTrigger value="trucks" className="h-11 flex-1">{t("mobile.trucks")}</TabsTrigger>
+        <TabsTrigger value="drivers" className="h-11 flex-1">{t("mobile.drivers")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="gaps" className="flex flex-col gap-3 pt-3">
