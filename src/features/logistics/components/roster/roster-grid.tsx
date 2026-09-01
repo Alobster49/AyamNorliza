@@ -37,7 +37,7 @@ function TruckCellView({ cell, today, canEdit, onClick, truckCode }: { cell: Tru
     case "gap":
       return (
         <button type="button" disabled={!canEdit} onClick={onClick} title={t("cellTitle", { truck: truckCode, date: cell.date, state: t("gap") })} className={cn(CELL, "w-full text-left font-semibold text-destructive outline-2 outline-dashed -outline-offset-[3px] outline-destructive", ring)}>
-          <span>{t("gap")}</span>
+          {t("gap").split(" ").map((word, i) => <span key={i}>{word}</span>)}
         </button>
       );
     case "risk":

@@ -2869,7 +2869,7 @@
     },
     "rail": {
       "next": "{days} hari akan datang",
-      "headline": "{count, plural, =0 {semua lori ada pemandu} other {# lori perlukan pemandu}}",
+      "headline": "{count, plural, =0 {semua lori ada pemandu} other {# kekosongan untuk diisi}}",
       "gaps": "Kekosongan",
       "risks": "Berisiko · cuti belum diluluskan",
       "free": "Lapang:",
@@ -2903,7 +2903,7 @@
       "save": "Simpan",
       "saved": "Pemandu tetap dikemas kini."
     },
-    "mobile": { "gaps": "Kekosongan", "trucks": "Lori", "drivers": "Pemandu", "assignCover": "Tetapkan pengganti", "range": "{days} hari", "needsDriver": "lori perlukan pemandu · {days} hari akan datang", "noGaps": "Semua lori ada pemandu.", "badgeGap": "tiada pemandu", "badgeRisk": "berisiko", "usually": "Tetap · {truck}", "pool": "Pemandu ganti" },
+    "mobile": { "gaps": "Kekosongan", "trucks": "Lori", "drivers": "Pemandu", "assignCover": "Tetapkan pengganti", "range": "{days} hari", "needsDriver": "kekosongan untuk diisi · {days} hari akan datang", "noGaps": "Semua lori ada pemandu.", "badgeGap": "tiada pemandu", "badgeRisk": "berisiko", "usually": "Tetap · {truck}", "pool": "Pemandu ganti" },
     "toasts": { "couldNotSave": "Perubahan jadual tidak dapat disimpan." }
   },
   "profile": {

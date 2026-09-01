@@ -2869,7 +2869,7 @@
     },
     "rail": {
       "next": "Next {days} days",
-      "headline": "{count, plural, =0 {every truck has a driver} one {# truck needs a driver} other {# trucks need a driver}}",
+      "headline": "{count, plural, =0 {every truck has a driver} one {# gap to cover} other {# gaps to cover}}",
       "gaps": "Gaps",
       "risks": "At risk · leave not yet approved",
       "free": "Free:",
@@ -2903,7 +2903,7 @@
       "save": "Save",
       "saved": "Regular drivers updated."
     },
-    "mobile": { "gaps": "Gaps", "trucks": "Trucks", "drivers": "Drivers", "assignCover": "Assign cover", "range": "{days} days", "needsDriver": "trucks need a driver · next {days} days", "noGaps": "Every truck has a driver.", "badgeGap": "no driver", "badgeRisk": "at risk", "usually": "Regular · {truck}", "pool": "Cover pool" },
+    "mobile": { "gaps": "Gaps", "trucks": "Trucks", "drivers": "Drivers", "assignCover": "Assign cover", "range": "{days} days", "needsDriver": "gaps to cover · next {days} days", "noGaps": "Every truck has a driver.", "badgeGap": "no driver", "badgeRisk": "at risk", "usually": "Regular · {truck}", "pool": "Cover pool" },
     "toasts": { "couldNotSave": "Could not save the roster change." }
   },
   "profile": {
