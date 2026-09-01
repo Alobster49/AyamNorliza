@@ -103,7 +103,12 @@ export function RosterGrid({
         </div>
 
         {view.truckRows.map((row) => (
-          <div key={row.truck.id} className="grid border-b" style={{ gridTemplateColumns: cols }}>
+          <div
+            key={row.truck.id}
+            className="grid border-b"
+            style={{ gridTemplateColumns: cols }}
+            data-testid={`roster-truck-row-${row.truck.code}`}
+          >
             <div className={rowHead}>
               <div className="min-w-0 flex-1 leading-tight">
                 <p className="truncate text-sm font-semibold">{row.truck.code} <span className="font-normal text-muted-foreground">· {row.truck.name}</span></p>

@@ -23,7 +23,10 @@ export function AlertPill({ gaps, risks }: { gaps: number; risks: number }) {
   const t = useTranslations("roster.alert");
   if (gaps === 0 && risks === 0) return null;
   return (
-    <span className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-destructive/40 px-3 text-sm font-medium">
+    <span
+      className="inline-flex h-8 items-center gap-1.5 rounded-2xl border border-destructive/40 px-3 text-sm font-medium"
+      data-testid="roster-gap-count"
+    >
       <Bell className="size-4 text-destructive" />
       <span className="text-destructive">{t("gaps", { count: gaps })}</span>
       {risks > 0 ? (
