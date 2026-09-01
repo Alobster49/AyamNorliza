@@ -36,6 +36,10 @@ export default async function RosterPage({
   const result = await getDriverRoster(organizationSlug, fromDate, days);
   if (!result.ok) {
     redirect({ href: `/${organizationSlug}/tasks`, locale: await getLocale() });
+    // Unreachable -- redirect throws. It is declared `=> never`, but
+    // TypeScript only narrows on that for plain function declarations, and
+    // this one is destructured off createNavigation(), so without an explicit
+    // return the compiler still treats `result` as possibly not ok below.
     return null;
   }
 

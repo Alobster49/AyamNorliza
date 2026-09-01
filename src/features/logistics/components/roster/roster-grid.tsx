@@ -5,8 +5,6 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { DriverCell, RosterDay, RosterView, TruckCell } from "../../lib/roster-model";
 
-const SHORT_TYPE: Record<string, string> = { Annual: "AL", Medical: "MC", Emergency: "EL", Hospitalization: "HL", Paternity: "PL", Unpaid: "UL" };
-
 function dayLabel(date: string, locale: string, part: "weekday" | "day") {
   const d = new Date(`${date}T00:00:00Z`);
   return part === "weekday"
@@ -26,7 +24,7 @@ function DayHeader({ day, locale }: { day: RosterDay; locale: string }) {
 
 const CELL = "flex min-h-11 min-w-0 flex-col justify-center gap-px border-l px-1.5 py-1 text-[11px] leading-tight [&>*]:max-w-full [&>*]:truncate";
 
-function TruckCellView({ cell, today, canEdit, onClick }: { cell: TruckCell; today: boolean; canEdit: boolean; onClick: () => void }) {
+function TruckCellView({ cell, today, canEdit, onClick, truckCode }: { cell: TruckCell; today: boolean; canEdit: boolean; onClick: () => void; truckCode: string }) {
   const t = useTranslations("roster.grid");
   const ring = today ? "shadow-[inset_0_0_0_2px_var(--primary)]" : "";
   switch (cell.state) {
@@ -38,7 +36,7 @@ function TruckCellView({ cell, today, canEdit, onClick }: { cell: TruckCell; tod
       return <div className={cn(CELL, "items-center text-foreground/30", ring)}><Check className="size-3.5" /></div>;
     case "gap":
       return (
-        <button type="button" disabled={!canEdit} onClick={onClick} className={cn(CELL, "w-full text-left font-semibold text-destructive outline-2 outline-dashed -outline-offset-[3px] outline-destructive", ring)}>
+        <button type="button" disabled={!canEdit} onClick={onClick} title={t("cellTitle", { truck: truckCode, date: cell.date, state: t("gap") })} className={cn(CELL, "w-full text-left font-semibold text-destructive outline-2 outline-dashed -outline-offset-[3px] outline-destructive", ring)}>
           <span>{t("gap")}</span>
         </button>
       );
@@ -50,7 +48,7 @@ function TruckCellView({ cell, today, canEdit, onClick }: { cell: TruckCell; tod
       );
     case "cover":
       return (
-        <button type="button" disabled={!canEdit} onClick={onClick} className={cn(CELL, "w-full text-left", ring)} style={{ background: "var(--status-pending-soft)", color: "var(--status-pending-text)" }}>
+        <button type="button" disabled={!canEdit} onClick={onClick} title={t("cellTitle", { truck: truckCode, date: cell.date, state: t("cover") })} className={cn(CELL, "w-full text-left", ring)} style={{ background: "var(--status-pending-soft)", color: "var(--status-pending-text)" }}>
           <b>{cell.driverName}</b><span className="text-[10px]">{t("cover")}</span>
         </button>
       );
@@ -70,11 +68,11 @@ function DriverCellView({ cell, today }: { cell: DriverCell; today: boolean }) {
     case "free":
       return <div className={cn(CELL, "text-muted-foreground", ring)}><span>{t("free")}</span></div>;
     case "leave":
-      return <div className={cn(CELL, ring)} style={{ background: "var(--status-cancelled-soft)", color: "var(--status-cancelled-text)" }}><b>{t("leave")}</b><span className="text-[10px]">{SHORT_TYPE[cell.leaveType ?? ""] ?? cell.leaveType}</span></div>;
+      return <div className={cn(CELL, ring)} style={{ background: "var(--status-cancelled-soft)", color: "var(--status-cancelled-text)" }}><b>{t("leave")}</b><span className="text-[10px]">{cell.leaveType}</span></div>;
     case "pending":
-      return <div className={cn(CELL, "roster-hatch-pending", ring)} style={{ color: "var(--status-confirmed-text)" }}><b>{t("pending")}</b><span className="text-[10px]">{SHORT_TYPE[cell.leaveType ?? ""] ?? cell.leaveType}</span></div>;
+      return <div className={cn(CELL, "roster-hatch-pending", ring)} style={{ color: "var(--status-confirmed-text)" }}><b>{t("pending")}</b><span className="text-[10px]">{cell.leaveType}</span></div>;
     case "cover":
-      return <div className={cn(CELL, ring)} style={{ background: "var(--status-pending-soft)", color: "var(--status-pending-text)" }}><b>{cell.truckCode?.replace(/^JHR-/, "")}</b><span className="text-[10px]">{t("cover")}</span></div>;
+      return <div className={cn(CELL, ring)} style={{ background: "var(--status-pending-soft)", color: "var(--status-pending-text)" }}><b>{cell.truckCode}</b><span className="text-[10px]">{t("cover")}</span></div>;
   }
 }
 
@@ -117,7 +115,7 @@ export function RosterGrid({
               </div>
             </div>
             {row.cells.map((cell, i) => (
-              <TruckCellView key={cell.date} cell={cell} today={view.days[i]!.isToday} canEdit={canEdit} onClick={() => onCellClick(row.truck.id, cell.date)} />
+              <TruckCellView key={cell.date} cell={cell} today={view.days[i]!.isToday} canEdit={canEdit} onClick={() => onCellClick(row.truck.id, cell.date)} truckCode={row.truck.code} />
             ))}
           </div>
         ))}

@@ -57,7 +57,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
         <AlertPill gaps={view.gaps.length} risks={view.risks.length} />
         <div className="inline-flex rounded-2xl bg-muted p-0.5">
           {WINDOWS.map((w) => (
-            <button key={w} type="button" onClick={() => load(data.fromDate, w)} className={`rounded-2xl px-3 py-1 text-sm font-medium ${data.days === w ? "bg-background shadow-sm" : "text-muted-foreground"}`}>
+            <button key={w} type="button" onClick={() => load(data.fromDate, w)} aria-pressed={data.days === w} className={`rounded-2xl px-3 py-1 text-sm font-medium ${data.days === w ? "bg-background shadow-sm" : "text-muted-foreground"}`}>
               {w === 7 ? t("window.week") : w === 14 ? t("window.twoWeeks") : t("window.fourWeeks")}
             </button>
           ))}
