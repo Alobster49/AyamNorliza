@@ -10,10 +10,18 @@ test("owner changes a member role and sees an audit row", async ({ page }) => {
   const targetRow = page.locator("table tbody tr", { hasText: TARGET.email });
   const select = targetRow.locator("td select");
   await expect(select).toBeVisible({ timeout: 10_000 });
+  // Under dynamic RBAC each option's value is a per-org role UUID, not the
+  // role key, so match on the visible label instead -- selecting by the key
+  // string silently finds no option and times out.
   // Pick whichever of the two roles the member is not currently in, so the
   // action never short-circuits with "Member already has that role".
-  const current = await select.inputValue();
-  await select.selectOption(current === "supervisor" ? "driver" : "supervisor");
+  const current = await select
+    .locator("option:checked")
+    .innerText()
+    .catch(() => "");
+  await select.selectOption({
+    label: current.trim() === "Supervisor" ? "Driver" : "Supervisor",
+  });
 
   // Role changes are a sensitive action: the server returns `reauth_required`
   // and the island mounts the step-up dialog, which must be completed for the

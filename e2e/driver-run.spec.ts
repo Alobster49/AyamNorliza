@@ -2,7 +2,9 @@ import { expect, test, type Page, type Locator } from "@playwright/test";
 import {
   OWNER,
   createSellableProduct,
+  goToRunDate,
   markOrderLoaded,
+  waitForOrderStatus,
   seedZoneWithCoverage,
   signIn,
   uniqueFixtureName,
@@ -185,14 +187,33 @@ async function seedReadyOrderForDriver(
   await page.getByRole("button", { name: customerName }).first().click();
   const station = page.getByRole("heading", { name: customerName, exact: true });
   await expect(station).toBeVisible({ timeout: 10_000 });
+  // Weighing is claim-gated (330e4b8): until this station holds the claim,
+  // every digit keystroke is dropped and Enter only claims the task rather
+  // than submitting it. Claim it first, then the numpad accepts input.
+  //
+  // The button unmounts as soon as the claim lands (`startable &&` in
+  // weigh-station.tsx), so waiting for that is the precise signal that the
+  // numpad is live. Typing straight after the click races the claim: the
+  // dropped digits leave the task unweighed, and the station still blinks
+  // hidden on the optimistic complete, so `toBeHidden` below passes while
+  // the order silently stays 'confirmed'.
+  const startWeighing = page.getByRole("button", { name: "Start weighing", exact: true });
+  await startWeighing.first().click();
+  await expect(startWeighing).toHaveCount(0, { timeout: 10_000 });
   await page.keyboard.type(opts.warehouseWeightKg);
   await page.keyboard.press("Enter");
   await expect(station).toBeHidden({ timeout: 10_000 });
+  // That hide is optimistic. Wait for the write itself: without this the run
+  // continues while the order is still 'confirmed', and the failure surfaces
+  // 60 lines later as a disabled "Start delivering".
+  await waitForOrderStatus(orderId, "ready");
 
   // --- Office puts the driver on the run ---
   await page.goto("/ayam-norliza-pilot/runs");
-  await expect(page.getByRole("heading", { name: /runs/i })).toBeVisible({ timeout: 10_000 });
-  await page.locator('input[type="date"]').fill(deliveryDate);
+  // No page-level heading to wait on here -- the title lives in the shell
+  // breadcrumb, and the only <h2> is a per-run truck card that does not exist
+  // yet on a date with no runs. goToRunDate gates on the date picker instead.
+  await goToRunDate(page, deliveryDate);
   await page
     .getByRole("tablist", { name: /trucks running today/i })
     .getByRole("button", { name: new RegExp(truckName) })

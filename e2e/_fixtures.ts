@@ -1,4 +1,4 @@
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 
 /**
  * Resend mock + owner fixtures. Tests sign in by going through the real
@@ -11,10 +11,63 @@ export const OWNER = {
   password: process.env.E2E_OWNER_PASSWORD ?? "password123",
 };
 
+/**
+ * Fill a React-controlled input and make sure the value survives.
+ *
+ * Every text input in this app is controlled (`value` + `onChange` from
+ * useState). A `fill()` that lands before the client mounts is silently
+ * reverted when React hydrates and re-renders from the initial state, and
+ * Playwright reports the fill as successful either way. The failures that
+ * follow look nothing like the cause: an empty email box beside a filled
+ * password one, or a date picker that snaps back to today and reports
+ * "No runs scheduled for this date". Re-fill until the DOM agrees.
+ */
+export async function fillStable(field: Locator, value: string, timeoutMs = 10_000) {
+  await expect
+    .poll(
+      async () => {
+        if ((await field.inputValue()) !== value) await field.fill(value);
+        return field.inputValue();
+      },
+      { timeout: timeoutMs },
+    )
+    .toBe(value);
+}
+
+/**
+ * Move the Delivery runs board to `targetDate` using its own ‹ / › buttons.
+ *
+ * Filling the date <input> directly is not reliable: it is React-controlled
+ * (`value={date}` in runs-client.tsx) and a Playwright fill can set the DOM
+ * value without React's onChange committing it to state. The fill then looks
+ * like it worked -- the input really does read the new date -- until the next
+ * re-render re-applies the old state and the board snaps back to today,
+ * reporting "No runs scheduled for this date" for a run that exists tomorrow.
+ * The day buttons call handleDateChange directly, so state and input cannot
+ * disagree.
+ */
+export async function goToRunDate(page: Page, targetDate: string) {
+  const dateInput = page.locator('input[type="date"]');
+  await expect(dateInput).toBeVisible({ timeout: 10_000 });
+  for (let step = 0; step < 30; step++) {
+    const current = await dateInput.inputValue();
+    if (current === targetDate) return;
+    await page
+      .getByRole("button", { name: current < targetDate ? "Next day" : "Previous day" })
+      .click();
+    await expect(dateInput).not.toHaveValue(current, { timeout: 10_000 });
+  }
+  throw new Error(
+    `Runs board never reached ${targetDate} (stuck at ${await dateInput.inputValue()}).`,
+  );
+}
+
 export async function signIn(page: Page, email: string, password: string) {
   await page.goto("/login");
-  await page.getByLabel(/email/i).fill(email);
-  await page.getByLabel(/password/i).fill(password);
+  await fillStable(page.getByLabel(/email/i), email);
+  await fillStable(page.getByLabel(/password/i), password);
+  // The password fill can hydrate-revert the email one, so re-assert both.
+  await expect(page.getByLabel(/email/i)).toHaveValue(email);
   await page.getByRole("button", { name: /sign in/i }).click();
   // Landing depends on role: managers land on the dashboard, warehouse staff
   // land on Products, drivers on the driver deck, HR on the leave approval
@@ -390,7 +443,7 @@ export async function markOrderLoaded(orderId: string): Promise<void> {
   if (!url || !serviceKey) {
     throw new Error("markOrderLoaded needs SUPABASE_SERVICE_ROLE_KEY (see playwright.config.ts)");
   }
-  await fetch(`${url}/rest/v1/orders?id=eq.${orderId}`, {
+  const response = await fetch(`${url}/rest/v1/orders?id=eq.${orderId}`, {
     method: "PATCH",
     headers: {
       apikey: serviceKey,
@@ -400,6 +453,49 @@ export async function markOrderLoaded(orderId: string): Promise<void> {
     },
     body: JSON.stringify({ loaded_at: new Date().toISOString() }),
   });
+  // Previously unchecked: a rejected PATCH left the order unloaded and only
+  // surfaced much later as a disabled "Start delivering" on the driver deck.
+  if (!response.ok) {
+    throw new Error(`markOrderLoaded failed: ${response.status} ${await response.text()}`);
+  }
+}
+
+/**
+ * Block until the server agrees the order reached `status`.
+ *
+ * The weigh kiosk completes optimistically: the station hides and the queue
+ * rail drops the order the moment the numpad submits, *before* completeTask
+ * has committed. A test that walks on from that optimistic hide races the
+ * write — the loading board then renders "Not weighed yet" and the driver
+ * deck keeps "Start delivering" disabled, both of which look like unrelated
+ * bugs several steps later. Poll the row itself instead of trusting the UI.
+ */
+export async function waitForOrderStatus(
+  orderId: string,
+  status: string,
+  timeoutMs = 20_000,
+): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    throw new Error("waitForOrderStatus needs SUPABASE_SERVICE_ROLE_KEY (see playwright.config.ts)");
+  }
+  const deadline = Date.now() + timeoutMs;
+  let seen: string | undefined;
+  while (Date.now() < deadline) {
+    const response = await fetch(`${url}/rest/v1/orders?id=eq.${orderId}&select=status`, {
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    });
+    if (response.ok) {
+      seen = ((await response.json()) as { status: string }[])[0]?.status;
+      if (seen === status) return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  throw new Error(
+    `Order ${orderId} never reached status "${status}" (last saw "${seen ?? "none"}"). ` +
+      `The weigh most likely did not commit -- see the claim gate in tasks-client.tsx.`,
+  );
 }
 
 /**

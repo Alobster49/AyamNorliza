@@ -15,11 +15,14 @@ test("dashboard shell exposes sidebar navigation and account actions", async ({
   await expect(page.getByRole("button", { name: /^sales$/i })).toBeVisible();
   await expect(page.getByRole("button", { name: /^fulfillment$/i })).toBeVisible();
 
-  // Sidebar renders one open submenu per top-level nav group: Sales,
-  // Fulfillment, and Access control are all open by default.
+  // Sidebar renders one open submenu per top-level nav group the viewer can
+  // see. The owner sees four: Sales, Fulfillment, Access control and HR.
+  // System is dropped because its only item needs `data_console.manage`,
+  // which owner deliberately does not hold (DEFAULT_ROLE_GRANTS in
+  // src/lib/auth/rbac.ts) -- that group is org_admin-only.
   const sidebar = page.locator('[data-slot="sidebar"]');
   const openSectionSubmenus = sidebar.locator('[data-sidebar="menu-sub"]');
-  await expect(openSectionSubmenus).toHaveCount(3);
+  await expect(openSectionSubmenus).toHaveCount(4);
 
   await expect(page.getByRole("link", { name: /^organization$/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /^users$/i })).toBeVisible();

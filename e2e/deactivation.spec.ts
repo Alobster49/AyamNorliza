@@ -15,7 +15,12 @@ test("deactivating a user revokes their session", async ({ page, browser }) => {
   const targetContext = await browser.newContext();
   const second = await targetContext.newPage();
   await signIn(second, TARGET.email, TARGET.password);
-  await expect(second.getByRole("heading", { name: /organization settings/i })).toBeVisible({
+  // Assert only that the session exists, not which page it landed on: the
+  // seeded target is a `driver` (7c4fb01 realigned it from `caretaker`), so
+  // it lands on the driver deck, and any future role change would move that
+  // landing again. This is the exact inverse of the post-deactivation
+  // assertion below, so it still catches a sign-in that never happened.
+  await expect(second.getByRole("heading", { name: /sign in/i })).toBeHidden({
     timeout: 10_000,
   });
 

@@ -2,10 +2,12 @@ import { expect, test, type Page, type Locator } from "@playwright/test";
 import {
   OWNER,
   createSellableProduct,
+  goToRunDate,
   seedZoneWithCoverage,
   shiftOrderToToday,
   signIn,
   uniqueFixtureName,
+  waitForOrderStatus,
 } from "./_fixtures";
 
 // RECONCILIATION: several fields on the New order / order detail screens
@@ -145,11 +147,21 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   await page.getByRole("button", { name: customerName }).first().click();
   const station = page.getByRole("heading", { name: customerName, exact: true });
   await expect(station).toBeVisible({ timeout: 10_000 });
+  // Weighing is claim-gated (330e4b8): digits are dropped until this station
+  // holds the claim. The button unmounts once the claim lands, so wait for
+  // that rather than typing straight after the click.
+  const startWeighing = page.getByRole("button", { name: "Start weighing", exact: true });
+  await startWeighing.first().click();
+  await expect(startWeighing).toHaveCount(0, { timeout: 10_000 });
   await page.keyboard.type("5.2");
   await page.keyboard.press("Enter");
   // Pieces are optional (isPiecesValid treats "" as valid), so one weight is
   // enough for this single-line order to auto-complete and leave the queue.
   await expect(station).toBeHidden({ timeout: 10_000 });
+  // The hide is optimistic; the loading board gates its Start button on
+  // `ticket.status === "ready"` (loading-model.ts), so walking on before the
+  // write lands renders the stop as "Not weighed yet" with Start disabled.
+  await waitForOrderStatus(orderId, "ready");
 
   // --- Truck is loaded, departs, then comes back ---
   // The Loading board is today-only by design, but an order can only be
@@ -162,13 +174,20 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   // The loading page is a truck sidebar + one manifest: pick this test's
   // truck first, then mark the order loaded inside its manifest.
   await page.getByRole("button", { name: `Show manifest for ${truckName}` }).click();
+  // Loading is claim-gated the same way weighing is: the "Mark ... loaded"
+  // button only renders once this station holds the claim (`job.claim?.mine`
+  // in loading-client.tsx), so claim the stop first. The Start button is
+  // itself disabled until the order is weighed, which the step above did.
+  const startLoading = page.getByRole("button", { name: `Start loading ${customerName}` });
+  await expect(startLoading).toBeEnabled({ timeout: 10_000 });
+  await startLoading.click();
   await page.getByRole("button", { name: `Mark ${customerName} loaded` }).click();
 
   await page.goto("/ayam-norliza-pilot/runs");
-  await expect(page.getByRole("heading", { name: /runs/i })).toBeVisible({ timeout: 10_000 });
-  // RECONCILIATION: the date filter is a bare <input type="date"> with no
-  // associated <label> at all.
-  await page.locator('input[type="date"]').fill(runDate);
+  // No page-level heading to wait on (the title lives in the shell breadcrumb,
+  // and the only <h2> is a per-run truck card); goToRunDate gates on the date
+  // picker and steps to the date with the board's own day buttons.
+  await goToRunDate(page, runDate);
   // Runs are now one tab per truck: pick this test's truck, then work inside
   // its panel. Other runs for the same date belong to earlier test runs.
   await page
