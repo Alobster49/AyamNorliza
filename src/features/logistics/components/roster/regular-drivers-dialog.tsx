@@ -22,8 +22,8 @@ export function RegularDriversDialog({ open, onOpenChange, organizationSlug, vie
       // eslint-disable-next-line react-hooks/set-state-in-effect -- resets the draft on open; a lazy initializer can't see the `open` transition, matches apply-leave-dialog.tsx idiom
       setDraft(initial);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `initial` is recomputed every render from `view`; only `open` should retrigger the reset
-  }, [open]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `initial` is recomputed every render from `view`; re-seed on open and whenever a refetch hands us different trucks, never on an unrelated render
+  }, [open, view]);
 
   function save() {
     startTransition(async () => {
@@ -33,6 +33,10 @@ export function RegularDriversDialog({ open, onOpenChange, organizationSlug, vie
         const result = await setRegularDriver(organizationSlug, row.truck.id, next);
         if (!result.ok) {
           toast({ title: tErr("roster.toasts.couldNotSave"), description: result.messageKey ? tErr(result.messageKey as never) : result.message, variant: "destructive" });
+          // Earlier trucks in the loop may already have saved. Refresh so the
+          // grid (and this dialog's draft) shows what actually landed, and
+          // leave the dialog open so the planner can retry the one that failed.
+          onDone();
           return;
         }
       }

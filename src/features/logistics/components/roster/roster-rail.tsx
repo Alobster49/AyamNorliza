@@ -1,11 +1,15 @@
 "use client";
 
+import { useState } from "react";
 import { Check, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { RosterGap, RosterView } from "../../lib/roster-model";
+
+/** How many gap / risk items render before "See all". */
+const LIST_CAP = 20;
 
 function longDay(date: string, locale: string) {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -48,6 +52,12 @@ function GapItem({ gap, kind, view, canEdit, locale, onAssign }: { gap: RosterGa
 export function RosterRail({ view, days, canEdit, locale, onAssign, docked = false }: { view: RosterView; days: number; canEdit: boolean; locale: string; onAssign: (truckId: string, date: string, driverId?: string) => void; docked?: boolean }) {
   const t = useTranslations("roster.rail");
   const risksByRange = view.risks; // one item per day keeps the list honest about how many days are exposed
+  // A 30-truck org over 28 days can produce hundreds of items; render a page
+  // of them and let the planner ask for the rest.
+  const [showAll, setShowAll] = useState(false);
+  const shownGaps = showAll ? view.gaps : view.gaps.slice(0, LIST_CAP);
+  const shownRisks = showAll ? risksByRange : risksByRange.slice(0, LIST_CAP);
+  const truncated = view.gaps.length > LIST_CAP || risksByRange.length > LIST_CAP;
   return (
     <Card className={cn(docked ? "" : "h-full")}>
       <CardContent className="flex flex-col gap-3">
@@ -70,15 +80,18 @@ export function RosterRail({ view, days, canEdit, locale, onAssign, docked = fal
         <div className="h-px bg-border" />
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("gaps")}</span>
         <div className={cn("grid gap-2", docked ? "grid-cols-2" : "grid-cols-1")}>
-          {view.gaps.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="gap" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
+          {shownGaps.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="gap" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
         </div>
         {risksByRange.length > 0 ? (
           <>
             <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("risks")}</span>
             <div className={cn("grid gap-2", docked ? "grid-cols-2" : "grid-cols-1")}>
-              {risksByRange.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="risk" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
+              {shownRisks.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="risk" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
             </div>
           </>
+        ) : null}
+        {truncated && !showAll ? (
+          <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll(true)}>{t("seeAll")}</Button>
         ) : null}
         {!docked ? <p className="mt-auto border-t pt-2.5 text-xs text-muted-foreground">{t("footnote")}</p> : null}
       </CardContent>

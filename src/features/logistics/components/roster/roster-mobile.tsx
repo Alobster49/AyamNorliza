@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 import type { DriverCell, DriverRow, RosterGap, RosterView } from "../../lib/roster-model";
 import { RosterGrid } from "./roster-grid";
 
+/** How many gap / risk cards render before "See all" — same cap as the rail. */
+const LIST_CAP = 20;
+
 function longDay(date: string, locale: string) {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 }
@@ -61,6 +64,10 @@ function Sparkline({ row }: { row: DriverRow }) {
 export function RosterMobile({ view, days, canEdit, locale, onAssign }: { view: RosterView; days: number; canEdit: boolean; locale: string; onAssign: (truckId: string, date: string, driverId?: string) => void }) {
   const t = useTranslations("roster");
   const [tab, setTab] = useState("gaps");
+  const [showAll, setShowAll] = useState(false);
+  const shownGaps = showAll ? view.gaps : view.gaps.slice(0, LIST_CAP);
+  const shownRisks = showAll ? view.risks : view.risks.slice(0, LIST_CAP);
+  const truncated = view.gaps.length > LIST_CAP || view.risks.length > LIST_CAP;
   const truckOf = (id: string | null) => view.truckRows.find((r) => r.truck.id === id)?.truck.code ?? "";
 
   function chipLabel(cell: DriverCell): string | null {
@@ -102,12 +109,15 @@ export function RosterMobile({ view, days, canEdit, locale, onAssign }: { view: 
           <span className="inline-flex h-8 items-center gap-2 rounded-2xl border px-3 text-sm"><CalendarDays className="size-4" />{t("mobile.range", { days })}</span>
         </div>
         {view.gaps.length === 0 ? <p className="text-sm text-muted-foreground">{t("mobile.noGaps")}</p> : null}
-        {view.gaps.map((g) => <GapCard key={`${g.truckId}|${g.date}`} gap={g} kind="gap" canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
+        {shownGaps.map((g) => <GapCard key={`${g.truckId}|${g.date}`} gap={g} kind="gap" canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
         {view.risks.length > 0 ? (
           <>
             <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("rail.risks")}</span>
-            {view.risks.map((g) => <GapCard key={`${g.truckId}|${g.date}`} gap={g} kind="risk" canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
+            {shownRisks.map((g) => <GapCard key={`${g.truckId}|${g.date}`} gap={g} kind="risk" canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
           </>
+        ) : null}
+        {truncated && !showAll ? (
+          <Button variant="ghost" className="h-11 self-start" onClick={() => setShowAll(true)}>{t("rail.seeAll")}</Button>
         ) : null}
       </TabsContent>
 
