@@ -604,6 +604,16 @@
         "internal": "Sesuatu tidak kena. Sila cuba lagi.",
         "alreadyLoaded": "Pesanan itu sudah berada di atas lori — pekerja lain telah memuatkannya.",
         "claimedByOther": "Pekerja lain sedang memuat pesanan itu sekarang."
+      },
+      "roster": {
+        "unauthenticated": "Log masuk untuk membuka jadual pemandu.",
+        "orgNotFound": "Organisasi tidak dijumpai.",
+        "forbidden": "Anda tiada akses ke jadual pemandu.",
+        "internal": "Jadual pemandu tidak dapat dimuatkan. Cuba lagi.",
+        "validation": "Perubahan jadual itu tidak sah.",
+        "driverNotMember": "Orang itu bukan pemandu aktif dalam organisasi ini.",
+        "driverOnLeave": "Pemandu itu sedang bercuti (diluluskan) pada hari tersebut.",
+        "driverDoubleBooked": "Pemandu itu sudah mengganti lori lain pada hari tersebut."
       }
     }
   },

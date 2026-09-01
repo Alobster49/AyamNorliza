@@ -604,6 +604,16 @@
         "internal": "Something went wrong. Please try again.",
         "alreadyLoaded": "That order is already on the truck — someone else loaded it.",
         "claimedByOther": "Another worker is loading that order right now."
+      },
+      "roster": {
+        "unauthenticated": "Sign in to open the driver roster.",
+        "orgNotFound": "Organization not found.",
+        "forbidden": "You do not have access to the driver roster.",
+        "internal": "Could not load the driver roster. Try again.",
+        "validation": "That roster change is not valid.",
+        "driverNotMember": "That person is not an active driver in this organization.",
+        "driverOnLeave": "That driver is on approved leave that day.",
+        "driverDoubleBooked": "That driver is already covering another truck that day."
       }
     }
   },
