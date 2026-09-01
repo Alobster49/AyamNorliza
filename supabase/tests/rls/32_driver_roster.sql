@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(14);
+select plan(16);
 
 -- Fixtures (postgres bypasses RLS). 00a org; 001 owner, 002 seller, 003 hr,
 -- 004 driver A (regular on truck 008), 005 driver B (cover pool), 006 driver
@@ -208,6 +208,27 @@ select is_empty(
 );
 
 reset role;
+
+-- 5. A run created for a covered day inherits the cover; a plain day inherits
+-- the regular driver. current_date + 3 already carries the truck-008 cover
+-- assigned to driver 005 in section 2 above. The ordinary day is leave2 + 10,
+-- well clear of driver 004's leave1/leave2 dates and of any truck_covers row.
+select results_eq(
+  $$ insert into public.delivery_runs (organization_id, truck_id, run_date)
+     values ('f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000008', current_date + 3)
+     returning driver_id $$,
+  $$ values ('f0000000-0000-0000-0000-000000000005'::uuid) $$,
+  'a new run on a covered day gets the cover driver'
+);
+
+select results_eq(
+  $$ insert into public.delivery_runs (organization_id, truck_id, run_date)
+     values ('f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000008',
+             (select leave2 + 10 from _roster_test_dates))
+     returning driver_id $$,
+  $$ values ('f0000000-0000-0000-0000-000000000004'::uuid) $$,
+  'a new run on an ordinary day gets the regular driver'
+);
 
 select * from finish();
 rollback;
