@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CalendarDays, Users } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { RosterGrid } from "@/features/logistics/components/roster/roster-grid";
 import { AlertPill, RosterLegend } from "@/features/logistics/components/roster/roster-legend";
 import { RosterRail } from "@/features/logistics/components/roster/roster-rail";
+import { RosterMobile } from "@/features/logistics/components/roster/roster-mobile";
 import { AssignCoverDialog } from "@/features/logistics/components/roster/assign-cover-dialog";
 import { RegularDriversDialog } from "@/features/logistics/components/roster/regular-drivers-dialog";
 import { getDriverRoster, type RosterData } from "@/features/logistics/server/roster-actions";
@@ -17,6 +18,18 @@ import { mondayOf } from "@/features/logistics/lib/roster-model";
 import { shiftIsoDate } from "@/lib/time/org-date";
 
 const WINDOWS = [7, 14, 28] as const;
+
+function useIsPhone(): boolean {
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setPhone(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
+  return phone;
+}
 
 export function formatRange(from: string, days: number, locale: string): string {
   const fmt = (iso: string, withYear: boolean) =>
@@ -33,6 +46,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
   const [pending, startTransition] = useTransition();
   const [assignTarget, setAssignTarget] = useState<{ truckId: string; date: string; driverId?: string } | null>(null);
   const [regularOpen, setRegularOpen] = useState(false);
+  const isPhone = useIsPhone();
   const openAssign = useCallback((truckId: string, date: string, driverId?: string) => setAssignTarget({ truckId, date, driverId }), []);
 
   const load = useCallback(
@@ -92,6 +106,8 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
         ) : <span />}
         <RosterLegend />
       </div>
+      <RosterMobile view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} />
+
       {/* Desktop: grid + rail side by side. Tablet (md..lg): grid, then rail docked below in two columns. */}
       <div className="hidden md:flex md:flex-col md:gap-4 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">
@@ -113,6 +129,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
         preselectDriverId={assignTarget?.driverId ?? null}
         locale={locale}
         onDone={refresh}
+        asSheet={isPhone}
       />
       <RegularDriversDialog open={regularOpen} onOpenChange={setRegularOpen} organizationSlug={organizationSlug} view={view} onDone={refresh} />
     </div>
