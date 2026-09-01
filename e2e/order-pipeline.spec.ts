@@ -7,6 +7,7 @@ import {
   shiftOrderToToday,
   signIn,
   uniqueFixtureName,
+  waitForOrderLoaded,
   waitForOrderStatus,
 } from "./_fixtures";
 
@@ -182,6 +183,9 @@ test("owner creates a manual order, confirms with a fallback, and takes it throu
   await expect(startLoading).toBeEnabled({ timeout: 10_000 });
   await startLoading.click();
   await page.getByRole("button", { name: `Mark ${customerName} loaded` }).click();
+  // Optimistic, like the weigh: let the write land before the runs board reads
+  // it, or the departure gate still sees an unloaded stop.
+  await waitForOrderLoaded(orderId);
 
   await page.goto("/ayam-norliza-pilot/runs");
   // No page-level heading to wait on (the title lives in the shell breadcrumb,

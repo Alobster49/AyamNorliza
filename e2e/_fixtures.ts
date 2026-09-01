@@ -64,16 +64,33 @@ export async function goToRunDate(page: Page, targetDate: string) {
 
 export async function signIn(page: Page, email: string, password: string) {
   await page.goto("/login");
-  await fillStable(page.getByLabel(/email/i), email);
-  await fillStable(page.getByLabel(/password/i), password);
-  // The password fill can hydrate-revert the email one, so re-assert both.
-  await expect(page.getByLabel(/email/i)).toHaveValue(email);
+  // Both fields must be checked together, not one after the other: hydration
+  // triggered while filling the password reverts the email field that was
+  // already filled, so a per-field helper leaves an empty email behind and the
+  // submit never leaves /login. Re-fill until both hold at the same time.
+  const emailBox = page.getByLabel(/email/i);
+  const passwordBox = page.getByLabel(/password/i);
+  await expect
+    .poll(
+      async () => {
+        if ((await emailBox.inputValue()) !== email) await emailBox.fill(email);
+        if ((await passwordBox.inputValue()) !== password) await passwordBox.fill(password);
+        return (await emailBox.inputValue()) === email && (await passwordBox.inputValue()) === password;
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
   await page.getByRole("button", { name: /sign in/i }).click();
   // Landing depends on role: managers land on the dashboard, warehouse staff
-  // land on Products, drivers on the driver deck, HR on the leave approval
-  // queue, everyone else on org settings (see server/landing.ts).
+  // on Products, drivers on the driver deck, HR on My Leave, everyone else on
+  // org settings (see server/landing.ts).
+  //
+  // HR lands on /leave, not /leave/manage: landing takes the first item of the
+  // first visible nav group, and the HR group leads with My Leave. No spec
+  // signs in as hr today, so the old /leave/manage-only pattern never failed
+  // here -- it just would have, the first time one did.
   await expect(page).toHaveURL(
-    /\/(?:[^/]+\/dashboard|[^/]+\/products|[^/]+\/settings\/organization|[^/]+\/leave\/manage|drive\/[^/]+|signup)(?:[/?#]|$)/,
+    /\/(?:[^/]+\/dashboard|[^/]+\/products|[^/]+\/settings\/organization|[^/]+\/leave(?:\/manage)?|drive\/[^/]+|signup)(?:[/?#]|$)/,
     { timeout: 10_000 },
   );
 }
@@ -470,6 +487,35 @@ export async function markOrderLoaded(orderId: string): Promise<void> {
  * deck keeps "Start delivering" disabled, both of which look like unrelated
  * bugs several steps later. Poll the row itself instead of trusting the UI.
  */
+/**
+ * Block until the server has recorded the order as loaded.
+ *
+ * "Mark loaded" on the loading board updates optimistically too. Navigating to
+ * the runs board before it commits means the departure gate still counts the
+ * stop as unloaded, so "Mark departed" renders disabled and never re-enables
+ * (the board does not refetch on its own) -- a timeout that points at the runs
+ * page rather than at the loading click that actually raced.
+ */
+export async function waitForOrderLoaded(orderId: string, timeoutMs = 20_000): Promise<void> {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceKey) {
+    throw new Error("waitForOrderLoaded needs SUPABASE_SERVICE_ROLE_KEY (see playwright.config.ts)");
+  }
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const response = await fetch(`${url}/rest/v1/orders?id=eq.${orderId}&select=loaded_at`, {
+      headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` },
+    });
+    if (response.ok) {
+      const [row] = (await response.json()) as { loaded_at: string | null }[];
+      if (row?.loaded_at) return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+  throw new Error(`Order ${orderId} was never marked loaded.`);
+}
+
 export async function waitForOrderStatus(
   orderId: string,
   status: string,
