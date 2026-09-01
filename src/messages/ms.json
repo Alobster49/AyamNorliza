@@ -2875,7 +2875,7 @@
       "free": "Lapang:",
       "noneFree": "Tiada sesiapa lapang hari itu",
       "assign": "Tetapkan {name}",
-      "planBackup": "Rancang pengganti",
+      "planBackup": "Rancang pengganti:",
       "reasonLeave": "{name} · {type} ({range})",
       "reasonNoRegular": "Lori ini tiada pemandu tetap",
       "footnote": "Pengganti yang ditetapkan di sini menjadi pemandu larian apabila Dispatch merancang hari itu.",

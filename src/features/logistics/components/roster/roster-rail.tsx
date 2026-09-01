@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,12 +31,12 @@ function GapItem({ gap, kind, view, canEdit, locale, onAssign }: { gap: RosterGa
       <span className="text-xs text-muted-foreground">{reason}</span>
       {canEdit ? (
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("free")}</span>
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{kind === "risk" ? t("planBackup") : t("free")}</span>
           {gap.freeDriverIds.length === 0 ? <span className="text-xs text-muted-foreground">{t("noneFree")}</span> : null}
           {gap.freeDriverIds.slice(0, 3).map((id, i) => (
             <Button key={id} size="sm" variant={i === 0 && kind === "gap" ? "default" : "outline"} className="h-7 px-2.5 text-xs" onClick={() => onAssign(gap.truckId, gap.date, id)}>
               {i === 0 && kind === "gap" ? <Plus className="size-3" /> : null}
-              {kind === "gap" ? nameOf(id) : t("planBackup")}
+              {nameOf(id)}
             </Button>
           ))}
         </div>
@@ -53,10 +53,19 @@ export function RosterRail({ view, days, canEdit, locale, onAssign, docked = fal
       <CardContent className="flex flex-col gap-3">
         <div className="leading-none">
           <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("next", { days })}</span>
-          <p className="mt-1">
-            <span className="font-display text-4xl text-destructive">{view.gaps.length}</span>{" "}
-            <span className="text-lg">{t("headline", { count: view.gaps.length }).replace(/^\d+\s*/, "")}</span>
-          </p>
+          {view.gaps.length === 0 ? (
+            <p className="mt-1 flex items-center gap-2">
+              <Check className="size-5" style={{ color: "var(--status-ready-text)" }} />
+              <span className="text-lg" style={{ color: "var(--status-ready-text)" }}>
+                {t("headline", { count: 0 })}
+              </span>
+            </p>
+          ) : (
+            <p className="mt-1">
+              <span className="font-display text-4xl text-destructive">{view.gaps.length}</span>{" "}
+              <span className="text-lg">{t("headline", { count: view.gaps.length }).replace(/^\d+\s*/, "")}</span>
+            </p>
+          )}
         </div>
         <div className="h-px bg-border" />
         <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("gaps")}</span>

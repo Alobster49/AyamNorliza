@@ -2875,7 +2875,7 @@
       "free": "Free:",
       "noneFree": "No one is free that day",
       "assign": "Assign {name}",
-      "planBackup": "Plan a backup",
+      "planBackup": "Plan a backup:",
       "reasonLeave": "{name} · {type} ({range})",
       "reasonNoRegular": "No regular driver on this truck",
       "footnote": "Covers you assign here become the run's driver when Dispatch plans that day.",
