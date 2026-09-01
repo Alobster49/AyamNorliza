@@ -21,7 +21,7 @@ A **Driver roster** page under Fulfillment that shows, per day across a chosen w
 2. A truck's **operating days** come from its existing `delivery_slots` weekdays (a truck with no slot on Sunday is not running Sunday, so it has no gap). Org-wide and per-truck `schedule_blocks` and `public_holidays` also close a day.
 3. Drivers have no fixed rest days in the data. V1 treats a driver as available on any day the org operates unless on leave. Per-driver rest days are phase 3.
 4. Roles: seller, supervisor, owner, org_admin plan the roster (view + edit). HR sees it read-only so they can judge the impact of a pending request before approving. Drivers do not see it (they have the driver deck and My Leave).
-5. Window: default 2 weeks starting Monday of the current week, in the org's `default_time_zone`; week and month views are toggles.
+5. Window: default 2 weeks starting Monday of the current week, in the org's `default_time_zone`; week and 4-week views are toggles.
 6. One cover driver per truck per day. Split days are out of scope.
 
 ## Recommended feature set
@@ -34,7 +34,7 @@ V1 (ship first):
 - Assign / clear a cover for a truck on a date.
 - Pending leave shown hatched as *at risk*, with the truck it would leave uncovered.
 - Public holidays and truck off-days shaded so they never count as gaps.
-- Legend, today marker, prev/next/Today, week / 2 weeks / month.
+- Legend, today marker, prev/next/Today, week / 2 weeks / 4 weeks.
 - Assign dialog with ranked drivers (the ranking is v1, not v2).
 
 V2:
@@ -122,7 +122,7 @@ Error mapping follows the existing `*-message-keys` pattern so the UI toasts i18
 
 Same chrome as every seller page: inset sidebar, h-16 header ("Ayam Norliza / Driver roster · Fulfillment workspace"), Poppins, shadcn buttons and cards, the status oklch hues from `globals.css`.
 
-**Toolbar.** Display-serif title "Truck coverage". Alert pill (Bell icon, red count "N gaps · K at risk", hidden when both are zero, same pattern as the runs AlertBell). Segmented Week / 2 weeks / Month. `‹` Today `›` (Today is filled when the window contains today, like the runs page). Range chip with the calendar icon. Second row: zone filter, "Set regular drivers" (opens a dialog listing trucks with a driver select each), legend on the right.
+**Toolbar.** Display-serif title "Truck coverage". Alert pill (Bell icon, red count "N gaps · K at risk", hidden when both are zero, same pattern as the runs AlertBell). Segmented Week / 2 weeks / 4 weeks (28 days from a Monday; a calendar-month view is not needed for planning covers). `‹` Today `›` (Today is filled when the window contains today, like the runs page). Range chip with the calendar icon. Second row: zone filter, "Set regular drivers" (opens a dialog listing trucks with a driver select each), legend on the right.
 
 **Grid.** One row per active truck, `200px` head + one column per day. Head: `JHR-01 · Batu Pahat` and the regular driver (avatar + name), or "No regular driver" in destructive red. Header row: weekday cap, day number (filled circle for today), holiday name in the editorial accent under it. Cell states, in priority order:
 
