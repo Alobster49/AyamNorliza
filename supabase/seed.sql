@@ -12,10 +12,21 @@
 --   owner@ayam-norliza-pilot.example  -- E2E owner (e2e/_fixtures.ts OWNER)
 --   target@ayam-norliza-pilot.example -- E2E deactivation target
 --   owner@gmail.com                   -- local convenience owner login
+--   admin@gmail.com                   -- local convenience org_admin login
 --   hr@gmail.com                      -- local convenience hr login
 --   buyer@ayam-norliza-pilot.example  -- E2E buyer portal (e2e/_fixtures.ts BUYER)
--- All five share password123, the repo-wide test-account convention
+-- All six share password123, the repo-wide test-account convention
 -- (project CLAUDE.md; e2e/_fixtures.ts defaults).
+--
+-- admin@gmail.com is seeded here rather than left to the data console's
+-- "Seed demo data" action because that action is itself gated on
+-- data_console.manage, which only org_admin holds (see DEFAULT_ROLE_GRANTS in
+-- src/lib/auth/rbac.ts -- owner is excluded on purpose). Without an org_admin
+-- in this file a fresh `supabase db reset` leaves no account able to open the
+-- console, so the seeded logins could only be created by hand-editing SQL.
+-- Its id and display name match CONSOLE_ACCOUNTS in
+-- src/features/data-console/lib/accounts.ts, so the Seed action's own
+-- re-assertion of the same account is a no-op rather than a conflicting row.
 
 begin;
 
@@ -45,6 +56,12 @@ with seed_users as (
       'hr@gmail.com',
       'HR Manager',
       'hr'
+    ),
+    (
+      '10000000-0000-0000-0000-000000000005'::uuid,
+      'admin@gmail.com',
+      'Hafiz Samad',
+      'org_admin'
     )
   ) as user_seed(id, email, display_name, role)
   -- Only seed when the pilot org exists, so a partially migrated database
