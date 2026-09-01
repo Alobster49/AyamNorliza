@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import type { DriverRow, RosterGap, RosterView } from "../../lib/roster-model";
+import type { DriverCell, DriverRow, RosterGap, RosterView } from "../../lib/roster-model";
 import { RosterGrid } from "./roster-grid";
 
 function longDay(date: string, locale: string) {
@@ -46,7 +46,13 @@ function Sparkline({ row }: { row: DriverRow }) {
           : c.state === "driving" ? "var(--border)"
           : c.state === "free" ? "var(--muted)"
           : "transparent";
-        return <span key={c.date} className={cn("rounded-[2px]", (c.state === "off" || c.state === "holiday") && "roster-hatch-off")} style={{ background: bg }} />;
+        return (
+          <span
+            key={c.date}
+            className={cn("rounded-[2px]", (c.state === "off" || c.state === "holiday") && "roster-hatch-off")}
+            style={c.state === "off" || c.state === "holiday" ? undefined : { background: bg }}
+          />
+        );
       })}
     </div>
   );
@@ -57,12 +63,34 @@ export function RosterMobile({ view, days, canEdit, locale, onAssign }: { view: 
   const [tab, setTab] = useState("gaps");
   const truckOf = (id: string | null) => view.truckRows.find((r) => r.truck.id === id)?.truck.code ?? "";
 
+  function chipLabel(cell: DriverCell): string | null {
+    switch (cell.state) {
+      case "cover":
+      case "driving":
+        return cell.truckCode;
+      case "leave":
+        return t("grid.leave");
+      case "pending":
+        return t("grid.pending");
+      case "free":
+        return t("grid.free");
+      case "holiday":
+        return t("grid.holiday");
+      case "off":
+        return null;
+      default: {
+        const _exhaustive: never = cell.state;
+        return _exhaustive;
+      }
+    }
+  }
+
   return (
     <Tabs value={tab} onValueChange={setTab} className="md:hidden">
-      <TabsList className="w-full">
-        <TabsTrigger value="gaps" className="flex-1">{t("mobile.gaps")}</TabsTrigger>
-        <TabsTrigger value="trucks" className="flex-1">{t("mobile.trucks")}</TabsTrigger>
-        <TabsTrigger value="drivers" className="flex-1">{t("mobile.drivers")}</TabsTrigger>
+      <TabsList className="h-11 w-full">
+        <TabsTrigger value="gaps" className="h-10 flex-1">{t("mobile.gaps")}</TabsTrigger>
+        <TabsTrigger value="trucks" className="h-10 flex-1">{t("mobile.trucks")}</TabsTrigger>
+        <TabsTrigger value="drivers" className="h-10 flex-1">{t("mobile.drivers")}</TabsTrigger>
       </TabsList>
 
       <TabsContent value="gaps" className="flex flex-col gap-3 pt-3">
@@ -93,6 +121,7 @@ export function RosterMobile({ view, days, canEdit, locale, onAssign }: { view: 
         ) : null}
         {view.driverRows.map((row) => {
           const today = row.cells.find((c) => view.days.find((d) => d.date === c.date)?.isToday);
+          const label = today ? chipLabel(today) : null;
           return (
             <div key={row.driver.userId} className="flex flex-col gap-2 rounded-2xl border p-3">
               <div className="flex items-center gap-2.5">
@@ -101,7 +130,7 @@ export function RosterMobile({ view, days, canEdit, locale, onAssign }: { view: 
                   <b className="block truncate text-sm">{row.driver.name}</b>
                   <span className="text-xs text-muted-foreground">{row.driver.regularTruckId ? t("mobile.usually", { truck: truckOf(row.driver.regularTruckId) }) : t("mobile.pool")}</span>
                 </div>
-                {today ? <span className="rounded-2xl bg-muted px-2 py-0.5 text-xs">{today.state === "cover" || today.state === "driving" ? today.truckCode : today.state}</span> : null}
+                {label ? <span className="rounded-2xl bg-muted px-2 py-0.5 text-xs">{label}</span> : null}
               </div>
               <Sparkline row={row} />
             </div>

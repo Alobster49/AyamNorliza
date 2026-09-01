@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { CalendarDays, Users } from "lucide-react";
 import { useRouter } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { RosterGrid } from "@/features/logistics/components/roster/roster-grid";
 import { AlertPill, RosterLegend } from "@/features/logistics/components/roster/roster-legend";
@@ -18,18 +19,6 @@ import { mondayOf } from "@/features/logistics/lib/roster-model";
 import { shiftIsoDate } from "@/lib/time/org-date";
 
 const WINDOWS = [7, 14, 28] as const;
-
-function useIsPhone(): boolean {
-  const [phone, setPhone] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const update = () => setPhone(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
-  }, []);
-  return phone;
-}
 
 export function formatRange(from: string, days: number, locale: string): string {
   const fmt = (iso: string, withYear: boolean) =>
@@ -44,10 +33,10 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
   const { toast } = useToast();
   const [data, setData] = useState<RosterData>(initial);
   const [pending, startTransition] = useTransition();
-  const [assignTarget, setAssignTarget] = useState<{ truckId: string; date: string; driverId?: string } | null>(null);
+  const [assignTarget, setAssignTarget] = useState<{ truckId: string; date: string; driverId?: string; asSheet: boolean } | null>(null);
   const [regularOpen, setRegularOpen] = useState(false);
-  const isPhone = useIsPhone();
-  const openAssign = useCallback((truckId: string, date: string, driverId?: string) => setAssignTarget({ truckId, date, driverId }), []);
+  const isPhone = useIsMobile();
+  const openAssign = useCallback((truckId: string, date: string, driverId?: string) => setAssignTarget({ truckId, date, driverId, asSheet: isPhone }), [isPhone]);
 
   const load = useCallback(
     (fromDate: string, days: number) => {
@@ -129,7 +118,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
         preselectDriverId={assignTarget?.driverId ?? null}
         locale={locale}
         onDone={refresh}
-        asSheet={isPhone}
+        asSheet={assignTarget?.asSheet ?? isPhone}
       />
       <RegularDriversDialog open={regularOpen} onOpenChange={setRegularOpen} organizationSlug={organizationSlug} view={view} onDone={refresh} />
     </div>
