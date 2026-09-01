@@ -23,3 +23,20 @@ gates on (`src/features/data-console/lib/accounts.ts`), all `password123`:
 The login page has a dev-only **"Dev: pick an account"** dialog that fills the
 form from that same list. It is compiled out when `NODE_ENV === "production"`,
 so never move the password out of that guarded block.
+
+## Local market prices
+
+`market_prices` / `market_premises` hold KPDN PriceCatcher data, which is
+ingested by the `market-price-sync` edge function — not by `seed.sql`. A fresh
+`npm run db:reset` therefore leaves the Market Prices page showing "No data".
+
+```bash
+npm run db:market-sync
+```
+
+That starts `supabase functions serve`, invokes the function twice (the first
+run only refreshes the premise lookup and returns early), and stops the server
+again. It is idempotent and pulls the last ~2 days of real prices.
+
+"Price suggestions" stays empty until a product variant picks a benchmark —
+that is the empty state, not a failure.
