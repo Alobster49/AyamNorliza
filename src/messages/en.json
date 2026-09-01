@@ -628,6 +628,7 @@
       "dispatch": "Dispatch",
       "loading": "Loading",
       "deliveryRuns": "Delivery runs",
+      "driverRoster": "Driver roster",
       "warehouseTasks": "Warehouse tasks",
       "myLeave": "My Leave",
       "leaveManagement": "Leave Management",

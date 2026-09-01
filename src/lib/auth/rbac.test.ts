@@ -20,6 +20,7 @@ const LEGACY_PAGE_ACCESS: Record<string, readonly Role[]> = {
   dispatch: ["owner", "org_admin", "seller", "supervisor"],
   delivery_runs: ["owner", "org_admin", "seller", "supervisor"],
   delivery_setup: ["owner", "org_admin", "seller", "supervisor"],
+  driver_roster: ["owner", "org_admin", "seller", "supervisor", "hr"],
   warehouse_tasks: ["owner", "org_admin", "inventory"],
   loading: ["owner", "org_admin", "inventory"],
   driver_deck: ["owner", "org_admin", "driver"],

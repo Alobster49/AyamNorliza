@@ -6,7 +6,7 @@
 
 export const RESOURCES = [
   "dashboard", "products", "orders", "customers", "market_prices",
-  "dispatch", "delivery_runs", "delivery_setup", "warehouse_tasks",
+  "dispatch", "delivery_runs", "delivery_setup", "driver_roster", "warehouse_tasks",
   "loading", "driver_deck", "leave", "leave_management", "users",
   "roles", "data_console", "settings",
 ] as const;
@@ -50,7 +50,7 @@ function caps(...list: AdminCapability[]): PermissionKey[] {
 }
 
 const SELLER_GRANTS: PermissionKey[] = [
-  ...(["products", "orders", "customers", "market_prices", "dispatch", "delivery_runs"] as const)
+  ...(["products", "orders", "customers", "market_prices", "dispatch", "delivery_runs", "driver_roster"] as const)
     .flatMap(crud),
   grantKey("delivery_setup", "view"),
   grantKey("loading", "edit"), // RPC-only (dispatch_set_loaded/claim_loading); page stays hidden
@@ -63,7 +63,7 @@ export const DEFAULT_ROLE_GRANTS: Record<SystemRoleKey, ReadonlySet<PermissionKe
     ...caps(...ADMIN_CAPABILITIES.filter((c) => c !== "data_console.manage")),
   ]),
   org_admin: new Set([...RESOURCES.flatMap(crud), ...caps(...ADMIN_CAPABILITIES)]),
-  hr: new Set([...crud("leave"), ...crud("leave_management")]),
+  hr: new Set([...crud("leave"), ...crud("leave_management"), grantKey("driver_roster", "view")]),
   seller: new Set(SELLER_GRANTS),
   supervisor: new Set(SELLER_GRANTS),
   inventory: new Set([
