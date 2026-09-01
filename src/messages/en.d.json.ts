@@ -607,6 +607,16 @@ declare const messages: {
         "internal": "Something went wrong. Please try again.",
         "alreadyLoaded": "That order is already on the truck — someone else loaded it.",
         "claimedByOther": "Another worker is loading that order right now."
+      },
+      "roster": {
+        "unauthenticated": "Sign in to open the driver roster.",
+        "orgNotFound": "Organization not found.",
+        "forbidden": "You do not have access to the driver roster.",
+        "internal": "Could not load the driver roster. Try again.",
+        "validation": "That roster change is not valid.",
+        "driverNotMember": "That person is not an active driver in this organization.",
+        "driverOnLeave": "That driver is on approved leave that day.",
+        "driverDoubleBooked": "That driver is already covering another truck that day."
       }
     }
   },
@@ -631,6 +641,7 @@ declare const messages: {
       "dispatch": "Dispatch",
       "loading": "Loading",
       "deliveryRuns": "Delivery runs",
+      "driverRoster": "Driver roster",
       "warehouseTasks": "Warehouse tasks",
       "myLeave": "My Leave",
       "leaveManagement": "Leave Management",
@@ -2835,6 +2846,68 @@ declare const messages: {
       "attachment_required": "This leave type requires a supporting attachment.",
       "uploadFailed": "Attachment upload failed"
     }
+  },
+  "roster": {
+    "title": "Truck coverage",
+    "window": { "week": "Week", "twoWeeks": "2 weeks", "fourWeeks": "4 weeks", "today": "Today", "previous": "Earlier", "next": "Later" },
+    "alert": { "gaps": "{count, plural, one {# gap} other {# gaps}}", "risks": "{count} at risk" },
+    "toolbar": { "setRegular": "Set regular drivers", "allTrucks": "All trucks" },
+    "legend": { "regular": "Regular driver", "leave": "On leave", "pending": "Leave pending", "cover": "Covering", "gap": "No driver", "off": "Off / holiday" },
+    "grid": {
+      "truckHeader": "Truck · regular driver",
+      "noRegular": "No regular driver",
+      "poolHeader": "Cover pool · not tied to a truck",
+      "holiday": "Holiday",
+      "gap": "No driver",
+      "pending": "Pend.",
+      "pendingSub": "leave",
+      "cover": "cover",
+      "leave": "Leave",
+      "free": "Free",
+      "cellTitle": "{truck} · {date} · {state}",
+      "empty": "No active trucks yet.",
+      "emptyHint": "Add trucks and their delivery slots in Delivery setup, then set a regular driver here.",
+      "noDrivers": "No drivers yet.",
+      "noDriversHint": "Invite members with the Driver role from Users."
+    },
+    "rail": {
+      "next": "Next {days} days",
+      "headline": "{count, plural, =0 {every truck has a driver} one {# truck needs a driver} other {# trucks need a driver}}",
+      "gaps": "Gaps",
+      "risks": "At risk · leave not yet approved",
+      "free": "Free:",
+      "noneFree": "No one is free that day",
+      "assign": "Assign {name}",
+      "planBackup": "Plan a backup:",
+      "reasonLeave": "{name} · {type} ({range})",
+      "reasonNoRegular": "No regular driver on this truck",
+      "footnote": "Covers you assign here become the run's driver when Dispatch plans that day.",
+      "seeAll": "See all"
+    },
+    "assign": {
+      "title": "Assign cover",
+      "subtitle": "{truck} · {date}",
+      "contextLeave": "{name} is on {type}. Who takes the {truck} run?",
+      "contextNoRegular": "{truck} has no regular driver. Who takes the {truck} run?",
+      "tierFree": "Free · cover pool",
+      "tierFreeRegular": "Free · usually {truck}",
+      "tierTruckOff": "Own truck {truck} not running that day",
+      "tierBusy": "Driving {truck} that day · would leave it uncovered",
+      "confirm": "Assign {name} to {truck}",
+      "clear": "Clear cover",
+      "noCandidates": "No driver is available that day.",
+      "assigned": "{name} now covers {truck} on {date}.",
+      "cleared": "Cover cleared for {truck} on {date}."
+    },
+    "regular": {
+      "title": "Regular drivers",
+      "subtitle": "Who usually drives each truck. Leave blank for trucks run by the cover pool.",
+      "none": "— none —",
+      "save": "Save",
+      "saved": "Regular drivers updated."
+    },
+    "mobile": { "gaps": "Gaps", "trucks": "Trucks", "drivers": "Drivers", "assignCover": "Assign cover", "range": "{days} days", "needsDriver": "trucks need a driver · next {days} days", "noGaps": "Every truck has a driver.", "badgeGap": "no driver", "badgeRisk": "at risk", "usually": "Regular · {truck}", "pool": "Cover pool" },
+    "toasts": { "couldNotSave": "Could not save the roster change." }
   },
   "profile": {
     "edit": {
