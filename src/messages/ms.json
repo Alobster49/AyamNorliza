@@ -2385,17 +2385,51 @@
     "pageTitle": "Harga Pasaran",
     "subtitle": "Median tinjauan runcit KPDN",
     "subtitleWithDate": "Median tinjauan runcit KPDN — data terkini {date}",
-    "staleWarning": "Data pasaran sudah lebih 3 hari. Cadangan mungkin tidak mencerminkan pasaran hari ini.",
     "noData": "Tiada data",
+    "empty": "Belum ada data pasaran. Jalankan penyegerakan harga pasaran dan kembali semula.",
     "premisesCount": "{count, plural, other {# premis}}",
-    "priceSuggestionsTitle": "Cadangan harga",
-    "noSuggestions": "Belum ada saiz/pilihan yang menjejak penanda aras pasaran. Sunting saiz/pilihan di bawah Produk dan pilih penanda aras untuk mendapatkan cadangan di sini.",
-    "table": {
-      "variant": "Saiz/pilihan",
-      "benchmark": "Penanda aras",
-      "marketBase": "Asas pasaran",
-      "current": "Semasa",
-      "suggested": "Dicadangkan"
+    "grade": {
+      "standard": "Ayam standard",
+      "super": "Ayam super"
+    },
+    "focus": "Fokus: {state}",
+    "perKg": "/kg",
+    "national": {
+      "title": "{grade} · Seluruh negara, berwajaran premis",
+      "d1": "1H",
+      "d7": "7H",
+      "d30": "30H",
+      "range": "Julat",
+      "premises": "Premis",
+      "legendMedian": "Median negeri (berwajaran)",
+      "legendBand": "Separuh tengah negeri (Q1–Q3)",
+      "premisesAxis": "Premis ditinjau",
+      "tooltipMedian": "Median",
+      "tooltipBand": "Q1–Q3",
+      "tooltipStates": "{count, plural, other {# negeri}}"
+    },
+    "watchlist": {
+      "title": "Senarai pantau · {count, plural, other {# negeri}}",
+      "sorted": "Ikut harga terkini",
+      "state": "Negeri",
+      "last": "Terkini",
+      "d1": "1H",
+      "d7": "7H",
+      "trend": "Trend"
+    },
+    "heat": {
+      "title": "{count, plural, other {# hari}} terakhir · semua negeri",
+      "last": "Terkini",
+      "caption": "Lebih cerah = lebih mahal. Warna ialah kedudukan sel antara semua hari-negeri (kuantil), jadi baris Semenanjung kekal jelas di sebelah Sabah dan Labuan."
+    },
+    "tiles": {
+      "dearest": "Negeri termahal",
+      "cheapest": "Negeri termurah",
+      "premium": "Premium super",
+      "premiumSub": "Super − standard",
+      "spread": "Beza",
+      "spreadSub": "Termahal − termurah",
+      "focus": "Fokus anda"
     },
     "upToDate": "Terkini",
     "apply": "Guna pakai",

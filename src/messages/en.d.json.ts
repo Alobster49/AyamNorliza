@@ -2388,17 +2388,51 @@ declare const messages: {
     "pageTitle": "Market Prices",
     "subtitle": "KPDN retail survey medians",
     "subtitleWithDate": "KPDN retail survey medians — latest data {date}",
-    "staleWarning": "Market data is more than 3 days old. Suggestions may not reflect today's market.",
     "noData": "No data",
+    "empty": "No market data yet. Run the market price sync and come back.",
     "premisesCount": "{count, plural, one {# premise} other {# premises}}",
-    "priceSuggestionsTitle": "Price suggestions",
-    "noSuggestions": "No variants are tracking a market benchmark yet. Edit a size/option under Products and pick a benchmark to get suggestions here.",
-    "table": {
-      "variant": "Variant",
-      "benchmark": "Benchmark",
-      "marketBase": "Market base",
-      "current": "Current",
-      "suggested": "Suggested"
+    "grade": {
+      "standard": "Ayam standard",
+      "super": "Ayam super"
+    },
+    "focus": "Focus: {state}",
+    "perKg": "/kg",
+    "national": {
+      "title": "{grade} · National, premise-weighted",
+      "d1": "1D",
+      "d7": "7D",
+      "d30": "30D",
+      "range": "Range",
+      "premises": "Premises",
+      "legendMedian": "State median (weighted)",
+      "legendBand": "Middle half of states (Q1–Q3)",
+      "premisesAxis": "Premises surveyed",
+      "tooltipMedian": "Median",
+      "tooltipBand": "Q1–Q3",
+      "tooltipStates": "{count, plural, one {# state} other {# states}}"
+    },
+    "watchlist": {
+      "title": "Watchlist · {count, plural, one {# state} other {# states}}",
+      "sorted": "Sorted by last",
+      "state": "State",
+      "last": "Last",
+      "d1": "1D",
+      "d7": "7D",
+      "trend": "Trend"
+    },
+    "heat": {
+      "title": "Last {count, plural, one {# day} other {# days}} · every state",
+      "last": "Last",
+      "caption": "Brighter = dearer. Colour is the cell's rank among all state-days (quantiles), so peninsula rows stay readable next to Sabah and Labuan."
+    },
+    "tiles": {
+      "dearest": "Dearest state",
+      "cheapest": "Cheapest state",
+      "premium": "Super premium",
+      "premiumSub": "Super − standard",
+      "spread": "Spread",
+      "spreadSub": "Dearest − cheapest",
+      "focus": "Your focus"
     },
     "upToDate": "Up to date",
     "apply": "Apply",

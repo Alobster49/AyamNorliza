@@ -2,12 +2,12 @@ import { redirect } from "@/i18n/navigation";
 import { getLocale } from "next-intl/server";
 import { OrderPermissionError } from "@/features/orders/server/guards";
 import { requirePermission } from "@/lib/auth/require-permission";
-import {
-  getMarketState,
-  getMarketSuggestions,
-  getMarketTrend,
-} from "@/features/market/server/actions";
+import { getMarketState, getMarketTrend } from "@/features/market/server/actions";
+import { MARKET_STATES } from "@/features/market/types";
 import { MarketPricesClient } from "./market-prices-client";
+
+/** 30 days on screen plus a few for the 30D delta to have a base point. */
+const TREND_DAYS = 35;
 
 export default async function MarketPricesPage({
   params,
@@ -25,18 +25,12 @@ export default async function MarketPricesPage({
     throw error;
   }
 
-  const state = await getMarketState(organizationSlug);
-  const [trend, suggestions] = await Promise.all([
-    getMarketTrend(organizationSlug, [state]),
-    getMarketSuggestions(organizationSlug),
+  const [focusState, trend] = await Promise.all([
+    getMarketState(organizationSlug),
+    getMarketTrend(organizationSlug, [...MARKET_STATES], TREND_DAYS),
   ]);
 
   return (
-    <MarketPricesClient
-      organizationSlug={organizationSlug}
-      state={state}
-      trend={trend}
-      suggestions={suggestions}
-    />
+    <MarketPricesClient organizationSlug={organizationSlug} focusState={focusState} trend={trend} />
   );
 }

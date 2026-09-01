@@ -30,3 +30,17 @@ export const MARKET_STATES = [
   "Perak", "Perlis", "Pulau Pinang", "Sabah", "Sarawak", "Selangor",
   "Terengganu", "W.P. Kuala Lumpur", "W.P. Labuan", "W.P. Putrajaya",
 ] as const;
+
+export type MarketState = (typeof MARKET_STATES)[number];
+
+/** Short codes for the ticker strip; JPJ-style plate prefixes people already know. */
+export const MARKET_STATE_ABBR: Record<MarketState, string> = {
+  Johor: "JHR", Kedah: "KDH", Kelantan: "KTN", Melaka: "MLK", "Negeri Sembilan": "NSN",
+  Pahang: "PHG", Perak: "PRK", Perlis: "PLS", "Pulau Pinang": "PNG", Sabah: "SBH",
+  Sarawak: "SWK", Selangor: "SGR", Terengganu: "TRG", "W.P. Kuala Lumpur": "KUL",
+  "W.P. Labuan": "LBN", "W.P. Putrajaya": "PJY",
+};
+
+export function marketStateAbbr(state: string): string {
+  return MARKET_STATE_ABBR[state as MarketState] ?? state.slice(0, 3).toUpperCase();
+}

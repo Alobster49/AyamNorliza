@@ -54,6 +54,10 @@
   --color-fg-muted: var(--muted-foreground);
   --color-accent: var(--primary);
   --editorial-accent: oklch(0.65 0.19 50);
+  /* Market prices page — the two PriceCatcher grades. Standard stays on the
+     brand red; super takes a cool hue so the pair survives colour blindness. */
+  --market-standard: oklch(0.56 0.2 25);
+  --market-super: oklch(0.56 0.17 258);
   --color-success: #22c55e;
   --color-warning: #f59e0b;
   --color-danger: var(--destructive);
@@ -133,6 +137,8 @@
   --status-delivered-text: oklch(0.8 0.13 300);
   --status-closed-text: oklch(0.78 0.02 260);
   --status-cancelled-text: oklch(0.78 0.15 25);
+  --market-standard: oklch(0.63 0.2 22);
+  --market-super: oklch(0.62 0.17 258);
 
   --color-bg: var(--background);
   --color-surface: var(--card);
