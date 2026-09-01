@@ -72,7 +72,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
         <Button variant="outline" size="sm" aria-label={t("window.previous")} onClick={() => load(shiftIsoDate(data.fromDate, -data.days), data.days)}>‹</Button>
         <Button variant={containsToday ? "default" : "outline"} size="sm" onClick={() => load(mondayOf(data.today), data.days)}>{t("window.today")}</Button>
         <Button variant="outline" size="sm" aria-label={t("window.next")} onClick={() => load(shiftIsoDate(data.fromDate, data.days), data.days)}>›</Button>
-        <span className="inline-flex h-8 items-center gap-2 rounded-2xl border px-3 text-sm"><CalendarDays className="size-4" />{formatRange(data.fromDate, data.days, locale)}</span>
+        <span className="hidden md:inline-flex h-8 items-center gap-2 rounded-2xl border px-3 text-sm"><CalendarDays className="size-4" />{formatRange(data.fromDate, data.days, locale)}</span>
       </div>
     </div>
   );
@@ -93,7 +93,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
         {data.canEdit ? (
           <Button variant="outline" size="sm" onClick={() => setRegularOpen(true)}><Users className="size-4" />{t("toolbar.setRegular")}</Button>
         ) : <span />}
-        <RosterLegend />
+        <div className="hidden md:block"><RosterLegend /></div>
       </div>
       <RosterMobile view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} />
 
