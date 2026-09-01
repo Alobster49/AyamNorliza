@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OrderPermissionError } from "@/features/orders/server/guards";
-import { requirePermission, type PermissionContext } from "@/lib/auth/require-permission";
+import { requirePermission, resolvePermissionsForOrg, type PermissionContext } from "@/lib/auth/require-permission";
+import { grantKey } from "@/lib/auth/rbac";
 import type { ActionResult } from "@/features/orders/types";
 import { todayInTimeZone, shiftIsoDate } from "@/lib/time/org-date";
 import {
@@ -38,13 +39,33 @@ function permissionKey(message: string): string {
   return `${KEY}.forbidden`;
 }
 
-/** Trigger messages from 20260903000001_driver_roster.sql -> i18n keys. */
-function writeErrorKey(message: string): { code: string; messageKey: string } {
-  if (message.includes("driver_on_leave")) return { code: "driver_on_leave", messageKey: `${KEY}.driverOnLeave` };
-  if (message.includes("driver_double_booked")) return { code: "driver_double_booked", messageKey: `${KEY}.driverDoubleBooked` };
-  if (message.includes("driver_not_member")) return { code: "driver_not_member", messageKey: `${KEY}.driverNotMember` };
-  if (message.includes("truck_org_mismatch")) return { code: "validation", messageKey: `${KEY}.validation` };
-  return { code: "internal", messageKey: `${KEY}.internal` };
+/**
+ * Trigger messages from 20260903000001_driver_roster.sql -> curated copy +
+ * i18n keys. Never forwards the raw Postgres error text to the client —
+ * mirrors `mapRpcError` in dispatch-actions.ts.
+ */
+function writeErrorKey(message: string): { code: string; message: string; messageKey: string } {
+  if (message.includes("driver_on_leave")) {
+    return { code: "driver_on_leave", message: "That driver is on approved leave that day.", messageKey: `${KEY}.driverOnLeave` };
+  }
+  if (message.includes("driver_double_booked")) {
+    return {
+      code: "driver_double_booked",
+      message: "That driver is already covering another truck that day.",
+      messageKey: `${KEY}.driverDoubleBooked`,
+    };
+  }
+  if (message.includes("driver_not_member")) {
+    return {
+      code: "driver_not_member",
+      message: "That person is not an active driver in this organization.",
+      messageKey: `${KEY}.driverNotMember`,
+    };
+  }
+  if (message.includes("truck_org_mismatch")) {
+    return { code: "validation", message: "That roster change is not valid.", messageKey: `${KEY}.validation` };
+  }
+  return { code: "internal", message: "Could not save the roster change.", messageKey: `${KEY}.internal` };
 }
 
 async function guard(
@@ -67,21 +88,19 @@ export async function getDriverRoster(
   fromDate: string,
   days: number,
 ): Promise<ActionResult<RosterData>> {
-  const g = await guard(organizationSlug, "view");
-  if (!g.ok) return g.result;
+  // Single lookup for both the view gate and the edit-grant check `canEdit`
+  // derives from, rather than two separate `requirePermission` round trips.
+  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
+  if (!context || !grants.has(grantKey("driver_roster", "view"))) {
+    const message = new OrderPermissionError().message;
+    return err("forbidden", message, permissionKey(message));
+  }
   if (!ISO_DATE.test(fromDate) || !Number.isInteger(days) || days < 1 || days > MAX_DAYS) {
     return err("validation", "Invalid roster window.", `${KEY}.validation`);
   }
-  const { orgId, timeZone } = g.ctx;
+  const { orgId, timeZone } = context;
   const toDate = shiftIsoDate(fromDate, days - 1);
-
-  let canEdit = true;
-  try {
-    await requirePermission(organizationSlug, "driver_roster", "edit");
-  } catch (e) {
-    if (!(e instanceof OrderPermissionError)) throw e;
-    canEdit = false;
-  }
+  const canEdit = grants.has(grantKey("driver_roster", "edit"));
 
   const supabase = await createSupabaseServerClient();
   const [trucks, slots, blocks, holidays, leave, types, covers, runs, members] = await Promise.all([
@@ -162,7 +181,7 @@ export async function setRegularDriver(
     .eq("organization_id", g.ctx.orgId);
   if (error) {
     const mapped = writeErrorKey(error.message);
-    return err(mapped.code, error.message, mapped.messageKey);
+    return err(mapped.code, mapped.message, mapped.messageKey);
   }
   revalidatePath(`/${organizationSlug}/roster`);
   return ok(undefined);
@@ -194,7 +213,7 @@ export async function assignCover(
   );
   if (error) {
     const mapped = writeErrorKey(error.message);
-    return err(mapped.code, error.message, mapped.messageKey);
+    return err(mapped.code, mapped.message, mapped.messageKey);
   }
   revalidatePath(`/${organizationSlug}/roster`);
   revalidatePath(`/${organizationSlug}/runs`);
@@ -218,7 +237,10 @@ export async function clearCover(
     .eq("organization_id", g.ctx.orgId)
     .eq("truck_id", truckId)
     .eq("cover_date", date);
-  if (error) return err("internal", error.message, `${KEY}.internal`);
+  if (error) {
+    const mapped = writeErrorKey(error.message);
+    return err(mapped.code, mapped.message, mapped.messageKey);
+  }
   revalidatePath(`/${organizationSlug}/roster`);
   revalidatePath(`/${organizationSlug}/runs`);
   return ok(undefined);
