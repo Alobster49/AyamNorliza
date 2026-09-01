@@ -2844,6 +2844,68 @@
       "uploadFailed": "Muat naik lampiran gagal"
     }
   },
+  "roster": {
+    "title": "Liputan lori",
+    "window": { "week": "Minggu", "twoWeeks": "2 minggu", "fourWeeks": "4 minggu", "today": "Hari ini", "previous": "Sebelum", "next": "Selepas" },
+    "alert": { "gaps": "{count} kekosongan", "risks": "{count} berisiko" },
+    "toolbar": { "setRegular": "Tetapkan pemandu tetap", "allTrucks": "Semua lori" },
+    "legend": { "regular": "Pemandu tetap", "leave": "Bercuti", "pending": "Cuti belum lulus", "cover": "Mengganti", "gap": "Tiada pemandu", "off": "Rehat / cuti umum" },
+    "grid": {
+      "truckHeader": "Lori · pemandu tetap",
+      "noRegular": "Tiada pemandu tetap",
+      "poolHeader": "Pemandu ganti · tidak terikat pada lori",
+      "holiday": "Cuti umum",
+      "gap": "Tiada pemandu",
+      "pending": "Belum",
+      "pendingSub": "lulus",
+      "cover": "ganti",
+      "leave": "Cuti",
+      "free": "Lapang",
+      "cellTitle": "{truck} · {date} · {state}",
+      "empty": "Belum ada lori aktif.",
+      "emptyHint": "Tambah lori dan slot penghantaran di Tetapan penghantaran, kemudian tetapkan pemandu tetap di sini.",
+      "noDrivers": "Belum ada pemandu.",
+      "noDriversHint": "Jemput ahli dengan peranan Pemandu dari halaman Pengguna."
+    },
+    "rail": {
+      "next": "{days} hari akan datang",
+      "headline": "{count, plural, =0 {semua lori ada pemandu} other {# lori perlukan pemandu}}",
+      "gaps": "Kekosongan",
+      "risks": "Berisiko · cuti belum diluluskan",
+      "free": "Lapang:",
+      "noneFree": "Tiada sesiapa lapang hari itu",
+      "assign": "Tetapkan {name}",
+      "planBackup": "Rancang pengganti",
+      "reasonLeave": "{name} · {type} ({range})",
+      "reasonNoRegular": "Lori ini tiada pemandu tetap",
+      "footnote": "Pengganti yang ditetapkan di sini menjadi pemandu larian apabila Dispatch merancang hari itu.",
+      "seeAll": "Lihat semua"
+    },
+    "assign": {
+      "title": "Tetapkan pengganti",
+      "subtitle": "{truck} · {date}",
+      "contextLeave": "{name} sedang {type}. Siapa ambil larian {truck}?",
+      "contextNoRegular": "{truck} tiada pemandu tetap. Siapa ambil larian {truck}?",
+      "tierFree": "Lapang · pemandu ganti",
+      "tierFreeRegular": "Lapang · biasanya {truck}",
+      "tierTruckOff": "Lori sendiri {truck} tidak beroperasi hari itu",
+      "tierBusy": "Memandu {truck} hari itu · lori itu akan kosong",
+      "confirm": "Tetapkan {name} ke {truck}",
+      "clear": "Buang pengganti",
+      "noCandidates": "Tiada pemandu tersedia hari itu.",
+      "assigned": "{name} kini mengganti {truck} pada {date}.",
+      "cleared": "Pengganti dibuang untuk {truck} pada {date}."
+    },
+    "regular": {
+      "title": "Pemandu tetap",
+      "subtitle": "Siapa biasanya memandu setiap lori. Biarkan kosong untuk lori yang dipandu pemandu ganti.",
+      "none": "— tiada —",
+      "save": "Simpan",
+      "saved": "Pemandu tetap dikemas kini."
+    },
+    "mobile": { "gaps": "Kekosongan", "trucks": "Lori", "drivers": "Pemandu", "assignCover": "Tetapkan pengganti", "range": "{days} hari", "needsDriver": "lori perlukan pemandu · {days} hari akan datang", "noGaps": "Semua lori ada pemandu.", "badgeGap": "tiada pemandu", "badgeRisk": "berisiko", "usually": "Tetap · {truck}", "pool": "Pemandu ganti" },
+    "toasts": { "couldNotSave": "Perubahan jadual tidak dapat disimpan." }
+  },
   "profile": {
     "edit": {
       "title": "Sunting profil",
