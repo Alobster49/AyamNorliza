@@ -27,7 +27,7 @@ import { DriverSignOutButton } from "@/features/orders/components/driver-sign-ou
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CalendarDays, MessageCircle, Navigation, Phone } from "lucide-react";
+import { CalendarDays, Check, MessageCircle, Navigation, Phone } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 type Sheet = "none" | "deliver" | "fail";
@@ -51,6 +51,21 @@ function Bar({ pct }: { pct: number }) {
         style={{ width: `${Math.min(Math.max(pct, 0), 100)}%` }}
       />
     </div>
+  );
+}
+
+/** One tick in the finished screen's "before you close" list. Read-only: the
+ * run's data decides what is done, the driver does not tick anything. */
+function ChecklistMark({ done }: { done: boolean }) {
+  return (
+    <span
+      className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${
+        done ? "bg-emerald-500 text-background" : "border-2 border-muted-foreground/50"
+      }`}
+      aria-hidden
+    >
+      {done && <Check className="size-4" strokeWidth={3} />}
+    </span>
   );
 }
 
@@ -381,28 +396,89 @@ export function DriverDeck({
       </header>
 
       {!stop ? (
-        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col items-center gap-3 overflow-y-auto px-4 py-6 text-center sm:py-10">
-          <p className="text-lg font-semibold">{t("finished.title")}</p>
-          <p className="text-sm text-muted-foreground">
-            {t("finished.delivered", { count: deck.delivered })}
-            {deck.failed > 0 ? `, ${t("finished.couldNotDeliver", { count: deck.failed })}` : ""}.{" "}
-            {t("finished.wrapUp")}
-          </p>
-          <p className="text-xs text-muted-foreground">{t("finished.invoiceHint")}</p>
-          {deck.runStatus === "departed" && (
-            <div className="flex w-full flex-col items-center gap-1.5">
-              <Button
-                size="lg"
-                className="h-12 w-full max-w-sm text-base"
-                disabled={busy}
-                onClick={() => setConfirmClose(true)}
-              >
-                {t("closeRun.button")}
-              </Button>
-              <p className="text-xs text-muted-foreground">{t("finished.closeHint")}</p>
+        <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-3.5 overflow-y-auto px-4 py-4 sm:py-8">
+          {/* Outcome */}
+          <section className="flex items-center gap-3.5 rounded-2xl border bg-card p-4">
+            <span
+              className="flex size-12 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-500"
+              aria-hidden
+            >
+              <Check className="size-6" strokeWidth={2.5} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-lg font-semibold leading-6">{t("finished.title")}</p>
+              <p className="text-[13px] text-muted-foreground">
+                {t("finished.delivered", { count: deck.delivered })}
+                {deck.failed > 0 ? ` · ${t("finished.couldNotDeliver", { count: deck.failed })}` : ""}
+              </p>
             </div>
+          </section>
+
+          {/* Earned. The office settles payment; the driver never carries cash. */}
+          <section className="flex items-baseline justify-between gap-3 rounded-2xl border bg-card px-4 py-3.5">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">{t("finished.earnedLabel")}</p>
+              <p className="text-xs text-muted-foreground">{t("finished.earnedHint", { count: deck.delivered })}</p>
+            </div>
+            <p
+              className="shrink-0 font-display text-2xl tabular-nums tracking-tight"
+              style={{ fontFamily: "var(--font-display)" }}
+            >
+              {formatPrice(deck.earned)}
+            </p>
+          </section>
+
+          {deck.runStatus === "departed" && (
+            <>
+              <section className="flex flex-col gap-1.5">
+                <h2 className="px-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  {t("finished.beforeClose")}
+                </h2>
+                <div className="divide-y overflow-hidden rounded-2xl border bg-card">
+                  <div className="flex min-h-16 items-center gap-3.5 px-4 py-3.5">
+                    <ChecklistMark done={deck.onTruck.length === 0} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-medium leading-5">
+                        {deck.onTruck.length > 0 ? t("finished.onTruckLabel") : t("finished.onTruckEmpty")}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {deck.onTruck.length > 0
+                          ? deck.onTruck.map((item) => `${item.customerName} ${formatWeight(item.weightKg)}`).join(" · ")
+                          : t("finished.onTruckEmptyHint")}
+                      </p>
+                    </div>
+                    {deck.onTruck.length > 0 && (
+                      <p className="shrink-0 text-[13px] font-semibold text-destructive">
+                        {t("finished.onTruckCount", { count: deck.onTruck.length })}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex min-h-16 items-center gap-3.5 px-4 py-3.5">
+                    <ChecklistMark done />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-medium leading-5">{t("finished.invoicesLabel")}</p>
+                      <p className="text-xs text-muted-foreground">{t("finished.invoicesHint")}</p>
+                    </div>
+                    <p className="shrink-0 text-[13px] font-semibold tabular-nums text-emerald-500">{deck.delivered}</p>
+                  </div>
+                </div>
+              </section>
+
+              <div className="flex flex-col items-center gap-2">
+                <Button size="lg" className="h-12 w-full text-base" disabled={busy} onClick={() => setConfirmClose(true)}>
+                  {t("closeRun.button")}
+                </Button>
+                <p className="text-center text-xs text-muted-foreground">
+                  {deck.failed > 0 ? t("finished.closeReplan", { count: deck.failed }) : t("finished.closeHint")}
+                </p>
+              </div>
+            </>
           )}
-          <section className="w-full overflow-hidden rounded-xl border bg-card text-left">
+
+          <section className="overflow-hidden rounded-2xl border bg-card">
+            <p className="border-b px-4 py-3 text-sm font-semibold">
+              {t("wholeRun.summary", { delivered: deck.delivered, total: deck.total })}
+            </p>
             <StopList stops={deck.stops} organizationSlug={organizationSlug} t={t} />
           </section>
         </div>

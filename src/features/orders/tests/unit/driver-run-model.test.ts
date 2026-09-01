@@ -274,6 +274,24 @@ describe("buildDriverDeck", () => {
     expect(deck.cashCollected).toBeCloseTo(750);
   });
 
+  it("sums what the delivered stops earned, ignoring failed and cancelled ones", () => {
+    const a = makeOrder({ run_sequence: 1, status: "delivered", total_amount: 186 });
+    const b = makeOrder({ run_sequence: 2, status: "delivered", total_amount: 92.4 });
+    const c = makeOrder({ run_sequence: 3, total_amount: 500, attempts: [attempt()] });
+    const d = makeOrder({ run_sequence: 4, status: "cancelled", total_amount: 70 });
+    const deck = buildDriverDeck(makeRun({}, [a, b, c, d]));
+    expect(deck.earned).toBeCloseTo(278.4);
+  });
+
+  it("lists the failed stops as still on the truck, in route order", () => {
+    const a = makeOrder({ run_sequence: 1, status: "delivered" });
+    const b = makeOrder({ run_sequence: 2, attempts: [attempt({ next_action: "return_to_yard" })] });
+    const c = makeOrder({ run_sequence: 3, attempts: [attempt({ next_action: "move_tomorrow" })] });
+    const d = makeOrder({ run_sequence: 4, status: "cancelled" });
+    const deck = buildDriverDeck(makeRun({}, [c, d, a, b]));
+    expect(deck.onTruck.map((stop) => stop.orderId)).toEqual([b.id, c.id]);
+  });
+
   it("hands back an empty deck for a run with no stops rather than throwing", () => {
     const deck = buildDriverDeck(makeRun({}, []));
     expect(deck.current).toBeNull();

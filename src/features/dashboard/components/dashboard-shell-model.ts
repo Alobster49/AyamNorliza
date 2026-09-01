@@ -29,18 +29,45 @@ type DashboardPageContextInput = {
 
 type RouteItemDef = {
   titleKey: string;
+  /** Path under `/{organizationSlug}/`. Ignored when `href` is set. */
   segment: string;
+  /** Full path for pages that live outside the dashboard shell (the driver deck). */
+  href?: (organizationSlug: string) => string;
   /** Resource key checked against the caller's grants (see `@/lib/auth/rbac`). */
   resource: string;
   /** Defaults to "view" — pass "use" for capability-style items (data console, access reviews, audit log). */
   action?: PermissionAction;
+  /**
+   * Hide the item from anyone who ALSO holds this grant. The driver deck is
+   * only a destination for people whose job it is: the office (anyone who can
+   * see delivery runs) opens a driver's deck from the runs page with ?run=,
+   * and a bare /drive would just tell them "no run for you today".
+   */
+  hiddenIfGranted?: string;
 };
 
 // Canonical group/item order. Each item's visibility is driven entirely by
 // whether the caller's grant set contains `resource:action` — no more
 // role-branch constants (STAFF_ONLY_ROLES/ADMIN_ROLES/SALES_ROLES/
 // APPROVER_ROLES). A group with zero visible items is dropped.
+//
+// "Driving" comes first so a driver who wanders into the shell (My Leave is
+// the only reason) always has the way back to their deck at the top, and so
+// the landing logic's "first visible item" is the deck for them.
 const routeGroups = [
+  {
+    title: "Driving",
+    sectionKey: "sections.driving",
+    items: [
+      {
+        titleKey: "pages.driverDeck",
+        segment: "drive",
+        href: (slug: string) => `/drive/${slug}`,
+        resource: "driver_deck",
+        hiddenIfGranted: grantKey("delivery_runs", "view"),
+      },
+    ],
+  },
   {
     title: "Sales",
     sectionKey: "sections.sales",
@@ -116,7 +143,7 @@ function buildGroups(
   isVisible: (def: RouteItemDef) => boolean,
 ): DashboardRouteGroup[] {
   const item = (def: RouteItemDef): DashboardRoute => {
-    const href = `/${organizationSlug}/${def.segment}`;
+    const href = def.href ? def.href(organizationSlug) : `/${organizationSlug}/${def.segment}`;
     return { titleKey: def.titleKey, href, isActive: isRouteActive(pathname, href) };
   };
 
@@ -143,8 +170,12 @@ export function getDashboardSidebarGroups({
   pathname,
   grants,
 }: DashboardSidebarInput): DashboardRouteGroup[] {
-  return buildGroups(organizationSlug, pathname, (def) =>
-    grants.has(grantKey(def.resource, def.action ?? "view")),
+  return buildGroups(
+    organizationSlug,
+    pathname,
+    (def) =>
+      grants.has(grantKey(def.resource, def.action ?? "view")) &&
+      !(def.hiddenIfGranted && grants.has(def.hiddenIfGranted)),
   );
 }
 

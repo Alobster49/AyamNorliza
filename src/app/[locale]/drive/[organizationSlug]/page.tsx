@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
-import { getDriverRun } from "@/features/orders/server/driver-actions";
+import { getDriverClosedRunToday, getDriverRun } from "@/features/orders/server/driver-actions";
 import { DriverDeck } from "@/features/orders/components/driver-deck";
+import { DriverDayClosed } from "@/features/orders/components/driver-day-closed";
 import { DriverSignOutButton } from "@/features/orders/components/driver-sign-out";
 
 export default async function DrivePage({
@@ -33,6 +34,15 @@ export default async function DrivePage({
   }
 
   if (!result.data.run) {
+    // A driver with no open run may have just closed one: show them the day,
+    // not "no run for you". The office shadowing with ?run= gets no such
+    // fallback -- a missing run there is a missing run.
+    if (!runId) {
+      const closed = await getDriverClosedRunToday(organizationSlug);
+      if (closed.ok && closed.data) {
+        return <DriverDayClosed organizationSlug={organizationSlug} closed={closed.data} />;
+      }
+    }
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center">
         <h1 className="text-lg font-semibold">{t("noRunTitle")}</h1>

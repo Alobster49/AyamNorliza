@@ -618,7 +618,8 @@ declare const messages: {
       "warehouse": "Warehouse",
       "system": "System",
       "account": "Account",
-      "hr": "HR"
+      "hr": "HR",
+      "driving": "Driving"
     },
     "pages": {
       "dashboard": "Dashboard",
@@ -639,7 +640,8 @@ declare const messages: {
       "accessReviews": "Access reviews",
       "auditLog": "Audit log",
       "dataConsole": "Data console",
-      "accountSecurity": "My security"
+      "accountSecurity": "My security",
+      "driverDeck": "Driver deck"
     },
     "fallbackUserName": "Team member",
     "sidebar": {
@@ -1346,6 +1348,20 @@ declare const messages: {
     "cantOpenRunTitle": "Can't open the run",
     "noRunTitle": "No run for you today",
     "noRunDescription": "The office has not put you on a truck yet. This page will show the run as soon as they do.",
+    "dayClosed": {
+      "title": "Run closed.",
+      "greeting": "Take a break, {name}.",
+      "greetingAnonymous": "Take a break.",
+      "closedAt": "Closed at {time}. The office has your run now.",
+      "todayLabel": "Today · {truck}",
+      "delivered": "{count, plural, one {# delivered} other {# delivered}}",
+      "earnedLabel": "Earned today",
+      "notDeliveredLabel": "Reported as not delivered",
+      "notDeliveredCount": "{count, plural, one {# stop} other {# stops}}",
+      "tomorrowLabel": "Tomorrow",
+      "tomorrowTitle": "Nothing assigned yet",
+      "tomorrowHint": "This page shows your truck as soon as the office plans it."
+    },
     "invoice": {
       "cantOpenTitle": "Can't open this invoice",
       "notDeliveredTitle": "Not delivered yet",
@@ -1846,8 +1862,16 @@ declare const messages: {
         "title": "Every stop is done.",
         "delivered": "{count, plural, one {# delivered} other {# delivered}}",
         "couldNotDeliver": "{count, plural, one {# could not be delivered} other {# could not be delivered}}",
-        "wrapUp": "Head back to the yard.",
-        "invoiceHint": "Open any delivered stop below for its invoice.",
+        "earnedLabel": "Earned today",
+        "earnedHint": "{count, plural, one {# delivered stop} other {# delivered stops}} · the office handles payment",
+        "beforeClose": "Before you close",
+        "onTruckLabel": "Still on the truck",
+        "onTruckCount": "{count, plural, one {# order} other {# orders}}",
+        "onTruckEmpty": "Nothing left on the truck",
+        "onTruckEmptyHint": "Every stop was delivered or written off.",
+        "invoicesLabel": "Invoices ready",
+        "invoicesHint": "One per delivered stop. Open any of them below.",
+        "closeReplan": "{count, plural, one {The # undelivered stop goes back to the office to re-plan.} other {The # undelivered stops go back to the office to re-plan.}}",
         "closeHint": "Nothing left on the truck? Close the run and the office takes it from here."
       },
       "closeRun": {

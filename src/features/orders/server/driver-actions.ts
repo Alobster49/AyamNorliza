@@ -6,6 +6,7 @@ import { OrderPermissionError } from "./guards";
 import { requirePermission } from "@/lib/auth/require-permission";
 import type { PermissionAction } from "@/lib/auth/rbac";
 import { mapRpcError } from "../lib/rpc-errors";
+import { todayInTimeZone } from "@/lib/time/org-date";
 import type {
   ActionResult,
   DeliveryFailureReason,
@@ -227,6 +228,74 @@ function finishRunMessageKey(rawMessage: string): string {
     default:
       return "errors.drive.run.internal";
   }
+}
+
+export type DriverClosedRunPayload = {
+  truckLabel: string | null;
+  /** When the run went to completed -- `updated_at`, bumped by the status change. */
+  closedAt: string;
+  timeZone: string;
+  driverName: string | null;
+  delivered: number;
+  /** Sum of the delivered orders' totals. The office settles payment; this is only shown. */
+  earned: number;
+  /** Stops the driver reported as failed and never delivered. */
+  notDelivered: number;
+};
+
+/**
+ * The run the caller closed today, for the screen after "Close run".
+ * `getDriverRun` deliberately skips completed runs (the deck is for open
+ * ones), so without this a driver who just finished would land on "no run
+ * for you today". Undelivered stops were released from the run when it
+ * closed (`driver_finish_run` nulls their run_id), but their attempt rows
+ * keep the run_id -- that is how they are counted here.
+ */
+export async function getDriverClosedRunToday(
+  organizationSlug: string,
+): Promise<ActionResult<DriverClosedRunPayload | null>> {
+  const ctx = await guard(organizationSlug);
+  if (!ctx.ok) return err(ctx.code, ctx.message, ctx.messageKey);
+
+  const supabase = await createSupabaseServerClient();
+  const [{ data: org }, { data: profile }] = await Promise.all([
+    supabase.from("organizations").select("default_time_zone").eq("id", ctx.orgId).single(),
+    supabase.from("profiles").select("display_name").eq("user_id", ctx.userId).maybeSingle(),
+  ]);
+  const timeZone = org?.default_time_zone ?? "UTC";
+
+  const { data: runs, error } = await supabase
+    .from("delivery_runs")
+    .select("*, truck:trucks(*)")
+    .eq("organization_id", ctx.orgId)
+    .eq("driver_id", ctx.userId)
+    .eq("status", "completed")
+    .eq("run_date", todayInTimeZone(timeZone))
+    .order("updated_at", { ascending: false })
+    .limit(1);
+  if (error) return err("internal", "Failed to load the run", "errors.drive.run.loadFailed");
+
+  const run = (runs ?? [])[0] as (DeliveryRun & { truck?: Truck }) | undefined;
+  if (!run) return ok(null);
+
+  const [{ data: orders }, { data: attempts }] = await Promise.all([
+    supabase.from("orders").select("id, status, total_amount").eq("run_id", run.id),
+    supabase.from("delivery_attempts").select("order_id").eq("run_id", run.id),
+  ]);
+  const deliveredOrders = (orders ?? []).filter((o) => o.status === "delivered" || o.status === "closed");
+  const deliveredIds = new Set(deliveredOrders.map((o) => o.id));
+  const notDelivered = new Set((attempts ?? []).map((a) => a.order_id).filter((id) => !deliveredIds.has(id)))
+    .size;
+
+  return ok({
+    truckLabel: run.truck?.code ? `${run.truck.name} (${run.truck.code})` : (run.truck?.name ?? null),
+    closedAt: run.updated_at,
+    timeZone,
+    driverName: profile?.display_name?.trim() || null,
+    delivered: deliveredIds.size,
+    earned: Math.round(deliveredOrders.reduce((sum, o) => sum + (o.total_amount ?? 0), 0) * 100) / 100,
+    notDelivered,
+  });
 }
 
 /**

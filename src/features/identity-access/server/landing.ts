@@ -30,11 +30,14 @@ export const NO_ORGANIZATION_PATH = "/signup";
 function pathForGrants(grants: ReadonlySet<string>, slug: string): string {
   const groups = getDashboardSidebarGroups({ organizationSlug: slug, pathname: "", grants });
 
-  // Driver special-case: the caller's only nav-visible access is the driver
-  // deck (a page outside the dashboard/seller nav model entirely), so none
-  // of the groups above will contain it. Everything else (My Leave included)
-  // stays in `groups`, so exclude the HR group before checking for that.
-  const nonHrGroups = groups.filter((g) => g.sectionKey !== "sections.hr");
+  // Driver special-case: kept even though the sidebar now carries a
+  // "Driving" group (first, so `firstItem` below would already be the deck)
+  // -- it also covers a custom role holding driver_deck:view on its own.
+  // Everything else (My Leave included) stays in `groups`, so exclude the HR
+  // group before checking for that.
+  const nonHrGroups = groups.filter(
+    (g) => g.sectionKey !== "sections.hr" && g.sectionKey !== "sections.driving",
+  );
   if (grants.has(grantKey("driver_deck", "view")) && nonHrGroups.length === 0) {
     return `/drive/${slug}`;
   }

@@ -11,7 +11,14 @@ import { Button } from "@/components/ui/button";
  * there is no sidebar to hang the account menu off, so the button lives in the
  * run header (and on the "no run" screens, where a driver who signed in as the
  * wrong account would otherwise be stuck). */
-export function DriverSignOutButton({ className }: { className?: string }) {
+export function DriverSignOutButton({
+  className,
+  variant = "outline",
+}: {
+  className?: string;
+  /** The day-closed screen makes signing out the primary action; everywhere else it is a quiet outline. */
+  variant?: "outline" | "default";
+}) {
   const t = useTranslations("common");
   const router = useRouter();
   const [busy, startTransition] = useTransition();
@@ -19,7 +26,7 @@ export function DriverSignOutButton({ className }: { className?: string }) {
   return (
     <Button
       type="button"
-      variant="outline"
+      variant={variant}
       size="sm"
       className={`h-9 shrink-0 gap-1.5 ${className ?? ""}`}
       disabled={busy}
@@ -31,7 +38,8 @@ export function DriverSignOutButton({ className }: { className?: string }) {
       }
     >
       <LogOut className="size-4" aria-hidden />
-      <span className="sr-only sm:not-sr-only">{t("signOut")}</span>
+      {/* The quiet header button is icon-only on a phone; a primary one says what it does. */}
+      <span className={variant === "default" ? "" : "sr-only sm:not-sr-only"}>{t("signOut")}</span>
     </Button>
   );
 }

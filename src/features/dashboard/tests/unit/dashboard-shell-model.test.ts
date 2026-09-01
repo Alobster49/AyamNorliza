@@ -254,22 +254,39 @@ describe("dashboard shell model", () => {
     ]);
   });
 
-  it("gives the driver grant set My Leave only", () => {
+  it("gives the driver grant set the way back to the deck, then My Leave", () => {
     const groups = getDashboardSidebarGroups({
       organizationSlug: "ayam-norliza-pilot",
       pathname: "/ayam-norliza-pilot/leave",
       grants: DEFAULT_ROLE_GRANTS.driver,
     });
 
-    expect(groups).toHaveLength(1);
-    expect(groups[0]?.title).toBe("HR");
+    expect(groups.map((g) => g.title)).toEqual(["Driving", "HR"]);
     expect(groups[0]?.items).toEqual([
+      {
+        titleKey: "pages.driverDeck",
+        href: "/drive/ayam-norliza-pilot",
+        isActive: false,
+      },
+    ]);
+    expect(groups[1]?.items).toEqual([
       {
         titleKey: "pages.myLeave",
         href: "/ayam-norliza-pilot/leave",
         isActive: true,
       },
     ]);
+  });
+
+  it("hides the driver deck from the office even though owner/admin hold the grant", () => {
+    for (const role of ["owner", "org_admin"] as const) {
+      const groups = getDashboardSidebarGroups({
+        organizationSlug: "ayam-norliza-pilot",
+        pathname: "/ayam-norliza-pilot/runs",
+        grants: DEFAULT_ROLE_GRANTS[role],
+      });
+      expect(groups.map((g) => g.title)).not.toContain("Driving");
+    }
   });
 
   it("shows the owner the HR group including Leave Management", () => {

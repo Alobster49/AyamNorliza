@@ -125,6 +125,10 @@ export type DriverDeck = {
   total: number;
   progressPct: number;
   cashCollected: number;
+  /** What the delivered stops came to. The office settles payment; the driver only sees the total. */
+  earned: number;
+  /** Failed stops, in route order -- their goods are still on the truck when the run ends. */
+  onTruck: DriverStop[];
   finished: boolean;
   runStatus: RunWithOrders["status"];
 };
@@ -193,6 +197,12 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
       ) * 100,
     ) / 100;
 
+  const earned =
+    Math.round(
+      stops.filter((stop) => stop.outcome === "delivered").reduce((sum, stop) => sum + stop.amount, 0) * 100,
+    ) / 100;
+  const onTruck = stops.filter((stop) => stop.outcome === "failed");
+
   return {
     runId: run.id,
     truckLabel: run.truck?.code
@@ -208,6 +218,8 @@ export function buildDriverDeck(run: RunWithOrders, now: Date = new Date()): Dri
     total: live.length,
     progressPct: live.length === 0 ? 0 : (delivered / live.length) * 100,
     cashCollected,
+    earned,
+    onTruck,
     finished: current === null,
     runStatus: run.status,
   };

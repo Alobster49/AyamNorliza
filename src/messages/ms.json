@@ -615,7 +615,8 @@
       "warehouse": "Gudang",
       "system": "Sistem",
       "account": "Akaun",
-      "hr": "HR"
+      "hr": "HR",
+      "driving": "Pemanduan"
     },
     "pages": {
       "dashboard": "Papan pemuka",
@@ -636,7 +637,8 @@
       "accessReviews": "Semakan akses",
       "auditLog": "Log audit",
       "dataConsole": "Konsol data",
-      "accountSecurity": "Keselamatan saya"
+      "accountSecurity": "Keselamatan saya",
+      "driverDeck": "Dek pemandu"
     },
     "fallbackUserName": "Ahli pasukan",
     "sidebar": {
@@ -1343,6 +1345,20 @@
     "cantOpenRunTitle": "Tidak dapat membuka trip",
     "noRunTitle": "Tiada trip untuk anda hari ini",
     "noRunDescription": "Pejabat belum menetapkan anda pada mana-mana lori. Halaman ini akan memaparkan trip sebaik sahaja ia ditetapkan.",
+    "dayClosed": {
+      "title": "Trip ditutup.",
+      "greeting": "Rehat dulu, {name}.",
+      "greetingAnonymous": "Rehat dulu.",
+      "closedAt": "Ditutup pada {time}. Pejabat sudah ambil alih trip anda.",
+      "todayLabel": "Hari ini · {truck}",
+      "delivered": "{count, plural, other {# dihantar}}",
+      "earnedLabel": "Pendapatan hari ini",
+      "notDeliveredLabel": "Dilaporkan tidak dihantar",
+      "notDeliveredCount": "{count, plural, other {# hentian}}",
+      "tomorrowLabel": "Esok",
+      "tomorrowTitle": "Belum ada tugasan",
+      "tomorrowHint": "Halaman ini akan memaparkan lori anda sebaik sahaja pejabat merancangnya."
+    },
     "invoice": {
       "cantOpenTitle": "Tidak dapat buka invois ini",
       "notDeliveredTitle": "Belum dihantar",
@@ -1843,8 +1859,16 @@
         "title": "Semua perhentian selesai.",
         "delivered": "{count, plural, other {# dihantar}}",
         "couldNotDeliver": "{count, plural, other {# tidak dapat dihantar}}",
-        "wrapUp": "Pulang ke garaj.",
-        "invoiceHint": "Buka mana-mana hantaran selesai di bawah untuk invoisnya.",
+        "earnedLabel": "Pendapatan hari ini",
+        "earnedHint": "{count, plural, other {# hantaran selesai}} · pejabat uruskan bayaran",
+        "beforeClose": "Sebelum tutup",
+        "onTruckLabel": "Masih dalam lori",
+        "onTruckCount": "{count, plural, other {# pesanan}}",
+        "onTruckEmpty": "Tiada apa-apa lagi dalam lori",
+        "onTruckEmptyHint": "Semua hentian sudah dihantar atau dibatalkan.",
+        "invoicesLabel": "Invois sedia",
+        "invoicesHint": "Satu untuk setiap hantaran selesai. Buka mana-mana di bawah.",
+        "closeReplan": "{count, plural, other {# hentian tidak dihantar dikembalikan kepada pejabat untuk dirancang semula.}}",
         "closeHint": "Tiada apa-apa lagi dalam lori? Tutup trip dan pejabat akan uruskan seterusnya."
       },
       "closeRun": {
