@@ -4,7 +4,7 @@
 
 begin;
 
-select plan(12);
+select plan(14);
 
 -- Fixtures (postgres bypasses RLS). 00a org; 001 owner, 002 seller, 003 hr,
 -- 004 driver A (regular on truck 008), 005 driver B (cover pool), 006 driver
@@ -113,6 +113,13 @@ select throws_ok(
   'a driver from another org cannot be a regular driver'
 );
 
+select throws_ok(
+  $$ insert into public.trucks (organization_id, name, code, regular_driver_id, created_by)
+     values ('f0000000-0000-0000-0000-00000000000a', 'Lori 3', 'TRK-RS3', 'f0000000-0000-0000-0000-000000000007', 'f0000000-0000-0000-0000-000000000001') $$,
+  'P0001', 'driver_not_member',
+  'inserting a truck with a non-driver regular driver is refused'
+);
+
 reset role;
 
 -- 2. Seller (driver_roster:edit) assigns a cover; triggers refuse leave and double booking.
@@ -124,6 +131,15 @@ select lives_ok(
      values ('f0000000-0000-0000-0000-00000000000a', 'f0000000-0000-0000-0000-000000000008', current_date + 3, 'f0000000-0000-0000-0000-000000000005', 'f0000000-0000-0000-0000-000000000002') $$,
   'seller assigns a free driver as cover'
 );
+
+select lives_ok(
+  $$ update public.truck_covers set truck_id = 'f0000000-0000-0000-0000-000000000009'
+     where truck_id = 'f0000000-0000-0000-0000-000000000008' and cover_date = current_date + 3 $$,
+  'moving an existing cover to another truck does not collide with itself'
+);
+-- move it back so the later double-booking assertion still holds
+update public.truck_covers set truck_id = 'f0000000-0000-0000-0000-000000000008'
+  where truck_id = 'f0000000-0000-0000-0000-000000000009' and cover_date = current_date + 3;
 
 select throws_ok(
   $$ insert into public.truck_covers (organization_id, truck_id, cover_date, driver_id, created_by)

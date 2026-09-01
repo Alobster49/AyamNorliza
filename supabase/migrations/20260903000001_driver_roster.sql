@@ -21,9 +21,10 @@ create table if not exists public.truck_covers (
   organization_id uuid not null references public.organizations(id) on delete cascade,
   truck_id uuid not null references public.trucks(id) on delete cascade,
   cover_date date not null,
+  -- A cover is meaningless once the covering driver's account is gone.
   driver_id uuid not null references auth.users(id) on delete cascade,
   note text null check (note is null or char_length(note) <= 200),
-  created_by uuid not null references auth.users(id) on delete cascade,
+  created_by uuid not null references auth.users(id) on delete restrict,
   created_at timestamptz not null default now(),
   unique (truck_id, cover_date)
 );
@@ -67,7 +68,7 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if new.regular_driver_id is distinct from old.regular_driver_id then
+  if tg_op = 'INSERT' or new.regular_driver_id is distinct from old.regular_driver_id then
     perform public.roster_assert_driver_member(new.organization_id, new.regular_driver_id);
   end if;
   return new;
@@ -76,7 +77,7 @@ $$;
 
 drop trigger if exists trucks_validate_regular_driver on public.trucks;
 create trigger trucks_validate_regular_driver
-  before update of regular_driver_id on public.trucks
+  before insert or update on public.trucks
   for each row execute function public.trucks_validate_regular_driver();
 
 create or replace function public.truck_covers_before_write()
@@ -111,6 +112,7 @@ begin
       and c.driver_id = new.driver_id
       and c.cover_date = new.cover_date
       and c.truck_id <> new.truck_id
+      and c.id <> new.id
   ) then
     raise exception using errcode = 'P0001', message = 'driver_double_booked';
   end if;
