@@ -49,6 +49,58 @@ export function monthKeys(today: Date): string[] {
   return keys;
 }
 
+/**
+ * Bootstrap read size for a month with no cursor.
+ *
+ * Starting at byte 0 is what kills the worker -- 50 MB and ~1.5M rows for a
+ * full month. ~4 MB is a little over two days of nationwide rows, enough to
+ * land current prices on the first run after deploy without pretending to
+ * backfill history.
+ */
+export const BOOTSTRAP_TAIL_BYTES = 4_000_000;
+
+export type MonthCursor = { bytes_read: number; file_size: number };
+
+/**
+ * What to fetch for a month, given its current size and our cursor.
+ *
+ * - `resume` starts at a known line boundary, so every byte read is a whole row.
+ * - `tail` starts mid-line by construction; the caller must discard bytes up to
+ *   the first newline.
+ * - `uptodate` means the file has not grown since the last read.
+ */
+export type RangePlan =
+  | { kind: "full" }
+  | { kind: "tail"; start: number }
+  | { kind: "resume"; start: number }
+  | { kind: "uptodate" };
+
+export function planRange(
+  fileSize: number,
+  cursor: MonthCursor | null,
+  tailBytes: number = BOOTSTRAP_TAIL_BYTES,
+): RangePlan {
+  // A file smaller than what we last saw was rewritten, not appended: the
+  // offset no longer means anything, so fall back to the no-cursor path.
+  const usable = cursor && cursor.file_size <= fileSize ? cursor : null;
+
+  if (usable) {
+    if (usable.bytes_read >= fileSize) return { kind: "uptodate" };
+    return { kind: "resume", start: usable.bytes_read };
+  }
+  if (fileSize <= tailBytes) return { kind: "full" };
+  return { kind: "tail", start: fileSize - tailBytes };
+}
+
+/** Total size out of a 206 response's `Content-Range: bytes 0-99/12345`. */
+export function parseContentRangeTotal(header: string | null): number | null {
+  if (!header) return null;
+  const slash = header.lastIndexOf("/");
+  if (slash < 0) return null;
+  const total = Number.parseInt(header.slice(slash + 1), 10);
+  return Number.isFinite(total) ? total : null;
+}
+
 /** Minimal quote-aware CSV split (premise addresses contain commas). */
 export function splitCsvLine(line: string): string[] {
   const out: string[] = [];
@@ -75,19 +127,24 @@ export function splitCsvLine(line: string): string[] {
 /** Parse one pricecatcher_YYYY-MM.csv line: date,premise_code,item_code,price */
 export function parsePriceRow(line: string): PriceRow | null {
   if (!line) return null;
-  const parts = splitCsvLine(line.trim());
+  // Hot path: runs over every line of a month file -- millions of rows, of
+  // which ~180k are ours. The price CSV is four unquoted columns, so the
+  // quote-aware splitter is pure cost here, and its char-by-char loop is what
+  // pushed the worker past its CPU budget (WORKER_RESOURCE_LIMIT / 546 on
+  // 2026-09-01). Premise addresses still need splitCsvLine; prices do not.
+  const parts = line.split(",");
   if (parts.length < 4) return null;
   const date = parts[0]!;
-  const premiseRaw = parts[1]!;
-  const itemRaw = parts[2]!;
-  const priceRaw = parts[3]!;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null; // header or junk
-  const premise_code = Math.trunc(Number.parseFloat(premiseRaw));
-  const item_code = Math.trunc(Number.parseFloat(itemRaw));
-  const price = Number.parseFloat(priceRaw);
-  if (!Number.isFinite(premise_code) || !Number.isFinite(item_code) || !Number.isFinite(price)) {
-    return null;
-  }
+  // Reject untracked items before parsing the rest: ~99% of rows exit here.
+  // This couples the parser to TRACKED_ITEM_CODES, which is the only set any
+  // caller passes to the aggregator; the aggregator keeps its own check so
+  // `aggregate()` stays honest about the set it is given.
+  const item_code = Math.trunc(Number.parseFloat(parts[2]!));
+  if (!TRACKED_ITEM_CODES.has(item_code)) return null;
+  const premise_code = Math.trunc(Number.parseFloat(parts[1]!));
+  const price = Number.parseFloat(parts[3]!);
+  if (!Number.isFinite(premise_code) || !Number.isFinite(price)) return null;
   return { date, premise_code, item_code, price };
 }
 

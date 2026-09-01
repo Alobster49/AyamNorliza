@@ -15,10 +15,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   createAggregator,
+  type MonthCursor,
   monthKeys,
+  parseContentRangeTotal,
   parsePremiseRow,
   parsePriceRow,
+  planRange,
   TRACKED_ITEM_CODES,
+  type Aggregator,
 } from "./logic.ts";
 import { cronGuard } from "../_shared/cron-guard.ts";
 
@@ -110,6 +114,165 @@ async function premiseStateMap(): Promise<Map<number, string>> {
   return map;
 }
 
+type MonthReport = {
+  month: string;
+  plan: "full" | "tail" | "resume" | "uptodate";
+  bytesStreamed: number;
+  rowsMatched: number;
+  fileSize: number;
+  nextBytesRead: number;
+};
+
+async function readCursors(months: string[]): Promise<Map<string, MonthCursor>> {
+  const { data, error } = await admin
+    .from("market_sync_cursor")
+    .select("month, bytes_read, file_size")
+    .in("month", months);
+  if (error) throw new Error(`market_sync_cursor read: ${error.message}`);
+  const out = new Map<string, MonthCursor>();
+  for (const r of data ?? []) {
+    out.set(r.month, { bytes_read: Number(r.bytes_read), file_size: Number(r.file_size) });
+  }
+  return out;
+}
+
+/**
+ * Read one month file from `cursor` forward and feed the aggregator.
+ *
+ * Returns null when the month could not be read at all -- a missing file for
+ * the current month on day 1 is normal, not an error.
+ */
+async function ingestMonth(
+  month: string,
+  cursor: MonthCursor | null,
+  aggregator: Aggregator,
+): Promise<MonthReport | null> {
+  const url = `${DATA_BASE}/pricecatcher_${month}.csv`;
+
+  // HEAD first: the plan depends on how big the file is now versus what we
+  // read last time, and asking for a range we have not sized could mean
+  // swallowing the whole 50 MB.
+  let head: Response;
+  try {
+    head = await fetch(url, { method: "HEAD" });
+  } catch (e) {
+    console.error(`pricecatcher_${month}.csv HEAD failed`, e);
+    return null;
+  }
+  if (!head.ok) {
+    console.error(`pricecatcher_${month}.csv HEAD HTTP ${head.status}`);
+    return null;
+  }
+  const headSize = Number.parseInt(head.headers.get("content-length") ?? "", 10);
+  if (!Number.isFinite(headSize)) {
+    console.error(`pricecatcher_${month}.csv HEAD gave no usable content-length`);
+    return null;
+  }
+
+  const plan = planRange(headSize, cursor);
+  if (plan.kind === "uptodate") {
+    return {
+      month,
+      plan: "uptodate",
+      bytesStreamed: 0,
+      rowsMatched: 0,
+      fileSize: headSize,
+      nextBytesRead: cursor?.bytes_read ?? 0,
+    };
+  }
+
+  const start = plan.kind === "full" ? 0 : plan.start;
+  let res: Response;
+  try {
+    res = await fetch(url, start > 0 ? { headers: { Range: `bytes=${start}-` } } : {});
+  } catch (e) {
+    console.error(`pricecatcher_${month}.csv fetch failed`, e);
+    return null;
+  }
+  if (!res.ok) {
+    console.error(`pricecatcher_${month}.csv HTTP ${res.status}`);
+    return null;
+  }
+  // A range we asked for but did not get means the body is the entire file.
+  // Reading it is the exact 50 MB that kills the worker, so bail instead.
+  if (start > 0 && res.status !== 206) {
+    await res.body?.cancel();
+    console.error(
+      `pricecatcher_${month}.csv ignored Range (HTTP ${res.status}); skipping rather than reading ${headSize} bytes`,
+    );
+    return null;
+  }
+
+  const fileSize = (res.status === 206 ? parseContentRangeTotal(res.headers.get("content-range")) : null) ?? headSize;
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  let bytesStreamed = 0;
+  let rowsMatched = 0;
+  let asciiOnly = true;
+
+  // Byte offset of the line about to be emitted. Only meaningful while the
+  // stream stays ASCII -- see the cursor choice at the end.
+  let lineStart = start;
+  // A tail start lands mid-line by construction; a cursor start does not.
+  let pendingPartialLine = plan.kind === "tail";
+  let newestDate = "";
+  let newestDateStart = start;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytesStreamed += value.byteLength;
+    const text = decoder.decode(value, { stream: true });
+    // One test per chunk, not per line. PriceCatcher price rows are dates and
+    // numbers, so this should never trip; if it does, the byte arithmetic
+    // below is off and we fall back to the exact end-of-read offset.
+    if (asciiOnly && /[^\x00-\x7F]/.test(text)) asciiOnly = false;
+    buf += text;
+
+    const parts = buf.split("\n");
+    buf = parts.pop() ?? "";
+    for (const line of parts) {
+      const lineBytes = line.length + 1; // ASCII: one byte per char, plus "\n"
+      if (pendingPartialLine) {
+        pendingPartialLine = false;
+        lineStart += lineBytes;
+        continue;
+      }
+      const parsed = parsePriceRow(line);
+      if (parsed) {
+        aggregator.add(parsed);
+        rowsMatched++;
+        // The file is date-ordered, so the last date change marks where the
+        // newest day begins.
+        if (parsed.date !== newestDate) {
+          newestDate = parsed.date;
+          newestDateStart = lineStart;
+        }
+      }
+      lineStart += lineBytes;
+    }
+  }
+  buf += decoder.decode();
+
+  // Whatever is left in `buf` is a partial line: not parsed, and not counted
+  // as read, so the next run picks it up whole.
+  const leftoverBytes = new TextEncoder().encode(buf).length;
+  const endOfRead = start + bytesStreamed - leftoverBytes;
+
+  // Hold the cursor at the newest date's first row so a day still being
+  // appended is re-read and re-aggregated next run, rather than left frozen
+  // with a half-counted premise_count. Costs one day of bytes; the upsert is
+  // idempotent. Falls back to the exact end when the byte arithmetic cannot
+  // be trusted or nothing matched.
+  const nextBytesRead = asciiOnly && rowsMatched > 0
+    ? Math.min(Math.max(newestDateStart, start), endOfRead)
+    : endOfRead;
+
+  return { month, plan: plan.kind, bytesStreamed, rowsMatched, fileSize, nextBytesRead };
+}
+
 Deno.serve(async (req) => {
   const denied = cronGuard(req);
   if (denied) return denied;
@@ -132,33 +295,19 @@ Deno.serve(async (req) => {
     const aggregator = createAggregator(premises, TRACKED_ITEM_CODES);
 
     const candidateMonths = monthKeys(new Date());
-    const months: string[] = [];
+    const cursors = await readCursors(candidateMonths);
+
+    const months: MonthReport[] = [];
     for (const month of candidateMonths) {
-      // Each month file is fetched independently: on days 1-3 the current
-      // month's file may not exist yet at 13:15 MYT, but the previous
-      // month (which holds the month's last day) must still be fetched.
-      // A missing file for one month must not abort the whole run.
-      let res: Response;
-      try {
-        res = await fetch(`${DATA_BASE}/pricecatcher_${month}.csv`);
-      } catch (e) {
-        console.error(`pricecatcher_${month}.csv fetch failed`, e);
-        continue;
-      }
-      if (!res.ok) {
-        console.error(`pricecatcher_${month}.csv HTTP ${res.status}`);
-        continue;
-      }
-      months.push(month);
-      for await (const line of lines(res)) {
-        const parsed = parsePriceRow(line);
-        // Accumulate as we stream: a month of nationwide rows never all sits
-        // in memory at once, only one number per surveyed price.
-        if (parsed) aggregator.add(parsed);
-      }
+      // Each month is ingested independently: on days 1-3 the current month's
+      // file may not exist yet at 13:15 MYT, but the previous month (which
+      // holds the month's last day) must still be read. One month failing
+      // must not abort the whole run.
+      const report = await ingestMonth(month, cursors.get(month) ?? null, aggregator);
+      if (report) months.push(report);
     }
     if (months.length === 0) {
-      throw new Error(`No month files fetched successfully (tried: ${candidateMonths.join(", ")})`);
+      throw new Error(`No month files read successfully (tried: ${candidateMonths.join(", ")})`);
     }
 
     const aggregates = aggregator.finish();
@@ -167,6 +316,24 @@ Deno.serve(async (req) => {
         .from("market_prices")
         .upsert(aggregates.slice(i, i + 500), { onConflict: "price_date,item_code,state" });
       if (error) throw new Error(`market_prices upsert: ${error.message}`);
+    }
+
+    // The cursor is saved only after the prices it accounts for are committed.
+    // Saving first would let a failed upsert skip a day permanently.
+    for (const report of months) {
+      if (report.plan === "uptodate") continue;
+      const { error } = await admin
+        .from("market_sync_cursor")
+        .upsert(
+          {
+            month: report.month,
+            bytes_read: report.nextBytesRead,
+            file_size: report.fileSize,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "month" },
+        );
+      if (error) throw new Error(`market_sync_cursor upsert (${report.month}): ${error.message}`);
     }
 
     return new Response(JSON.stringify({ upserted: aggregates.length, months }), {

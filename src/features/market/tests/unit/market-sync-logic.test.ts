@@ -4,7 +4,9 @@ import {
   createAggregator,
   monthKeys,
   parsePremiseRow,
+  parseContentRangeTotal,
   parsePriceRow,
+  planRange,
   splitCsvLine,
   TRACKED_ITEM_CODES,
   type PriceRow,
@@ -114,5 +116,50 @@ describe("createAggregator", () => {
     const agg = createAggregator(premiseState, TRACKED_ITEM_CODES);
     for (const r of rows) agg.add(r);
     expect(agg.finish()).toEqual(aggregate(rows, premiseState, TRACKED_ITEM_CODES));
+  });
+});
+
+describe("planRange", () => {
+  const TAIL = 1000;
+
+  it("reads a small file whole when there is no cursor", () => {
+    expect(planRange(500, null, TAIL)).toEqual({ kind: "full" });
+  });
+
+  it("starts a big file at the tail rather than byte 0", () => {
+    expect(planRange(50_000, null, TAIL)).toEqual({ kind: "tail", start: 49_000 });
+  });
+
+  it("resumes from the cursor", () => {
+    expect(planRange(50_000, { bytes_read: 40_000, file_size: 45_000 }, TAIL)).toEqual({
+      kind: "resume",
+      start: 40_000,
+    });
+  });
+
+  it("is up to date when the file has not grown past the cursor", () => {
+    expect(planRange(45_000, { bytes_read: 45_000, file_size: 45_000 }, TAIL)).toEqual({
+      kind: "uptodate",
+    });
+  });
+
+  it("drops a cursor whose file shrank -- rewritten, not appended", () => {
+    // 20 MB read against a file now 5 MB: the offset means nothing anymore.
+    expect(planRange(5_000, { bytes_read: 20_000, file_size: 20_000 }, TAIL)).toEqual({
+      kind: "tail",
+      start: 4_000,
+    });
+  });
+});
+
+describe("parseContentRangeTotal", () => {
+  it("reads the total off a range response", () => {
+    expect(parseContentRangeTotal("bytes 200-1023/50122871")).toBe(50122871);
+  });
+
+  it("returns null for missing or unparseable headers", () => {
+    expect(parseContentRangeTotal(null)).toBeNull();
+    expect(parseContentRangeTotal("bytes 200-1023/*")).toBeNull();
+    expect(parseContentRangeTotal("garbage")).toBeNull();
   });
 });
