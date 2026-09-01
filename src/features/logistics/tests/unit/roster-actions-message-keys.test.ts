@@ -5,6 +5,11 @@ vi.mock("@/lib/supabase/server", () => ({ createSupabaseServerClient: vi.fn() })
 vi.mock("@/lib/auth/require-permission", () => ({
   requirePermission: vi.fn(),
   resolvePermissionsForOrg: vi.fn(),
+  messageForDenial: (reason: "unauthenticated" | "org_not_found" | null) => {
+    if (reason === "unauthenticated") return "Not authenticated";
+    if (reason === "org_not_found") return "Organization not found";
+    return "Not permitted";
+  },
 }));
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -16,7 +21,7 @@ import { assignCover, clearCover, getDriverRoster, setRegularDriver } from "../.
 const CTX = { orgId: "org", userId: "u", roleId: "r", roleKey: "seller", timeZone: "Asia/Kuala_Lumpur" };
 
 function resolvedWithViewGrant() {
-  return { context: CTX, grants: new Set<PermissionKey>(["driver_roster:view", "driver_roster:edit"]) };
+  return { context: CTX, grants: new Set<PermissionKey>(["driver_roster:view", "driver_roster:edit"]), reason: null };
 }
 
 beforeEach(() => {
@@ -25,13 +30,27 @@ beforeEach(() => {
 
 describe("guards", () => {
   it("getDriverRoster maps a permission error to the roster forbidden key", async () => {
-    vi.mocked(resolvePermissionsForOrg).mockResolvedValue({ context: null, grants: new Set() });
+    vi.mocked(resolvePermissionsForOrg).mockResolvedValue({ context: null, grants: new Set(), reason: null });
     const result = await getDriverRoster("ayam-norliza-pilot", "2026-08-31", 14);
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.code).toBe("forbidden");
       expect(result.messageKey).toBe("errors.logistics.roster.forbidden");
     }
+    expect(createSupabaseServerClient).not.toHaveBeenCalled();
+  });
+
+  it("getDriverRoster maps an unauthenticated denial to the roster unauthenticated key", async () => {
+    vi.mocked(resolvePermissionsForOrg).mockResolvedValue({ context: null, grants: new Set(), reason: "unauthenticated" });
+    const result = await getDriverRoster("ayam-norliza-pilot", "2026-08-31", 14);
+    expect(!result.ok && result.messageKey).toBe("errors.logistics.roster.unauthenticated");
+    expect(createSupabaseServerClient).not.toHaveBeenCalled();
+  });
+
+  it("getDriverRoster maps an org-not-found denial to the roster orgNotFound key", async () => {
+    vi.mocked(resolvePermissionsForOrg).mockResolvedValue({ context: null, grants: new Set(), reason: "org_not_found" });
+    const result = await getDriverRoster("ayam-norliza-pilot", "2026-08-31", 14);
+    expect(!result.ok && result.messageKey).toBe("errors.logistics.roster.orgNotFound");
     expect(createSupabaseServerClient).not.toHaveBeenCalled();
   });
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OrderPermissionError } from "@/features/orders/server/guards";
-import { requirePermission, resolvePermissionsForOrg, type PermissionContext } from "@/lib/auth/require-permission";
+import { messageForDenial, requirePermission, resolvePermissionsForOrg, type PermissionContext } from "@/lib/auth/require-permission";
 import { grantKey } from "@/lib/auth/rbac";
 import type { ActionResult } from "@/features/orders/types";
 import { todayInTimeZone, shiftIsoDate } from "@/lib/time/org-date";
@@ -90,9 +90,9 @@ export async function getDriverRoster(
 ): Promise<ActionResult<RosterData>> {
   // Single lookup for both the view gate and the edit-grant check `canEdit`
   // derives from, rather than two separate `requirePermission` round trips.
-  const { context, grants } = await resolvePermissionsForOrg(organizationSlug);
+  const { context, grants, reason } = await resolvePermissionsForOrg(organizationSlug);
   if (!context || !grants.has(grantKey("driver_roster", "view"))) {
-    const message = new OrderPermissionError().message;
+    const message = messageForDenial(reason);
     return err("forbidden", message, permissionKey(message));
   }
   if (!ISO_DATE.test(fromDate) || !Number.isInteger(days) || days < 1 || days > MAX_DAYS) {

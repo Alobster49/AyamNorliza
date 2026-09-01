@@ -42,6 +42,7 @@ function mockGrants(grants: ReadonlySet<PermissionKey> | null) {
         }
       : null,
     grants: grants ?? new Set(),
+    reason: null,
   });
 }
 

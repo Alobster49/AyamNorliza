@@ -39,7 +39,7 @@ type MembershipRow = {
  * `organization_members` that pulls the role key and every
  * `role_permissions` row for that role in one round trip.
  */
-type LoadReason = "unauthenticated" | "org_not_found" | null;
+export type LoadReason = "unauthenticated" | "org_not_found" | null;
 
 async function loadContextAndGrants(organizationSlug: string): Promise<{
   context: PermissionContext | null;
@@ -117,29 +117,36 @@ async function loadContextAndGrants(organizationSlug: string): Promise<{
  * until the React 19 upgrade lands; re-add `cache()` then. Callers that
  * need to share one resolution across a request should pass the already
  * -resolved `PermissionContext`/grant set down rather than re-calling this.
+ *
+ * Also returns `reason` (additive — existing callers that destructure just
+ * `{ context, grants }` are unaffected) so a caller that builds its own
+ * denial message, rather than throwing through `requirePermission`, can
+ * still distinguish "not signed in" / "org not found" from a plain
+ * missing-grant denial. See `messageForDenial` below for the shared mapping.
  */
 export async function resolvePermissionsForOrg(
   organizationSlug: string,
-): Promise<{ context: PermissionContext | null; grants: ReadonlySet<PermissionKey> }> {
-  const { context, grants } = await loadContextAndGrants(organizationSlug);
-  return { context, grants };
+): Promise<{ context: PermissionContext | null; grants: ReadonlySet<PermissionKey>; reason: LoadReason }> {
+  return loadContextAndGrants(organizationSlug);
 }
 
 /**
- * Throws the specific `OrderPermissionError` message for the two denial
- * reasons `requireOrgRole` has always distinguished (see guards.ts:42-52) —
- * ~40 server-action sites map "Not authenticated" / "Organization not
- * found" to i18n keys via `permissionMessageKey`. Non-member and
- * missing-grant keep the generic default message, same as before.
+ * The specific message for the two denial reasons `requireOrgRole` has
+ * always distinguished (see guards.ts:42-52) — ~40 server-action sites map
+ * "Not authenticated" / "Organization not found" to i18n keys via
+ * `permissionMessageKey`. Non-member and missing-grant keep the generic
+ * default `OrderPermissionError` message, same as before. Shared by
+ * `throwForDenial` and by callers (like `resolvePermissionsForOrg` users)
+ * that build their own `ActionResult` instead of catching a throw.
  */
+export function messageForDenial(reason: LoadReason): string {
+  if (reason === "unauthenticated") return "Not authenticated";
+  if (reason === "org_not_found") return "Organization not found";
+  return new OrderPermissionError().message;
+}
+
 function throwForDenial(reason: LoadReason): never {
-  if (reason === "unauthenticated") {
-    throw new OrderPermissionError("Not authenticated");
-  }
-  if (reason === "org_not_found") {
-    throw new OrderPermissionError("Organization not found");
-  }
-  throw new OrderPermissionError();
+  throw new OrderPermissionError(messageForDenial(reason));
 }
 
 export async function requirePermission(
