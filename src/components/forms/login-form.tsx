@@ -76,8 +76,8 @@ const devLogins =
       ];
 
 /**
- * The 30-driver fleet from the real-world seed, folded into their own
- * collapsed section so the picker stays usable. driver1/driver2 also cover
+ * The 32-driver fleet from the real-world seed (30 truck drivers + 2 cover-pool drivers),
+ * folded into their own collapsed section so the picker stays usable. driver1/driver2 also cover
  * the demo seed (same emails); drivers 3-30 only log in after the
  * real-world seed has run.
  */
@@ -86,7 +86,7 @@ const devDriverLogins =
     ? []
     : REALWORLD_DRIVER_ACCOUNTS.map((driver) => ({
         label: driver.displayName,
-        role: driver.truckCode,
+        role: driver.truckCode ?? "Cover pool",
         email: driver.email,
         password: "password123",
       }));

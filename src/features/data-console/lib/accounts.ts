@@ -35,11 +35,13 @@ export const CONSOLE_DRIVER_EMAILS = CONSOLE_ACCOUNTS.filter(
 ).map((a) => a.email);
 
 /**
- * The real-world seed's driver fleet: one driver per truck, 30 of each.
- * driver<N>@gmail.com always drives truck JHR-<N> -- the data console's
- * real-world seed action ensures these accounts exist and assigns each to
- * its truck's live run, so any of them can be picked in the dev sign-in to
- * open a driver deck with stops on it.
+ * The real-world seed's driver fleet: one driver per truck for JHR-01..30
+ * (driver<N>@gmail.com always drives truck JHR-<N>) plus two cover-pool
+ * drivers, driver31 and driver32, who have no truck of their own and step in
+ * when a regular driver is on leave (see the roster). The data console's
+ * real-world seed action ensures all 32 accounts exist and hands the
+ * truck-code -> user-id map to the SQL seed, which sets each truck's regular
+ * driver and books the leave/cover scenarios.
  *
  * driver1/driver2 overlap the demo seed's CONSOLE_ACCOUNTS on purpose (same
  * emails, so the two seeds never strand a login); whichever seed ran last
@@ -54,13 +56,21 @@ const REALWORLD_DRIVER_NAMES = [
   "Syazwan Idris", "Rahim Daud", "Aiman Zaki", "Halim Osman",
   "Nabil Fikri", "Imran Shah", "Taufik Hidayat", "Zaidi Musa",
   "Akmal Hafiz", "Sulaiman Jaafar",
+  // Cover pool: no regular truck.
+  "Hakim Roslan", "Fauzi Mansor",
 ] as const;
+
+/** Trucks JHR-01..JHR-30 have a regular driver; the rest of the list is the cover pool. */
+const TRUCK_DRIVER_COUNT = 30;
 
 export const REALWORLD_DRIVER_ACCOUNTS = REALWORLD_DRIVER_NAMES.map(
   (name, i) => ({
     email: `driver${i + 1}@gmail.com`,
     displayName: name,
     role: "driver" as const,
-    truckCode: `JHR-${String(i + 1).padStart(2, "0")}`,
+    truckCode:
+      i < TRUCK_DRIVER_COUNT
+        ? `JHR-${String(i + 1).padStart(2, "0")}`
+        : null,
   }),
 );
