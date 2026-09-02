@@ -2457,7 +2457,7 @@ declare const messages: {
     "clearedRows": "Cleared {count, plural, one {# row} other {# rows}}. Users were kept.",
     "seededSummary": "Seeded {products, plural, one {# product} other {# products}}, {customers, plural, one {# customer} other {# customers}}, {orders, plural, one {# order} other {# orders}}, {runs, plural, one {# run} other {# runs}}.",
     "seededSetupSummary": "Seeded {products, plural, one {# product} other {# products}}, {customers, plural, one {# customer} other {# customers}}, {zones, plural, one {# zone} other {# zones}} and {trucks, plural, one {# truck} other {# trucks}}. No orders or runs.",
-    "seededRealworldSummary": "Seeded {trucks, plural, one {# truck} other {# trucks}} across {zones, plural, one {# zone} other {# zones}}, {customers, plural, one {# customer} other {# customers}}, {orders, plural, one {# order} other {# orders}} and {runs, plural, one {# run} other {# runs}}. Drivers 1-30 can now sign in.",
+    "seededRealworldSummary": "Seeded {trucks, plural, one {# truck} other {# trucks}} across {zones, plural, one {# zone} other {# zones}}, {customers, plural, one {# customer} other {# customers}}, {orders, plural, one {# order} other {# orders}} and {runs, plural, one {# run} other {# runs}} over the week. Drivers 1-32 can now sign in.",
     "clearCard": {
       "title": "Clear all data",
       "description": "Permanently deletes products, customers, orders, and runs for this organization. User accounts and logins are kept.",
@@ -2484,11 +2484,11 @@ declare const messages: {
     },
     "realworldCard": {
       "title": "Seed real-world load",
-      "description": "A full Johor operation: 10 zones with real postcode ranges, 30 trucks, 30 driver accounts, and about 190 orders with a live run per truck today.",
-      "detail": "Driver 1-30 accounts (driver1@gmail.com …) are created and each is assigned to their truck's run — pick any of them in the login page's dev sign-in.",
+      "description": "A full Johor operation across one week: 10 zones with real postcode ranges, 30 trucks, 32 driver accounts, and about 1,000 orders — 3 days already delivered, today live with 30 runs, and 3 days waiting for Dispatch.",
+      "detail": "Driver 1-30 accounts (driver1@gmail.com …) are each truck's regular driver; driver31 and driver32 are the cover pool. The seed books leave for five drivers: two on emergency leave (one covered, one not), one on MC today, one with a pending annual request, and one covered in last week's history — so the Driver roster, Leave Management and run history have something real to show.",
       "trigger": "Seed real-world load",
       "dialogTitle": "Seed the real-world load?",
-      "dialogDescription": "This clears existing data first, then creates the full Johor setup: 10 zones, 30 trucks with drivers, and about 190 orders across today's runs. Seeding takes a moment.",
+      "dialogDescription": "This clears existing data first, then creates the full Johor week: 10 zones, 30 trucks with drivers, about 1,000 orders across 7 days, and the leave and cover scenarios. Seeding takes a moment.",
       "confirm": "Seed real-world load"
     }
   },
