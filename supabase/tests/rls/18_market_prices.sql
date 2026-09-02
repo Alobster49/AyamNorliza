@@ -4,6 +4,16 @@
 -- suggested price from seeded market data, scoped to the caller's own org
 -- membership (not just product_variants RLS, which is not org-scoped for
 -- available variants).
+--
+-- The price fixture is deliberately keyed on a synthetic item code (999001)
+-- and a state name KPDN never emits ('MarketTest State'). market_prices is
+-- global -- no organization_id, primary key (price_date, item_code, state) --
+-- and `npm run db:market-sync` fills it with real PriceCatcher rows for
+-- item_code 1 / 'Selangor' on today's dates. Sharing that key made this file
+-- die on a duplicate-key error the moment a developer had synced prices, and
+-- would also have let real medians leak into the suggestion math below.
+-- get_market_suggestions filters on item_code + the org's configured states,
+-- so a synthetic pair keeps this test isolated from whatever is in the table.
 
 begin;
 select plan(9);
@@ -40,12 +50,12 @@ insert into public.product_variants
 values ('40000000-0000-0000-0000-000000000004',
         '20000000-0000-0000-0000-000000000002',
         '30000000-0000-0000-0000-000000000003',
-        'Standard', 1, 'rm', 1.00);
+        'Standard', 999001, 'rm', 1.00);
 
--- Seven days of Selangor medians 9.00..9.60 → median 9.30, +1.00 margin = 10.30.
+-- Seven days of medians 9.00..9.60 → median 9.30, +1.00 margin = 10.30.
 insert into public.market_prices
   (price_date, item_code, state, median_price, avg_price, min_price, max_price, premise_count)
-select current_date - offs, 1, 'Selangor',
+select current_date - offs, 999001, 'MarketTest State',
        9.00 + offs * 0.10, 9.00 + offs * 0.10, 8.00, 11.00, 50
 from generate_series(0, 6) as offs;
 
@@ -59,15 +69,18 @@ reset role;
 -- 2. authenticated can read market_prices.
 set local role authenticated;
 set local "request.jwt.claim.sub" to '10000000-0000-0000-0000-000000000001';
+-- Scoped to this file's own rows: the table is global and may already hold
+-- real synced prices, so a bare count(*) is not a stable assertion.
 select results_eq(
-  $$ select count(*)::int from public.market_prices $$,
+  $$ select count(*)::int from public.market_prices
+     where item_code = 999001 and state = 'MarketTest State' $$,
   array[7], 'authenticated reads market_prices');
 
 -- 3. authenticated cannot write market_prices.
 select throws_ok(
   $$ insert into public.market_prices
      (price_date, item_code, state, median_price, avg_price, min_price, max_price, premise_count)
-     values (current_date, 1, 'Selangor', 1, 1, 1, 1, 1) $$,
+     values (current_date, 999002, 'MarketTest State', 1, 1, 1, 1, 1) $$,
   '42501', null, 'authenticated cannot insert market_prices');
 
 -- 4. authenticated can read market_premises (empty is fine).
@@ -75,10 +88,13 @@ select lives_ok(
   $$ select count(*) from public.market_premises $$,
   'authenticated reads market_premises');
 
--- 5. org member can upsert own org market_settings.
+-- 5. org member can upsert own org market_settings. The state here is also
+-- what tests 7/8 depend on: get_market_suggestions reads the org's configured
+-- states, so pointing it at the synthetic state keeps the suggestion math on
+-- this file's own rows.
 select lives_ok(
   $$ insert into public.market_settings (org_id, states)
-     values ('20000000-0000-0000-0000-000000000002', array['Selangor'])
+     values ('20000000-0000-0000-0000-000000000002', array['MarketTest State'])
      on conflict (org_id) do update set states = excluded.states $$,
   'member upserts own market_settings');
 
