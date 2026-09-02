@@ -64,14 +64,17 @@ truck. `REALWORLD_DRIVER_ACCOUNTS` grows to 32; `truckCode` is `null` for them.
 | 2 | Approved leave, covered | driver07 emergency leave `W(1)`..`W(3)`, `approved`; `truck_covers` JHR-07 → driver31 on each of those dates | Roster: blue cover cells; when Dispatch creates the run, `delivery_runs_default_driver` picks driver31 |
 | 3 | Sick today | driver18 medical leave `W(0)`, `approved` (decided this morning) | If today is a weekday: JHR-18's live run gets `driver_id` null from the default-driver trigger, so Delivery runs and Dispatch show a run with no driver and driver32 is free. On a weekend the leave falls on Monday and today's run keeps driver18 |
 | 4 | Pending leave (risk) | driver12 annual leave starting on the first workday on or after `D+7`, two workdays, `pending` | Roster amber "at risk"; Leave Management has one request to decide |
+| 5 | Public holiday | `public_holidays` row on `W(4)`, name `Cuti Umum (demo)` | Roster shades the day; `W(4)` is always after the seeded order window (W4 ≥ D+4), so it only shows on the roster |
+| 6 | Cover in history | driver22 medical leave `P(1)`, `approved`; `truck_covers` JHR-22 → driver31 on `P(1)`; the completed run on `P(1)` has `driver_id` = driver31 | Run history shows a run driven by a cover driver. `P(1)` is clamped to `D-3`..`D-1` (the days that have runs); after a long weekend or holiday there is no such workday and scenario 6 is skipped |
 
 Scenarios 1 and 2 use **emergency** leave, not annual: `leave_requests_before_insert`
 refuses annual leave that starts less than 7 calendar days out
 (`leave_min_notice_days`), and the seed cannot bypass a trigger. Scenario 4
 keeps annual leave and respects the notice. `W(k)` also skips the org's public
 holidays, mirroring `leave_workday_count`, so `day_count` is never zero.
-| 5 | Public holiday | `public_holidays` row on `W(4)`, name `Cuti Umum (demo)` | Roster shades the day; no future orders are created on that date if it falls in D+1..D+3 |
-| 6 | Cover in history | driver22 medical leave `P(1)`, `approved`; `truck_covers` JHR-22 → driver31 on `P(1)`; the completed run on `P(1)` has `driver_id` = driver31 | Run history shows a run driven by a cover driver |
+Scenario 2's leave range is a calendar range but covers are written only on
+workdays, so the roster shows JHR-07 on leave without cover over the weekend;
+that is intended, nobody covers a weekend.
 
 Cover rows respect the roster triggers: driver31 is an active driver-role member
 of the org, is not on leave, and is never covered twice on one date (scenarios
@@ -102,8 +105,8 @@ else happens inside the SQL function in one transaction:
    `history_runs`.
 
 The app-side loop that called `dispatch_assign_driver` per run and the
-per-truck `regular_driver_id` update are removed; the audit record keeps
-`drivers: 32`.
+per-truck `regular_driver_id` update are removed; the audit record's `drivers`
+is the number of accounts actually mapped (30 trucks + pool).
 
 **B (rejected):** keep the SQL and add history, leave and covers from the server
 action through the existing RPCs. Not atomic, about a thousand client-side

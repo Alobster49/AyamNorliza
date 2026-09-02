@@ -33,13 +33,17 @@ describe("CONSOLE_ACCOUNTS", () => {
 });
 
 describe("REALWORLD_DRIVER_ACCOUNTS", () => {
-  it("fields exactly 30 drivers, driver<N> on truck JHR-<N>", () => {
-    expect(REALWORLD_DRIVER_ACCOUNTS).toHaveLength(30);
+  it("fields 30 truck drivers, driver<N> on truck JHR-<N>, plus 2 cover-pool drivers", () => {
+    expect(REALWORLD_DRIVER_ACCOUNTS).toHaveLength(32);
     for (const [i, driver] of REALWORLD_DRIVER_ACCOUNTS.entries()) {
       const n = i + 1;
       expect(driver.email).toBe(`driver${n}@gmail.com`);
-      expect(driver.truckCode).toBe(`JHR-${String(n).padStart(2, "0")}`);
       expect(driver.role).toBe("driver");
+      if (n <= 30) {
+        expect(driver.truckCode).toBe(`JHR-${String(n).padStart(2, "0")}`);
+      } else {
+        expect(driver.truckCode).toBeNull();
+      }
     }
   });
 

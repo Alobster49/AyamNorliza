@@ -212,7 +212,7 @@ export async function seedRealworldData(
   organizationSlug: string,
 ): Promise<ActionResult<{ summary: Record<string, number> }>> {
   const ctx = await guardOwner(organizationSlug);
-  if (!ctx) return { ok: false, code: "forbidden", message: "Owner only." };
+  if (!ctx) return { ok: false, code: "forbidden", message: "Admin only." };
 
   // Same self-skip rule as seedDemoData: never reset the seeder's own
   // password mid-session.
@@ -222,11 +222,14 @@ export async function seedRealworldData(
   } = await supabase.auth.getUser();
   const actingEmail = actingUser?.email?.toLowerCase() ?? null;
 
-  // Office accounts stay the demo set; the driver fleet is the 30 real-world
-  // drivers, one per truck. driverByTruck maps JHR-<N> -> auth user id so the
-  // run assignment below can pair each truck's run with its own driver.
+  // Office accounts stay the demo set; the driver fleet is the 32 real-world
+  // drivers: one per truck plus two in the cover pool. p_drivers maps
+  // JHR-<N> -> auth user id (the truck's regular driver) and "pool" -> the
+  // cover drivers, so the SQL seed can set regular drivers, book leave and
+  // assign covers in one transaction.
   const officeAccounts = CONSOLE_ACCOUNTS.filter((a) => a.role !== "driver");
-  const driverByTruck = new Map<string, string>();
+  const driverMap: Record<string, string | string[]> = {};
+  const pool: string[] = [];
   try {
     for (const account of officeAccounts) {
       const isSelf = account.email.toLowerCase() === actingEmail;
@@ -261,8 +264,10 @@ export async function seedRealworldData(
         role: driver.role,
         invitedBy: ctx.userId,
       });
-      driverByTruck.set(driver.truckCode, userId);
+      if (driver.truckCode) driverMap[driver.truckCode] = userId;
+      else pool.push(userId);
     }
+    driverMap.pool = pool;
   } catch (e) {
     const detail = e instanceof Error ? e.message : "";
     return {
@@ -274,45 +279,22 @@ export async function seedRealworldData(
 
   const { data, error } = await supabase.rpc("admin_seed_realworld_data", {
     p_organization_id: ctx.orgId,
+    p_drivers: driverMap,
   });
   if (error) {
     const forbidden = error.message === "forbidden";
     return {
       ok: false,
       code: forbidden ? "forbidden" : "internal",
-      message: forbidden ? "Owner only." : "Seeding failed and was rolled back.",
+      message: forbidden ? "Admin only." : "Seeding failed and was rolled back.",
     };
   }
   const summary = (data ?? {}) as Record<string, number>;
 
-  // Put driver<N> on truck JHR-<N>'s live run. Not fatal if one assignment
-  // fails: the data is seeded and dispatch can assign by hand.
-  const { data: runs } = await supabase
-    .from("delivery_runs")
-    .select("id, trucks(code)")
-    .eq("organization_id", ctx.orgId)
-    .neq("status", "completed");
-  for (const run of runs ?? []) {
-    const code = (run.trucks as unknown as { code: string } | null)?.code;
-    const driverId = code ? driverByTruck.get(code) : undefined;
-    if (!driverId) continue;
-    await supabase.rpc("dispatch_assign_driver", {
-      p_run: run.id,
-      p_driver: driverId,
-    });
-  }
-
-  // The roster needs a regular driver per truck to know what a "gap" is.
-  // driver<N> is JHR-<N>'s regular driver; not fatal if one update fails.
-  const { data: seededTrucks } = await supabase
-    .from("trucks")
-    .select("id, code")
-    .eq("organization_id", ctx.orgId);
-  for (const truck of seededTrucks ?? []) {
-    const driverId = driverByTruck.get(truck.code);
-    if (!driverId) continue;
-    await supabase.from("trucks").update({ regular_driver_id: driverId }).eq("id", truck.id);
-  }
+  // The actual number of drivers mapped: one key per truck that got a
+  // regular driver, plus the pool drivers (the "pool" key itself holds an
+  // array, not a single driver, so it's subtracted back out).
+  const driversSeeded = Object.keys(driverMap).length - 1 + pool.length;
 
   const auditCtx = ctxFor(ctx.userId);
   await recordAudit(
@@ -323,7 +305,7 @@ export async function seedRealworldData(
       eventType: "org.data_seeded",
       entityType: "organization",
       entityId: ctx.orgId,
-      after: { ...summary, mode: "realworld", drivers: driverByTruck.size },
+      after: { ...summary, mode: "realworld", drivers: driversSeeded },
       correlationId: auditCtx.correlationId,
       source: "web",
     },

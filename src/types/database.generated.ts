@@ -2460,7 +2460,7 @@ export type Database = {
         Returns: Json
       }
       admin_seed_realworld_data: {
-        Args: { p_organization_id: string }
+        Args: { p_drivers?: Json; p_organization_id: string }
         Returns: Json
       }
       admin_seed_setup_data: {
