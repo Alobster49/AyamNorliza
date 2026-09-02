@@ -14,6 +14,7 @@ import type {
   Truck,
   TruckZone,
 } from "@/features/orders/types";
+import type { TruckDuty } from "./lib/roster-model";
 
 export const POSTCODE_REGEX = /^\d{5}$/;
 
@@ -97,6 +98,12 @@ export type DispatchBoardData = {
   orders: DispatchTicket[];
   /** Display names for every loaded_by / loading_claimed_by on the board. */
   people: Record<string, string>;
+  /**
+   * Who drives each truck on the board's date, keyed by truck id. A truck the
+   * roster has a gap for is present with a null `driverId` -- the boards warn
+   * on it so a truck nobody drives can't be quietly planned and loaded.
+   */
+  duties: Record<string, TruckDuty>;
 };
 
 // ---------------------------------------------------------------------------

@@ -295,6 +295,24 @@ describe("departTruck", () => {
       messageKey: "errors.drive.run.notLoaded",
     });
   });
+
+  it("maps driver_on_leave RPC error to copy that points at the roster", async () => {
+    const supabase = mockSupabaseFor({ role: "seller" });
+    supabase.rpc.mockResolvedValue({ data: null, error: { message: "driver_on_leave" } });
+
+    const result = await departTruck("ayam-norliza-pilot", {
+      truckId: "5b1f5c1e-0000-4000-8000-000000000002",
+      date: "2026-08-14",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      code: "conflict",
+      message:
+        "Nobody is rostered to drive this truck today — the driver is on approved leave. Assign a cover in Driver roster first.",
+      messageKey: "errors.drive.run.driverOnLeave",
+    });
+  });
 });
 
 describe("applyPlan", () => {

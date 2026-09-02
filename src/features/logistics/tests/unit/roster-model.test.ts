@@ -3,7 +3,9 @@ import {
   buildRoster,
   mondayOf,
   rankCoverCandidates,
+  truckDutyOn,
   weekdayOf,
+  type DutyInput,
   type RosterInput,
 } from "../../lib/roster-model";
 
@@ -236,5 +238,68 @@ describe("rankCoverCandidates", () => {
       ["hakim", "truckOff", null],
       ["faizal", "busy", "JHR-02"],
     ]);
+  });
+});
+
+describe("truckDutyOn", () => {
+  // The dispatch and loading boards ask this directly for one truck on one
+  // day, so it must answer with the same precedence the roster grid uses:
+  // cover ?? run driver ?? regular driver, and nobody when that person is on
+  // approved leave.
+  const duty = (over: Partial<DutyInput> = {}) =>
+    truckDutyOn(
+      {
+        trucks: [
+          { id: "t1", regularDriverId: "azman" },
+          { id: "t2", regularDriverId: null },
+        ],
+        drivers: [
+          { userId: "azman", name: "Azman" },
+          { userId: "ravi", name: "Ravi" },
+        ],
+        covers: [],
+        runs: [],
+        leave: [],
+        ...over,
+      },
+      "t1",
+      "2026-09-03",
+    );
+
+  it("names the regular driver when nothing else is planned", () => {
+    expect(duty()).toEqual({ driverId: "azman", driverName: "Azman", absentName: null });
+  });
+
+  it("prefers the run's driver over the regular driver", () => {
+    const d = duty({ runs: [{ truckId: "t1", runDate: "2026-09-03", driverId: "ravi" }] });
+    expect(d).toEqual({ driverId: "ravi", driverName: "Ravi", absentName: null });
+  });
+
+  it("prefers an assigned cover over both the run and the regular driver", () => {
+    const d = duty({
+      covers: [{ truckId: "t1", date: "2026-09-03", driverId: "ravi", note: null }],
+      runs: [{ truckId: "t1", runDate: "2026-09-03", driverId: "azman" }],
+    });
+    expect(d).toEqual({ driverId: "ravi", driverName: "Ravi", absentName: null });
+  });
+
+  it("reports nobody, and who is away, when the planned driver is on approved leave", () => {
+    const d = duty({
+      leave: [{ userId: "azman", startDate: "2026-09-01", endDate: "2026-09-04", status: "approved", typeName: "Medical" }],
+    });
+    expect(d).toEqual({ driverId: null, driverName: null, absentName: "Azman" });
+  });
+
+  it("still expects a driver whose leave is only pending", () => {
+    const d = duty({
+      leave: [{ userId: "azman", startDate: "2026-09-03", endDate: "2026-09-03", status: "pending", typeName: "Annual" }],
+    });
+    expect(d).toEqual({ driverId: "azman", driverName: "Azman", absentName: null });
+  });
+
+  it("reports nobody for a truck with no regular driver and no cover", () => {
+    expect(
+      truckDutyOn({ trucks: [{ id: "t2", regularDriverId: null }], drivers: [], covers: [], runs: [], leave: [] }, "t2", "2026-09-03"),
+    ).toEqual({ driverId: null, driverName: null, absentName: null });
   });
 });

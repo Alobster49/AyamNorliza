@@ -16,7 +16,7 @@ function zone(over: Partial<SetupSnapshot["zones"][number]> = {}) {
 function truck(over: Partial<SetupSnapshot["trucks"][number]> = {}) {
   return {
     id: uid("truck"), organization_id: "org", name: "Canter 01", code: "T1",
-    is_active: true, bay_id: "bay-1", capacity_kg: 1200,
+    is_active: true, bay_id: "bay-1", capacity_kg: 1200, regular_driver_id: null,
     created_by: null, created_at: "", updated_at: "", version: 1, ...over,
   };
 }

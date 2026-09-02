@@ -504,7 +504,8 @@
         "notFound": "Trip tidak dijumpai.",
         "internal": "Sesuatu tidak kena. Sila cuba lagi.",
         "notDeparted": "Trip ini tidak berada di jalan.",
-        "notLoaded": "Trak belum siap dimuatkan. Bahagian pemuatan perlu selesaikan semua hentian dahulu."
+        "notLoaded": "Trak belum siap dimuatkan. Bahagian pemuatan perlu selesaikan semua hentian dahulu.",
+        "driverOnLeave": "Tiada pemandu dijadualkan untuk trak ini hari ini — pemandu sedang bercuti yang diluluskan. Tetapkan pengganti dalam Jadual pemandu dahulu."
       },
       "stop": {
         "forbidden": "Anda tidak mempunyai kebenaran untuk berbuat demikian.",
@@ -2166,6 +2167,12 @@
         "runDeparted": "Order ini berada pada trip yang sudah bertolak dan tidak boleh dipindah lagi.",
         "truckDeparted": "Trak itu sudah bertolak.",
         "truckAtCapacity": "Trak itu sudah pada kapasiti slotnya untuk tarikh ini."
+      },
+      "driver": {
+        "label": "Pemandu",
+        "none": "Tiada pemandu",
+        "noneTitle": "Tiada sesiapa dijadualkan untuk trak ini hari ini — tetapkan pengganti dalam Jadual pemandu sebelum ia keluar.",
+        "away": "{name} sedang bercuti"
       }
     },
     "facility": {

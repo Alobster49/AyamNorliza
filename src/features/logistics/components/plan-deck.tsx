@@ -39,7 +39,9 @@ import {
   type PlanDraft,
 } from "../lib/plan-model";
 import { resolveDispatchDrop, type DispatchDropTarget } from "../lib/dispatch-rules";
+import type { TruckDuty } from "../lib/roster-model";
 import { applyPlan, assignOrder, departTruck, unassignOrder } from "../server/dispatch-actions";
+import { DriverLine } from "./truck-card";
 import { Loader2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -296,7 +298,7 @@ function RackDropZone({ active, children }: { active: boolean; children: ReactNo
     <aside
       ref={setNodeRef}
       className={[
-        "flex flex-col gap-2 rounded-lg transition-all duration-150 motion-reduce:transition-none",
+        "flex min-h-0 flex-col gap-2 rounded-lg transition-all duration-150 motion-reduce:transition-none lg:overflow-y-auto lg:overscroll-y-contain lg:pr-1",
         active && !isOver ? "outline outline-1 outline-dashed outline-offset-4 outline-green-600/50" : "",
         active && isOver ? "bg-green-500/5 outline outline-2 outline-dashed outline-offset-4 outline-green-600" : "",
       ].join(" ")}
@@ -313,6 +315,7 @@ function RackDropZone({ active, children }: { active: boolean; children: ReactNo
 
 function TruckPlanCard({
   bt,
+  duty,
   incoming,
   activeTicket,
   compatible,
@@ -324,6 +327,8 @@ function TruckPlanCard({
   departPending,
 }: {
   bt: BoardTruck;
+  /** Who drives it that day — null-driver trucks warn before they get planned. */
+  duty: TruckDuty | null;
   incoming: number;
   /** The ticket being dragged, if any — drives the invite/dim/ghost states. */
   activeTicket: DispatchTicket | null;
@@ -400,6 +405,7 @@ function TruckPlanCard({
             {t("orderCount", { load, capSuffix: bt.cap !== null ? `/${bt.cap}` : "" })}
             {incoming > 0 ? ` · ${t("proposedSuffix", { count: incoming })}` : ""}
           </p>
+          <DriverLine duty={duty} className="mt-0.5" />
         </div>
       </div>
 
@@ -738,7 +744,7 @@ export function PlanDeck({
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       {draft.proposals.length > 0 && !dismissed ? (
         <div className="animate-panel-in flex flex-wrap items-center gap-3 rounded-lg border bg-accent/60 p-3">
           <div className="min-w-0">
@@ -767,7 +773,7 @@ export function PlanDeck({
           and client render — PlanDeck is the SSR'd default view, and the
           auto-incremented default id hydration-mismatches. */}
       <DndContext id="dispatch-plan-dnd" sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+        <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-4 lg:grid-cols-[300px_1fr] lg:grid-rows-[minmax(0,1fr)]">
           <RackDropZone
             active={activeTicket !== null && activeTicket.assignment_source !== "none"}
           >
@@ -842,11 +848,12 @@ export function PlanDeck({
             ) : null}
           </RackDropZone>
 
-          <div className="grid content-start gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid min-h-0 content-start gap-3 overflow-y-auto overscroll-y-contain pr-1 sm:grid-cols-2 xl:grid-cols-3">
             {boardTrucks.map((bt) => (
               <TruckPlanCard
                 key={bt.truck.id}
                 bt={bt}
+                duty={data.duties[bt.truck.id] ?? null}
                 incoming={Math.max(
                   0,
                   (incomingByTruck.get(bt.truck.id) ?? 0) - (pendingByTruck.get(bt.truck.id)?.length ?? 0),

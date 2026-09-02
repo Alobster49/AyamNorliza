@@ -190,7 +190,7 @@ export function DispatchBoard({
   return (
     <>
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex items-start gap-4 overflow-x-auto pb-4">
+        <div className="flex min-h-0 flex-1 items-start gap-4 overflow-auto overscroll-contain pb-4">
           <PoolColumn tickets={view.pool} />
           {view.bays.map(({ bay, trucks }) => (
             <div key={bay.id} className="flex w-80 shrink-0 flex-col gap-3 rounded-lg border bg-muted/20 p-3">
@@ -199,6 +199,7 @@ export function DispatchBoard({
                 <TruckCard
                   key={bt.truck.id}
                   boardTruck={bt}
+                  duty={data.duties[bt.truck.id] ?? null}
                   highlight={compatible !== null && compatible.has(bt.truck.id) && !bt.departed}
                   dim={compatible !== null && !compatible.has(bt.truck.id)}
                   departing={departingTruckId === bt.truck.id}

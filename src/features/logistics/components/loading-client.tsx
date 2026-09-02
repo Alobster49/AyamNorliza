@@ -6,7 +6,9 @@ import { motion, useReducedMotion } from "motion/react";
 import { useFormatter, useTranslations } from "next-intl";
 import type { DispatchBoardData } from "../types";
 import { buildLoadBoard, type LoadJob, type LoadLane } from "../lib/loading-model";
+import type { TruckDuty } from "../lib/roster-model";
 import { getDispatchBoard, setLoadingClaim, setOrderLoaded } from "../server/dispatch-actions";
+import { DriverLine } from "./truck-card";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { Link } from "@/i18n/navigation";
 import { HenEmptyState } from "@/components/shared/hen-empty-state";
@@ -369,12 +371,14 @@ function ManifestRow({
 
 function Manifest({
   lane,
+  duty,
   pendingIds,
   organizationSlug,
   onToggle,
   onClaim,
 }: {
   lane: LoadLane;
+  duty: TruckDuty | null;
   pendingIds: ReadonlySet<string>;
   organizationSlug: string;
   onToggle: (orderId: string, loaded: boolean) => void;
@@ -407,7 +411,7 @@ function Manifest({
 
   return (
     <section
-      className="min-w-0"
+      className="flex min-h-0 min-w-0 flex-1 flex-col"
       aria-label={tLane("ariaLabel", {
         truck: lane.truck.name,
         done: lane.doneCount,
@@ -423,6 +427,7 @@ function Manifest({
             {" · "}
             {t("drops", { count: lane.totalCount })}
           </p>
+          <DriverLine duty={duty} className="mt-0.5" />
         </div>
         {allLoaded ? (
           <p className="flex items-center gap-1.5 text-xs font-medium text-[color:var(--color-success)] animate-in fade-in duration-300 motion-reduce:animate-none">
@@ -474,7 +479,7 @@ function Manifest({
             </div>
           ) : null}
 
-          <div className="mt-3 rounded-xl border">
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto overscroll-y-contain rounded-xl border [scrollbar-gutter:stable]">
             <Table>
               <TableHeader>
                 <TableRowPlain>
@@ -794,7 +799,7 @@ export function LoadingClient({
   const boardComplete = totals.total > 0 && totals.done === totals.total;
 
   return (
-    <div className="flex w-full flex-col gap-4">
+    <div className="flex w-full flex-col gap-4 md:h-[calc(100svh-7rem)]">
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h1 className="text-lg font-semibold">{tDash("loading")}</h1>
@@ -821,8 +826,8 @@ export function LoadingClient({
       {totals.total === 0 ? (
         <HenEmptyState title={tEmpty("noLoadTitle")} subtitle={tEmpty("subtitle")} className="py-14" />
       ) : (
-        <div className="flex flex-col gap-4 md:grid md:grid-cols-[264px_minmax(0,1fr)] md:items-start md:gap-6">
-          <nav aria-label={tTrucks("title")} className="flex flex-col gap-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 md:grid md:grid-cols-[264px_minmax(0,1fr)] md:items-stretch md:gap-6">
+          <nav aria-label={tTrucks("title")} className="flex min-h-0 flex-col gap-2">
             <Tabs value={tab} onValueChange={(value) => setTabChoice(value as TruckTab)}>
               <TabsList className="w-full">
                 <TabsTrigger value="loading" className="flex-1 tabular-nums">
@@ -839,7 +844,7 @@ export function LoadingClient({
             {navLanes.length === 0 ? (
               <p className="px-1 py-2 text-xs text-muted-foreground">{tTrucks("emptyTab")}</p>
             ) : (
-              <div className="-mx-1 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0">
+              <div className="-mx-1 flex snap-x gap-2 overflow-x-auto overscroll-x-contain px-1 pb-1 md:mx-0 md:min-h-0 md:flex-1 md:flex-col md:overflow-x-hidden md:overflow-y-auto md:overscroll-y-contain md:px-0 md:pr-1 md:pb-0 [scrollbar-gutter:stable]">
                 {navLanes.map((lane) => (
                   <TruckNavButton
                     key={lane.truck.id}
@@ -856,6 +861,7 @@ export function LoadingClient({
             <Manifest
               key={selected.truck.id}
               lane={selected}
+              duty={data.duties[selected.truck.id] ?? null}
               pendingIds={pendingIds}
               organizationSlug={organizationSlug}
               onToggle={(orderId, loaded) => toggle(orderId, loaded, nameFor(orderId))}

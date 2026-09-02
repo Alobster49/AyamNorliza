@@ -85,6 +85,46 @@ function leaveOn(leave: LeaveRow[], userId: string, date: string, status: LeaveR
   return leave.find((l) => l.userId === userId && l.status === status && l.startDate <= date && date <= l.endDate) ?? null;
 }
 
+/** `planned(T, D)` from the gap rule: cover wins, then the run, then the regular driver. */
+function plannedDriverId(cover: CoverRow | null | undefined, run: RunRow | null | undefined, regularDriverId: string | null | undefined): string | null {
+  return cover?.driverId ?? run?.driverId ?? regularDriverId ?? null;
+}
+
+/** Who is expected on one truck on one day, and who is away if nobody is. */
+export type TruckDuty = { driverId: string | null; driverName: string | null; absentName: string | null };
+
+/**
+ * The slice of roster data the duty rule needs. Deliberately narrower than
+ * `RosterInput`: the dispatch and loading boards ask about a single day and
+ * have no reason to know about operating weekdays, blocks or holidays.
+ */
+export type DutyInput = {
+  trucks: { id: string; regularDriverId: string | null }[];
+  drivers: { userId: string; name: string }[];
+  covers: CoverRow[];
+  runs: RunRow[];
+  leave: LeaveRow[];
+};
+
+/**
+ * `planned(T, D)` from the gap rule, for one truck on one day: cover ?? run
+ * driver ?? regular driver, and nobody at all when that person is on approved
+ * leave. Pending leave still counts as expected -- the office can send them
+ * out, which is what makes it a risk rather than a gap. `buildRoster` shares
+ * this so the boards and the roster grid can never disagree about who drives.
+ */
+export function truckDutyOn(input: DutyInput, truckId: string, date: string): TruckDuty {
+  const truck = input.trucks.find((t) => t.id === truckId) ?? null;
+  const cover = input.covers.find((c) => c.truckId === truckId && c.date === date) ?? null;
+  const run = input.runs.find((r) => r.truckId === truckId && r.runDate === date) ?? null;
+  const plannedId = plannedDriverId(cover, run, truck?.regularDriverId);
+  const planned = plannedId ? (input.drivers.find((d) => d.userId === plannedId) ?? null) : null;
+  if (!planned) return { driverId: null, driverName: null, absentName: null };
+  const absent = leaveOn(input.leave, planned.userId, date, "approved");
+  if (absent) return { driverId: null, driverName: null, absentName: planned.name };
+  return { driverId: planned.userId, driverName: planned.name, absentName: null };
+}
+
 export function buildRoster(input: RosterInput): RosterView {
   const holidayByDate = new Map(input.holidays.map((h) => [h.date, h.name]));
   const orgBlocked = new Set(input.blocks.filter((b) => b.truckId === null).map((b) => b.date));
@@ -121,7 +161,7 @@ export function buildRoster(input: RosterInput): RosterView {
 
       const cover = coverByKey.get(`${truck.id}|${day.date}`);
       const run = runByKey.get(`${truck.id}|${day.date}`);
-      const plannedId = cover?.driverId ?? run?.driverId ?? truck.regularDriverId ?? null;
+      const plannedId = plannedDriverId(cover, run, truck.regularDriverId);
       const planned = plannedId ? (driverById.get(plannedId) ?? null) : null;
 
       const absent = planned ? leaveOn(input.leave, planned.userId, day.date, "approved") : null;

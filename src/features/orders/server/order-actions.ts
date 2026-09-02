@@ -668,6 +668,14 @@ export async function setRunStatus(
         "errors.drive.run.notLoaded",
       );
     }
+    if (error.message.includes("driver_on_leave")) {
+      return err(
+        "conflict",
+        "Nobody is rostered to drive this truck today — the driver is on approved leave. Assign a cover in Driver roster first.",
+        undefined,
+        "errors.drive.run.driverOnLeave",
+      );
+    }
     const mapped = mapRpcError(error.message);
     return err(mapped.code as OrderErrorCode, mapped.message);
   }

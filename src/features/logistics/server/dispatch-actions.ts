@@ -5,8 +5,9 @@ import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { OrderPermissionError } from "@/features/orders/server/guards";
 import { requirePermission, requireAnyPermission } from "@/lib/auth/require-permission";
-import type { ActionResult } from "@/features/orders/types";
+import type { ActionResult, DeliveryRun } from "@/features/orders/types";
 import { suggestTruck, type AssignmentContext } from "../lib/assignment";
+import { truckDutyOn, type DutyInput, type TruckDuty } from "../lib/roster-model";
 import type { DispatchBoardData, DispatchTicket, DispatchTruck, Facility, Bay, ZonePostcodeRange } from "../types";
 
 type DispatchErrorCode = "forbidden" | "validation" | "not_found" | "conflict" | "internal";
@@ -154,7 +155,7 @@ export async function getDispatchBoard(
   if (!DATE_REGEX.test(date)) return err("validation", "Invalid date");
 
   const supabase = await createSupabaseServerClient();
-  const [facility, bays, trucks, zones, ranges, truckZones, slots, blocks, runs, orders] =
+  const [facility, bays, trucks, zones, ranges, truckZones, slots, blocks, runs, orders, covers, leave] =
     await Promise.all([
       supabase.from("facilities").select("*").eq("organization_id", orgId).eq("is_active", true).limit(1).maybeSingle(),
       supabase.from("bays").select("*").eq("organization_id", orgId).order("position", { ascending: true }),
@@ -173,22 +174,31 @@ export async function getDispatchBoard(
         .eq("organization_id", orgId)
         .eq("delivery_date", date)
         .in("status", ["confirmed", "ready"]),
+      // Who drives what today: the roster's cover assignments plus any
+      // approved leave that takes the planned driver off the board.
+      supabase.from("truck_covers").select("truck_id, cover_date, driver_id, note").eq("organization_id", orgId).eq("cover_date", date),
+      supabase.from("leave_roster").select("user_id, start_date, end_date, status").eq("organization_id", orgId).lte("start_date", date).gte("end_date", date).eq("status", "approved"),
     ]);
 
   if (
     facility.error || bays.error || trucks.error || zones.error || ranges.error ||
-    truckZones.error || slots.error || blocks.error || runs.error || orders.error
+    truckZones.error || slots.error || blocks.error || runs.error || orders.error ||
+    covers.error || leave.error
   ) {
     return err("internal", "Failed to load the dispatch board");
   }
 
   // Names for whoever loaded or is currently claiming an order, so the
-  // loading screen can say which worker has which crates.
+  // loading screen can say which worker has which crates -- plus every driver
+  // who could be on duty today, so the boards can name them too.
   const personIds = Array.from(
     new Set(
-      ((orders.data ?? []) as DispatchTicket[])
-        .flatMap((o) => [o.loaded_by, o.loading_claimed_by])
-        .filter((id): id is string => id !== null && id !== undefined),
+      [
+        ...((orders.data ?? []) as DispatchTicket[]).flatMap((o) => [o.loaded_by, o.loading_claimed_by]),
+        ...((trucks.data ?? []) as DispatchTruck[]).map((t) => t.regular_driver_id),
+        ...(covers.data ?? []).map((c) => c.driver_id),
+        ...((runs.data ?? []) as DeliveryRun[]).map((r) => r.driver_id),
+      ].filter((id): id is string => id !== null && id !== undefined),
     ),
   );
   const people: Record<string, string> = {};
@@ -200,6 +210,22 @@ export async function getDispatchBoard(
     for (const profile of profiles ?? []) {
       if (profile.display_name) people[profile.user_id] = profile.display_name;
     }
+  }
+
+  // `leave_roster` is a view, so every column comes back nullable; drop rows
+  // missing a field the duty rule keys or ranges on rather than fabricating one.
+  const dutyInput: DutyInput = {
+    trucks: ((trucks.data ?? []) as DispatchTruck[]).map((t) => ({ id: t.id, regularDriverId: t.regular_driver_id })),
+    drivers: personIds.map((id) => ({ userId: id, name: people[id] ?? "Driver" })),
+    covers: (covers.data ?? []).map((c) => ({ truckId: c.truck_id, date: c.cover_date, driverId: c.driver_id, note: c.note })),
+    runs: ((runs.data ?? []) as DeliveryRun[]).map((r) => ({ truckId: r.truck_id, runDate: r.run_date, driverId: r.driver_id })),
+    leave: (leave.data ?? [])
+      .filter((l): l is typeof l & { user_id: string; start_date: string; end_date: string } => l.user_id !== null && l.start_date !== null && l.end_date !== null)
+      .map((l) => ({ userId: l.user_id, startDate: l.start_date, endDate: l.end_date, status: "approved" as const, typeName: "Leave" })),
+  };
+  const duties: Record<string, TruckDuty> = {};
+  for (const truck of (trucks.data ?? []) as DispatchTruck[]) {
+    duties[truck.id] = truckDutyOn(dutyInput, truck.id, date);
   }
 
   return ok({
@@ -214,6 +240,7 @@ export async function getDispatchBoard(
     runs: (runs.data ?? []) as DispatchBoardData["runs"],
     orders: (orders.data ?? []) as DispatchTicket[],
     people,
+    duties,
   });
 }
 
@@ -401,6 +428,15 @@ export async function departTruck(
         "conflict",
         "The truck is not fully loaded yet. The loading bay has to sign every stop off first.",
         "errors.drive.run.notLoaded",
+      );
+    }
+    // The roster gate (20260903000004): the planned driver is on approved
+    // leave, so the office has to assign a cover before this truck moves.
+    if (error.message.includes("driver_on_leave")) {
+      return err(
+        "conflict",
+        "Nobody is rostered to drive this truck today — the driver is on approved leave. Assign a cover in Driver roster first.",
+        "errors.drive.run.driverOnLeave",
       );
     }
     return mapRpcError(error.message);

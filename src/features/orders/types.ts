@@ -102,6 +102,8 @@ export type Truck = {
   is_active: boolean;
   bay_id: string | null;
   capacity_kg: number | null;
+  /** The driver who normally has this truck (20260903000001_driver_roster). */
+  regular_driver_id: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;

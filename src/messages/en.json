@@ -504,7 +504,8 @@
         "notFound": "Run not found.",
         "internal": "Something went wrong. Please try again.",
         "notDeparted": "This run is not out on the road.",
-        "notLoaded": "The truck is not fully loaded yet. The loading bay has to sign every stop off first."
+        "notLoaded": "The truck is not fully loaded yet. The loading bay has to sign every stop off first.",
+        "driverOnLeave": "Nobody is rostered to drive this truck today — the driver is on approved leave. Assign a cover in Driver roster first."
       },
       "stop": {
         "forbidden": "You do not have permission to do that.",
@@ -2166,6 +2167,12 @@
         "runDeparted": "This order is on a departed run and can no longer be moved.",
         "truckDeparted": "That truck has already departed.",
         "truckAtCapacity": "That truck is at its slot capacity for this date."
+      },
+      "driver": {
+        "label": "Driver",
+        "none": "No driver",
+        "noneTitle": "Nobody is rostered on this truck today — assign a cover in Driver roster before it goes out.",
+        "away": "{name} is on leave"
       }
     },
     "facility": {

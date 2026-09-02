@@ -13,7 +13,7 @@ function bay(id: string, name: string, position: number, active = true): Bay {
 function truck(id: string, code: string, bayId: string | null, active = true): DispatchTruck {
   return {
     id, organization_id: "org-1", name: `Truck ${code}`, code, is_active: active,
-    bay_id: bayId, capacity_kg: null, created_by: null, created_at: "", updated_at: "", version: 1,
+    bay_id: bayId, capacity_kg: null, regular_driver_id: null, created_by: null, created_at: "", updated_at: "", version: 1,
   };
 }
 function ticket(id: string, truckId: string, source: "none" | "auto" | "manual", status: "confirmed" | "ready" = "confirmed"): DispatchTicket {
@@ -51,6 +51,7 @@ function data(overrides: Partial<DispatchBoardData> = {}): DispatchBoardData {
     runs: [],
     orders: [],
     people: {},
+    duties: {},
     ...overrides,
   };
 }

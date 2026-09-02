@@ -11,7 +11,7 @@ const uid = (p: string) => `${p}-${++n}`.padEnd(36, "0");
 function truck(over: Partial<DispatchBoardData["trucks"][number]> = {}) {
   return {
     id: uid("truck"), organization_id: "org", name: "Lori", code: "T1",
-    is_active: true, bay_id: "bay-1", capacity_kg: null,
+    is_active: true, bay_id: "bay-1", capacity_kg: null, regular_driver_id: null,
     created_by: null, created_at: "", updated_at: "", version: 1, ...over,
   };
 }
@@ -43,6 +43,7 @@ function baseData(over: Partial<DispatchBoardData> = {}): DispatchBoardData {
     runs: [],
     orders: [],
     people: {},
+    duties: {},
     ...over,
   };
 }
