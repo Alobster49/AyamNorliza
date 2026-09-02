@@ -302,6 +302,18 @@ export async function seedRealworldData(
     });
   }
 
+  // The roster needs a regular driver per truck to know what a "gap" is.
+  // driver<N> is JHR-<N>'s regular driver; not fatal if one update fails.
+  const { data: seededTrucks } = await supabase
+    .from("trucks")
+    .select("id, code")
+    .eq("organization_id", ctx.orgId);
+  for (const truck of seededTrucks ?? []) {
+    const driverId = driverByTruck.get(truck.code);
+    if (!driverId) continue;
+    await supabase.from("trucks").update({ regular_driver_id: driverId }).eq("id", truck.id);
+  }
+
   const auditCtx = ctxFor(ctx.userId);
   await recordAudit(
     {

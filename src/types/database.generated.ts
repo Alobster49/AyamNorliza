@@ -1230,6 +1230,27 @@ export type Database = {
           },
         ]
       }
+      market_sync_cursor: {
+        Row: {
+          bytes_read: number
+          file_size: number
+          month: string
+          updated_at: string
+        }
+        Insert: {
+          bytes_read: number
+          file_size: number
+          month: string
+          updated_at?: string
+        }
+        Update: {
+          bytes_read?: number
+          file_size?: number
+          month?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       member_scopes: {
         Row: {
           created_at: string
@@ -2147,6 +2168,54 @@ export type Database = {
           },
         ]
       }
+      truck_covers: {
+        Row: {
+          cover_date: string
+          created_at: string
+          created_by: string
+          driver_id: string
+          id: string
+          note: string | null
+          organization_id: string
+          truck_id: string
+        }
+        Insert: {
+          cover_date: string
+          created_at?: string
+          created_by: string
+          driver_id: string
+          id?: string
+          note?: string | null
+          organization_id: string
+          truck_id: string
+        }
+        Update: {
+          cover_date?: string
+          created_at?: string
+          created_by?: string
+          driver_id?: string
+          id?: string
+          note?: string | null
+          organization_id?: string
+          truck_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "truck_covers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "truck_covers_truck_id_fkey"
+            columns: ["truck_id"]
+            isOneToOne: false
+            referencedRelation: "trucks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       truck_zones: {
         Row: {
           organization_id: string
@@ -2198,6 +2267,7 @@ export type Database = {
           is_active: boolean
           name: string
           organization_id: string
+          regular_driver_id: string | null
           updated_at: string
           version: number
         }
@@ -2211,6 +2281,7 @@ export type Database = {
           is_active?: boolean
           name: string
           organization_id: string
+          regular_driver_id?: string | null
           updated_at?: string
           version?: number
         }
@@ -2224,6 +2295,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           organization_id?: string
+          regular_driver_id?: string | null
           updated_at?: string
           version?: number
         }
@@ -2291,6 +2363,48 @@ export type Database = {
       }
     }
     Views: {
+      leave_roster: {
+        Row: {
+          end_date: string | null
+          leave_type_id: string | null
+          organization_id: string | null
+          start_date: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          end_date?: string | null
+          leave_type_id?: string | null
+          organization_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          end_date?: string | null
+          leave_type_id?: string | null
+          organization_id?: string | null
+          start_date?: string | null
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "leave_requests_leave_type_id_fkey"
+            columns: ["leave_type_id"]
+            isOneToOne: false
+            referencedRelation: "leave_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leave_requests_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       leave_whos_away: {
         Row: {
           end_date: string | null
@@ -2388,6 +2502,7 @@ export type Database = {
         Args: { p_decisions: Json; p_order: string }
         Returns: undefined
       }
+      cron_config: { Args: { p_name: string }; Returns: string }
       current_actor_session_id: { Args: never; Returns: string }
       dispatch_assign_driver: {
         Args: { p_driver: string; p_run: string }
@@ -2486,6 +2601,7 @@ export type Database = {
           variant_name: string
         }[]
       }
+      has_ops_read: { Args: { target_org: string }; Returns: boolean }
       has_org_role: {
         Args: { roles: string[]; target_org: string }
         Returns: boolean
@@ -2584,6 +2700,11 @@ export type Database = {
         Args: { p_org: string; p_postcode: string }
         Returns: string
       }
+      roster_assert_driver_member: {
+        Args: { p_driver: string; p_org: string }
+        Returns: undefined
+      }
+      seed_public_holidays: { Args: { target_org: string }; Returns: undefined }
       seed_system_roles: { Args: { target_org: string }; Returns: undefined }
       set_run_status: {
         Args: {

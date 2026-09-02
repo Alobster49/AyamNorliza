@@ -42,6 +42,21 @@ function pathForGrants(grants: ReadonlySet<string>, slug: string): string {
     return `/drive/${slug}`;
   }
 
+  // HR special-case: `leave_management:view` marks an HR approver, but owner
+  // and org_admin also hold it (they hold every grant), and their landing
+  // page must stay the dashboard -- gate on the absence of `dashboard:view`,
+  // which only those two roles carry. Everyone else who can approve leave
+  // belongs in the HR group by default, even when they also hold a
+  // Fulfillment-group view grant (e.g. the `driver_roster:view` grant baked
+  // into the hr role) that would otherwise sort first in canonical nav order.
+  if (
+    grants.has(grantKey("leave_management", "view")) &&
+    !grants.has(grantKey("dashboard", "view"))
+  ) {
+    const hrFirstItem = groups.find((g) => g.sectionKey === "sections.hr")?.items[0];
+    if (hrFirstItem) return hrFirstItem.href;
+  }
+
   const firstItem = groups[0]?.items[0];
   if (firstItem) return firstItem.href;
 

@@ -216,6 +216,7 @@ describe("dashboard shell model", () => {
       expect(groups[1]?.items.map((item) => item.titleKey)).toEqual([
         "pages.dispatch",
         "pages.deliveryRuns",
+        "pages.driverRoster",
         "pages.deliverySetup",
       ]);
 
@@ -231,13 +232,25 @@ describe("dashboard shell model", () => {
       grants: DEFAULT_ROLE_GRANTS.hr,
     });
 
-    expect(groups).toHaveLength(1);
+    expect(groups).toHaveLength(2);
     expect(groups[0]).toMatchObject({
+      title: "Fulfillment",
+      sectionKey: "sections.fulfillment",
+      isActive: false,
+    });
+    expect(groups[0]?.items).toEqual([
+      {
+        titleKey: "pages.driverRoster",
+        href: "/ayam-norliza-pilot/roster",
+        isActive: false,
+      },
+    ]);
+    expect(groups[1]).toMatchObject({
       title: "HR",
       sectionKey: "sections.hr",
       isActive: true,
     });
-    expect(groups[0]?.items).toEqual([
+    expect(groups[1]?.items).toEqual([
       {
         titleKey: "pages.myLeave",
         href: "/ayam-norliza-pilot/leave",
@@ -342,6 +355,7 @@ describe("dashboard shell model", () => {
       "pages.dispatch",
       "pages.loading",
       "pages.deliveryRuns",
+      "pages.driverRoster",
       "pages.deliverySetup",
     ]);
   });

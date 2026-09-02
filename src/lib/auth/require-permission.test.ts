@@ -225,10 +225,11 @@ describe("resolvePermissionsForOrg", () => {
   it("returns null context and an empty grant set when unauthenticated", async () => {
     mockSupabaseFor({ userId: null });
 
-    const { context, grants } = await resolvePermissionsForOrg("acme");
+    const { context, grants, reason } = await resolvePermissionsForOrg("acme");
 
     expect(context).toBeNull();
     expect(grants.size).toBe(0);
+    expect(reason).toBe("unauthenticated");
   });
 
   it("returns the full grant set for an authenticated member", async () => {
@@ -240,12 +241,13 @@ describe("resolvePermissionsForOrg", () => {
       ],
     });
 
-    const { context, grants } = await resolvePermissionsForOrg("acme");
+    const { context, grants, reason } = await resolvePermissionsForOrg("acme");
 
     expect(context?.roleKey).toBe("seller");
     expect(grants.has(grantKey("products", "view"))).toBe(true);
     expect(grants.has(grantKey("products", "edit"))).toBe(false);
     expect(grants.has(grantKey("orders", "add"))).toBe(true);
+    expect(reason).toBeNull();
   });
 });
 

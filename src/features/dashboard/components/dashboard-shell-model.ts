@@ -87,6 +87,7 @@ const routeGroups = [
       { titleKey: "pages.dispatch", segment: "dispatch", resource: "dispatch" },
       { titleKey: "pages.loading", segment: "loading", resource: "loading" },
       { titleKey: "pages.deliveryRuns", segment: "runs", resource: "delivery_runs" },
+      { titleKey: "pages.driverRoster", segment: "roster", resource: "driver_roster" },
       { titleKey: "pages.deliverySetup", segment: "delivery", resource: "delivery_setup" },
     ],
   },
