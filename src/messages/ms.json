@@ -654,7 +654,10 @@
     "fallbackUserName": "Ahli pasukan",
     "sidebar": {
       "regionFallback": "Ruang kerja operasi",
-      "operatorProfile": "Profil operator"
+      "operatorProfile": "Profil operator",
+      "searchLabel": "Cari halaman",
+      "searchPlaceholder": "Cari halaman…",
+      "searchEmpty": "Tiada halaman sepadan dengan carian anda."
     }
   },
   "analytics": {

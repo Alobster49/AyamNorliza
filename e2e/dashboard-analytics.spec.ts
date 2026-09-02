@@ -37,11 +37,13 @@ test("owner sees the analytics dashboard with KPIs, range controls, and sidebar 
   await expect(page.getByRole("button", { name: "90 days" })).toBeVisible();
 
   // Sidebar: "Dashboard" is the first item in the "Sales" group (see
-  // dashboard-shell-model.ts). Scope to the group that owns the "Sales"
-  // toggle button, then check its first nav link.
+  // dashboard-shell-model.ts). Scope to the group carrying the "Sales"
+  // label, then check its first nav link.
   const sidebar = page.locator('[data-slot="sidebar"]');
   const salesGroup = sidebar
     .locator('[data-sidebar="group"]')
-    .filter({ has: page.getByRole("button", { name: /^sales$/i }) });
+    .filter({
+      has: page.locator('[data-sidebar="group-label"]', { hasText: /^sales$/i }),
+    });
   await expect(salesGroup.getByRole("link").first()).toHaveText("Dashboard");
 });

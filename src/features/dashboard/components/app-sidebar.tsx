@@ -7,25 +7,35 @@ import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { signOutAction } from "@/features/identity-access/server/auth-actions";
 import {
   BadgeCheck,
-  ChevronRight,
+  Boxes,
+  Building2,
+  CalendarCheck,
+  CalendarDays,
   ChevronsUpDown,
-  Database,
+  ClipboardList,
+  Eye,
+  KeyRound,
+  LayoutDashboard,
+  ListChecks,
   LogOut,
+  Map,
+  MapPin,
+  Package,
+  Route,
+  ScrollText,
+  Search,
   Settings,
-  ShieldCheck,
-  ShoppingCart,
+  Square,
+  Terminal,
+  TrendingUp,
   Truck,
+  UserCheck,
   UserRound,
-  Warehouse,
+  Users,
   type LucideIcon,
 } from "lucide-react";
 import { UserAvatar } from "@/features/profile/components/user-avatar";
 import { EditProfileDialog } from "@/features/profile/components/edit-profile-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -35,23 +45,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
+  SidebarInput,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
 import {
   getDashboardSidebarGroups,
-  getUserInitials,
+  type DashboardRoute,
 } from "./dashboard-shell-model";
 
 type AppSidebarProps = {
@@ -65,13 +76,34 @@ type AppSidebarProps = {
   grants: string[];
 };
 
-const groupIcons: Record<string, LucideIcon> = {
-  "Access control": ShieldCheck,
-  Fulfillment: Truck,
-  Sales: ShoppingCart,
-  Warehouse: Warehouse,
-  System: Database,
-} as const;
+// One icon per nav item, keyed by the item's `dashboard` message key. The nav
+// is a flat list of links now, so the icon is what identifies a row once the
+// sidebar collapses to `collapsible="icon"` — every key in
+// dashboard-shell-model.ts's routeGroups needs an entry here.
+const pageIcons: Record<string, LucideIcon> = {
+  "pages.driverDeck": Truck,
+  "pages.dashboard": LayoutDashboard,
+  "pages.products": Package,
+  "pages.orders": ClipboardList,
+  "pages.customers": UserRound,
+  "pages.marketPrices": TrendingUp,
+  "pages.warehouseTasks": ListChecks,
+  "pages.dispatch": Map,
+  "pages.loading": Boxes,
+  "pages.deliveryRuns": Route,
+  "pages.driverRoster": CalendarDays,
+  "pages.deliverySetup": MapPin,
+  "pages.organization": Building2,
+  "pages.users": Users,
+  "pages.roles": KeyRound,
+  "pages.accessReviews": Eye,
+  "pages.auditLog": ScrollText,
+  "pages.myLeave": CalendarCheck,
+  "pages.leaveManagement": UserCheck,
+  "pages.dataConsole": Terminal,
+};
+
+type LabelledRoute = DashboardRoute & { label: string };
 
 export function AppSidebar({
   organizationName,
@@ -85,8 +117,30 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const t = useTranslations("dashboard");
   const pathname = usePathname();
+  const [search, setSearch] = useState("");
   const grantSet = useMemo(() => new Set(grants), [grants]);
   const groups = getDashboardSidebarGroups({ organizationSlug, pathname, grants: grantSet });
+
+  // Labels are resolved once here so the filter matches what the user reads
+  // (translated), not the message key.
+  const labelled = groups.map((group) => ({
+    sectionKey: group.sectionKey,
+    label: t(group.sectionKey),
+    items: group.items.map<LabelledRoute>((item) => ({ ...item, label: t(item.titleKey) })),
+  }));
+
+  const query = search.trim().toLowerCase();
+  const visibleGroups = query
+    ? labelled
+        .map((group) =>
+          // A group whose own name matches keeps all its pages; otherwise only
+          // the matching pages survive.
+          group.label.toLowerCase().includes(query)
+            ? group
+            : { ...group, items: group.items.filter((item) => item.label.toLowerCase().includes(query)) },
+        )
+        .filter((group) => group.items.length > 0)
+    : labelled;
 
   return (
     <Sidebar collapsible="icon" variant="inset" className="print:hidden">
@@ -95,58 +149,57 @@ export function AppSidebar({
           organizationName={organizationName}
           organizationRegion={organizationRegion}
         />
+        <div className="relative group-data-[collapsible=icon]:hidden">
+          <Label htmlFor="sidebar-search" className="sr-only">
+            {t("sidebar.searchLabel")}
+          </Label>
+          <Search className="pointer-events-none absolute top-1/2 left-2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <SidebarInput
+            id="sidebar-search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder={t("sidebar.searchPlaceholder")}
+            className="pl-8"
+          />
+        </div>
       </SidebarHeader>
       <SidebarContent>
-        {groups.map((group) => {
-          const GroupIcon = groupIcons[group.title] ?? Settings;
+        {visibleGroups.map((group) => (
+          <SidebarGroup key={group.sectionKey} className="py-1">
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => {
+                  const ItemIcon = pageIcons[item.titleKey] ?? Square;
 
-          return (
-            <Collapsible
-              key={group.title}
-              asChild
-              defaultOpen
-              className="group/collapsible"
-            >
-              <SidebarGroup className="py-1">
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <CollapsibleTrigger asChild>
+                  return (
+                    <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
-                        isActive={group.isActive}
-                        tooltip={t(group.sectionKey)}
-                        className="h-9 rounded-lg font-medium"
+                        asChild
+                        isActive={item.isActive}
+                        tooltip={item.label}
+                        className="h-8 rounded-lg data-active:font-medium"
                       >
-                        <GroupIcon />
-                        <span>{t(group.sectionKey)}</span>
-                        <ChevronRight className="ml-auto transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-                <CollapsibleContent>
-                  <SidebarMenuSub className="mx-4 my-1 gap-1 border-sidebar-border/80 px-3 py-0">
-                    {group.items.map((item) => (
-                      <SidebarMenuSubItem key={item.href}>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={item.isActive}
-                          className="h-8 rounded-lg px-3 text-sm data-active:font-medium"
+                        <Link
+                          href={item.href}
+                          aria-current={item.isActive ? "page" : undefined}
                         >
-                          <Link
-                            href={item.href}
-                            aria-current={item.isActive ? "page" : undefined}
-                          >
-                            <span>{t(item.titleKey)}</span>
-                          </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    ))}
-                  </SidebarMenuSub>
-                </CollapsibleContent>
-              </SidebarGroup>
-            </Collapsible>
-          );
-        })}
+                          <ItemIcon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+        {visibleGroups.length === 0 ? (
+          <p className="px-4 py-2 text-sm text-muted-foreground group-data-[collapsible=icon]:hidden">
+            {t("sidebar.searchEmpty")}
+          </p>
+        ) : null}
       </SidebarContent>
       <SidebarFooter>
         <NavUser

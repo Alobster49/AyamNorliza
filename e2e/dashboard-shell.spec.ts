@@ -11,23 +11,35 @@ test("dashboard shell exposes sidebar navigation and account actions", async ({
     page.getByRole("heading", { name: /organization/i }),
   ).toBeVisible({ timeout: 10_000 });
 
-  await expect(page.getByRole("button", { name: /^access control$/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^sales$/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /^fulfillment$/i })).toBeVisible();
-
-  // Sidebar renders one open submenu per top-level nav group the viewer can
-  // see. The owner sees four: Sales, Fulfillment, Access control and HR.
-  // System is dropped because its only item needs `data_console.manage`,
-  // which owner deliberately does not hold (DEFAULT_ROLE_GRANTS in
-  // src/lib/auth/rbac.ts) -- that group is org_admin-only.
+  // Nav groups are flat lists under a plain text label (not a collapsible
+  // button), so these are group labels rather than controls.
   const sidebar = page.locator('[data-slot="sidebar"]');
-  const openSectionSubmenus = sidebar.locator('[data-sidebar="menu-sub"]');
-  await expect(openSectionSubmenus).toHaveCount(4);
+  const groupLabels = sidebar.locator('[data-sidebar="group-label"]');
+  await expect(groupLabels.filter({ hasText: /^access control$/i })).toBeVisible();
+  await expect(groupLabels.filter({ hasText: /^sales$/i })).toBeVisible();
+  await expect(groupLabels.filter({ hasText: /^fulfillment$/i })).toBeVisible();
+
+  // One group per top-level nav section the viewer can see. The owner sees
+  // four: Sales, Fulfillment, Access control and HR. System is dropped
+  // because its only item needs `data_console.manage`, which owner
+  // deliberately does not hold (DEFAULT_ROLE_GRANTS in src/lib/auth/rbac.ts)
+  // -- that group is org_admin-only.
+  await expect(sidebar.locator('[data-sidebar="group"]')).toHaveCount(4);
 
   await expect(page.getByRole("link", { name: /^organization$/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /^users$/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /^orders$/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /^customers$/i })).toBeVisible();
+
+  // The header filter narrows the nav to matching pages and drops the groups
+  // that have none left.
+  const navFilter = sidebar.getByPlaceholder(/search pages/i);
+  await navFilter.fill("orders");
+  await expect(sidebar.getByRole("link", { name: /^orders$/i })).toBeVisible();
+  await expect(sidebar.getByRole("link", { name: /^customers$/i })).toBeHidden();
+  await expect(sidebar.locator('[data-sidebar="group"]')).toHaveCount(1);
+  await navFilter.clear();
+  await expect(sidebar.getByRole("link", { name: /^customers$/i })).toBeVisible();
 
   await page.getByRole("button", { name: /owner@ayam-norliza-pilot\.example/i }).click();
   await expect(page.getByRole("menuitem", { name: /my security/i })).toBeVisible();

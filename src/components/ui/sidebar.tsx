@@ -426,7 +426,9 @@ function SidebarGroupLabel({
       data-sidebar="group-label"
       className={mergedClassName}
       {...props}
-    />
+    >
+      {children}
+    </div>
   )
 }
 
@@ -462,7 +464,9 @@ function SidebarGroupAction({
       data-sidebar="group-action"
       className={mergedClassName}
       {...props}
-    />
+    >
+      {children}
+    </button>
   )
 }
 

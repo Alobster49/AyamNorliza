@@ -657,7 +657,10 @@ declare const messages: {
     "fallbackUserName": "Team member",
     "sidebar": {
       "regionFallback": "Operations workspace",
-      "operatorProfile": "Operator profile"
+      "operatorProfile": "Operator profile",
+      "searchLabel": "Search pages",
+      "searchPlaceholder": "Search pages…",
+      "searchEmpty": "No pages match your search."
     }
   },
   "analytics": {
