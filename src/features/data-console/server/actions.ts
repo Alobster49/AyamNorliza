@@ -212,7 +212,7 @@ export async function seedRealworldData(
   organizationSlug: string,
 ): Promise<ActionResult<{ summary: Record<string, number> }>> {
   const ctx = await guardOwner(organizationSlug);
-  if (!ctx) return { ok: false, code: "forbidden", message: "Owner only." };
+  if (!ctx) return { ok: false, code: "forbidden", message: "Admin only." };
 
   // Same self-skip rule as seedDemoData: never reset the seeder's own
   // password mid-session.
@@ -286,10 +286,15 @@ export async function seedRealworldData(
     return {
       ok: false,
       code: forbidden ? "forbidden" : "internal",
-      message: forbidden ? "Owner only." : "Seeding failed and was rolled back.",
+      message: forbidden ? "Admin only." : "Seeding failed and was rolled back.",
     };
   }
   const summary = (data ?? {}) as Record<string, number>;
+
+  // The actual number of drivers mapped: one key per truck that got a
+  // regular driver, plus the pool drivers (the "pool" key itself holds an
+  // array, not a single driver, so it's subtracted back out).
+  const driversSeeded = Object.keys(driverMap).length - 1 + pool.length;
 
   const auditCtx = ctxFor(ctx.userId);
   await recordAudit(
@@ -300,7 +305,7 @@ export async function seedRealworldData(
       eventType: "org.data_seeded",
       entityType: "organization",
       entityId: ctx.orgId,
-      after: { ...summary, mode: "realworld", drivers: REALWORLD_DRIVER_ACCOUNTS.length },
+      after: { ...summary, mode: "realworld", drivers: driversSeeded },
       correlationId: auditCtx.correlationId,
       source: "web",
     },

@@ -34,6 +34,9 @@ begin
   perform public.admin_clear_org_data(p_organization_id);
 
   -- 0. Clean what the clear deliberately keeps, but only our own rows.
+  -- Belt-and-braces: admin_clear_org_data deletes trucks, and truck_covers
+  -- cascades from truck_id, so this delete is already a no-op by the time we
+  -- get here.
   delete from public.truck_covers where organization_id = p_organization_id;
   delete from public.leave_requests
    where organization_id = p_organization_id
@@ -242,7 +245,11 @@ begin
   select day into v_w2 from _rw_days where workday and day >= v_today order by day offset 2 limit 1;
   select day into v_w3 from _rw_days where workday and day >= v_today order by day offset 3 limit 1;
   select day into v_w4 from _rw_days where workday and day >= v_today order by day offset 4 limit 1;
-  select max(day) into v_p1 from _rw_days where workday and day < v_today;
+  -- P1 must land inside the seeded history window (D-3..D-1): a long weekend
+  -- or holiday run of non-workdays before today can otherwise push the last
+  -- workday back past D-3, to a day with no history run at all. Clamp it and
+  -- let scenario 6 (below) drop out cleanly when there is no such day.
+  select max(day) into v_p1 from _rw_days where workday and day < v_today and day >= v_today - 3;
   -- Annual leave needs 7 calendar days' notice: first workday on/after D+7,
   -- then the next workday.
   select day into v_annual_start from _rw_days where workday and day >= v_today + 7 order by day limit 1;
@@ -264,12 +271,19 @@ begin
   select id into v_t_emergency from public.leave_types where organization_id = p_organization_id and code = 'emergency';
 
   -- 5. Public holiday on W4 (inserted before the leaves; none overlap it).
+  -- W4 (the 5th workday on/after today) always falls beyond the seeded order
+  -- window (D+1..D+3), so it never suppresses an order day by construction --
+  -- it exists purely so the Driver roster has a holiday to shade.
   insert into public.public_holidays (organization_id, holiday_date, name)
   values (p_organization_id, v_w4, 'Cuti Umum (demo)');
 
   -- year/day_count are recomputed by leave_requests_before_insert; the values
   -- here are placeholders that satisfy the not-null constraints.
   -- 1: driver03 emergency leave W1..W2, approved, nobody covers.
+  -- W1..W3 below is a calendar range (start_date..end_date) but the cover
+  -- rows further down are written only on workdays in that range, so if the
+  -- range spans a weekend the roster shows JHR-07 on leave with no cover on
+  -- the Saturday/Sunday in between -- intended, nobody covers a weekend.
   -- 2: driver07 emergency leave W1..W3, approved, driver31 covers.
   -- 3: driver18 medical leave W0 (today when a workday), approved.
   -- 4: driver12 annual leave >= D+7, pending.
@@ -290,7 +304,7 @@ begin
     ('lv-12', (p_drivers->>'JHR-12')::uuid, v_t_annual,    v_annual_start, coalesce(v_annual_end, v_annual_start), 'Cuti tahunan, balik kampung', 'pending', null),
     ('lv-22', (p_drivers->>'JHR-22')::uuid, v_t_medical,   v_p1, v_p1, 'Sakit perut, MC sehari', 'approved', (v_p1::timestamp + time '07:30') at time zone 'Asia/Kuala_Lumpur')
   ) as s(label, user_id, type_id, start_d, end_d, reason, status, decided)
-  where s.user_id is not null;
+  where s.user_id is not null and s.start_d is not null;
 
   -- Approved rows carry the breakdown the approve RPC would have written so
   -- My Leave shows the days as used.
@@ -302,21 +316,25 @@ begin
                 public._dc_uuid(p_organization_id, 'lv-18'), public._dc_uuid(p_organization_id, 'lv-22'));
 
   -- Covers: JHR-07 on each workday W1..W3, JHR-22 on P1, both by driver31.
+  -- JHR-22's cover is skipped when v_p1 is null (see the P1 clamp above): the
+  -- lv-22 leave row was already skipped for the same reason, so there is
+  -- nothing to cover.
   insert into public.truck_covers (id, organization_id, truck_id, cover_date, driver_id, note, created_by)
   select public._dc_uuid(p_organization_id, 'cv-07-' || d.day), p_organization_id,
          public._dc_uuid(p_organization_id, 'trk-7'), d.day, v_pool1,
-         'Ganti Khairul (cuti kecemasan)', v_actor
+         'Ganti pemandu tetap (cuti kecemasan)', v_actor
   from _rw_days d
   where v_pool1 is not null and d.workday and d.day between v_w1 and v_w3
   union all
   select public._dc_uuid(p_organization_id, 'cv-22-' || v_p1), p_organization_id,
          public._dc_uuid(p_organization_id, 'trk-22'), v_p1, v_pool1,
-         'Ganti Rahim (MC)', v_actor
-  where v_pool1 is not null;
+         'Ganti pemandu tetap (MC)', v_actor
+  where v_pool1 is not null and v_p1 is not null;
 
   -- 6. Operating days --------------------------------------------------------
   -- off: -3..3. Stops per truck by weekday (Fri/Sat busiest, Mon quiet).
-  -- Future days skip the demo holiday.
+  -- v_w4 (the 5th workday on/after today) is always >= D+4, past this D-3..D+3
+  -- window, so it never needs to be excluded here.
   drop table if exists _rw_ops;
   create temp table _rw_ops on commit drop as
   select o.off, (v_today + o.off)::date as day,
@@ -326,8 +344,7 @@ begin
            when o.off < 0 then case extract(isodow from v_today + o.off) when 5 then 6 when 6 then 6 when 1 then 4 else 5 end
            else               case extract(isodow from v_today + o.off) when 5 then 5 when 6 then 5 when 1 then 3 else 4 end
          end as stops
-  from generate_series(-3, 3) as o(off)
-  where (v_today + o.off) <> v_w4 or o.off <= 0;
+  from generate_series(-3, 3) as o(off);
 
   -- Runs for history + today; driver_id is left null so the
   -- delivery_runs_default_driver trigger resolves cover -> regular -> null on

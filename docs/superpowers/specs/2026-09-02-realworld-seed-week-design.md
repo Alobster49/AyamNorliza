@@ -70,7 +70,7 @@ refuses annual leave that starts less than 7 calendar days out
 (`leave_min_notice_days`), and the seed cannot bypass a trigger. Scenario 4
 keeps annual leave and respects the notice. `W(k)` also skips the org's public
 holidays, mirroring `leave_workday_count`, so `day_count` is never zero.
-| 5 | Public holiday | `public_holidays` row on `W(4)`, name `Cuti Umum (demo)` | Roster shades the day; no future orders are created on that date if it falls in D+1..D+3 |
+| 5 | Public holiday | `public_holidays` row on `W(4)`, name `Cuti Umum (demo)` | Roster shades the day; `W(4)` is always after the seeded order window (W4 ≥ D+4), so it only shows on the roster |
 | 6 | Cover in history | driver22 medical leave `P(1)`, `approved`; `truck_covers` JHR-22 → driver31 on `P(1)`; the completed run on `P(1)` has `driver_id` = driver31 | Run history shows a run driven by a cover driver |
 
 Cover rows respect the roster triggers: driver31 is an active driver-role member

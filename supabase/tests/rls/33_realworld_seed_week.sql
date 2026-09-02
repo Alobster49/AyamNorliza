@@ -60,7 +60,9 @@ select
   (select day from days, today where workday and day >= today.d order by day offset 1 limit 1) as w1,
   (select day from days, today where workday and day >= today.d order by day offset 3 limit 1) as w3,
   (select day from days, today where workday and day >= today.d order by day offset 4 limit 1) as w4,
-  (select max(day) from days, today where workday and day < today.d) as p1;
+  -- Same clamp as the seed: P1 only counts if it lands inside the seeded
+  -- D-3..D-1 history window.
+  (select max(day) from days, today where workday and day < today.d and day >= today.d - 3) as p1;
 grant select on _rw_test_cal to authenticated;
 
 create or replace function pg_temp.impersonate(p_user uuid) returns void
@@ -123,13 +125,24 @@ select is(
       and v.cover_date in (c.w1, c.w3)),
   2::bigint, 'JHR-07 covered by pool driver on W1 and W3');
 
--- 7: the P1 run of JHR-22 was driven by the pool driver (cover in history).
-select is(
-  (select r.driver_id from public.delivery_runs r
-     join public.trucks t on t.id = r.truck_id
-     cross join _rw_test_cal c
-    where t.code = 'JHR-22' and r.run_date = c.p1),
-  'ee000000-0000-0000-0000-000000000031'::uuid, 'JHR-22 run on P1 has the cover as driver');
+-- 7: the P1 run of JHR-22 was driven by the pool driver (cover in history),
+-- when P1 exists inside the seeded history window. After a long weekend or
+-- holiday run, P1 can be null -- the seed then skips both the leave and the
+-- cover, so assert their absence instead.
+select case when (select p1 from _rw_test_cal) is not null then
+  is(
+    (select r.driver_id from public.delivery_runs r
+       join public.trucks t on t.id = r.truck_id
+       cross join _rw_test_cal c
+      where t.code = 'JHR-22' and r.run_date = c.p1),
+    'ee000000-0000-0000-0000-000000000031'::uuid, 'JHR-22 run on P1 has the cover as driver')
+else
+  ok(
+    not exists (select 1 from public.truck_covers v
+                 join public.trucks t on t.id = v.truck_id
+                where t.code = 'JHR-22'),
+    'no P1 in the history window: JHR-22 has no cover')
+end;
 
 -- 8: JHR-18 today: null driver on a workday (MC today), regular driver otherwise.
 select ok(
@@ -171,15 +184,14 @@ select ok(
      ) sub),
   'JHR-01/11/21 today: all loaded, 2 closed each');
 
--- 12: no orders on the demo holiday; the holiday exists on W4.
+-- 12: the demo holiday exists on W4. W4 is always past the seeded order
+-- window (D+1..D+3 -- see the migration's comment on the holiday insert), so
+-- there is nothing to assert about orders on that date.
 select ok(
   exists (select 1 from public.public_holidays h, _rw_test_cal c
            where h.organization_id = 'ee000000-0000-0000-0000-00000000000a'
-             and h.name = 'Cuti Umum (demo)' and h.holiday_date = c.w4)
-  and not exists (select 1 from public.orders o, _rw_test_cal c
-                   where o.organization_id = 'ee000000-0000-0000-0000-00000000000a'
-                     and o.delivery_date = c.w4),
-  'demo holiday on W4 and no orders that day');
+             and h.name = 'Cuti Umum (demo)' and h.holiday_date = c.w4),
+  'demo holiday exists on W4');
 
 -- 13: driver 012 has a pending annual request at least 7 days out.
 select ok(
@@ -216,7 +228,8 @@ select set_config('role', 'postgres', true);
 select is(
   (select count(*) from public.leave_requests
     where organization_id = 'ee000000-0000-0000-0000-00000000000a'),
-  5::bigint, 'exactly 5 seeded leave requests after re-seed');
+  (select case when p1 is null then 4 else 5 end from _rw_test_cal)::bigint,
+  'exactly 4 or 5 seeded leave requests after re-seed, depending on whether P1 exists');
 
 select * from finish();
 rollback;

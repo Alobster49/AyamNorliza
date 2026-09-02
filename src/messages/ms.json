@@ -2454,7 +2454,7 @@
     "clearedRows": "{count, plural, other {# baris}} dipadam. Pengguna dikekalkan.",
     "seededSummary": "{products, plural, other {# produk}}, {customers, plural, other {# pelanggan}}, {orders, plural, other {# pesanan}}, {runs, plural, other {# trip}} disemai.",
     "seededSetupSummary": "{products, plural, other {# produk}}, {customers, plural, other {# pelanggan}}, {zones, plural, other {# zon}} dan {trucks, plural, other {# lori}} disemai. Tiada pesanan atau trip.",
-    "seededRealworldSummary": "Disemai {trucks, plural, one {# lori} other {# lori}} merentasi {zones, plural, one {# zon} other {# zon}}, {customers, plural, one {# pelanggan} other {# pelanggan}}, {orders, plural, one {# pesanan} other {# pesanan}} dan {runs, plural, one {# trip} other {# trip}} sepanjang minggu ini. Pemandu 1-32 kini boleh log masuk.",
+    "seededRealworldSummary": "{trucks, plural, other {# lori}} merentasi {zones, plural, other {# zon}}, {customers, plural, other {# pelanggan}}, {orders, plural, other {# pesanan}} dan {runs, plural, other {# trip}} sepanjang minggu ini disemai. Pemandu 1-32 kini boleh log masuk.",
     "clearCard": {
       "title": "Padam semua data",
       "description": "Memadam produk, pelanggan, pesanan dan trip untuk organisasi ini secara kekal. Akaun pengguna dan log masuk dikekalkan.",
@@ -2482,7 +2482,7 @@
     "realworldCard": {
       "title": "Semai beban dunia sebenar",
       "description": "Operasi Johor penuh selama seminggu: 10 zon dengan julat poskod sebenar, 30 lori, 32 akaun pemandu, dan kira-kira 1,000 pesanan — 3 hari sudah dihantar, hari ini langsung dengan 30 trip, dan 3 hari menunggu Dispatch.",
-      "detail": "Akaun Pemandu 1-30 (driver1@gmail.com …) ialah pemandu tetap setiap lori; driver31 dan driver32 ialah pemandu ganti. Semaian ini menempah cuti untuk lima pemandu: dua cuti kecemasan (seorang ada pengganti, seorang tiada), seorang MC hari ini, seorang permohonan cuti tahunan belum diluluskan, dan seorang diganti dalam sejarah minggu lepas — supaya Jadual pemandu, Pengurusan Cuti dan sejarah trip ada data sebenar.",
+      "detail": "Akaun Pemandu 1-30 (driver1@gmail.com …) ialah pemandu tetap setiap lori; driver31 dan driver32 ialah pemandu ganti. Semaian ini menempah cuti untuk lima pemandu: dua cuti kecemasan (seorang ada pengganti, seorang tiada), seorang MC hari ini (hari bekerja seterusnya jika hujung minggu), seorang permohonan cuti tahunan belum diluluskan, dan seorang diganti dalam sejarah semalam — supaya Jadual pemandu, Pengurusan Cuti dan sejarah trip ada data sebenar.",
       "trigger": "Semai beban dunia sebenar",
       "dialogTitle": "Semai beban dunia sebenar?",
       "dialogDescription": "Ini akan memadam data sedia ada dahulu, kemudian mencipta minggu Johor penuh: 10 zon, 30 lori dengan pemandu, kira-kira 1,000 pesanan merentasi 7 hari, serta senario cuti dan pengganti. Semaian mengambil sedikit masa.",
