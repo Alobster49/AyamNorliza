@@ -8,6 +8,10 @@
 
 begin;
 
+-- The seed's `drop table if exists` on its temp tables raises NOTICEs on a
+-- fresh session; keep the suite output pristine.
+set local client_min_messages = warning;
+
 select plan(16);
 
 -- Fixtures (postgres bypasses RLS). 00a org; 001 org_admin; 003/007/012/018/022
@@ -113,7 +117,7 @@ select ok(
   and not exists (select 1 from public.truck_covers v
                    join public.trucks t on t.id = v.truck_id
                    cross join _rw_test_cal c
-                  where t.code = 'JHR-03' and v.cover_date = c.w1),
+                  where t.organization_id = 'ee000000-0000-0000-0000-00000000000a' and t.code = 'JHR-03' and v.cover_date = c.w1),
   'JHR-03: approved leave on W1, no cover');
 
 -- 6: JHR-07 is covered by pool driver 1 on W1 and W3.
@@ -121,7 +125,7 @@ select is(
   (select count(*) from public.truck_covers v
      join public.trucks t on t.id = v.truck_id
      cross join _rw_test_cal c
-    where t.code = 'JHR-07' and v.driver_id = 'ee000000-0000-0000-0000-000000000031'
+    where t.organization_id = 'ee000000-0000-0000-0000-00000000000a' and t.code = 'JHR-07' and v.driver_id = 'ee000000-0000-0000-0000-000000000031'
       and v.cover_date in (c.w1, c.w3)),
   2::bigint, 'JHR-07 covered by pool driver on W1 and W3');
 
@@ -134,13 +138,13 @@ select case when (select p1 from _rw_test_cal) is not null then
     (select r.driver_id from public.delivery_runs r
        join public.trucks t on t.id = r.truck_id
        cross join _rw_test_cal c
-      where t.code = 'JHR-22' and r.run_date = c.p1),
+      where t.organization_id = 'ee000000-0000-0000-0000-00000000000a' and t.code = 'JHR-22' and r.run_date = c.p1),
     'ee000000-0000-0000-0000-000000000031'::uuid, 'JHR-22 run on P1 has the cover as driver')
 else
   ok(
     not exists (select 1 from public.truck_covers v
                  join public.trucks t on t.id = v.truck_id
-                where t.code = 'JHR-22'),
+                where t.organization_id = 'ee000000-0000-0000-0000-00000000000a' and t.code = 'JHR-22'),
     'no P1 in the history window: JHR-22 has no cover')
 end;
 
@@ -151,7 +155,7 @@ select ok(
      from public.delivery_runs r
      join public.trucks t on t.id = r.truck_id
      cross join _rw_test_cal c
-    where t.code = 'JHR-18' and r.run_date = c.today),
+    where t.organization_id = 'ee000000-0000-0000-0000-00000000000a' and t.code = 'JHR-18' and r.run_date = c.today),
   'JHR-18 today has no driver when today is a workday');
 
 -- 9-10: history orders are closed with a delivered attempt.
@@ -179,7 +183,7 @@ select ok(
          join public.delivery_runs r on r.id = o.run_id
          join public.trucks t on t.id = r.truck_id
          cross join _rw_test_cal c
-        where t.code in ('JHR-01', 'JHR-11', 'JHR-21') and r.run_date = c.today
+        where t.organization_id = 'ee000000-0000-0000-0000-00000000000a' and t.code in ('JHR-01', 'JHR-11', 'JHR-21') and r.run_date = c.today
         group by t.code
      ) sub),
   'JHR-01/11/21 today: all loaded, 2 closed each');
