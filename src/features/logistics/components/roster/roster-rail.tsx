@@ -59,8 +59,8 @@ export function RosterRail({ view, days, canEdit, locale, onAssign, docked = fal
   const shownRisks = showAll ? risksByRange : risksByRange.slice(0, LIST_CAP);
   const truncated = view.gaps.length > LIST_CAP || risksByRange.length > LIST_CAP;
   return (
-    <Card className={cn(docked ? "" : "h-full")}>
-      <CardContent className="flex flex-col gap-3">
+    <Card className={cn(docked ? "" : "h-full min-h-0")}>
+      <CardContent className={cn("flex flex-col gap-3", docked ? "" : "min-h-0 flex-1")}>
         <div className="leading-none">
           <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("next", { days })}</span>
           {view.gaps.length === 0 ? (
@@ -78,21 +78,26 @@ export function RosterRail({ view, days, canEdit, locale, onAssign, docked = fal
           )}
         </div>
         <div className="h-px bg-border" />
-        <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("gaps")}</span>
-        <div className={cn("grid gap-2", docked ? "grid-cols-2" : "grid-cols-1")}>
-          {shownGaps.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="gap" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
+        {/* The rail is height-capped next to the grid, so its list scrolls on
+            its own and the headline / footnote stay put. Docked below the grid
+            it keeps growing with the page instead. */}
+        <div className={cn("flex flex-col gap-3", docked ? "" : "min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1")}>
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("gaps")}</span>
+          <div className={cn("grid gap-2", docked ? "grid-cols-2" : "grid-cols-1")}>
+            {shownGaps.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="gap" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
+          </div>
+          {risksByRange.length > 0 ? (
+            <>
+              <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("risks")}</span>
+              <div className={cn("grid gap-2", docked ? "grid-cols-2" : "grid-cols-1")}>
+                {shownRisks.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="risk" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
+              </div>
+            </>
+          ) : null}
+          {truncated && !showAll ? (
+            <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll(true)}>{t("seeAll")}</Button>
+          ) : null}
         </div>
-        {risksByRange.length > 0 ? (
-          <>
-            <span className="mt-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("risks")}</span>
-            <div className={cn("grid gap-2", docked ? "grid-cols-2" : "grid-cols-1")}>
-              {shownRisks.map((g) => <GapItem key={`${g.truckId}|${g.date}`} gap={g} kind="risk" view={view} canEdit={canEdit} locale={locale} onAssign={onAssign} />)}
-            </div>
-          </>
-        ) : null}
-        {truncated && !showAll ? (
-          <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll(true)}>{t("seeAll")}</Button>
-        ) : null}
         {!docked ? <p className="mt-auto border-t pt-2.5 text-xs text-muted-foreground">{t("footnote")}</p> : null}
       </CardContent>
     </Card>

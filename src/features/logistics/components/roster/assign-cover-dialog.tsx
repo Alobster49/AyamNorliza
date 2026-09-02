@@ -84,7 +84,7 @@ export function AssignCoverDialog({
   };
 
   const body = (
-    <div className="flex flex-col gap-2" role="radiogroup" aria-label={t("title")}>
+    <div className="flex max-h-[60vh] flex-col gap-2 overflow-y-auto" role="radiogroup" aria-label={t("title")}>
       {candidates.length === 0 ? <p className="text-sm text-muted-foreground">{t("noCandidates")}</p> : null}
       {candidates.map((c) => {
         const on = picked === c.driver.userId;

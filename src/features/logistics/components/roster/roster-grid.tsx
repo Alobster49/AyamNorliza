@@ -92,13 +92,19 @@ export function RosterGrid({
   const t = useTranslations("roster.grid");
   const head = compact ? 150 : 200;
   const cols = `${head}px repeat(${view.days.length}, minmax(0, 1fr))`;
-  const rowHead = "flex min-w-0 items-center gap-2.5 border-r bg-muted/30 px-3 py-2";
+  // The truck column stays put while the day columns scroll sideways, so its
+  // background has to be opaque -- a translucent tint would let the cells
+  // sliding underneath show through. `color-mix` flattens the same muted/30
+  // tint against the page background.
+  const rowHead = "sticky left-0 z-10 flex min-w-0 items-center gap-2.5 border-r px-3 py-2";
+  const headBg = { background: "color-mix(in oklab, var(--muted) 30%, var(--background))" };
+  const headerBg = { background: "color-mix(in oklab, var(--muted) 50%, var(--background))" };
 
   return (
-    <div className="overflow-auto overscroll-contain rounded-xl border">
+    <div className="h-full overflow-auto overscroll-contain rounded-xl border">
       <div style={{ minWidth: `${head + view.days.length * 44}px` }}>
-        <div className="grid border-b bg-muted/50" style={{ gridTemplateColumns: cols }}>
-          <div className={cn(rowHead, "bg-transparent")}><span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("truckHeader")}</span></div>
+        <div className="sticky top-0 z-20 grid border-b" style={{ gridTemplateColumns: cols, ...headerBg }}>
+          <div className={cn(rowHead, "z-30")} style={headerBg}><span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("truckHeader")}</span></div>
           {view.days.map((d) => <DayHeader key={d.date} day={d} locale={locale} />)}
         </div>
 
@@ -109,7 +115,7 @@ export function RosterGrid({
             style={{ gridTemplateColumns: cols }}
             data-testid={`roster-truck-row-${row.truck.code}`}
           >
-            <div className={rowHead}>
+            <div className={rowHead} style={headBg}>
               <div className="min-w-0 flex-1 leading-tight">
                 <p className="truncate text-sm font-semibold">{row.truck.code} <span className="font-normal text-muted-foreground">· {row.truck.name}</span></p>
                 {row.regularDriver ? (
@@ -127,13 +133,13 @@ export function RosterGrid({
 
         {view.poolRows.length > 0 ? (
           <>
-            <div className="grid border-b bg-muted/50" style={{ gridTemplateColumns: cols }}>
-              <div className={cn(rowHead, "min-h-7 bg-transparent py-1")}><span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("poolHeader")}</span></div>
+            <div className="grid border-b" style={{ gridTemplateColumns: cols, ...headerBg }}>
+              <div className={cn(rowHead, "min-h-7 py-1")} style={headerBg}><span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("poolHeader")}</span></div>
               {view.days.map((d) => <div key={d.date} className="border-l" />)}
             </div>
             {view.poolRows.map((row) => (
               <div key={row.driver.userId} className="grid border-b last:border-b-0" style={{ gridTemplateColumns: cols }}>
-                <div className={rowHead}>
+                <div className={rowHead} style={headBg}>
                   <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-semibold">{row.driver.name.slice(0, 2).toUpperCase()}</span>
                   <p className="truncate text-sm font-semibold">{row.driver.name}</p>
                 </div>

@@ -59,7 +59,7 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
 
   const toolbar = (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <h2 className="font-display text-2xl leading-tight">{t("title")}</h2>
+      <h2 className="text-lg font-semibold leading-tight">{t("title")}</h2>
       <div className="flex flex-wrap items-center gap-2">
         <AlertPill gaps={view.gaps.length} risks={view.risks.length} />
         <div className="inline-flex rounded-2xl bg-muted p-0.5">
@@ -87,7 +87,11 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
   }
 
   return (
-    <div className={`flex flex-col gap-4 ${pending ? "opacity-70" : ""}`}>
+    // On lg the page fills the shell exactly -- 100dvh less the h-16 header
+    // (4rem), the inset shell's m-2 (1rem) and the layout's p-4 (2rem) -- so
+    // nothing here scrolls the page itself; the grid and the rail each scroll
+    // inside their own box. Below lg the page flows normally.
+    <div className={`flex flex-col gap-4 lg:h-[calc(100dvh-7rem)] lg:overflow-hidden ${pending ? "opacity-70" : ""}`}>
       {toolbar}
       <div className="flex flex-wrap items-center justify-between gap-3">
         {data.canEdit ? (
@@ -97,13 +101,15 @@ export function RosterClient({ organizationSlug, initial }: { organizationSlug: 
       </div>
       <RosterMobile view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} />
 
-      {/* Desktop: grid + rail side by side. Tablet (md..lg): grid, then rail docked below in two columns. */}
-      <div className="hidden md:flex md:flex-col md:gap-4 lg:flex-row lg:items-start">
-        <div className="min-w-0 flex-1">
+      {/* Desktop: grid + rail side by side, filling whatever height the toolbars
+          leave -- each scrolls inside its own box. Tablet (md..lg): grid, then
+          rail docked below in two columns, page scrolls as before. */}
+      <div className="hidden md:flex md:flex-col md:gap-4 lg:min-h-0 lg:flex-1 lg:flex-row lg:items-stretch">
+        <div className="min-w-0 flex-1 lg:h-full">
           <RosterGrid view={view} canEdit={data.canEdit} locale={locale} compact={data.days === 7} onCellClick={(truckId, date) => openAssign(truckId, date)} />
         </div>
-        <aside className="lg:w-[300px] lg:shrink-0">
-          <div className="hidden lg:block"><RosterRail view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} /></div>
+        <aside className="lg:h-full lg:w-[300px] lg:shrink-0">
+          <div className="hidden lg:block lg:h-full"><RosterRail view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} /></div>
           <div className="lg:hidden"><RosterRail view={view} days={data.days} canEdit={data.canEdit} locale={locale} onAssign={openAssign} docked /></div>
         </aside>
       </div>
