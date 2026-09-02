@@ -25,7 +25,6 @@ declare
   v_actor uuid := auth.uid();
   v_today date := (now() at time zone 'Asia/Kuala_Lumpur')::date;
   v_pool1 uuid := (p_drivers->'pool'->>0)::uuid;
-  v_pool2 uuid := (p_drivers->'pool'->>1)::uuid;
   v_t_annual uuid;
   v_t_medical uuid;
   v_t_emergency uuid;
@@ -288,7 +287,7 @@ begin
     ('lv-03', (p_drivers->>'JHR-03')::uuid, v_t_emergency, v_w1, v_w2, 'Urusan keluarga di kampung', 'approved', now() - interval '2 days'),
     ('lv-07', (p_drivers->>'JHR-07')::uuid, v_t_emergency, v_w1, v_w3, 'Isteri bersalin', 'approved', now() - interval '3 days'),
     ('lv-18', (p_drivers->>'JHR-18')::uuid, v_t_medical,   v_w0, v_w0, 'Demam, MC dari klinik', 'approved', now() - interval '2 hours'),
-    ('lv-12', (p_drivers->>'JHR-12')::uuid, v_t_annual,    v_annual_start, v_annual_end, 'Cuti tahunan, balik kampung', 'pending', null),
+    ('lv-12', (p_drivers->>'JHR-12')::uuid, v_t_annual,    v_annual_start, coalesce(v_annual_end, v_annual_start), 'Cuti tahunan, balik kampung', 'pending', null),
     ('lv-22', (p_drivers->>'JHR-22')::uuid, v_t_medical,   v_p1, v_p1, 'Sakit perut, MC sehari', 'approved', (v_p1::timestamp + time '07:30') at time zone 'Asia/Kuala_Lumpur')
   ) as s(label, user_id, type_id, start_d, end_d, reason, status, decided)
   where s.user_id is not null;
@@ -405,7 +404,9 @@ begin
     end::public.order_status,
     loaded = case
       when s.final_off < 0 then true
-      when s.final_off = 0 and s.kind = 'today' and s.n in (1, 11, 21) then true
+      -- Departed trucks load the whole manifest this morning, including a
+      -- D-1 failed stop carried over to today (final_off = 0, kind = 'history').
+      when s.final_off = 0 and s.n in (1, 11, 21) then true
       when s.final_off = 0 and s.kind = 'today' and s.s <= 2 then true
       else false
     end;

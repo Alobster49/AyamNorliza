@@ -154,15 +154,22 @@ select is(
                        where a.order_id = o.id and a.outcome = 'delivered')),
   0::bigint, 'every closed order has a delivered attempt');
 
--- 11: today's departed run JHR-01 is fully loaded with its first 2 stops closed.
+-- 11: today's departed runs (JHR-01/11/21) are each fully loaded with their
+-- first 2 stops closed -- including a D-1 failed stop carried over to today.
 select ok(
-  (select bool_and(o.loaded_at is not null) and count(*) filter (where o.status = 'closed') = 2
-     from public.orders o
-     join public.delivery_runs r on r.id = o.run_id
-     join public.trucks t on t.id = r.truck_id
-     cross join _rw_test_cal c
-    where t.code = 'JHR-01' and r.run_date = c.today),
-  'JHR-01 today: all loaded, 2 closed');
+  (select count(*) = 3 and bool_and(sub.all_loaded and sub.closed_count = 2)
+     from (
+       select t.code,
+              bool_and(o.loaded_at is not null) as all_loaded,
+              count(*) filter (where o.status = 'closed') as closed_count
+         from public.orders o
+         join public.delivery_runs r on r.id = o.run_id
+         join public.trucks t on t.id = r.truck_id
+         cross join _rw_test_cal c
+        where t.code in ('JHR-01', 'JHR-11', 'JHR-21') and r.run_date = c.today
+        group by t.code
+     ) sub),
+  'JHR-01/11/21 today: all loaded, 2 closed each');
 
 -- 12: no orders on the demo holiday; the holiday exists on W4.
 select ok(
