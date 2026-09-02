@@ -246,7 +246,7 @@ function StopTable({
   return (
     <>
       {/* Desktop and tablet: one row per stop */}
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden min-h-0 flex-1 overflow-auto overscroll-y-contain md:block">
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b bg-muted/40 text-left text-[11px] uppercase tracking-wide text-muted-foreground">
@@ -335,7 +335,7 @@ function StopTable({
       </div>
 
       {/* Phone: stacked cards, no horizontal scrolling */}
-      <ul className="flex flex-col divide-y md:hidden">
+      <ul className="flex min-h-0 flex-1 flex-col divide-y overflow-y-auto overscroll-y-contain md:hidden">
         {rows.map((row, index) => (
           <li key={row.orderId} className="flex flex-col gap-1 px-3 py-2.5">
             <div className="flex items-start justify-between gap-2">
@@ -436,7 +436,7 @@ function RunDetail({
   const blockers = [...gate.unloaded, ...gate.unweighed];
 
   return (
-    <div className="animate-panel-in flex min-w-0 flex-col rounded-lg border bg-card">
+    <div className="animate-panel-in flex min-h-0 min-w-0 flex-col rounded-lg border bg-card">
       <header className="flex flex-wrap items-start justify-between gap-3 border-b px-4 py-3">
         <div className="min-w-0">
           <h2 className="truncate text-lg font-semibold">{truckLabel(run)}</h2>
@@ -690,7 +690,7 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
   const isToday = date === todayInTimeZone(timeZone);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 md:h-[calc(100svh-7rem)]">
       <div className="flex flex-wrap items-start justify-end gap-3">
         <AlertBell alerts={alerts} onJump={setSelectedId} />
         <div className="flex items-center gap-2">
@@ -740,12 +740,12 @@ export function RunsClient({ organizationSlug, initialDate, timeZone, initialRun
         // so the layout never collapses to a one-line loading message.
         <div
           aria-busy={loading}
-          className={`grid gap-4 transition-opacity duration-200 lg:grid-cols-[264px_minmax(0,1fr)] ${
+          className={`grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-4 transition-opacity duration-200 lg:grid-cols-[264px_minmax(0,1fr)] lg:grid-rows-[minmax(0,1fr)] ${
             loading ? "pointer-events-none opacity-50" : ""
           }`}
         >
           <div
-            className="-mx-1 flex snap-x snap-proximity gap-2 overflow-x-auto p-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:p-0"
+            className="-mx-1 flex snap-x snap-proximity gap-2 overflow-x-auto p-1 lg:mx-0 lg:min-h-0 lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:overscroll-y-contain lg:p-0 lg:pr-1 [scrollbar-gutter:stable]"
             role="tablist"
             aria-label={t("trucksRunningToday")}
           >

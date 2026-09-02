@@ -71,7 +71,7 @@ export function DayTimeline({
   const fmt = (min: number) => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
         <span>
           {fmt(view.windowStart)} — {fmt(view.windowEnd)}
@@ -85,7 +85,7 @@ export function DayTimeline({
       </div>
 
       {/* Desktop / tablet: trucks × hours grid */}
-      <div className="hidden overflow-x-auto rounded-lg border md:block">
+      <div className="hidden rounded-lg border md:block md:min-h-0 md:flex-1 md:overflow-auto md:overscroll-contain">
         <div className="min-w-[720px]">
           <div className="grid border-b bg-muted/50" style={{ gridTemplateColumns: `140px repeat(${view.hours.length - 1}, 1fr)` }}>
             <span className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{t("truckHeader")}</span>
@@ -154,7 +154,7 @@ export function DayTimeline({
       </div>
 
       {/* Phone: agenda grouped by start time */}
-      <div className="flex flex-col gap-2 md:hidden">
+      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-y-contain md:hidden">
         {agenda.map((b) => (
           <div key={b.ticket.id} className={`flex items-center gap-3 rounded-lg border p-3 ${BLOCK_CLASS[b.state]}`}>
             <span className="w-12 shrink-0 text-sm font-semibold tabular-nums">{fmt(b.startMin)}</span>

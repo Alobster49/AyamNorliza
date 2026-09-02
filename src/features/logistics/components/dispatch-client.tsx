@@ -47,7 +47,7 @@ export function DispatchClient({
   }, [organizationSlug, toast, tLogistics]);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 md:h-[calc(100svh-7rem)]">
       <div className="flex flex-wrap items-center gap-3">
         <h1 className="text-lg font-semibold">{t("title")}</h1>
         <Input
@@ -104,7 +104,7 @@ export function DispatchClient({
           pending dim tells the user the data underneath is being refreshed. */}
       <div
         key={view}
-        className={`animate-panel-in transition-opacity duration-200 motion-reduce:transition-none ${isPending ? "opacity-60" : ""}`}
+        className={`animate-panel-in flex min-h-0 flex-1 flex-col transition-opacity duration-200 motion-reduce:transition-none ${isPending ? "opacity-60" : ""}`}
       >
         {view === "plan" ? (
           <PlanDeck organizationSlug={organizationSlug} date={date} data={data} refetch={refetch} />
