@@ -388,9 +388,16 @@ begin
     add column loaded boolean,
     add column closed_at timestamptz;
 
+  -- PostgREST's authenticator role loads the safeupdate extension, which
+  -- refuses any UPDATE/DELETE without a WHERE clause -- even one running
+  -- inside this security-definer function on a temp table. `where true`
+  -- satisfies it without changing which rows are touched. pgTAP cannot load
+  -- safeupdate into its own session, so calling this RPC through PostgREST
+  -- (as the data console does) is the only check that exercises this path.
   update _rw_stops s set
     final_off = s.off + case when s.failed then 1 else 0 end,
-    final_day = s.day + case when s.failed then 1 else 0 end;
+    final_day = s.day + case when s.failed then 1 else 0 end
+  where true;
 
   update _rw_stops s set
     orig_run_id = case when s.off <= 0 then public._dc_uuid(p_organization_id, 'run-' || s.off || '-' || s.n) end,
@@ -409,7 +416,8 @@ begin
       when s.final_off = 0 and s.n in (1, 11, 21) then true
       when s.final_off = 0 and s.kind = 'today' and s.s <= 2 then true
       else false
-    end;
+    end
+  where true;
 
   -- Delivery clock: run leaves the depot 09:00 KL, stops are 25 minutes apart.
   update _rw_stops s set
